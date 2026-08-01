@@ -272,6 +272,16 @@ export default function AllTurfsPage() {
                                                 ribbon: '🔥 MORNING SLOT • ₹200 OFF • 9AM–10AM',
                                                 strip: '⏰ Early Bird Offer • ₹200 OFF on morning booking'
                                             }
+                                        } else if (turfNameLower.includes('green arena') || turfNameLower.includes('sportzone arena')) {
+                                            promo = {
+                                                ribbon: '⚡ EVENING DEAL • Save 25% OFF',
+                                                strip: '⚽ Peak Hour Offer • Flat 25% OFF on booking'
+                                            }
+                                        } else if (turfNameLower.includes('champion cricket') || turfNameLower.includes('prokick stadium')) {
+                                            promo = {
+                                                ribbon: '🔥 WEEKEND SPECIAL • ₹300 OFF',
+                                                strip: '🏏 Prime Time Deal • ₹300 OFF on pitch booking'
+                                            }
                                         }
 
                                         return (

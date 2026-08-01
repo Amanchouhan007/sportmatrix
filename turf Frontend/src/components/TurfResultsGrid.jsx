@@ -181,7 +181,7 @@ export default function TurfResultsGrid({ turfs, searchValues, recentSearches = 
                         {sortedTurfs.map(turf => {
                             const isGaming = turf.sports.includes('Gaming Zone')
                             
-                            // Check for target promo cards (Indore Sports Arena & Royal Cricket Ground)
+                            // Check for target promo cards (Indore Sports, Royal Cricket, Green Arena, Champion Cricket)
                             const turfNameLower = (turf.name || '').toLowerCase()
                             let promo = null
                             if (turfNameLower.includes('indore sports arena') || turfNameLower.includes('indore sports complex')) {
@@ -193,6 +193,16 @@ export default function TurfResultsGrid({ turfs, searchValues, recentSearches = 
                                 promo = {
                                     ribbon: '🔥 MORNING SLOT • ₹200 OFF • 9AM–10AM',
                                     strip: '⏰ Early Bird Offer • ₹200 OFF on morning booking'
+                                }
+                            } else if (turfNameLower.includes('green arena') || turfNameLower.includes('sportzone arena')) {
+                                promo = {
+                                    ribbon: '⚡ EVENING DEAL • Save 25% OFF',
+                                    strip: '⚽ Peak Hour Offer • Flat 25% OFF on booking'
+                                }
+                            } else if (turfNameLower.includes('champion cricket') || turfNameLower.includes('prokick stadium')) {
+                                promo = {
+                                    ribbon: '🔥 WEEKEND SPECIAL • ₹300 OFF',
+                                    strip: '🏏 Prime Time Deal • ₹300 OFF on pitch booking'
                                 }
                             }
 
