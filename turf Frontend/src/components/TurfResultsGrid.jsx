@@ -180,6 +180,22 @@ export default function TurfResultsGrid({ turfs, searchValues, recentSearches = 
                     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6 xl:gap-8 items-stretch">
                         {sortedTurfs.map(turf => {
                             const isGaming = turf.sports.includes('Gaming Zone')
+                            
+                            // Check for target promo cards (Indore Sports Arena & Royal Cricket Ground)
+                            const turfNameLower = (turf.name || '').toLowerCase()
+                            let promo = null
+                            if (turfNameLower.includes('indore sports arena') || turfNameLower.includes('indore sports complex')) {
+                                promo = {
+                                    ribbon: '⚡ 9AM–10AM OFFER • Save 30% OFF',
+                                    strip: '🎯 Today 9:00 AM – 10:00 AM • Flat 30% OFF'
+                                }
+                            } else if (turfNameLower.includes('royal cricket ground')) {
+                                promo = {
+                                    ribbon: '🔥 MORNING SLOT • ₹200 OFF • 9AM–10AM',
+                                    strip: '⏰ Early Bird Offer • ₹200 OFF on morning booking'
+                                }
+                            }
+
                             return (
                                 <div 
                                     key={turf.id} 
@@ -210,13 +226,26 @@ export default function TurfResultsGrid({ turfs, searchValues, recentSearches = 
                                         />
                                         <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-transparent to-transparent pointer-events-none" />
                                         
+                                        {/* Floating Promotional Ribbon (Top-Left) */}
+                                        {promo && (
+                                            <div 
+                                                className="absolute top-2.5 left-2.5 z-20 font-bold text-[11px] text-white px-3 py-1.5 flex items-center gap-1 leading-none transition-all duration-300 pointer-events-none shadow-[0_0_12px_rgba(0,230,167,0.35)] group-hover:shadow-[0_0_18px_rgba(0,230,167,0.6)]"
+                                                style={{
+                                                    background: 'linear-gradient(135deg, #00E6A7, #00C2FF)',
+                                                    borderRadius: '9999px',
+                                                }}
+                                            >
+                                                {promo.ribbon}
+                                            </div>
+                                        )}
+
                                         {/* Rating Badge */}
                                         <div className="absolute top-3 right-3 bg-slate-950/90 text-amber-400 text-[9px] px-2 py-0.5 rounded font-black flex items-center gap-0.5 shadow-md">
                                             <span>★</span> <span className="text-white">{turf.rating.toFixed(1)}</span>
                                         </div>
 
                                         {/* Sport Category Tags */}
-                                        <div className="absolute bottom-2.5 left-2.5 flex flex-wrap gap-1.5 pointer-events-none">
+                                        <div className={`absolute bottom-2.5 left-2.5 flex flex-wrap gap-1.5 pointer-events-none ${promo ? 'max-w-[70%]' : ''}`}>
                                             {turf.sports.map(sport => {
                                                 const isZone = sport.toLowerCase() === 'gaming zone'
                                                 const bgClass = isZone ? 'bg-purple-600' : 'bg-emerald-600'
@@ -235,10 +264,24 @@ export default function TurfResultsGrid({ turfs, searchValues, recentSearches = 
                                         <h3 className={`text-sm font-black text-white transition-colors uppercase tracking-tight leading-tight truncate ${isGaming ? 'group-hover:text-purple-400' : 'group-hover:text-emerald-400'}`}>
                                             {turf.name}
                                         </h3>
-                                        <p className="text-[11px] text-slate-400 flex items-center gap-1 font-semibold mt-1.5 mb-3">
+                                        <p className="text-[11px] text-slate-400 flex items-center gap-1 font-semibold mt-1.5 mb-2">
                                             <HiLocationMarker className={`w-3.5 h-3.5 shrink-0 ${isGaming ? 'text-purple-500' : 'text-emerald-500'}`} />
                                             <span className="truncate">{turf.location}</span>
                                         </p>
+
+                                        {/* Additional Mini Offer Strip */}
+                                        {promo && (
+                                            <div 
+                                                className="mt-2 mb-2.5 px-2 py-1.5 rounded-lg text-[10px] font-semibold text-[#00E6A7] flex items-center gap-1 leading-tight"
+                                                style={{
+                                                    background: 'rgba(0, 230, 167, 0.12)',
+                                                    border: '1px solid rgba(0, 230, 167, 0.25)',
+                                                    borderRadius: '8px'
+                                                }}
+                                            >
+                                                <span className="truncate">{promo.strip}</span>
+                                            </div>
+                                        )}
 
                                         {/* Action & Price Block */}
                                         <div className="border-t border-white/5 pt-3.5 flex items-center justify-between gap-3 mt-auto">

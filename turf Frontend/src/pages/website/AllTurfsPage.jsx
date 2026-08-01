@@ -259,59 +259,102 @@ export default function AllTurfsPage() {
                                 </div>
                             ) : (
                                 <div className="grid sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
-                                    {filtered.map((t, i) => (
-                                        <div 
-                                            key={t.id} 
-                                             className="group relative bg-white/5 backdrop-blur-3xl border border-white/10 rounded-xl overflow-hidden transition-all duration-700 hover:shadow-[0_40px_80px_-20px_rgba(0,0,0,0.6)] hover:-translate-y-3 flex flex-col h-full cursor-pointer"
-                                            style={{ animationDelay: `${i * 100}ms` }}
-                                            onClick={() => navigate(`/turfs/${t.id}`)}
-                                        >
-                                            {/* Card Image */}
-                                            <div className="relative h-36 overflow-hidden">
-                                                <img src={t.image} alt={t.name} className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-110" />
-                                                <div className="absolute inset-0 bg-gradient-to-t from-[#020617] via-transparent to-transparent opacity-80" />
-                                                
-                                                {/* Top Tags */}
-                                                <div className="absolute top-4 left-4 flex flex-wrap gap-1.5">
-                                                    {t.sports.slice(0, 2).map(s => (
-                                                        <span key={s} className="px-2.5 py-1 bg-white/10 backdrop-blur-xl border border-white/20 text-white text-[8px] font-black uppercase tracking-widest rounded-full shadow-lg">{s}</span>
-                                                    ))}
+                                    {filtered.map((t, i) => {
+                                        const turfNameLower = (t.name || '').toLowerCase()
+                                        let promo = null
+                                        if (turfNameLower.includes('indore sports arena') || turfNameLower.includes('indore sports complex')) {
+                                            promo = {
+                                                ribbon: '⚡ 9AM–10AM OFFER • Save 30% OFF',
+                                                strip: '🎯 Today 9:00 AM – 10:00 AM • Flat 30% OFF'
+                                            }
+                                        } else if (turfNameLower.includes('royal cricket ground')) {
+                                            promo = {
+                                                ribbon: '🔥 MORNING SLOT • ₹200 OFF • 9AM–10AM',
+                                                strip: '⏰ Early Bird Offer • ₹200 OFF on morning booking'
+                                            }
+                                        }
+
+                                        return (
+                                            <div 
+                                                key={t.id} 
+                                                 className="group relative bg-white/5 backdrop-blur-3xl border border-white/10 rounded-xl overflow-hidden transition-all duration-700 hover:shadow-[0_40px_80px_-20px_rgba(0,0,0,0.6)] hover:-translate-y-3 flex flex-col h-full cursor-pointer"
+                                                style={{ animationDelay: `${i * 100}ms` }}
+                                                onClick={() => navigate(`/turfs/${t.id}`)}
+                                            >
+                                                {/* Card Image */}
+                                                <div className="relative h-36 overflow-hidden">
+                                                    <img src={t.image} alt={t.name} className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-110" />
+                                                    <div className="absolute inset-0 bg-gradient-to-t from-[#020617] via-transparent to-transparent opacity-80" />
+                                                    
+                                                    {/* Floating Promotional Ribbon (Top-Left) */}
+                                                    {promo && (
+                                                        <div 
+                                                            className="absolute top-2.5 left-2.5 z-20 font-bold text-[11px] text-white px-3 py-1.5 flex items-center gap-1 leading-none transition-all duration-300 pointer-events-none shadow-[0_0_12px_rgba(0,230,167,0.35)] group-hover:shadow-[0_0_18px_rgba(0,230,167,0.6)]"
+                                                            style={{
+                                                                background: 'linear-gradient(135deg, #00E6A7, #00C2FF)',
+                                                                borderRadius: '9999px',
+                                                            }}
+                                                        >
+                                                            {promo.ribbon}
+                                                        </div>
+                                                    )}
+
+                                                    {/* Top Tags */}
+                                                    <div className={`absolute bottom-3 left-3 flex flex-wrap gap-1.5 ${promo ? 'max-w-[70%]' : ''}`}>
+                                                        {t.sports.slice(0, 2).map(s => (
+                                                            <span key={s} className="px-2.5 py-1 bg-white/10 backdrop-blur-xl border border-white/20 text-white text-[8px] font-black uppercase tracking-widest rounded-full shadow-lg">{s}</span>
+                                                        ))}
+                                                    </div>
+
+                                                    {/* Rating Tag */}
+                                                    <div className="absolute top-4 right-4 flex items-center gap-1 px-2.5 py-1 bg-emerald-500 text-slate-950 font-black text-[10px] rounded-xl shadow-xl shadow-emerald-500/20">
+                                                        <HiStar className="w-3.5 h-3.5 text-slate-950" /> {t.rating}
+                                                    </div>
                                                 </div>
 
-                                                {/* Rating Tag */}
-                                                <div className="absolute top-4 right-4 flex items-center gap-1 px-2.5 py-1 bg-emerald-500 text-slate-950 font-black text-[10px] rounded-xl shadow-xl shadow-emerald-500/20">
-                                                    <HiStar className="w-3.5 h-3.5 text-slate-950" /> {t.rating}
-                                                </div>
-                                            </div>
+                                                {/* Card Content */}
+                                                <div className="p-3.5 flex flex-col flex-grow">
+                                                    <h3 className="text-base font-black text-white mb-1 group-hover:text-emerald-400 transition-colors truncate">{t.name}</h3>
+                                                    <p className="flex items-center gap-1.5 text-white/40 font-bold text-xs mb-1 truncate">
+                                                        <HiLocationMarker className="w-3.5 h-3.5 text-emerald-500" /> {t.location}
+                                                    </p>
 
-                                            {/* Card Content */}
-                                            <div className="p-3.5 flex flex-col flex-grow">
-                                                <h3 className="text-base font-black text-white mb-1 group-hover:text-emerald-400 transition-colors truncate">{t.name}</h3>
-                                                <p className="flex items-center gap-1.5 text-white/40 font-bold text-xs mb-auto truncate">
-                                                    <HiLocationMarker className="w-3.5 h-3.5 text-emerald-500" /> {t.location}
-                                                </p>
+                                                    {/* Additional Mini Offer Strip */}
+                                                    {promo && (
+                                                        <div 
+                                                            className="mt-2 mb-2 px-2 py-1.5 rounded-lg text-[10px] font-semibold text-[#00E6A7] flex items-center gap-1 leading-tight"
+                                                            style={{
+                                                                background: 'rgba(0, 230, 167, 0.12)',
+                                                                border: '1px solid rgba(0, 230, 167, 0.25)',
+                                                                borderRadius: '8px'
+                                                            }}
+                                                        >
+                                                            <span className="truncate">{promo.strip}</span>
+                                                        </div>
+                                                    )}
 
-                                                {/* Pricing & CTA */}
-                                                <div className="flex items-center justify-between mt-4 pt-4 border-t border-white/5">
-                                                    <div className="flex flex-col">
-                                                        <span className="text-[8px] font-black text-white/30 uppercase tracking-widest mb-0.5">Starting At</span>
-                                                        <div>
-                                                            <span className="text-xl font-black text-white">₹{t.price}</span>
-                                                            <span className="text-white/30 text-[10px] font-bold ml-0.5">/hr</span>
+                                                    {/* Pricing & CTA */}
+                                                    <div className="flex items-center justify-between mt-auto pt-4 border-t border-white/5">
+                                                        <div className="flex flex-col">
+                                                            <span className="text-[8px] font-black text-white/30 uppercase tracking-widest mb-0.5">Starting At</span>
+                                                            <div>
+                                                                <span className="text-xl font-black text-white">₹{t.price}</span>
+                                                                <span className="text-white/30 text-[10px] font-bold ml-0.5">/hr</span>
+                                                            </div>
+                                                        </div>
+                                                        <div className="flex gap-2">
+                                                            <button 
+                                                                onClick={(e) => { e.stopPropagation(); navigate(`/booking/${t.id}`) }} 
+                                                                className="flex items-center gap-1 px-4 py-2.5 bg-emerald-500 text-slate-950 font-black uppercase tracking-wider text-[9px] rounded-xl hover:bg-emerald-400 transition-all active:scale-95 group/btn shadow-lg"
+                                                            >
+                                                                Book Now <HiArrowRight className="w-3.5 h-3.5 group-hover/btn:translate-x-0.5 transition-transform" />
+                                                            </button>
                                                         </div>
                                                     </div>
-                                                    <div className="flex gap-2">
-                                                        <button 
-                                                            onClick={(e) => { e.stopPropagation(); navigate(`/booking/${t.id}`) }} 
-                                                            className="flex items-center gap-1 px-4 py-2.5 bg-emerald-500 text-slate-950 font-black uppercase tracking-wider text-[9px] rounded-xl hover:bg-emerald-400 transition-all active:scale-95 group/btn shadow-lg"
-                                                        >
-                                                            Book Now <HiArrowRight className="w-3.5 h-3.5 group-hover/btn:translate-x-0.5 transition-transform" />
-                                                        </button>
-                                                    </div>
                                                 </div>
                                             </div>
-                                        </div>
-                                    ))}
+                                        )
+                                    })}
                                 </div>
                             )}
                         </div>
