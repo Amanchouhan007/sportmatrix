@@ -33,7 +33,7 @@ const modulesData = {
             'Payment Logs & Dispute Resolution',
         ],
     },
-    'Owner Admin': {
+    'Admin Panel': {
         description:
             'Complete business control for facility owners including sports, slots, bookings, tournaments, and analytics.',
         items: [

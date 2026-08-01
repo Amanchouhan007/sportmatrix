@@ -23,8 +23,8 @@ const roles = [
         ],
     },
     {
-        title: 'Owner / Admin',
-        subtitle: 'Branch Business Owner',
+        title: 'Admin',
+        subtitle: 'Branch & Facility Owner',
         tint: 'from-rose-500/15 to-rose-500/5',
         borderHover: 'hover:border-rose-500/30',
         accent: 'text-rose-400',

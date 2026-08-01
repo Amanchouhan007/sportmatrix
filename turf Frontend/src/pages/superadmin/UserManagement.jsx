@@ -6,11 +6,12 @@ import ConfirmDialog from '../../components/ui/ConfirmDialog'
 import { useToast } from '../../components/ui/Toast'
 
 const initialUsers = [
-    { id: 1, name: 'Rajesh Kumar', email: 'rajesh@email.com', role: 'Owner', joined: 'Jan 12, 2026', status: 'Active' },
-    { id: 2, name: 'Priya Sharma', email: 'priya@email.com', role: 'Customer', joined: 'Feb 3, 2026', status: 'Active' },
+    { id: 1, name: 'Hitesha Borase', email: 'superadmin@gmail.com', role: 'Super Admin', joined: 'Jan 01, 2026', status: 'Active' },
+    { id: 2, name: 'Rajesh Kumar', email: 'rajesh@email.com', role: 'Admin', joined: 'Jan 12, 2026', status: 'Active' },
     { id: 3, name: 'Arjun Mehta', email: 'arjun@email.com', role: 'Staff', joined: 'Feb 15, 2026', status: 'Active' },
-    { id: 4, name: 'Sneha Reddy', email: 'sneha@email.com', role: 'Customer', joined: 'Jan 28, 2026', status: 'Suspended' },
-    { id: 5, name: 'Vikram Singh', email: 'vikram@email.com', role: 'Owner', joined: 'Dec 5, 2025', status: 'Active' },
+    { id: 4, name: 'Priya Sharma', email: 'priya@email.com', role: 'Customer', joined: 'Feb 3, 2026', status: 'Active' },
+    { id: 5, name: 'Sneha Reddy', email: 'sneha@email.com', role: 'Customer', joined: 'Jan 28, 2026', status: 'Suspended' },
+    { id: 6, name: 'Vikram Singh', email: 'vikram@email.com', role: 'Admin', joined: 'Dec 5, 2025', status: 'Active' },
 ]
 
 export default function UserManagement() {
@@ -43,7 +44,7 @@ export default function UserManagement() {
         ? users 
         : users.filter(u => u.role === activeTab)
 
-    const tabs = ['All', 'Owner', 'Customer', 'Staff']
+    const tabs = ['All', 'Super Admin', 'Admin', 'Staff', 'Customer']
 
     const columns = [
         { key: 'name', label: 'Name' }, 
@@ -52,7 +53,7 @@ export default function UserManagement() {
             key: 'role', 
             label: 'Role', 
             render: v => (
-                <Badge variant={v === 'Owner' ? 'primary' : v === 'Staff' ? 'accent' : 'secondary'}>
+                <Badge variant={v === 'Super Admin' ? 'purple' : v === 'Admin' ? 'primary' : v === 'Staff' ? 'accent' : 'secondary'}>
                     {v}
                 </Badge>
             )

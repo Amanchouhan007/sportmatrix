@@ -4,7 +4,7 @@ import { HiMenu, HiX, HiLogout, HiBell, HiSearch } from 'react-icons/hi'
 import sidebarConfig from '../config/sidebarConfig'
 import { useAuth } from '../context/AuthContext'
 
-const roleLabels = { superadmin: 'Super Admin', owner: 'Owner / Admin', staff: 'Staff', customer: 'Customer' }
+const roleLabels = { superadmin: 'Super Admin', owner: 'Admin', staff: 'Staff', customer: 'Customer' }
 
 const roleNotifications = {
     superadmin: [

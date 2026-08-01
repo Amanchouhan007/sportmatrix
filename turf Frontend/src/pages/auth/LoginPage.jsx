@@ -183,7 +183,7 @@ export default function LoginPage() {
                         <div className="pt-2">
                             <label className="block text-xs font-bold uppercase tracking-widest text-slate-500 mb-2.5">Login as</label>
                             <div className="grid grid-cols-2 gap-3">
-                                {[{ k: 'owner', l: 'Owner' }, { k: 'staff', l: 'Staff' }, { k: 'customer', l: 'Customer' }, { k: 'superadmin', l: 'Admin' }].map((r) => (
+                                {[{ k: 'superadmin', l: 'Super Admin' }, { k: 'owner', l: 'Admin' }, { k: 'staff', l: 'Staff' }, { k: 'customer', l: 'Customer' }].map((r) => (
                                     <button 
                                         key={r.k} 
                                         type="button" 
