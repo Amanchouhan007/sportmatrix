@@ -127,6 +127,61 @@ export default function TurfResultsGrid({ turfs, searchValues, recentSearches = 
                     </div>
                 )}
 
+                {/* ── Live Current Tournament Announcement Bar ── */}
+                <div 
+                    className="w-full h-[48px] md:h-[56px] mt-2 mb-8 px-[18px] flex items-center gap-[14px] overflow-hidden rounded-[18px] relative z-20 group"
+                    style={{
+                        background: 'rgba(8, 15, 35, 0.72)',
+                        border: '1px solid rgba(0, 230, 167, 0.18)',
+                        backdropFilter: 'blur(14px)',
+                        WebkitBackdropFilter: 'blur(14px)',
+                        boxShadow: '0 0 18px rgba(0, 230, 167, 0.08)'
+                    }}
+                >
+                    {/* Left Live Badge */}
+                    <div 
+                        className="h-[32px] px-[14px] rounded-full flex items-center justify-center font-bold text-[12px] text-white tracking-[0.4px] shrink-0 select-none shadow-[0_0_12px_rgba(0,230,167,0.35)]"
+                        style={{
+                            background: 'linear-gradient(135deg, #00E6A7, #00C2FF)'
+                        }}
+                    >
+                        <span className="relative flex h-2 w-2 mr-2 shrink-0">
+                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                            <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
+                        </span>
+                        <span className="whitespace-nowrap">🔴 LIVE TOURNAMENT</span>
+                    </div>
+
+                    {/* Center Marquee / Ticker Headline */}
+                    <div className="flex-1 overflow-hidden relative flex items-center h-full">
+                        <div 
+                            className="whitespace-nowrap flex items-center gap-6 text-[13px] md:text-[15px] font-semibold text-white animate-marquee"
+                        >
+                            {/* Desktop Headline */}
+                            <span className="hidden md:inline-flex items-center gap-1.5">
+                                <span className="text-[#00E6A7] font-bold">Indore Premier Turf League 2026</span> is currently running • <span className="text-[#00E6A7] font-bold">Finals Today</span> at <span className="text-[#00E6A7] font-bold">8:00 PM</span>
+                            </span>
+
+                            {/* Mobile Headline */}
+                            <span className="md:hidden inline-flex items-center gap-1 text-[13px]">
+                                <span className="text-[#00E6A7] font-bold">Indore Premier Turf League 2026</span> • <span className="text-[#00E6A7] font-bold">Finals Today 8:00 PM</span>
+                            </span>
+                        </div>
+                    </div>
+
+                    {/* Right Side CTA Button */}
+                    <button 
+                        onClick={() => navigate('/dashboard/customer/tournaments')}
+                        className="hidden md:flex h-[34px] px-[14px] rounded-[10px] items-center justify-center font-bold text-[12px] text-[#00E6A7] shrink-0 transition-all duration-300 cursor-pointer hover:bg-[#00E6A7] hover:text-[#04121F] hover:shadow-[0_0_15px_rgba(0,230,167,0.4)]"
+                        style={{
+                            background: 'rgba(0, 230, 167, 0.12)',
+                            border: '1px solid rgba(0, 230, 167, 0.28)'
+                        }}
+                    >
+                        VIEW BRACKET
+                    </button>
+                </div>
+
                 {/* ── Header & Filters Bar ── */}
                 <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-6 mb-10 border-b border-white/5 pb-6">
                     <div className="flex flex-col md:flex-row md:items-center gap-6 flex-1">
