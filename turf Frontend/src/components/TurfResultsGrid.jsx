@@ -239,18 +239,18 @@ export default function TurfResultsGrid({ turfs, searchValues, recentSearches = 
                                         {/* Floating Promotional Ribbon (Top-Left) */}
                                         {promo && (
                                             <div 
-                                                className="absolute top-2.5 left-2.5 z-20 font-bold text-[11px] text-white px-3 py-1.5 flex items-center gap-1 leading-none transition-all duration-300 pointer-events-none shadow-[0_0_12px_rgba(0,230,167,0.35)] group-hover:shadow-[0_0_18px_rgba(0,230,167,0.6)]"
+                                                className="absolute top-3 left-3 z-10 max-w-[calc(100%-90px)] font-bold text-[11px] text-white px-3 py-1.5 flex items-center gap-1 leading-none transition-all duration-300 pointer-events-none shadow-[0_0_12px_rgba(0,230,167,0.35)] group-hover:shadow-[0_0_18px_rgba(0,230,167,0.6)] truncate"
                                                 style={{
                                                     background: 'linear-gradient(135deg, #00E6A7, #00C2FF)',
                                                     borderRadius: '9999px',
                                                 }}
                                             >
-                                                {promo.ribbon}
+                                                <span className="truncate">{promo.ribbon}</span>
                                             </div>
                                         )}
 
-                                        {/* Rating Badge */}
-                                        <div className="absolute top-3 right-3 bg-slate-950/90 text-amber-400 text-[9px] px-2 py-0.5 rounded font-black flex items-center gap-0.5 shadow-md">
+                                        {/* Rating Badge (Top-Right) */}
+                                        <div className="absolute top-3 right-3 z-20 min-w-[48px] bg-slate-950/90 text-amber-400 text-[9px] px-2 py-1 rounded font-black flex items-center justify-center gap-0.5 shadow-md">
                                             <span>★</span> <span className="text-white">{turf.rating.toFixed(1)}</span>
                                         </div>
 

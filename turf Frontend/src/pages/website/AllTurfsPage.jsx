@@ -299,13 +299,13 @@ export default function AllTurfsPage() {
                                                     {/* Floating Promotional Ribbon (Top-Left) */}
                                                     {promo && (
                                                         <div 
-                                                            className="absolute top-2.5 left-2.5 z-20 font-bold text-[11px] text-white px-3 py-1.5 flex items-center gap-1 leading-none transition-all duration-300 pointer-events-none shadow-[0_0_12px_rgba(0,230,167,0.35)] group-hover:shadow-[0_0_18px_rgba(0,230,167,0.6)]"
+                                                            className="absolute top-3 left-3 z-10 max-w-[calc(100%-90px)] font-bold text-[11px] text-white px-3 py-1.5 flex items-center gap-1 leading-none transition-all duration-300 pointer-events-none shadow-[0_0_12px_rgba(0,230,167,0.35)] group-hover:shadow-[0_0_18px_rgba(0,230,167,0.6)] truncate"
                                                             style={{
                                                                 background: 'linear-gradient(135deg, #00E6A7, #00C2FF)',
                                                                 borderRadius: '9999px',
                                                             }}
                                                         >
-                                                            {promo.ribbon}
+                                                            <span className="truncate">{promo.ribbon}</span>
                                                         </div>
                                                     )}
 
@@ -316,8 +316,8 @@ export default function AllTurfsPage() {
                                                         ))}
                                                     </div>
 
-                                                    {/* Rating Tag */}
-                                                    <div className="absolute top-4 right-4 flex items-center gap-1 px-2.5 py-1 bg-emerald-500 text-slate-950 font-black text-[10px] rounded-xl shadow-xl shadow-emerald-500/20">
+                                                    {/* Rating Tag (Top-Right) */}
+                                                    <div className="absolute top-3 right-3 z-20 min-w-[48px] flex items-center justify-center gap-1 px-2.5 py-1 bg-emerald-500 text-slate-950 font-black text-[10px] rounded-xl shadow-xl shadow-emerald-500/20">
                                                         <HiStar className="w-3.5 h-3.5 text-slate-950" /> {t.rating}
                                                     </div>
                                                 </div>
