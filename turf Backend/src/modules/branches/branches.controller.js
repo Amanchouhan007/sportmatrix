@@ -121,7 +121,12 @@ const getBranchById = async (req, res) => {
  * Create a new branch
  */
 const createBranch = async (req, res) => {
-    const { branchName, description, ownerId, subscriptionPlanId, city, zipCode, fullAddress, email, mobile } = req.body;
+    const { 
+        branchName, description, ownerId, subscriptionPlanId, 
+        country, state, city, zipCode, fullAddress, 
+        email, mobile, alternateMobile, gstNumber, 
+        timezone, currency, logo 
+    } = req.body;
 
     if (!branchName || !email) {
         return res.status(400).json({
@@ -134,21 +139,46 @@ const createBranch = async (req, res) => {
         const branchId = 'br_' + Date.now();
         const branchCode = 'BR-' + Math.floor(1000 + Math.random() * 9000);
 
+        let validOwnerId = null;
+        if (ownerId) {
+            const [userCheck] = await db.query('SELECT id FROM users WHERE id = ?', [ownerId]);
+            if (userCheck.length > 0) {
+                validOwnerId = ownerId;
+            } else {
+                const [firstOwner] = await db.query("SELECT id FROM users WHERE role IN ('OWNER', 'SUPER_ADMIN') LIMIT 1");
+                validOwnerId = firstOwner.length > 0 ? firstOwner[0].id : null;
+            }
+        } else {
+            const [firstOwner] = await db.query("SELECT id FROM users WHERE role IN ('OWNER', 'SUPER_ADMIN') LIMIT 1");
+            validOwnerId = firstOwner.length > 0 ? firstOwner[0].id : null;
+        }
+
         await db.query(`
-            INSERT INTO branches (id, branch_name, branch_code, description, owner_id, subscription_plan_id, city, zip_code, full_address, email, mobile, status)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'ACTIVE')
+            INSERT INTO branches (
+                id, branch_name, branch_code, description, owner_id, subscription_plan_id,
+                country, state, city, zip_code, full_address, email, mobile, alternate_mobile,
+                gst_number, timezone, currency, logo, status
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'ACTIVE')
         `, [
             branchId,
             branchName,
             branchCode,
             description || '',
-            ownerId || req.user?.id || 'own_001',
+            validOwnerId,
             subscriptionPlanId || 'plan_starter',
+            country || 'India',
+            state || '',
             city || '',
             zipCode || '',
             fullAddress || '',
             email,
-            mobile || ''
+            mobile || '',
+            alternateMobile || '',
+            gstNumber || '',
+            timezone || 'Asia/Kolkata',
+            currency || 'INR',
+            logo || ''
         ]);
 
         return res.status(201).json({
@@ -160,7 +190,7 @@ const createBranch = async (req, res) => {
         console.error('Create branch error:', error);
         return res.status(500).json({
             success: false,
-            message: 'Internal Server Error creating branch.'
+            message: 'Internal Server Error creating branch: ' + error.message
         });
     }
 };

@@ -287,17 +287,34 @@ export default function BranchManagement() {
 
     // Submit Create/Edit Form
     const handleSave = async () => {
-        // Validation check
-        if (!formData.branchName.trim() || !formData.ownerId || !formData.subscriptionPlanId || !formData.email.trim() || !formData.mobile.trim()) {
-            addToast({ title: 'Required Fields', message: 'Please fill in all mandatory fields (*)', type: 'error' })
+        const finalOwnerId = formData.ownerId || owners[0]?._id || owners[0]?.id || 'own_001'
+        const finalPlanId = formData.subscriptionPlanId || subscriptionPlans[0]?._id || 'plan_starter'
+
+        // Validation check for mandatory inputs
+        if (!formData.branchName.trim()) {
+            addToast({ title: 'Required Field', message: 'Please enter a Branch Name', type: 'error' })
             return
+        }
+        if (!formData.email.trim()) {
+            addToast({ title: 'Required Field', message: 'Please enter an Email Address', type: 'error' })
+            return
+        }
+        if (!formData.mobile.trim()) {
+            addToast({ title: 'Required Field', message: 'Please enter a Mobile Number', type: 'error' })
+            return
+        }
+
+        const payload = {
+            ...formData,
+            ownerId: finalOwnerId,
+            subscriptionPlanId: finalPlanId
         }
 
         try {
             setIsSubmitLoading(true)
 
             if (editingBranch) {
-                const res = await updateBranch(editingBranch._id, formData)
+                const res = await updateBranch(editingBranch._id, payload)
                 if (res.success) {
                     addToast({ title: 'Updated', message: 'Branch updated successfully', type: 'success' })
                     setModal(false)
@@ -305,7 +322,7 @@ export default function BranchManagement() {
                     loadStats()
                 }
             } else {
-                const res = await createBranch(formData)
+                const res = await createBranch(payload)
                 if (res.success) {
                     addToast({ title: 'Created', message: 'New branch added successfully', type: 'success' })
                     setModal(false)
