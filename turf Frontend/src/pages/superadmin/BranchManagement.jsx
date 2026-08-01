@@ -126,7 +126,14 @@ export default function BranchManagement() {
                     getOwners({ limit: 1000 }),
                     getAllPlans()
                 ])
-                setOwners(ownersRes.data?.owners || [])
+                const rawOwners = ownersRes.data?.owners || []
+                const normalizedOwners = rawOwners.map(o => ({
+                    ...o,
+                    _id: o._id || o.id,
+                    fullName: o.fullName || o.name || o.ownerName || 'Owner',
+                    email: o.email || ''
+                }))
+                setOwners(normalizedOwners)
                 setSubscriptionPlans(plansRes.data || [])
             } catch (error) {
                 console.error('Error fetching configuration dropdowns:', error)
@@ -222,7 +229,7 @@ export default function BranchManagement() {
                 if (res.success) {
                     const fullBranch = res.data
                     setEditingBranch(fullBranch)
-                    setOwnerSearchText(fullBranch.ownerId?.fullName || '')
+                    setOwnerSearchText(fullBranch.ownerId?.fullName || fullBranch.ownerId?.name || '')
                     setFormData({
                         branchName: fullBranch.branchName || '',
                         branchCode: fullBranch.branchCode || '',
@@ -556,7 +563,7 @@ export default function BranchManagement() {
                         onChange={e => { setSelectedOwnerId(e.target.value); setPage(1); }}
                         options={[
                             { value: 'ALL', label: 'All Owners' },
-                            ...owners.map(o => ({ value: o._id, label: o.fullName }))
+                            ...owners.map(o => ({ value: o._id || o.id, label: o.fullName || o.name || 'Owner' }))
                         ]}
                         className="w-48"
                     />
@@ -822,28 +829,39 @@ export default function BranchManagement() {
                             {showOwnerDropdown && (
                                 <div className="absolute z-50 w-full mt-1.5 bg-white border border-surface-200 rounded-xl shadow-lg max-h-48 overflow-y-auto divide-y divide-surface-100 backdrop-blur-md">
                                     {owners
-                                        .filter(o => 
-                                            o.fullName.toLowerCase().includes(ownerSearchText.toLowerCase()) ||
-                                            o.email.toLowerCase().includes(ownerSearchText.toLowerCase())
-                                        )
-                                        .map(o => (
-                                            <div
-                                                key={o._id}
-                                                onClick={() => {
-                                                    setOwnerSearchText(o.fullName);
-                                                    setFormData(prev => ({ ...prev, ownerId: o._id }));
-                                                    setShowOwnerDropdown(false);
-                                                }}
-                                                className="px-4 py-2.5 text-sm text-surface-700 hover:bg-primary-50 hover:text-primary-700 cursor-pointer transition-colors"
-                                            >
-                                                <div className="font-semibold">{o.fullName}</div>
-                                                <div className="text-xs text-surface-400 mt-0.5">{o.email}</div>
-                                            </div>
-                                        ))}
-                                    {owners.filter(o => 
-                                        o.fullName.toLowerCase().includes(ownerSearchText.toLowerCase()) ||
-                                        o.email.toLowerCase().includes(ownerSearchText.toLowerCase())
-                                    ).length === 0 && (
+                                        .filter(o => {
+                                            const nameStr = String(o?.fullName || o?.name || o?.ownerName || '').toLowerCase()
+                                            const emailStr = String(o?.email || '').toLowerCase()
+                                            const queryStr = String(ownerSearchText || '').toLowerCase()
+                                            return nameStr.includes(queryStr) || emailStr.includes(queryStr)
+                                        })
+                                        .map(o => {
+                                            const ownerIdVal = o?._id || o?.id
+                                            const ownerNameStr = o?.fullName || o?.name || o?.ownerName || 'Owner'
+                                            const ownerEmailStr = o?.email || ''
+
+                                            return (
+                                                <div
+                                                    key={ownerIdVal || Math.random()}
+                                                    onMouseDown={(e) => {
+                                                        e.preventDefault()
+                                                        setOwnerSearchText(ownerNameStr)
+                                                        setFormData(prev => ({ ...prev, ownerId: ownerIdVal }))
+                                                        setShowOwnerDropdown(false)
+                                                    }}
+                                                    className="px-4 py-2.5 text-sm text-surface-700 hover:bg-primary-50 hover:text-primary-700 cursor-pointer transition-colors"
+                                                >
+                                                    <div className="font-semibold">{ownerNameStr}</div>
+                                                    {ownerEmailStr && <div className="text-xs text-surface-400 mt-0.5">{ownerEmailStr}</div>}
+                                                </div>
+                                            )
+                                        })}
+                                    {owners.filter(o => {
+                                        const nameStr = String(o?.fullName || o?.name || o?.ownerName || '').toLowerCase()
+                                        const emailStr = String(o?.email || '').toLowerCase()
+                                        const queryStr = String(ownerSearchText || '').toLowerCase()
+                                        return nameStr.includes(queryStr) || emailStr.includes(queryStr)
+                                    }).length === 0 && (
                                         <div className="px-4 py-3 text-sm text-surface-400 text-center font-medium">No owners found</div>
                                     )}
                                 </div>
