@@ -23,6 +23,7 @@ async function initializeDatabase() {
 
         // 2. Select Database
         await connection.query(`USE \`${dbName}\`;`);
+        await connection.query(`SET FOREIGN_KEY_CHECKS = 0;`);
 
         // 3. Create Tables
         console.log('Creating tables...');
@@ -181,24 +182,53 @@ async function initializeDatabase() {
             );
         `);
 
+        // Tournament Categories
+        await connection.query(`
+            CREATE TABLE IF NOT EXISTS tournament_categories (
+                id VARCHAR(50) PRIMARY KEY,
+                name VARCHAR(100) NOT NULL UNIQUE,
+                description TEXT,
+                status ENUM('ACTIVE', 'INACTIVE') DEFAULT 'ACTIVE',
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+        `);
+
         // Tournaments
         await connection.query(`
             CREATE TABLE IF NOT EXISTS tournaments (
                 id VARCHAR(50) PRIMARY KEY,
                 branch_id VARCHAR(50) NOT NULL,
                 title VARCHAR(150) NOT NULL,
-                description TEXT,
+                banner VARCHAR(255),
                 sport_id VARCHAR(50) NOT NULL,
+                category_id VARCHAR(50),
+                description TEXT,
+                rules TEXT,
+                court_name VARCHAR(100) DEFAULT 'Court A',
                 start_date DATE NOT NULL,
                 end_date DATE NOT NULL,
-                registration_fee INT DEFAULT 0,
+                registration_last_date DATE,
                 max_teams INT DEFAULT 16,
+                min_teams INT DEFAULT 4,
+                entry_fee INT DEFAULT 0,
+                winner_prize INT DEFAULT 0,
+                runner_prize INT DEFAULT 0,
+                third_prize INT DEFAULT 0,
                 prize_pool VARCHAR(150),
-                status ENUM('Upcoming', 'Active', 'Completed', 'Cancelled') DEFAULT 'Upcoming',
+                format ENUM('Knockout', 'League', 'League + Knockout') DEFAULT 'Knockout',
+                match_duration INT DEFAULT 60,
+                skill_level ENUM('Beginner', 'Intermediate', 'Advanced', 'Open') DEFAULT 'Open',
+                age_limit VARCHAR(50) DEFAULT 'Open',
+                gender ENUM('Men', 'Women', 'Mixed', 'All') DEFAULT 'All',
+                status ENUM('Draft', 'Pending Approval', 'Approved', 'Rejected', 'Completed', 'Cancelled', 'Suspended') DEFAULT 'Draft',
+                owner_remarks TEXT,
+                created_by VARCHAR(50),
+                approved_by VARCHAR(50),
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
                 FOREIGN KEY (branch_id) REFERENCES branches(id) ON DELETE CASCADE,
                 FOREIGN KEY (sport_id) REFERENCES sports(id) ON DELETE CASCADE
-            );
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
         `);
 
         // Teams (Tournament Participants)
@@ -207,13 +237,150 @@ async function initializeDatabase() {
                 id VARCHAR(50) PRIMARY KEY,
                 tournament_id VARCHAR(50) NOT NULL,
                 team_name VARCHAR(100) NOT NULL,
+                logo VARCHAR(255),
                 captain_name VARCHAR(100) NOT NULL,
                 captain_email VARCHAR(100) NOT NULL,
                 captain_mobile VARCHAR(20) NOT NULL,
-                status ENUM('PENDING', 'CONFIRMED', 'CANCELLED') DEFAULT 'CONFIRMED',
+                jersey_color VARCHAR(50) DEFAULT 'Blue',
+                payment_status ENUM('PENDING', 'PAID', 'REFUNDED') DEFAULT 'PAID',
+                payment_method ENUM('ONLINE', 'WALLET', 'CASH', 'UPI') DEFAULT 'UPI',
+                status ENUM('Pending', 'Approved', 'Rejected') DEFAULT 'Approved',
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 FOREIGN KEY (tournament_id) REFERENCES tournaments(id) ON DELETE CASCADE
-            );
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+        `);
+
+        // Team Players Roster
+        await connection.query(`
+            CREATE TABLE IF NOT EXISTS team_players (
+                id VARCHAR(50) PRIMARY KEY,
+                team_id VARCHAR(50) NOT NULL,
+                player_name VARCHAR(100) NOT NULL,
+                mobile VARCHAR(20),
+                jersey_number INT DEFAULT 10,
+                role VARCHAR(50) DEFAULT 'Player',
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (team_id) REFERENCES teams(id) ON DELETE CASCADE
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+        `);
+
+        // Fixtures / Matches
+        await connection.query(`
+            CREATE TABLE IF NOT EXISTS fixtures (
+                id VARCHAR(50) PRIMARY KEY,
+                tournament_id VARCHAR(50) NOT NULL,
+                round_name VARCHAR(100) NOT NULL,
+                match_number INT DEFAULT 1,
+                team1_id VARCHAR(50),
+                team2_id VARCHAR(50),
+                winner_team_id VARCHAR(50),
+                team1_score INT DEFAULT 0,
+                team2_score INT DEFAULT 0,
+                scheduled_date DATE,
+                scheduled_time TIME,
+                court_name VARCHAR(100) DEFAULT 'Main Turf',
+                slot_id VARCHAR(50),
+                status ENUM('Scheduled', 'Live', 'Completed', 'Cancelled') DEFAULT 'Scheduled',
+                yellow_cards INT DEFAULT 0,
+                red_cards INT DEFAULT 0,
+                remarks TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (tournament_id) REFERENCES tournaments(id) ON DELETE CASCADE
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+        `);
+
+        // Match Detailed Scores
+        await connection.query(`
+            CREATE TABLE IF NOT EXISTS match_scores (
+                id VARCHAR(50) PRIMARY KEY,
+                match_id VARCHAR(50) NOT NULL,
+                team_id VARCHAR(50) NOT NULL,
+                points_or_goals INT DEFAULT 0,
+                overs_or_minutes VARCHAR(50),
+                notes TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (match_id) REFERENCES fixtures(id) ON DELETE CASCADE
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+        `);
+
+        // Tournament Leaderboard Standings
+        await connection.query(`
+            CREATE TABLE IF NOT EXISTS leaderboards (
+                id VARCHAR(50) PRIMARY KEY,
+                tournament_id VARCHAR(50) NOT NULL,
+                team_id VARCHAR(50) NOT NULL,
+                matches_played INT DEFAULT 0,
+                wins INT DEFAULT 0,
+                losses INT DEFAULT 0,
+                draws INT DEFAULT 0,
+                goals_for INT DEFAULT 0,
+                goals_against INT DEFAULT 0,
+                goal_difference INT DEFAULT 0,
+                points INT DEFAULT 0,
+                rank_position INT DEFAULT 1,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                FOREIGN KEY (tournament_id) REFERENCES tournaments(id) ON DELETE CASCADE,
+                FOREIGN KEY (team_id) REFERENCES teams(id) ON DELETE CASCADE
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+        `);
+
+        // Tournament Sponsors
+        await connection.query(`
+            CREATE TABLE IF NOT EXISTS tournament_sponsors (
+                id VARCHAR(50) PRIMARY KEY,
+                tournament_id VARCHAR(50),
+                company_name VARCHAR(150) NOT NULL,
+                tier ENUM('Bronze', 'Silver', 'Gold', 'Platinum') DEFAULT 'Gold',
+                logo VARCHAR(255),
+                website VARCHAR(255),
+                package_amount INT DEFAULT 0,
+                status ENUM('ACTIVE', 'INACTIVE') DEFAULT 'ACTIVE',
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+        `);
+
+        // Tournament Payments & Invoices
+        await connection.query(`
+            CREATE TABLE IF NOT EXISTS tournament_payments (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                tournament_id VARCHAR(50) NOT NULL,
+                team_id VARCHAR(50),
+                sponsor_id VARCHAR(50),
+                transaction_type ENUM('Entry Fee', 'Sponsor Payment', 'Platform Commission', 'Prize Payout', 'Refund') NOT NULL,
+                invoice_number VARCHAR(50) NOT NULL,
+                payer_name VARCHAR(100) NOT NULL,
+                amount INT NOT NULL,
+                commission_amount INT DEFAULT 0,
+                payment_method ENUM('UPI', 'CASH', 'CARD', 'WALLET') DEFAULT 'UPI',
+                status ENUM('PENDING', 'COMPLETED', 'REFUNDED') DEFAULT 'COMPLETED',
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+        `);
+
+        // Tournament Notifications Log
+        await connection.query(`
+            CREATE TABLE IF NOT EXISTS tournament_notifications (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                user_id VARCHAR(50),
+                tournament_id VARCHAR(50),
+                type ENUM('Approved', 'Rejected', 'Registration', 'Reminder', 'Winner', 'General') DEFAULT 'General',
+                title VARCHAR(150) NOT NULL,
+                message TEXT NOT NULL,
+                is_read BOOLEAN DEFAULT FALSE,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+        `);
+
+        // Tournament System Settings
+        await connection.query(`
+            CREATE TABLE IF NOT EXISTS tournament_settings (
+                id VARCHAR(50) PRIMARY KEY,
+                platform_commission_percentage FLOAT DEFAULT 10.0,
+                auto_lock_slots BOOLEAN DEFAULT TRUE,
+                allow_staff_create BOOLEAN DEFAULT TRUE,
+                notify_on_approval BOOLEAN DEFAULT TRUE,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
         `);
 
         // Wallet Transactions
@@ -258,6 +425,28 @@ async function initializeDatabase() {
                 purchase_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 FOREIGN KEY (inventory_id) REFERENCES inventory(id) ON DELETE CASCADE
             );
+        `);
+
+        // Turfs (For Nearby Search feature)
+        await connection.query(`
+            CREATE TABLE IF NOT EXISTS turfs (
+                id VARCHAR(50) PRIMARY KEY,
+                name VARCHAR(150) NOT NULL,
+                slug VARCHAR(150),
+                address TEXT,
+                city VARCHAR(100),
+                latitude DECIMAL(10, 8),
+                longitude DECIMAL(11, 8),
+                price INT DEFAULT 0,
+                rating DECIMAL(2, 1) DEFAULT 0.0,
+                sports JSON,
+                amenities JSON,
+                opening_time TIME DEFAULT '06:00:00',
+                closing_time TIME DEFAULT '23:00:00',
+                status ENUM('ACTIVE', 'INACTIVE') DEFAULT 'ACTIVE',
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
         `);
 
         console.log('Tables created/verified successfully.');
@@ -375,6 +564,21 @@ async function initializeDatabase() {
                 ('item_001', 12, 1000, 'Sports Solutions Indore'),
                 ('item_002', 3, 900, 'Dechatlon Indore'),
                 ('item_003', 8, 200, 'Yonex Distributors');
+            `);
+
+            console.log('Seeding mock turfs...');
+            await connection.query(`
+                INSERT INTO turfs (id, name, slug, address, city, latitude, longitude, price, rating, sports, amenities, opening_time, closing_time) VALUES
+                ('turf_1', 'Green Arena Football Turf', 'green-arena', 'Andheri West, Mumbai', 'Mumbai', 19.1136, 72.8697, 1200, 4.8, '["Football"]', '["Floodlights", "Parking", "Washroom"]', '06:00:00', '23:00:00'),
+                ('turf_2', 'Champion Cricket Academy', 'champion-cricket', 'Koramangala, Bangalore', 'Bangalore', 12.9352, 77.6245, 1500, 4.9, '["Cricket"]', '["Floodlights", "Seating", "Drinking Water"]', '06:00:00', '22:00:00'),
+                ('turf_4', 'Elite Sports Complex', 'elite-sports', 'Whitefield, Bangalore', 'Bangalore', 12.9698, 77.7500, 2000, 4.6, '["Football", "Cricket"]', '["Floodlights", "Parking", "Seating", "Washroom"]', '06:00:00', '23:00:00'),
+                ('turf_5', 'ProPlay Arena', 'proplay-arena', 'Vashi, Navi Mumbai', 'Mumbai', 19.0330, 73.0297, 1000, 4.5, '["Football"]', '["Floodlights", "Parking"]', '07:00:00', '23:00:00'),
+                ('turf_6', 'Royal Cricket Ground', 'royal-cricket', 'Vijay Nagar, Indore', 'Indore', 22.7533, 75.8937, 600, 4.7, '["Cricket"]', '["Floodlights", "Parking", "Drinking Water"]', '06:00:00', '23:00:00'),
+                ('turf_9', 'Skyline Football Turf', 'skyline-football', 'Powai, Mumbai', 'Mumbai', 19.1176, 72.9060, 1400, 4.6, '["Football"]', '["Floodlights", "Washroom"]', '06:00:00', '23:00:00'),
+                ('turf_11', 'Master Blaster Cricket', 'master-blaster', 'Saket, Delhi', 'Delhi', 28.5244, 77.2167, 1100, 4.8, '["Cricket"]', '["Floodlights", "Equipment"]', '06:00:00', '23:00:00'),
+                ('turf_13', 'Spike Football Turf', 'spike-football', 'Bhawarkua, Indore', 'Indore', 22.6953, 75.8690, 500, 4.6, '["Football"]', '["Floodlights", "Parking", "Washroom"]', '06:00:00', '23:00:00'),
+                ('turf_14', 'Indore Sports Arena', 'indore-sports-arena', 'LIG Colony, Indore', 'Indore', 22.7380, 75.8916, 800, 4.9, '["Football", "Cricket"]', '["Floodlights", "Parking", "Seating", "Washroom", "AC"]', '06:00:00', '23:00:00'),
+                ('turf_15', 'Rajiv Gandhi Stadium Turf', 'rajiv-gandhi-stadium', 'Navlakha, Indore', 'Indore', 22.7000, 75.8752, 700, 4.5, '["Football", "Cricket"]', '["Floodlights", "Parking", "Seating", "Drinking Water"]', '06:00:00', '23:00:00');
             `);
 
             console.log('Mock database seeded successfully.');

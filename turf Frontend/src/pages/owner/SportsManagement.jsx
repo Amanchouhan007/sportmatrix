@@ -157,8 +157,10 @@ export default function SportsManagement() {
 
         // Restrict only to allowed master sports
         const allowedSports = ['Cricket', 'Football', 'Badminton', 'Tennis']
-        const selectedSportObj = masterSports.find(s => s._id === currentSport.sportId)
-        if (!selectedSportObj || !allowedSports.includes(selectedSportObj.name)) {
+        const selectedSportObj = masterSports.find(s => (s.id || s._id) === currentSport.sportId)
+        const sportName = selectedSportObj ? selectedSportObj.name : currentSport.name
+
+        if (!sportName || !allowedSports.includes(sportName)) {
             addToast({ message: 'Only Cricket, Football, Badminton, and Tennis are allowed.', type: 'error' })
             return
         }
@@ -252,7 +254,7 @@ export default function SportsManagement() {
             loadBranchSports(selectedBranchId)
         } catch (err) {
             console.error('Error saving sport configurations:', err)
-            const errorMsg = err.response?.data?.message || 'Failed to save sport configurations.'
+            const errorMsg = err.message || err.response?.data?.message || 'Failed to save sport configurations.'
             
             if (errorMsg.includes('limit reached')) {
                 addToast({ message: 'Sports limit reached. Upgrade your subscription.', type: 'error' })
@@ -297,7 +299,7 @@ export default function SportsManagement() {
             loadBranchSports(selectedBranchId)
         } catch (err) {
             console.error('Error updating status:', err)
-            const errorMsg = err.response?.data?.message || 'Failed to update status.'
+            const errorMsg = err.message || err.response?.data?.message || 'Failed to update status.'
             if (errorMsg.includes('limit reached')) {
                 addToast({ message: 'Sports limit reached. Upgrade your subscription.', type: 'error' })
             } else {
@@ -346,7 +348,7 @@ export default function SportsManagement() {
             setDeleteConfirm({ isOpen: false, sport: null })
         } catch (err) {
             console.error('Error deleting sport:', err)
-            addToast({ message: err.response?.data?.message || 'Failed to delete sport.', type: 'error' })
+            addToast({ message: err.message || err.response?.data?.message || 'Failed to delete sport.', type: 'error' })
         } finally {
             setIsActionLoading(null)
         }
@@ -503,7 +505,7 @@ export default function SportsManagement() {
                             disabled={editMode}
                             onChange={(e) => {
                                 const selectedId = e.target.value
-                                const selected = masterSports.find(s => s._id === selectedId)
+                                const selected = masterSports.find(s => (s.id || s._id) === selectedId)
                                 setCurrentSport(prev => ({
                                     ...prev,
                                     sportId: selectedId,
@@ -514,7 +516,7 @@ export default function SportsManagement() {
                             options={masterSports
                                 .filter(s => ['Cricket', 'Football', 'Badminton', 'Tennis'].includes(s.name))
                                 .map(s => ({
-                                    value: s._id,
+                                    value: s.id || s._id,
                                     label: `${s.icon} ${s.name}`
                                 }))}
                         />

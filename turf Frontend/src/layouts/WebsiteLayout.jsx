@@ -29,9 +29,9 @@ export default function WebsiteLayout({ children }) {
     return (
         <div className="min-h-screen bg-surface-50 overflow-x-clip">
             {/* Navbar: Transparent to Solid Transition */}
-            <nav className={`fixed top-0 inset-x-0 z-50 transition-all duration-[400ms] ${isScrolled || !isHomePage ? 'bg-[#0f172a] shadow-[0_4px_20px_rgba(0,0,0,0.4)] border-b border-white/5 py-1' : 'bg-transparent py-4'}`}>
+            <nav className={`fixed top-0 inset-x-0 z-50 transition-all duration-[400ms] ${isScrolled || !isHomePage ? 'bg-[#0f172a] shadow-[0_4px_20px_rgba(0,0,0,0.4)] border-b border-white/5 py-0' : 'bg-transparent py-0'}`}>
 
-                <div className="w-full px-5 md:px-10 lg:px-20 h-16 flex items-center justify-between relative z-10">
+                <div className="w-full px-5 md:px-10 lg:px-20 h-[70px] flex items-center justify-between relative z-10">
                     {/* Logo */}
                     <NavLink to="/" className="flex items-center gap-2.5 group shrink-0">
                         <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center font-black text-white text-sm shadow-[0_0_15px_rgba(16,185,129,0.4)] group-hover:scale-105 transition-transform">SM</div>
@@ -66,11 +66,11 @@ export default function WebsiteLayout({ children }) {
                     </div>
 
                     {/* Auth Buttons (Desktop) */}
-                    <div className="hidden lg:flex items-center gap-4 shrink-0">
-                        <Button variant="outline" size="sm" onClick={() => navigate('/login')} className="font-black text-[10px] tracking-widest uppercase px-5 border-white/30 text-white hover:bg-white hover:text-slate-950 hover:border-white transition-all shadow-lg backdrop-blur-sm">Log In</Button>
+                    <div className="hidden lg:flex items-center gap-3.5 shrink-0">
+                        <Button variant="outline" size="sm" onClick={() => navigate('/login')} className="font-black text-[10px] tracking-widest uppercase px-5 border-white/20 text-white hover:border-[#00E6A7] hover:text-[#00E6A7] hover:bg-[#00E6A7]/10 transition-all shadow-lg backdrop-blur-sm">Log In</Button>
                         <div className="relative group">
-                            <div className="absolute inset-0 bg-blue-600 opacity-0 blur-xl rounded-sm group-hover:opacity-40 transition-opacity duration-500" />
-                            <Button size="sm" onClick={() => navigate('/register')} className="relative bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-black text-[10px] tracking-widest uppercase px-6 border border-blue-500 rounded-sm shadow-[0_0_20px_rgba(37,99,235,0.2)] hover:from-blue-500 hover:to-indigo-500 transition-all transform hover:scale-[1.02]">Get Started</Button>
+                            <div className="absolute inset-0 bg-[#00E6A7] opacity-0 blur-xl rounded-full group-hover:opacity-50 transition-opacity duration-500" />
+                            <Button size="sm" onClick={() => navigate('/register')} className="relative bg-gradient-to-r from-[#00E6A7] to-[#00C2FF] text-slate-950 font-black text-[10px] tracking-widest uppercase px-6 border border-[#00E6A7] rounded-full shadow-[0_0_20px_rgba(0,230,167,0.35)] hover:from-[#00c892] hover:to-[#00b0e6] transition-all transform hover:scale-[1.03]">Get Started</Button>
                         </div>
                     </div>
 
@@ -83,15 +83,15 @@ export default function WebsiteLayout({ children }) {
                 {mobileOpen && (
                     <div className="lg:hidden bg-slate-950 border-t border-white/10 px-6 pb-6 pt-3 space-y-1 fade-up shadow-2xl">
                         {navLinks.map((link) => (
-                            <NavLink key={link.to} to={link.to} onClick={() => setMobileOpen(false)} className={({ isActive }) => `block px-4 py-3 rounded-sm text-[11px] font-black uppercase tracking-widest ${isActive ? 'bg-blue-500/10 text-blue-400 border-l-2 border-blue-500' : 'text-slate-400 hover:bg-white/5 hover:text-white'}`}>
+                            <NavLink key={link.to} to={link.to} onClick={() => setMobileOpen(false)} className={({ isActive }) => `block px-4 py-3 rounded-sm text-[11px] font-black uppercase tracking-widest ${isActive ? 'bg-[#00E6A7]/10 text-[#00E6A7] border-l-2 border-[#00E6A7]' : 'text-slate-400 hover:bg-white/5 hover:text-white'}`}>
                                 {({ isActive }) => (
                                     <>{link.label}</>
                                 )}
                             </NavLink>
                         ))}
                         <div className="pt-5 space-y-3 border-t border-white/10 mt-3">
-                             <button className="w-full py-3 border border-white/20 text-white font-black text-[10px] tracking-widest uppercase rounded-sm hover:bg-white hover:text-slate-950 transition-all" onClick={() => { navigate('/login'); setMobileOpen(false) }}>Log In</button>
-                            <button className="w-full py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-black text-[10px] tracking-widest uppercase rounded-sm hover:from-blue-500 hover:to-indigo-500 transition-all animate-pulse" onClick={() => { navigate('/register'); setMobileOpen(false) }}>Get Started</button>
+                             <button className="w-full py-3 border border-white/20 text-white font-black text-[10px] tracking-widest uppercase rounded-lg hover:border-[#00E6A7] hover:text-[#00E6A7] transition-all" onClick={() => { navigate('/login'); setMobileOpen(false) }}>Log In</button>
+                            <button className="w-full py-3 bg-gradient-to-r from-[#00E6A7] to-[#00C2FF] text-slate-950 font-black text-[10px] tracking-widest uppercase rounded-lg shadow-[0_0_20px_rgba(0,230,167,0.35)] hover:from-[#00c892] hover:to-[#00b0e6] transition-all" onClick={() => { navigate('/register'); setMobileOpen(false) }}>Get Started</button>
                         </div>
                     </div>
                 )}

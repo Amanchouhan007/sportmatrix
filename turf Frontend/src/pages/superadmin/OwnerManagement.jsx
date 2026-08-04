@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom'
 import { useNavigate } from 'react-router-dom'
 import Badge from '../../components/ui/Badge'
 import Card from '../../components/ui/Card'
+import StatCard from '../../components/ui/StatCard'
 import Button from '../../components/ui/Button'
 import Modal from '../../components/ui/Modal'
 import Input from '../../components/ui/Input'
@@ -36,11 +37,11 @@ export default function OwnerManagement() {
             const rNorm = normalizeRole(user.role);
             if (rNorm !== 'SUPERADMIN') {
                 const roleRoutes = {
-                    OWNER: '/dashboard/owner',
-                    STAFF: '/dashboard/staff',
-                    CUSTOMER: '/dashboard/customer'
+                    OWNER: '/admin',
+                    STAFF: '/staff',
+                    CUSTOMER: '/customer'
                 }
-                navigate(roleRoutes[rNorm] || '/dashboard/customer')
+                navigate(roleRoutes[rNorm] || '/customer')
             }
         }
     }, [user, token, navigate])
@@ -374,57 +375,33 @@ export default function OwnerManagement() {
             </div>
 
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-5">
-                <Card hover={true} className="border border-surface-200/60 shadow-soft relative overflow-hidden">
-                    <div className="flex items-center justify-between">
-                        <div className="space-y-1">
-                            <p className="text-xs font-semibold text-surface-400 uppercase tracking-wider">Total Owners</p>
-                            <p className="text-3xl font-extrabold text-surface-900 tracking-tight">{stats.total}</p>
-                        </div>
-                        <div className="w-12 h-12 rounded-2xl bg-indigo-50 flex items-center justify-center text-accent-600 shadow-soft">
-                            <FiUsers className="w-6 h-6" />
-                        </div>
-                    </div>
-                    <div className="absolute top-0 left-0 h-1 w-full bg-accent-500"></div>
-                </Card>
+                <StatCard
+                    label="Total Owners"
+                    value={stats.total}
+                    icon={<FiUsers />}
+                    colorTheme="indigo"
+                />
 
-                <Card hover={true} className="border border-surface-200/60 shadow-soft relative overflow-hidden">
-                    <div className="flex items-center justify-between">
-                        <div className="space-y-1">
-                            <p className="text-xs font-semibold text-surface-400 uppercase tracking-wider">Active Owners</p>
-                            <p className="text-3xl font-extrabold text-emerald-600 tracking-tight">{stats.active}</p>
-                        </div>
-                        <div className="w-12 h-12 rounded-2xl bg-emerald-50 flex items-center justify-center text-emerald-600 shadow-soft">
-                            <FiUserCheck className="w-6 h-6" />
-                        </div>
-                    </div>
-                    <div className="absolute top-0 left-0 h-1 w-full bg-emerald-500"></div>
-                </Card>
+                <StatCard
+                    label="Active Owners"
+                    value={stats.active}
+                    icon={<FiUserCheck />}
+                    colorTheme="emerald"
+                />
 
-                <Card hover={true} className="border border-surface-200/60 shadow-soft relative overflow-hidden">
-                    <div className="flex items-center justify-between">
-                        <div className="space-y-1">
-                            <p className="text-xs font-semibold text-surface-400 uppercase tracking-wider">Suspended Owners</p>
-                            <p className="text-3xl font-extrabold text-danger-500 tracking-tight">{stats.suspended}</p>
-                        </div>
-                        <div className="w-12 h-12 rounded-2xl bg-red-50 flex items-center justify-center text-danger-500 shadow-soft">
-                            <FiUserX className="w-6 h-6" />
-                        </div>
-                    </div>
-                    <div className="absolute top-0 left-0 h-1 w-full bg-danger-500"></div>
-                </Card>
+                <StatCard
+                    label="Suspended Owners"
+                    value={stats.suspended}
+                    icon={<FiUserX />}
+                    colorTheme="rose"
+                />
 
-                <Card hover={true} className="border border-surface-200/60 shadow-soft relative overflow-hidden">
-                    <div className="flex items-center justify-between">
-                        <div className="space-y-1">
-                            <p className="text-xs font-semibold text-surface-400 uppercase tracking-wider">Total Commission</p>
-                            <p className="text-3xl font-extrabold text-surface-900 tracking-tight">₹{stats.totalCommission.toLocaleString()}</p>
-                        </div>
-                        <div className="w-12 h-12 rounded-2xl bg-amber-50 flex items-center justify-center text-warning-500 shadow-soft">
-                            <FiTrendingUp className="w-6 h-6" />
-                        </div>
-                    </div>
-                    <div className="absolute top-0 left-0 h-1 w-full bg-warning-500"></div>
-                </Card>
+                <StatCard
+                    label="Total Commission"
+                    value={`₹${stats.totalCommission.toLocaleString()}`}
+                    icon={<FiTrendingUp />}
+                    colorTheme="amber"
+                />
             </div>
 
             {/* Unified Card for Filters, Custom Table & Pagination */}
@@ -435,7 +412,7 @@ export default function OwnerManagement() {
                         <span className="absolute inset-y-0 left-0 flex items-center pl-3.5 pointer-events-none text-surface-400">
                             <FiSearch className="w-5 h-5" />
                         </span>
-                        <input 
+                        <input
                             type="text"
                             placeholder="Search name, email, or business..."
                             value={searchTerm}
@@ -458,7 +435,7 @@ export default function OwnerManagement() {
                             } else {
                                 activeStyles = 'bg-white border-surface-200 text-surface-600 hover:border-surface-300 hover:bg-surface-50'
                             }
-                            
+
                             return (
                                 <button
                                     key={statusOption}
@@ -504,9 +481,9 @@ export default function OwnerManagement() {
                                             <td className="px-6 py-4 whitespace-nowrap">
                                                 <div className="flex items-center gap-3">
                                                     {r.profileImage ? (
-                                                        <img 
-                                                            src={r.profileImage} 
-                                                            alt={r.fullName} 
+                                                        <img
+                                                            src={r.profileImage}
+                                                            alt={r.fullName}
                                                             className="w-10 h-10 rounded-xl object-cover border border-surface-200 bg-white"
                                                         />
                                                     ) : (
@@ -576,7 +553,7 @@ export default function OwnerManagement() {
                                                     >
                                                         <FiEdit2 className="w-4 h-4" />
                                                     </button>
-                                                    <button 
+                                                    <button
                                                         onClick={() => setConfirm({ open: true, type: 'delete', id: r._id })}
                                                         className="p-2 rounded-xl text-danger-500 hover:text-danger-600 hover:bg-red-50 border border-transparent hover:border-red-100 transition-all duration-200 cursor-pointer"
                                                         title="Delete Owner"
@@ -596,9 +573,8 @@ export default function OwnerManagement() {
                                                                     setActiveActionDropdownId(r._id)
                                                                 }
                                                             }}
-                                                            className={`p-2 rounded-xl text-surface-500 hover:text-surface-800 hover:bg-surface-100 border border-transparent transition-all duration-200 cursor-pointer ${
-                                                                activeActionDropdownId === r._id ? 'bg-surface-100 text-surface-800' : ''
-                                                            }`}
+                                                            className={`p-2 rounded-xl text-surface-500 hover:text-surface-800 hover:bg-surface-100 border border-transparent transition-all duration-200 cursor-pointer ${activeActionDropdownId === r._id ? 'bg-surface-100 text-surface-800' : ''
+                                                                }`}
                                                             title="More Actions"
                                                         >
                                                             <FiMoreVertical className="w-4 h-4" />
@@ -645,11 +621,10 @@ export default function OwnerManagement() {
                                                 <button
                                                     key={p}
                                                     onClick={() => handlePageChange(p)}
-                                                    className={`px-3 py-1.5 text-xs font-bold rounded-lg border transition-all duration-150 cursor-pointer ${
-                                                        pagination.page === p
+                                                    className={`px-3 py-1.5 text-xs font-bold rounded-lg border transition-all duration-150 cursor-pointer ${pagination.page === p
                                                             ? 'bg-primary-600 border-primary-600 text-white shadow-soft'
                                                             : 'bg-white border-surface-200 text-surface-600 hover:bg-surface-50 hover:border-surface-300'
-                                                    }`}
+                                                        }`}
                                                 >
                                                     {p}
                                                 </button>
@@ -684,11 +659,10 @@ export default function OwnerManagement() {
                         <button
                             type="button"
                             onClick={() => setActiveTab('personal')}
-                            className={`flex items-center gap-2 px-4 py-3 border-b-2 font-bold text-sm transition-all duration-200 cursor-pointer ${
-                                activeTab === 'personal'
+                            className={`flex items-center gap-2 px-4 py-3 border-b-2 font-bold text-sm transition-all duration-200 cursor-pointer ${activeTab === 'personal'
                                     ? 'border-primary-500 text-primary-600 font-extrabold'
                                     : 'border-transparent text-surface-500 hover:text-surface-700 hover:border-surface-200'
-                            }`}
+                                }`}
                         >
                             <FiUser className="w-4 h-4" />
                             Personal Info
@@ -696,11 +670,10 @@ export default function OwnerManagement() {
                         <button
                             type="button"
                             onClick={() => setActiveTab('business')}
-                            className={`flex items-center gap-2 px-4 py-3 border-b-2 font-bold text-sm transition-all duration-200 cursor-pointer ${
-                                activeTab === 'business'
+                            className={`flex items-center gap-2 px-4 py-3 border-b-2 font-bold text-sm transition-all duration-200 cursor-pointer ${activeTab === 'business'
                                     ? 'border-primary-500 text-primary-600 font-extrabold'
                                     : 'border-transparent text-surface-500 hover:text-surface-700 hover:border-surface-200'
-                            }`}
+                                }`}
                         >
                             <FiBriefcase className="w-4 h-4" />
                             Business Info
@@ -708,11 +681,10 @@ export default function OwnerManagement() {
                         <button
                             type="button"
                             onClick={() => setActiveTab('address')}
-                            className={`flex items-center gap-2 px-4 py-3 border-b-2 font-bold text-sm transition-all duration-200 cursor-pointer ${
-                                activeTab === 'address'
+                            className={`flex items-center gap-2 px-4 py-3 border-b-2 font-bold text-sm transition-all duration-200 cursor-pointer ${activeTab === 'address'
                                     ? 'border-primary-500 text-primary-600 font-extrabold'
                                     : 'border-transparent text-surface-500 hover:text-surface-700 hover:border-surface-200'
-                            }`}
+                                }`}
                         >
                             <FiMapPin className="w-4 h-4" />
                             Address & Profile
@@ -727,18 +699,18 @@ export default function OwnerManagement() {
                                     Personal Information
                                 </h4>
                                 <div className="grid md:grid-cols-2 gap-4">
-                                    <Input 
-                                        label="Full Name" 
-                                        placeholder="e.g. Rahul Sharma" 
+                                    <Input
+                                        label="Full Name"
+                                        placeholder="e.g. Rahul Sharma"
                                         value={formData.fullName}
                                         onChange={e => setFormData({ ...formData, fullName: e.target.value })}
                                         disabled={isSaving}
                                         required
                                     />
-                                    <Input 
-                                        label="Email Address" 
+                                    <Input
+                                        label="Email Address"
                                         type="email"
-                                        placeholder="rahul@example.com" 
+                                        placeholder="rahul@example.com"
                                         value={formData.email}
                                         onChange={e => setFormData({ ...formData, email: e.target.value })}
                                         disabled={isSaving || !!editingOwner}
@@ -746,17 +718,17 @@ export default function OwnerManagement() {
                                     />
                                 </div>
                                 <div className="grid md:grid-cols-2 gap-4">
-                                    <Input 
-                                        label="Mobile Number" 
-                                        placeholder="e.g. 9876543210" 
+                                    <Input
+                                        label="Mobile Number"
+                                        placeholder="e.g. 9876543210"
                                         value={formData.mobile}
                                         onChange={e => setFormData({ ...formData, mobile: e.target.value })}
                                         disabled={isSaving}
                                         required
                                     />
-                                    <Input 
-                                        label="Alternative Mobile" 
-                                        placeholder="e.g. 9876543211" 
+                                    <Input
+                                        label="Alternative Mobile"
+                                        placeholder="e.g. 9876543211"
                                         value={formData.alternateMobile}
                                         onChange={e => setFormData({ ...formData, alternateMobile: e.target.value })}
                                         disabled={isSaving}
@@ -770,19 +742,19 @@ export default function OwnerManagement() {
                                         Login Credentials
                                     </h4>
                                     <div className="grid md:grid-cols-2 gap-4">
-                                        <Input 
-                                            label="Password" 
+                                        <Input
+                                            label="Password"
                                             type="password"
-                                            placeholder="••••••••" 
+                                            placeholder="••••••••"
                                             value={formData.password}
                                             onChange={e => setFormData({ ...formData, password: e.target.value })}
                                             disabled={isSaving}
                                             required
                                         />
-                                        <Input 
-                                            label="Confirm Password" 
+                                        <Input
+                                            label="Confirm Password"
                                             type="password"
-                                            placeholder="••••••••" 
+                                            placeholder="••••••••"
                                             value={formData.confirmPassword}
                                             onChange={e => setFormData({ ...formData, confirmPassword: e.target.value })}
                                             disabled={isSaving}
@@ -802,33 +774,33 @@ export default function OwnerManagement() {
                                     Business Details
                                 </h4>
                                 <div className="grid md:grid-cols-2 gap-4">
-                                    <Input 
-                                        label="Business Name" 
-                                        placeholder="e.g. Turf Gaming Zone" 
+                                    <Input
+                                        label="Business Name"
+                                        placeholder="e.g. Turf Gaming Zone"
                                         value={formData.businessName}
                                         onChange={e => setFormData({ ...formData, businessName: e.target.value })}
                                         disabled={isSaving}
                                         required
                                     />
-                                    <Input 
-                                        label="Business Type" 
-                                        placeholder="e.g. Sports & Recreation" 
+                                    <Input
+                                        label="Business Type"
+                                        placeholder="e.g. Sports & Recreation"
                                         value={formData.businessType}
                                         onChange={e => setFormData({ ...formData, businessType: e.target.value })}
                                         disabled={isSaving}
                                     />
                                 </div>
                                 <div className="grid md:grid-cols-2 gap-4">
-                                    <Input 
-                                        label="GST Number" 
-                                        placeholder="e.g. 22AAAAA1111A1Z1" 
+                                    <Input
+                                        label="GST Number"
+                                        placeholder="e.g. 22AAAAA1111A1Z1"
                                         value={formData.gstNumber}
                                         onChange={e => setFormData({ ...formData, gstNumber: e.target.value })}
                                         disabled={isSaving}
                                     />
-                                    <Input 
-                                        label="PAN Number" 
-                                        placeholder="e.g. ABCDE1234F" 
+                                    <Input
+                                        label="PAN Number"
+                                        placeholder="e.g. ABCDE1234F"
                                         value={formData.panNumber}
                                         onChange={e => setFormData({ ...formData, panNumber: e.target.value })}
                                         disabled={isSaving}
@@ -846,40 +818,40 @@ export default function OwnerManagement() {
                                     Address Location
                                 </h4>
                                 <div className="grid md:grid-cols-2 gap-4">
-                                    <Input 
-                                        label="Country" 
-                                        placeholder="e.g. India" 
+                                    <Input
+                                        label="Country"
+                                        placeholder="e.g. India"
                                         value={formData.country}
                                         onChange={e => setFormData({ ...formData, country: e.target.value })}
                                         disabled={isSaving}
                                     />
-                                    <Input 
-                                        label="State" 
-                                        placeholder="e.g. Maharashtra" 
+                                    <Input
+                                        label="State"
+                                        placeholder="e.g. Maharashtra"
                                         value={formData.state}
                                         onChange={e => setFormData({ ...formData, state: e.target.value })}
                                         disabled={isSaving}
                                     />
                                 </div>
                                 <div className="grid md:grid-cols-2 gap-4">
-                                    <Input 
-                                        label="City" 
-                                        placeholder="e.g. Mumbai" 
+                                    <Input
+                                        label="City"
+                                        placeholder="e.g. Mumbai"
                                         value={formData.city}
                                         onChange={e => setFormData({ ...formData, city: e.target.value })}
                                         disabled={isSaving}
                                     />
-                                    <Input 
-                                        label="Zip Code" 
-                                        placeholder="e.g. 400001" 
+                                    <Input
+                                        label="Zip Code"
+                                        placeholder="e.g. 400001"
                                         value={formData.zipCode}
                                         onChange={e => setFormData({ ...formData, zipCode: e.target.value })}
                                         disabled={isSaving}
                                     />
                                 </div>
-                                <Input 
-                                    label="Full Address" 
-                                    placeholder="Street address, building, suite..." 
+                                <Input
+                                    label="Full Address"
+                                    placeholder="Street address, building, suite..."
                                     value={formData.address}
                                     onChange={e => setFormData({ ...formData, address: e.target.value })}
                                     disabled={isSaving}
@@ -892,9 +864,9 @@ export default function OwnerManagement() {
                                 </h4>
                                 <div className="flex items-center gap-4">
                                     {formData.profileImage ? (
-                                        <img 
-                                            src={formData.profileImage} 
-                                            alt="Profile Preview" 
+                                        <img
+                                            src={formData.profileImage}
+                                            alt="Profile Preview"
                                             className="w-16 h-16 rounded-xl object-cover border border-surface-250 bg-white"
                                         />
                                     ) : (
@@ -904,8 +876,8 @@ export default function OwnerManagement() {
                                     )}
                                     <div className="flex-1">
                                         <label className="block text-sm font-medium text-surface-700 mb-1.5">Upload Image</label>
-                                        <input 
-                                            type="file" 
+                                        <input
+                                            type="file"
                                             accept="image/*"
                                             onChange={handleImageChange}
                                             disabled={isSaving}
@@ -924,8 +896,8 @@ export default function OwnerManagement() {
                         </Button>
                         <div className="flex gap-2">
                             {activeTab !== 'personal' && (
-                                <Button 
-                                    variant="secondary" 
+                                <Button
+                                    variant="secondary"
                                     onClick={() => {
                                         if (activeTab === 'address') setActiveTab('business')
                                         else if (activeTab === 'business') setActiveTab('personal')
@@ -936,8 +908,8 @@ export default function OwnerManagement() {
                                 </Button>
                             )}
                             {activeTab !== 'address' && (
-                                <Button 
-                                    variant="outline" 
+                                <Button
+                                    variant="outline"
                                     onClick={() => {
                                         if (activeTab === 'personal') setActiveTab('business')
                                         else if (activeTab === 'business') setActiveTab('address')
@@ -1010,9 +982,9 @@ export default function OwnerManagement() {
                         {/* Profile Header Card */}
                         <div className="bg-surface-50 p-5 rounded-2xl border border-surface-200/80 flex flex-col sm:flex-row items-center gap-5">
                             {viewingOwner.profileImage ? (
-                                <img 
-                                    src={viewingOwner.profileImage} 
-                                    alt={viewingOwner.fullName} 
+                                <img
+                                    src={viewingOwner.profileImage}
+                                    alt={viewingOwner.fullName}
                                     className="w-20 h-20 rounded-2xl object-cover border border-surface-250 bg-white"
                                 />
                             ) : (
@@ -1058,24 +1030,24 @@ export default function OwnerManagement() {
                                     <div className="col-span-2">
                                         <p className="text-surface-400 font-semibold uppercase tracking-wider mb-0.5">Last Login</p>
                                         <p className="text-surface-800 font-bold">
-                                            {viewingOwner.lastLogin 
-                                                ? new Date(viewingOwner.lastLogin).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' }) 
+                                            {viewingOwner.lastLogin
+                                                ? new Date(viewingOwner.lastLogin).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' })
                                                 : 'Never Logged In'}
                                         </p>
                                     </div>
                                     <div>
                                         <p className="text-surface-400 font-semibold uppercase tracking-wider mb-0.5">Created At</p>
                                         <p className="text-surface-800 font-bold">
-                                            {viewingOwner.createdAt 
-                                                ? new Date(viewingOwner.createdAt).toLocaleDateString('en-IN', { dateStyle: 'medium' }) 
+                                            {viewingOwner.createdAt
+                                                ? new Date(viewingOwner.createdAt).toLocaleDateString('en-IN', { dateStyle: 'medium' })
                                                 : 'N/A'}
                                         </p>
                                     </div>
                                     <div>
                                         <p className="text-surface-400 font-semibold uppercase tracking-wider mb-0.5">Updated At</p>
                                         <p className="text-surface-800 font-bold">
-                                            {viewingOwner.updatedAt 
-                                                ? new Date(viewingOwner.updatedAt).toLocaleDateString('en-IN', { dateStyle: 'medium' }) 
+                                            {viewingOwner.updatedAt
+                                                ? new Date(viewingOwner.updatedAt).toLocaleDateString('en-IN', { dateStyle: 'medium' })
                                                 : 'N/A'}
                                         </p>
                                     </div>
@@ -1096,16 +1068,16 @@ export default function OwnerManagement() {
                                     <div>
                                         <p className="text-surface-400 font-semibold uppercase tracking-wider mb-0.5">Revenue Earned</p>
                                         <p className="text-surface-900 font-extrabold text-sm">
-                                            {typeof viewingOwner.revenue === 'number' 
-                                                ? `₹${viewingOwner.revenue.toLocaleString('en-IN')}` 
+                                            {typeof viewingOwner.revenue === 'number'
+                                                ? `₹${viewingOwner.revenue.toLocaleString('en-IN')}`
                                                 : (viewingOwner.revenue || '₹0')}
                                         </p>
                                     </div>
                                     <div className="col-span-2">
                                         <p className="text-surface-400 font-semibold uppercase tracking-wider mb-0.5">Commission Earned</p>
                                         <p className="text-emerald-600 font-extrabold text-base">
-                                            {typeof viewingOwner.commission === 'number' 
-                                                ? `₹${viewingOwner.commission.toLocaleString('en-IN')}` 
+                                            {typeof viewingOwner.commission === 'number'
+                                                ? `₹${viewingOwner.commission.toLocaleString('en-IN')}`
                                                 : (viewingOwner.commission || '₹0')}
                                         </p>
                                     </div>
@@ -1181,7 +1153,7 @@ export default function OwnerManagement() {
             </Modal>
 
             {/* Confirmation Dialog */}
-            <ConfirmDialog 
+            <ConfirmDialog
                 isOpen={confirm.open}
                 onClose={() => setConfirm({ open: false, type: '', id: null, currentStatus: '' })}
                 onConfirm={confirm.type === 'delete' ? handleDelete : handleToggleStatus}
@@ -1213,11 +1185,10 @@ export default function OwnerManagement() {
                             setActiveActionDropdownId(null)
                             setDropdownOwner(null)
                         }}
-                        className={`w-full px-4 py-2 text-xs font-semibold flex items-center gap-2 transition-colors cursor-pointer text-left ${
-                            dropdownOwner.status === 'ACTIVE'
+                        className={`w-full px-4 py-2 text-xs font-semibold flex items-center gap-2 transition-colors cursor-pointer text-left ${dropdownOwner.status === 'ACTIVE'
                                 ? 'text-surface-700 hover:bg-surface-50 hover:text-warning-600'
                                 : 'text-surface-700 hover:bg-surface-50 hover:text-emerald-600'
-                        }`}
+                            }`}
                     >
                         {dropdownOwner.status === 'ACTIVE' ? (
                             <>

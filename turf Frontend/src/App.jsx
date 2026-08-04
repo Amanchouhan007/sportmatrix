@@ -38,7 +38,6 @@ import OwnerDashboard from './pages/owner/OwnerDashboard'
 import SportsManagement from './pages/owner/SportsManagement'
 import SlotManagement from './pages/owner/SlotManagement'
 import BookingManagement from './pages/owner/BookingManagement'
-import TournamentManagement from './pages/owner/TournamentManagement'
 import TeamsPlayers from './pages/owner/TeamsPlayers';
 import WalletPage from './pages/owner/WalletPage'
 import ReportsPage from './pages/owner/ReportsPage'
@@ -51,8 +50,6 @@ import BillingHistory from './pages/owner/BillingHistory';
 // Staff
 import StaffDashboard from './pages/staff/StaffDashboard'
 import StaffBookings from './pages/staff/StaffBookings'
-import StaffTournaments from './pages/staff/StaffTournaments'
-
 import StaffRefunds from './pages/staff/StaffRefunds'
 import StaffMaintenance from './pages/staff/StaffMaintenance'
 import StaffEquipment from './pages/staff/StaffEquipment'
@@ -63,8 +60,32 @@ import CustomerBookings from './pages/customer/CustomerBookings'
 import CustomerTeams from './pages/customer/CustomerTeams'
 import CustomerMatches from './pages/customer/CustomerMatches'
 import CustomerTournaments from './pages/customer/CustomerTournaments'
+import CustomerTournamentDetail from './pages/customer/CustomerTournamentDetail'
 import CustomerWallet from './pages/customer/CustomerWallet'
 import CustomerProfile from './pages/customer/CustomerProfile'
+
+// Advertising & Marketing Modules
+import AllAdvertisements from './pages/advertising/AllAdvertisements'
+import CreateAdvertisement from './pages/advertising/CreateAdvertisement'
+import CommissionManagement from './pages/advertising/CommissionManagement'
+import AdAnalyticsDashboard from './pages/advertising/AdAnalyticsDashboard'
+import AdPaymentsPage from './pages/advertising/AdPaymentsPage'
+import OwnerMyAdvertisements from './pages/advertising/OwnerMyAdvertisements'
+import OwnerAdAnalytics from './pages/advertising/OwnerAdAnalytics'
+
+// Tournament Management System Module Pages
+import TournamentDashboard from './pages/tournaments/TournamentDashboard'
+import TournamentAllPage from './pages/tournaments/TournamentAllPage'
+import TournamentCreatePage from './pages/tournaments/TournamentCreatePage'
+import TournamentPendingPage from './pages/tournaments/TournamentPendingPage'
+import TournamentCategoriesPage from './pages/tournaments/TournamentCategoriesPage'
+import TournamentRegistrationsPage from './pages/tournaments/TournamentRegistrationsPage'
+import TournamentFixturesPage from './pages/tournaments/TournamentFixturesPage'
+import TournamentMatchesPage from './pages/tournaments/TournamentMatchesPage'
+import TournamentPaymentsPage from './pages/tournaments/TournamentPaymentsPage'
+import TournamentSponsorsPage from './pages/tournaments/TournamentSponsorsPage'
+import TournamentReportsPage from './pages/tournaments/TournamentReportsPage'
+import TournamentSettingsPage from './pages/tournaments/TournamentSettingsPage'
 
 export default function App() {
   return (
@@ -87,11 +108,16 @@ export default function App() {
             <Route path="/contact" element={<WebsiteLayout><ContactPage /></WebsiteLayout>} />
 
             {/* Super Admin Dashboard */}
-            <Route path="/dashboard/super-admin" element={<ProtectedRoute allowedRoles={['SUPER_ADMIN']}><DashboardLayout role="superadmin" /></ProtectedRoute>}>
+            <Route path="/super-admin" element={<ProtectedRoute allowedRoles={['SUPER_ADMIN']}><DashboardLayout role="superadmin" /></ProtectedRoute>}>
               <Route index element={<SADashboard />} />
               <Route path="branches" element={<BranchManagement />} />
               <Route path="owners" element={<OwnerManagement />} />
               <Route path="subscriptions" element={<SubscriptionPlans />} />
+              <Route path="ads" element={<AllAdvertisements />} />
+              <Route path="ads/create" element={<CreateAdvertisement />} />
+              <Route path="ads/commissions" element={<CommissionManagement />} />
+              <Route path="ads/analytics" element={<AdAnalyticsDashboard />} />
+              <Route path="ads/payments" element={<AdPaymentsPage />} />
               <Route path="analytics" element={<GlobalAnalytics />} />
               <Route path="users" element={<UserManagement />} />
               <Route path="payments" element={<PaymentLogs />} />
@@ -99,15 +125,37 @@ export default function App() {
               <Route path="settings" element={<SystemSettings />} />
             </Route>
 
-            {/* Owner Dashboard */}
-            <Route path="/dashboard/owner" element={<ProtectedRoute allowedRoles={['OWNER']}><DashboardLayout role="owner" /></ProtectedRoute>}>
+            {/* Admin Dashboard (/admin) */}
+            <Route path="/admin" element={<ProtectedRoute allowedRoles={['OWNER']}><DashboardLayout role="owner" /></ProtectedRoute>}>
               <Route index element={<OwnerDashboard />} />
+              <Route path="ads" element={<OwnerMyAdvertisements />} />
+              <Route path="ads/all" element={<AllAdvertisements />} />
+              <Route path="ads/create" element={<CreateAdvertisement />} />
+              <Route path="ads/commissions" element={<CommissionManagement />} />
+              <Route path="ads/analytics" element={<AdAnalyticsDashboard />} />
+              <Route path="ads/payments" element={<AdPaymentsPage />} />
+              <Route path="ads/owner-analytics" element={<OwnerAdAnalytics />} />
               <Route path="sports" element={<SportsManagement />} />
               <Route path="slots" element={<SlotManagement />} />
               <Route path="bookings" element={<BookingManagement />} />
               <Route path="pos" element={<OwnerPOS />} />
               <Route path="billing-history" element={<BillingHistory />} />
-              <Route path="tournaments" element={<TournamentManagement />} />
+              
+              {/* Tournament Management System Sub-Routes */}
+              <Route path="tournaments" element={<TournamentAllPage role="owner" />} />
+              <Route path="tournaments/dashboard" element={<TournamentDashboard role="owner" />} />
+              <Route path="tournaments/all" element={<TournamentAllPage role="owner" />} />
+              <Route path="tournaments/create" element={<TournamentCreatePage role="owner" />} />
+              <Route path="tournaments/pending" element={<TournamentPendingPage role="owner" />} />
+              <Route path="tournaments/categories" element={<TournamentCategoriesPage />} />
+              <Route path="tournaments/registrations" element={<TournamentRegistrationsPage />} />
+              <Route path="tournaments/fixtures" element={<TournamentFixturesPage />} />
+              <Route path="tournaments/matches" element={<TournamentMatchesPage />} />
+              <Route path="tournaments/payments" element={<TournamentPaymentsPage />} />
+              <Route path="tournaments/sponsors" element={<TournamentSponsorsPage role="owner" />} />
+              <Route path="tournaments/reports" element={<TournamentReportsPage />} />
+              <Route path="tournaments/settings" element={<TournamentSettingsPage />} />
+
               <Route path="teams" element={<TeamsPlayers />} />
               <Route path="players" element={<TeamsPlayers />} />
               <Route path="wallet" element={<WalletPage />} />
@@ -115,14 +163,30 @@ export default function App() {
               <Route path="inventory" element={<InventoryPage />} />
               <Route path="maintenance" element={<MaintenancePage />} />
               <Route path="staff" element={<StaffManagement />} />
-              <Route path="pos" element={<OwnerPOS />} />
             </Route>
 
-            {/* Staff Dashboard */}
-            <Route path="/dashboard/staff" element={<ProtectedRoute allowedRoles={['STAFF']}><DashboardLayout role="staff" /></ProtectedRoute>}>
+            {/* Staff Dashboard (/staff) */}
+            <Route path="/staff" element={<ProtectedRoute allowedRoles={['STAFF']}><DashboardLayout role="staff" /></ProtectedRoute>}>
               <Route index element={<StaffDashboard />} />
+              <Route path="ads" element={<OwnerMyAdvertisements />} />
+              <Route path="ads/create" element={<CreateAdvertisement />} />
+              <Route path="ads/analytics" element={<OwnerAdAnalytics />} />
               <Route path="bookings" element={<StaffBookings />} />
-              <Route path="tournaments" element={<StaffTournaments />} />
+              
+              {/* Staff Tournament Management Sub-Routes */}
+              <Route path="tournaments" element={<TournamentAllPage role="staff" />} />
+              <Route path="tournaments/dashboard" element={<TournamentDashboard role="staff" />} />
+              <Route path="tournaments/all" element={<TournamentAllPage role="staff" />} />
+              <Route path="tournaments/create" element={<TournamentCreatePage role="staff" />} />
+              <Route path="tournaments/pending" element={<TournamentPendingPage role="staff" />} />
+              <Route path="tournaments/categories" element={<TournamentCategoriesPage />} />
+              <Route path="tournaments/registrations" element={<TournamentRegistrationsPage />} />
+              <Route path="tournaments/fixtures" element={<TournamentFixturesPage />} />
+              <Route path="tournaments/matches" element={<TournamentMatchesPage />} />
+              <Route path="tournaments/payments" element={<TournamentPaymentsPage />} />
+              <Route path="tournaments/sponsors" element={<TournamentSponsorsPage role="staff" />} />
+              <Route path="tournaments/reports" element={<TournamentReportsPage />} />
+              <Route path="tournaments/settings" element={<TournamentSettingsPage />} />
 
               <Route path="refunds" element={<StaffRefunds />} />
               <Route path="maintenance" element={<StaffMaintenance />} />
@@ -130,12 +194,13 @@ export default function App() {
             </Route>
 
             {/* Customer Dashboard */}
-            <Route path="/dashboard/customer" element={<ProtectedRoute allowedRoles={['CUSTOMER']}><DashboardLayout role="customer" /></ProtectedRoute>}>
+            <Route path="/customer" element={<ProtectedRoute allowedRoles={['CUSTOMER']}><DashboardLayout role="customer" /></ProtectedRoute>}>
               <Route index element={<CustomerDashboard />} />
               <Route path="bookings" element={<CustomerBookings />} />
               <Route path="teams" element={<CustomerTeams />} />
               <Route path="matches" element={<CustomerMatches />} />
               <Route path="tournaments" element={<CustomerTournaments />} />
+              <Route path="tournaments/:id" element={<CustomerTournamentDetail />} />
               <Route path="wallet" element={<CustomerWallet />} />
               <Route path="profile" element={<CustomerProfile />} />
             </Route>

@@ -46,9 +46,9 @@ export default function GlobalAnalytics() {
                 const rNorm = normalizeRole(user.role);
                 if (rNorm !== 'SUPERADMIN') {
                     const routesMap = {
-                        OWNER: '/dashboard/owner',
-                        STAFF: '/dashboard/staff',
-                        CUSTOMER: '/dashboard/customer'
+                        OWNER: '/admin',
+                        STAFF: '/staff',
+                        CUSTOMER: '/customer'
                     }
                     navigate(routesMap[rNorm] || '/login')
                 }
@@ -357,6 +357,7 @@ export default function GlobalAnalytics() {
                     change={`${overview.revenueGrowthPercentage >= 0 ? '+' : ''}${overview.revenueGrowthPercentage}%`} 
                     trend={overview.revenueGrowthPercentage >= 0 ? 'up' : 'down'} 
                     icon="💰" 
+                    colorTheme="emerald"
                 />
                 <StatCard 
                     label="Active Bookings" 
@@ -364,6 +365,7 @@ export default function GlobalAnalytics() {
                     change="Platform Active" 
                     trend="up" 
                     icon="📅" 
+                    colorTheme="blue"
                 />
                 <StatCard 
                     label="Active Branches" 
@@ -371,6 +373,7 @@ export default function GlobalAnalytics() {
                     change={`Suspended: ${overview.suspendedBranches}`} 
                     trend="up" 
                     icon="🏢" 
+                    colorTheme="indigo"
                 />
                 <StatCard 
                     label="Total Owners" 
@@ -378,6 +381,7 @@ export default function GlobalAnalytics() {
                     change={`Customers: ${overview.totalCustomers}`} 
                     trend="up" 
                     icon="👤" 
+                    colorTheme="purple"
                 />
             </div>
 

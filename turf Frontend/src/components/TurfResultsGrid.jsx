@@ -92,6 +92,7 @@ export default function TurfResultsGrid({ turfs, searchValues, recentSearches = 
     if (activeFilter === 'price-low') sortedTurfs.sort((a, b) => a.price - b.price)
     else if (activeFilter === 'price-high') sortedTurfs.sort((a, b) => b.price - a.price)
     else if (activeFilter === 'rating') sortedTurfs.sort((a, b) => b.rating - a.rating)
+    else if (activeFilter === 'available') sortedTurfs = sortedTurfs.filter(t => (slotsByTurf[t.id] || []).some(s => s.status === 'available'))
 
     const statusColor = (status) => {
         if (status === 'available') return 'text-emerald-400 border-emerald-500/20 bg-emerald-500/5'
@@ -106,7 +107,7 @@ export default function TurfResultsGrid({ turfs, searchValues, recentSearches = 
     }
 
     return (
-        <section className="pt-8 pb-10 bg-[#020617] relative overflow-hidden">
+        <section className="pt-3 pb-8 bg-[#020617] relative overflow-hidden">
             {/* Background Spotlights */}
             <div className="absolute top-[20%] left-[10%] w-[35vw] h-[35vw] bg-blue-600/5 blur-[120px] rounded-full pointer-events-none" />
             <div className="absolute bottom-[20%] right-[10%] w-[35vw] h-[35vw] bg-purple-600/5 blur-[120px] rounded-full pointer-events-none" />
@@ -114,7 +115,7 @@ export default function TurfResultsGrid({ turfs, searchValues, recentSearches = 
             <div className="max-w-[1400px] mx-auto px-6 relative z-10">
                 {/* ── Recent Searches ── */}
                 {recentSearches.length > 0 && (
-                    <div className="flex items-center gap-3 mb-8 bg-slate-900/30 border border-white/5 rounded-full py-2 px-5 w-fit backdrop-blur-md">
+                    <div className="flex items-center gap-3 mb-4 bg-slate-900/30 border border-white/5 rounded-full py-2 px-5 w-fit backdrop-blur-md">
                         <span className="text-[9px] font-black uppercase tracking-widest text-slate-500">Recent Searches</span>
                         <div className="flex gap-2">
                             {recentSearches.slice(0, 3).map((rs, i) => (
@@ -128,8 +129,8 @@ export default function TurfResultsGrid({ turfs, searchValues, recentSearches = 
                 )}
 
                 {/* ── Live Current Tournament Announcement Bar ── */}
-                <div 
-                    className="w-full h-[48px] md:h-[56px] mt-2 mb-8 px-[18px] flex items-center gap-[14px] overflow-hidden rounded-[18px] relative z-20 group"
+                <div
+                    className="w-[calc(100%-2px)] mx-auto h-[38px] md:h-[42px] mt-1 mb-4 px-3.5 flex items-center gap-3 overflow-hidden rounded-xl relative z-20 group"
                     style={{
                         background: 'rgba(8, 15, 35, 0.72)',
                         border: '1px solid rgba(0, 230, 167, 0.18)',
@@ -139,23 +140,23 @@ export default function TurfResultsGrid({ turfs, searchValues, recentSearches = 
                     }}
                 >
                     {/* Left Live Badge */}
-                    <div 
-                        className="h-[32px] px-[14px] rounded-full flex items-center justify-center font-bold text-[12px] text-white tracking-[0.4px] shrink-0 select-none shadow-[0_0_12px_rgba(0,230,167,0.35)]"
+                    <div
+                        className="h-[26px] md:h-[28px] px-3 rounded-full flex items-center justify-center font-black text-[11px] text-black tracking-[0.4px] shrink-0 select-none shadow-[0_0_12px_rgba(0,230,167,0.35)]"
                         style={{
                             background: 'linear-gradient(135deg, #00E6A7, #00C2FF)'
                         }}
                     >
-                        <span className="relative flex h-2 w-2 mr-2 shrink-0">
+                        <span className="relative flex h-1.5 w-1.5 mr-1.5 shrink-0">
                             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-                            <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
+                            <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-red-500"></span>
                         </span>
-                        <span className="whitespace-nowrap">🔴 LIVE TOURNAMENT</span>
+                        <span className="whitespace-nowrap text-black font-black">LIVE TOURNAMENT</span>
                     </div>
 
                     {/* Center Marquee / Ticker Headline */}
                     <div className="flex-1 overflow-hidden relative flex items-center h-full">
-                        <div 
-                            className="whitespace-nowrap flex items-center gap-6 text-[13px] md:text-[15px] font-semibold text-white animate-marquee"
+                        <div
+                            className="whitespace-nowrap flex items-center gap-6 text-[12px] md:text-[13.5px] font-semibold text-white animate-marquee"
                         >
                             {/* Desktop Headline */}
                             <span className="hidden md:inline-flex items-center gap-1.5">
@@ -163,16 +164,16 @@ export default function TurfResultsGrid({ turfs, searchValues, recentSearches = 
                             </span>
 
                             {/* Mobile Headline */}
-                            <span className="md:hidden inline-flex items-center gap-1 text-[13px]">
+                            <span className="md:hidden inline-flex items-center gap-1 text-[12px]">
                                 <span className="text-[#00E6A7] font-bold">Indore Premier Turf League 2026</span> • <span className="text-[#00E6A7] font-bold">Finals Today 8:00 PM</span>
                             </span>
                         </div>
                     </div>
 
                     {/* Right Side CTA Button */}
-                    <button 
-                        onClick={() => navigate('/dashboard/customer/tournaments')}
-                        className="hidden md:flex h-[34px] px-[14px] rounded-[10px] items-center justify-center font-bold text-[12px] text-[#00E6A7] shrink-0 transition-all duration-300 cursor-pointer hover:bg-[#00E6A7] hover:text-[#04121F] hover:shadow-[0_0_15px_rgba(0,230,167,0.4)]"
+                    <button
+                        onClick={() => navigate('/customer/tournaments')}
+                        className="hidden md:flex h-[26px] md:h-[28px] px-3 rounded-[8px] items-center justify-center font-bold text-[11px] text-[#00E6A7] shrink-0 transition-all duration-300 cursor-pointer hover:bg-[#00E6A7] hover:text-[#04121F] hover:shadow-[0_0_15px_rgba(0,230,167,0.4)]"
                         style={{
                             background: 'rgba(0, 230, 167, 0.12)',
                             border: '1px solid rgba(0, 230, 167, 0.28)'
@@ -182,43 +183,57 @@ export default function TurfResultsGrid({ turfs, searchValues, recentSearches = 
                     </button>
                 </div>
 
-                {/* ── Header & Filters Bar ── */}
-                <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-6 mb-10 border-b border-white/5 pb-6">
-                    <div className="flex flex-col md:flex-row md:items-center gap-6 flex-1">
-                        {/* Heading */}
-                        <h2 className="text-3xl md:text-4xl font-black italic text-white uppercase tracking-tight leading-none flex items-center gap-3 whitespace-nowrap">
-                            EXPLORE <span className="text-emerald-400">TOP TURFS</span>
-                            <span className="text-xl text-slate-600 font-bold not-italic tracking-normal">({sortedTurfs.length})</span>
+                {/* ── Header & Filters Control Bar ── */}
+                <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 mb-6 border-b border-white/5 pb-4">
+                    {/* Left: Heading & Count Pill */}
+                    <div className="flex items-center gap-3 shrink-0">
+                        <h2 className="text-2xl md:text-3xl font-black italic text-white uppercase tracking-tight leading-none flex items-center gap-2">
+                            EXPLORE <span className="text-[#00E6A7]">TOP TURFS</span>
                         </h2>
+                        <span className="text-[11px] font-bold text-[#00E6A7] bg-[#00E6A7]/10 border border-[#00E6A7]/25 px-2.5 py-0.5 rounded-full shadow-[0_0_10px_rgba(0,230,167,0.15)]">
+                            {sortedTurfs.length} Venues
+                        </span>
+                    </div>
 
-                        {/* Divider */}
-                        <div className="hidden md:block w-px h-8 bg-white/10 shrink-0"></div>
-
-                        {/* Quick Filters */}
-                        <div className="flex gap-3 flex-wrap items-center">
+                    {/* Right: Aligned Filters & Sort Toolbar */}
+                    <div className="flex items-center gap-3 w-full lg:w-auto overflow-x-auto no-scrollbar py-1 shrink-0">
+                        {/* Quick Filter Chips (Scrollable row) */}
+                        <div className="flex items-center gap-2 overflow-x-auto no-scrollbar shrink-0">
                             {filterOptions.map(f => (
                                 <button
                                     key={f.key}
-                                    className={`px-4 py-2 border rounded-full text-[10px] font-black uppercase tracking-wider transition-all duration-300 cursor-pointer ${activeFilter === f.key ? 'bg-emerald-600 border-emerald-500 text-white shadow-[0_0_15px_rgba(16,185,129,0.3)]' : 'bg-slate-900/60 border-white/5 text-slate-400 hover:bg-slate-800 hover:text-white'}`}
+                                    className={`px-3.5 py-1.5 border rounded-full text-[10.5px] font-extrabold uppercase tracking-wider transition-all duration-300 cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${activeFilter === f.key
+                                        ? 'bg-gradient-to-r from-[#00E6A7] to-[#00C2FF] border-[#00E6A7] text-slate-950 font-black shadow-[0_0_15px_rgba(0,230,167,0.35)]'
+                                        : 'bg-slate-900/80 border-white/10 text-slate-300 hover:bg-slate-800 hover:text-white hover:border-white/20'
+                                        }`}
                                     onClick={() => setActiveFilter(activeFilter === f.key ? '' : f.key)}
                                 >
-                                    <span className="mr-1">{f.icon}</span> {f.label}
+                                    <span>{f.icon}</span> <span>{f.label}</span>
                                 </button>
                             ))}
                         </div>
-                    </div>
 
-                    {/* Sort Dropdown */}
-                    <div className="flex items-center gap-3 bg-slate-900/60 border border-white/10 px-5 py-2.5 rounded-full w-fit shrink-0 relative group hover:border-white/20 transition-all">
-                        <select className="bg-transparent text-white text-[10px] font-black uppercase tracking-widest outline-none cursor-pointer border-none pr-6 appearance-none focus:ring-0">
-                            <option className="bg-slate-950 text-white">RECOMMENDED</option>
-                            <option className="bg-slate-950 text-white">PRICE: LOW TO HIGH</option>
-                            <option className="bg-slate-950 text-white">RATING: HIGH TO LOW</option>
-                        </select>
-                        <div className="absolute right-4 pointer-events-none text-slate-400 group-hover:text-white transition-colors">
-                            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3.5" d="M19 9l-7 7-7-7" />
-                            </svg>
+                        {/* Divider */}
+                        <div className="w-px h-6 bg-white/10 shrink-0 hidden sm:block"></div>
+
+                        {/* Sort Dropdown Selector */}
+                        <div className="flex items-center gap-1.5 bg-slate-900/80 border border-white/10 px-3.5 py-1.5 rounded-full shrink-0 relative group hover:border-[#00E6A7]/40 transition-all cursor-pointer">
+                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider hidden sm:inline">SORT:</span>
+                            <select
+                                className="bg-transparent text-white text-[10.5px] font-black uppercase tracking-wider outline-none cursor-pointer border-none pr-5 appearance-none focus:ring-0"
+                                value={activeFilter}
+                                onChange={(e) => setActiveFilter(e.target.value)}
+                            >
+                                <option value="" className="bg-slate-950 text-white">RECOMMENDED</option>
+                                <option value="price-low" className="bg-slate-950 text-white">PRICE: LOW TO HIGH</option>
+                                <option value="price-high" className="bg-slate-950 text-white">PRICE: HIGH TO LOW</option>
+                                <option value="rating" className="bg-slate-950 text-white">RATING: HIGH TO LOW</option>
+                            </select>
+                            <div className="absolute right-3 pointer-events-none text-slate-400 group-hover:text-[#00E6A7] transition-colors">
+                                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M19 9l-7 7-7-7" />
+                                </svg>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -235,48 +250,34 @@ export default function TurfResultsGrid({ turfs, searchValues, recentSearches = 
                     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6 xl:gap-8 items-stretch">
                         {sortedTurfs.map(turf => {
                             const isGaming = turf.sports.includes('Gaming Zone')
-                            
-                            // Check for target promo cards (Indore Sports, Royal Cricket, Green Arena, Champion Cricket)
+
                             const turfNameLower = (turf.name || '').toLowerCase()
                             let promo = null
                             if (turfNameLower.includes('indore sports arena') || turfNameLower.includes('indore sports complex')) {
-                                promo = {
-                                    ribbon: '⚡ 9AM–10AM OFFER • Save 30% OFF',
-                                    strip: '🎯 Today 9:00 AM – 10:00 AM • Flat 30% OFF'
-                                }
+                                promo = { icon: '🎁', text: 'Today 9:00 AM - 10:00 AM' }
                             } else if (turfNameLower.includes('royal cricket ground')) {
-                                promo = {
-                                    ribbon: '🔥 MORNING SLOT • ₹200 OFF • 9AM–10AM',
-                                    strip: '⏰ Early Bird Offer • ₹200 OFF on morning booking'
-                                }
+                                promo = { icon: '🏷️', text: 'Early Bird Offer • ₹200 OFF' }
                             } else if (turfNameLower.includes('green arena') || turfNameLower.includes('sportzone arena')) {
-                                promo = {
-                                    ribbon: '⚡ EVENING DEAL • Save 25% OFF',
-                                    strip: '⚽ Peak Hour Offer • Flat 25% OFF on booking'
-                                }
+                                promo = { icon: '⚽', text: 'Peak Hour Offer • 25% OFF' }
                             } else if (turfNameLower.includes('champion cricket') || turfNameLower.includes('prokick stadium')) {
-                                promo = {
-                                    ribbon: '🔥 WEEKEND SPECIAL • ₹300 OFF',
-                                    strip: '🏏 Prime Time Deal • ₹300 OFF on pitch booking'
-                                }
+                                promo = { icon: '🏏', text: 'Weekend Special • ₹300 OFF' }
                             }
 
                             return (
-                                <div 
-                                    key={turf.id} 
+                                <div
+                                    key={turf.id}
                                     onClick={() => navigate(`/turfs/${turf.id}`)}
-                                    className={`group relative flex flex-col h-full bg-slate-950/40 border rounded-2xl overflow-hidden transition-all duration-500 hover:-translate-y-1.5 backdrop-blur-xl cursor-pointer ${
-                                        isGaming 
-                                            ? 'border-purple-950/60 hover:border-purple-500/40 hover:shadow-[0_12px_30px_rgba(0,0,0,0.6),0_0_20px_rgba(168,85,247,0.15)] shadow-[inset_0_0_20px_rgba(168,85,247,0.02)]' 
-                                            : 'border-white/5 hover:border-emerald-500/35 hover:shadow-[0_12px_30px_rgba(0,0,0,0.6),0_0_20px_rgba(16,185,129,0.1)]'
-                                    }`}
+                                    className={`group relative flex flex-col h-full bg-slate-950/40 border rounded-2xl overflow-hidden transition-all duration-500 hover:-translate-y-1.5 backdrop-blur-xl cursor-pointer ${isGaming
+                                        ? 'border-purple-950/60 hover:border-purple-500/40 hover:shadow-[0_12px_30px_rgba(0,0,0,0.6),0_0_20px_rgba(168,85,247,0.15)] shadow-[inset_0_0_20px_rgba(168,85,247,0.02)]'
+                                        : 'border-white/5 hover:border-emerald-500/35 hover:shadow-[0_12px_30px_rgba(0,0,0,0.6),0_0_20px_rgba(16,185,129,0.1)]'
+                                        }`}
                                 >
-                                    {/* Image Section */}
+                                    {/* Image Section - Clean Visual with Frosted Glass Overlay */}
                                     <div className="relative h-[145px] overflow-hidden shrink-0">
-                                        <img 
-                                            src={turf.image} 
-                                            alt={turf.name} 
-                                            className="w-full h-full object-cover transition-transform duration-750 group-hover:scale-105" 
+                                        <img
+                                            src={turf.image}
+                                            alt={turf.name}
+                                            className="w-full h-full object-cover transition-transform duration-750 group-hover:scale-105"
                                             loading="lazy"
                                             onError={(e) => {
                                                 e.target.style.display = 'none'
@@ -289,67 +290,53 @@ export default function TurfResultsGrid({ turfs, searchValues, recentSearches = 
                                                 }
                                             }}
                                         />
-                                        <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-transparent to-transparent pointer-events-none" />
-                                        
-                                        {/* Floating Promotional Ribbon (Top-Left) */}
+                                        <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-black/20 pointer-events-none" />
+
+                                        {/* Top Left: Glass Badge Offer */}
                                         {promo && (
-                                            <div 
-                                                className="absolute top-3 left-3 z-10 max-w-[calc(100%-90px)] font-bold text-[11px] text-white px-3 py-1.5 flex items-center gap-1 leading-none transition-all duration-300 pointer-events-none shadow-[0_0_12px_rgba(0,230,167,0.35)] group-hover:shadow-[0_0_18px_rgba(0,230,167,0.6)] truncate"
-                                                style={{
-                                                    background: 'linear-gradient(135deg, #00E6A7, #00C2FF)',
-                                                    borderRadius: '9999px',
-                                                }}
-                                            >
-                                                <span className="truncate">{promo.ribbon}</span>
+                                            <div className="absolute top-2.5 left-2.5 z-20 bg-slate-950/80 backdrop-blur-md border border-white/10 rounded px-2 py-1.5 flex flex-col shadow-lg pointer-events-none">
+                                                <span className="text-[8px] font-black text-orange-500 uppercase tracking-tight flex items-center gap-1 leading-none mb-1">
+                                                    <span className="text-[9px]">{promo.icon}</span> {promo.text.includes('•') ? promo.text.split('•')[0].trim() : 'SPECIAL OFFER'}
+                                                </span>
+                                                <span className="text-[7.5px] font-bold text-white uppercase tracking-widest leading-none">
+                                                    {promo.text.includes('•') ? promo.text.split('•')[1].trim() : promo.text}
+                                                </span>
                                             </div>
                                         )}
 
-                                        {/* Rating Badge (Top-Right) */}
-                                        <div className="absolute top-3 right-3 z-20 min-w-[48px] bg-slate-950/90 text-amber-400 text-[9px] px-2 py-1 rounded font-black flex items-center justify-center gap-0.5 shadow-md">
+                                        {/* Top Right: Sleek Rating Badge */}
+                                        <div className="absolute top-2.5 right-2.5 z-20 bg-slate-950/85 backdrop-blur-md border border-white/10 text-amber-400 text-[9.5px] px-2 py-0.5 rounded-full font-black flex items-center gap-0.5 shadow-md">
                                             <span>★</span> <span className="text-white">{turf.rating.toFixed(1)}</span>
                                         </div>
+                                    </div>
 
-                                        {/* Sport Category Tags */}
-                                        <div className={`absolute bottom-2.5 left-2.5 flex flex-wrap gap-1.5 pointer-events-none ${promo ? 'max-w-[70%]' : ''}`}>
+                                    {/* Info Content Section - Clean Tag Area */}
+                                    <div className="p-3.5 flex flex-col flex-1 relative z-10">
+                                        {/* Sports Category Tags */}
+                                        <div className="flex flex-wrap gap-1 mb-2">
                                             {turf.sports.map(sport => {
                                                 const isZone = sport.toLowerCase() === 'gaming zone'
-                                                const bgClass = isZone ? 'bg-purple-600' : 'bg-emerald-600'
-                                                
                                                 return (
-                                                    <span key={sport} className={`px-2 py-0.5 text-white text-[8px] font-black uppercase tracking-widest rounded ${bgClass}`}>
+                                                    <span key={sport} className={`px-2 py-0.5 text-white text-[7.5px] font-black uppercase tracking-widest rounded-md ${isZone ? 'bg-purple-600/90' : 'bg-emerald-600/90'}`}>
                                                         {sport}
                                                     </span>
                                                 )
                                             })}
                                         </div>
-                                    </div>
 
-                                    {/* Info Content Section */}
-                                    <div className="p-4 flex flex-col flex-1 relative z-10">
-                                        <h3 className={`text-sm font-black text-white transition-colors uppercase tracking-tight leading-tight truncate ${isGaming ? 'group-hover:text-purple-400' : 'group-hover:text-emerald-400'}`}>
+                                        {/* Turf Name */}
+                                        <h3 className={`text-sm font-black text-white transition-colors uppercase tracking-tight leading-snug truncate ${isGaming ? 'group-hover:text-purple-400' : 'group-hover:text-[#00E6A7]'}`}>
                                             {turf.name}
                                         </h3>
-                                        <p className="text-[11px] text-slate-400 flex items-center gap-1 font-semibold mt-1.5 mb-2">
-                                            <HiLocationMarker className={`w-3.5 h-3.5 shrink-0 ${isGaming ? 'text-purple-500' : 'text-emerald-500'}`} />
+
+                                        {/* Location */}
+                                        <p className="text-[11.5px] font-bold text-slate-300 flex items-center gap-1.5 mt-1.5 mb-2.5 leading-none">
+                                            <HiLocationMarker className={`w-3.5 h-3.5 shrink-0 ${isGaming ? 'text-purple-400' : 'text-[#00E6A7]'}`} />
                                             <span className="truncate">{turf.location}</span>
                                         </p>
 
-                                        {/* Additional Mini Offer Strip */}
-                                        {promo && (
-                                            <div 
-                                                className="mt-2 mb-2.5 px-2 py-1.5 rounded-lg text-[10px] font-semibold text-[#00E6A7] flex items-center gap-1 leading-tight"
-                                                style={{
-                                                    background: 'rgba(0, 230, 167, 0.12)',
-                                                    border: '1px solid rgba(0, 230, 167, 0.25)',
-                                                    borderRadius: '8px'
-                                                }}
-                                            >
-                                                <span className="truncate">{promo.strip}</span>
-                                            </div>
-                                        )}
-
                                         {/* Action & Price Block */}
-                                        <div className="border-t border-white/5 pt-3.5 flex items-center justify-between gap-3 mt-auto">
+                                        <div className="border-t border-white/5 pt-2.5 mt-auto flex items-center justify-between gap-3">
                                             <div>
                                                 <span className="text-[7.5px] font-black text-slate-500 uppercase tracking-widest block leading-none mb-0.5">Starts from</span>
                                                 <div className="flex items-baseline text-white">
@@ -358,8 +345,15 @@ export default function TurfResultsGrid({ turfs, searchValues, recentSearches = 
                                                     <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wide ml-0.5">/hr</span>
                                                 </div>
                                             </div>
-                                            <button className={`px-4 py-1.5 bg-gradient-to-r ${isGaming ? 'from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 shadow-[0_4px_12px_rgba(168,85,247,0.2)]' : 'from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 shadow-[0_4px_12px_rgba(16,185,129,0.2)]'} text-white font-black text-[8px] uppercase tracking-widest rounded-lg hover:scale-[1.02] transition-all cursor-pointer`} onClick={(e) => { e.stopPropagation(); navigate(`/booking/${turf.id}`) }}>
-                                                Book
+
+                                            <button
+                                                onClick={(e) => { e.stopPropagation(); navigate(`/turfs/${turf.id}`) }}
+                                                className={`h-7 px-4 rounded-full text-[10px] font-black uppercase tracking-wider transition-all duration-300 shadow-md hover:scale-[1.03] cursor-pointer ${isGaming
+                                                    ? 'bg-purple-600 hover:bg-purple-500 text-white shadow-purple-600/25'
+                                                    : 'bg-gradient-to-r from-[#00E6A7] to-[#00C2FF] hover:from-[#00c892] hover:to-[#00b0e6] text-slate-950 font-black shadow-[0_0_12px_rgba(0,230,167,0.3)]'
+                                                    }`}
+                                            >
+                                                BOOK
                                             </button>
                                         </div>
                                     </div>

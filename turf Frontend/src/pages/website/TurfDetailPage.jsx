@@ -1,9 +1,10 @@
 import { useState, useRef } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { HiLocationMarker, HiStar, HiArrowLeft, HiShieldCheck, HiClock, HiPhone, HiMail, HiLightBulb } from 'react-icons/hi'
+import { HiLocationMarker, HiStar, HiArrowLeft, HiShieldCheck, HiClock, HiPhone, HiMail, HiLightBulb, HiCheckCircle, HiX } from 'react-icons/hi'
 import { MdSportsCricket, MdWifi, MdLocalParking, MdLocalDrink, MdOutlineHealthAndSafety, MdSportsFootball, MdLock, MdWc } from 'react-icons/md'
 import { RiShieldStarFill } from 'react-icons/ri'
 import SlotGrid from '../../components/ui/SlotGrid'
+import { useToast } from '../../components/ui/Toast'
 
 const defaultTurfData = {
     id: 1, name: 'SportZone Arena', location: 'Andheri West, Mumbai', rating: 4.8, reviews: 124,
@@ -112,11 +113,17 @@ export default function TurfDetailPage() {
     const [selectedMediaId, setSelectedMediaId] = useState(0)
     const [selectedDate, setSelectedDate] = useState('2026-03-15')
     const [selectedSlot, setSelectedSlot] = useState(null)
+    const [duration, setDuration] = useState(1)
+    const [isDeploying, setIsDeploying] = useState(false)
+    const [bookingSuccessModal, setBookingSuccessModal] = useState(false)
+    const [deploymentDetails, setDeploymentDetails] = useState(null)
+    const toastContext = useToast()
+    const addToast = toastContext?.addToast
     const slots = generateSlots()
     const videoRef = useRef(null)
 
     const activeTurf = allTurfsList.find(t => t.id === Number(id)) || allTurfsList[0];
-    
+
     const turfData = {
         ...defaultTurfData,
         id: activeTurf.id,
@@ -138,6 +145,60 @@ export default function TurfDetailPage() {
 
     const activeMedia = turfData.media[selectedMediaId]
     const totalReviews = ratingBreakdown.reduce((a, b) => a + b.count, 0)
+
+    const handleSelectSlot = (startId) => {
+        let canBook = true;
+        for (let i = 0; i < duration; i++) {
+            const s = slots.find(slot => slot.id === startId + i);
+            if (!s || s.status === 'booked' || s.status === 'blocked') {
+                canBook = false;
+                break;
+            }
+        }
+        if (canBook) {
+            setSelectedSlot(startId);
+        }
+    }
+
+    const selectedSlotsArray = selectedSlot !== null ? Array.from({length: duration}, (_, i) => selectedSlot + i) : []
+    const totalPrice = selectedSlotsArray.reduce((sum, id) => {
+        const s = slots.find(slot => slot.id === id);
+        return sum + (s ? s.price : 0);
+    }, 0);
+
+    const handleConfirmAndDeploy = () => {
+        if (selectedSlot === null || isDeploying) return
+        setIsDeploying(true)
+
+        setTimeout(() => {
+            setIsDeploying(false)
+            const details = {
+                deploymentId: `DEP-${Math.floor(100000 + Math.random() * 900000)}`,
+                sport: turfData.sports[0]?.name || 'Football',
+                date: selectedDate,
+                time: slots[selectedSlot]?.time,
+                amount: totalPrice,
+                addOnsCount: 0,
+            }
+            setDeploymentDetails(details)
+            setBookingSuccessModal(true)
+            if (addToast) {
+                addToast('Session slot deployment authorized successfully!', 'success')
+            }
+        }, 800)
+    }
+
+    const turfNameLower = (turfData.name || '').toLowerCase()
+    let promo = null
+    if (turfNameLower.includes('indore sports arena') || turfNameLower.includes('indore sports complex')) {
+        promo = { icon: '🎁', text: 'Today 9:00 AM - 10:00 AM' }
+    } else if (turfNameLower.includes('royal cricket ground')) {
+        promo = { icon: '🏷️', text: 'Early Bird Offer • ₹200 OFF' }
+    } else if (turfNameLower.includes('green arena') || turfNameLower.includes('sportzone arena')) {
+        promo = { icon: '⚽', text: 'Peak Hour Offer • 25% OFF' }
+    } else if (turfNameLower.includes('champion cricket') || turfNameLower.includes('prokick stadium')) {
+        promo = { icon: '🏏', text: 'Weekend Special • ₹300 OFF' }
+    }
 
     return (
         <div className="min-h-screen bg-slate-950 pt-24 pb-16 relative">
@@ -182,6 +243,16 @@ export default function TurfDetailPage() {
                                     <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_8px_#10b981]" />
                                     <span className="text-[10px] font-black tracking-widest text-white uppercase">Live Feed</span>
                                 </div>
+                                {promo && (
+                                    <div className="absolute top-4 right-4 z-20 bg-slate-950/80 backdrop-blur-md border border-white/10 rounded px-3 py-2 flex flex-col shadow-lg pointer-events-none">
+                                        <span className="text-[10px] font-black text-orange-500 uppercase tracking-tight flex items-center gap-1.5 leading-none mb-1">
+                                            <span className="text-[12px]">{promo.icon}</span> {promo.text.includes('•') ? promo.text.split('•')[0].trim() : 'SPECIAL OFFER'}
+                                        </span>
+                                        <span className="text-[9px] font-bold text-white uppercase tracking-widest leading-none">
+                                            {promo.text.includes('•') ? promo.text.split('•')[1].trim() : promo.text}
+                                        </span>
+                                    </div>
+                                )}
                             </div>
 
                             {/* Thumbnails */}
@@ -281,14 +352,34 @@ export default function TurfDetailPage() {
                             <div className="relative bg-slate-950 border border-white/10 rounded-sm p-6 sm:p-8 shadow-2xl">
                                 <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-8 gap-4 pb-6 border-b border-white/10">
                                     <h2 className="text-2xl font-black italic tracking-tighter uppercase text-white">RESERVE SLOT</h2>
-                                    <div className="flex items-center gap-3">
-                                        <label className="text-[10px] font-bold tracking-widest text-slate-500 uppercase">Deploy Date</label>
-                                        <input
-                                            type="date"
-                                            value={selectedDate}
-                                            onChange={e => setSelectedDate(e.target.value)}
-                                            className="px-4 py-2 bg-slate-900 border border-white/10 rounded-sm text-sm font-medium text-white outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all cursor-pointer [color-scheme:dark]"
-                                        />
+                                    <div className="flex flex-wrap items-center gap-4">
+                                        <div className="flex items-center gap-3">
+                                            <label className="text-[10px] font-bold tracking-widest text-slate-500 uppercase">Duration</label>
+                                            <select
+                                                value={duration}
+                                                onChange={e => {
+                                                    setDuration(Number(e.target.value))
+                                                    setSelectedSlot(null)
+                                                }}
+                                                className="px-4 py-2 bg-slate-900 border border-white/10 rounded-sm text-sm font-medium text-white outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all cursor-pointer"
+                                            >
+                                                <option value={1}>1 Hour</option>
+                                                <option value={2}>2 Hours</option>
+                                                <option value={3}>3 Hours</option>
+                                            </select>
+                                        </div>
+                                        <div className="flex items-center gap-3">
+                                            <label className="text-[10px] font-bold tracking-widest text-slate-500 uppercase">Deploy Date</label>
+                                            <input
+                                                type="date"
+                                                value={selectedDate}
+                                                onChange={e => {
+                                                    setSelectedDate(e.target.value)
+                                                    setSelectedSlot(null)
+                                                }}
+                                                className="px-4 py-2 bg-slate-900 border border-white/10 rounded-sm text-sm font-medium text-white outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all cursor-pointer [color-scheme:dark]"
+                                            />
+                                        </div>
                                     </div>
                                 </div>
 
@@ -299,7 +390,7 @@ export default function TurfDetailPage() {
                                     <span className="flex items-center gap-2 text-red-500"><span className="w-2.5 h-2.5 rounded-sm bg-red-500/20 border border-red-500/50" /> Blocked</span>
                                 </div>
 
-                                <SlotGrid slots={slots} selectedSlot={selectedSlot} onSelect={s => setSelectedSlot(s.id)} />
+                                <SlotGrid slots={slots} selectedSlot={selectedSlotsArray} onSelect={s => handleSelectSlot(s.id)} />
 
                                 {/* Booking Action */}
                                 <div className="mt-10 p-6 bg-slate-900 border border-white/5 rounded-sm mt-8">
@@ -308,25 +399,34 @@ export default function TurfDetailPage() {
                                     </div>
                                     <div className="flex items-end justify-between mb-8">
                                         <span className="text-2xl font-black text-white px-3 py-1 bg-slate-950 border border-white/10 rounded-sm tabular-nums">
-                                            {selectedSlot !== null ? slots[selectedSlot]?.time : '--:--'}
+                                            {selectedSlot !== null ? `${slots[selectedSlot]?.time} (${duration} ${duration > 1 ? 'Hrs' : 'Hr'})` : '--:--'}
                                         </span>
                                         <div className="text-right">
                                             <span className="block text-[9px] font-bold tracking-widest text-emerald-500/70 uppercase mb-1">Total Authorization</span>
                                             <span className="font-black text-3xl text-emerald-400 tabular-nums">
-                                                ₹{selectedSlot !== null ? slots[selectedSlot]?.price : '0'}
+                                                ₹{selectedSlot !== null ? totalPrice : '0'}
                                             </span>
                                         </div>
                                     </div>
 
                                     <button
-                                        disabled={selectedSlot === null}
-                                        onClick={() => navigate(`/booking/${id}`)}
-                                        className={`w-full py-4 font-black italic tracking-widest uppercase text-sm rounded-sm transition-all duration-300 ${selectedSlot === null
-                                                ? 'bg-slate-800 text-slate-500 cursor-not-allowed border border-white/5'
-                                                : 'bg-emerald-500 text-slate-950 hover:bg-emerald-400 shadow-[0_0_20px_rgba(16,185,129,0.4)] cursor-pointer'
+                                        disabled={selectedSlot === null || isDeploying}
+                                        onClick={handleConfirmAndDeploy}
+                                        className={`w-full py-4 font-black italic tracking-widest uppercase text-sm rounded-sm transition-all duration-300 ${selectedSlot === null || isDeploying
+                                            ? 'bg-slate-800 text-slate-500 cursor-not-allowed border border-white/5'
+                                            : 'bg-emerald-500 text-slate-950 hover:bg-emerald-400 shadow-[0_0_20px_rgba(16,185,129,0.4)] cursor-pointer'
                                             }`}
                                     >
-                                        {selectedSlot === null ? 'AWAITING SELECTION' : 'INITIATE BOOKING'}
+                                        {isDeploying ? (
+                                            <span className="flex items-center justify-center gap-2">
+                                                <span className="w-4 h-4 border-2 border-slate-950 border-t-transparent rounded-full animate-spin" />
+                                                DEPLOYING...
+                                            </span>
+                                        ) : selectedSlot === null ? (
+                                            'AWAITING SELECTION'
+                                        ) : (
+                                            'INITIATE BOOKING'
+                                        )}
                                     </button>
                                 </div>
                             </div>
@@ -376,7 +476,7 @@ export default function TurfDetailPage() {
                                     </div>
                                     <h3 className="text-xl font-black uppercase text-white tracking-tight mb-2">Interactive Map</h3>
                                     <p className="text-sm text-slate-300 font-bold max-w-sm mb-4">{turfData.fullAddress}</p>
-                                    <div 
+                                    <div
                                         className="px-6 py-2.5 bg-blue-500/10 border border-blue-500/20 text-blue-400 text-[10px] font-black uppercase tracking-widest rounded-lg cursor-not-allowed opacity-80"
                                     >
                                         Map View Locked
@@ -424,7 +524,7 @@ export default function TurfDetailPage() {
                             <div className="bg-slate-900/40 border border-white/[0.06] rounded-xl p-7 flex flex-col items-center justify-center text-center">
                                 <div className="text-6xl font-black text-white mb-2">{turfData.rating}</div>
                                 <div className="flex gap-1 mb-3">
-                                    {[1,2,3,4,5].map(s => (
+                                    {[1, 2, 3, 4, 5].map(s => (
                                         <HiStar key={s} className={`w-5 h-5 ${s <= Math.round(turfData.rating) ? 'text-amber-400' : 'text-slate-700'}`} />
                                     ))}
                                 </div>
@@ -463,7 +563,7 @@ export default function TurfDetailPage() {
                                                 </div>
                                             </div>
                                             <div className="flex gap-0.5">
-                                                {[1,2,3,4,5].map(s => (
+                                                {[1, 2, 3, 4, 5].map(s => (
                                                     <HiStar key={s} className={`w-3.5 h-3.5 ${s <= r.rating ? 'text-amber-400' : 'text-slate-700'}`} />
                                                 ))}
                                             </div>
@@ -562,6 +662,74 @@ export default function TurfDetailPage() {
 
                 </div>
             </div>
+            {/* Deployment Confirmation Modal */}
+            {bookingSuccessModal && deploymentDetails && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-md p-4">
+                    <div className="bg-slate-900 border border-emerald-500/30 rounded-lg p-6 sm:p-8 max-w-md w-full shadow-2xl relative animate-in fade-in zoom-in-95 duration-200">
+                        <button
+                            onClick={() => setBookingSuccessModal(false)}
+                            className="absolute top-4 right-4 text-slate-400 hover:text-white transition-colors cursor-pointer"
+                        >
+                            <HiX className="w-5 h-5" />
+                        </button>
+
+                        <div className="w-12 h-12 rounded-full bg-emerald-500/20 border border-emerald-500/50 flex items-center justify-center mb-4 text-emerald-400 mx-auto">
+                            <HiCheckCircle className="w-8 h-8" />
+                        </div>
+
+                        <h3 className="text-xl font-black italic text-center text-white tracking-wider uppercase mb-1">
+                            DEPLOYMENT CONFIRMED
+                        </h3>
+                        <p className="text-xs text-center text-emerald-400 font-bold uppercase tracking-widest mb-6">
+                            Session Successfully Authorized
+                        </p>
+
+                        <div className="bg-slate-950/80 border border-white/10 rounded p-4 space-y-3 mb-6 text-xs font-medium">
+                            <div className="flex justify-between border-b border-white/5 pb-2">
+                                <span className="text-slate-400">Deployment Ref</span>
+                                <span className="text-emerald-400 font-mono font-bold">{deploymentDetails.deploymentId}</span>
+                            </div>
+                            <div className="flex justify-between border-b border-white/5 pb-2">
+                                <span className="text-slate-400">Discipline</span>
+                                <span className="text-white font-bold">{deploymentDetails.sport}</span>
+                            </div>
+                            <div className="flex justify-between border-b border-white/5 pb-2">
+                                <span className="text-slate-400">Date & Time</span>
+                                <span className="text-white font-bold">{deploymentDetails.date} @ {deploymentDetails.time}</span>
+                            </div>
+                            <div className="flex justify-between border-b border-white/5 pb-2">
+                                <span className="text-slate-400">Add-ons Selected</span>
+                                <span className="text-white font-bold">{deploymentDetails.addOnsCount} Authorized</span>
+                            </div>
+                            <div className="flex justify-between pt-1">
+                                <span className="text-slate-400 font-bold uppercase">Total Amount</span>
+                                <span className="text-emerald-400 text-sm font-black">₹{deploymentDetails.amount}</span>
+                            </div>
+                        </div>
+
+                        <div className="flex flex-col sm:flex-row gap-3">
+                            <button
+                                onClick={() => {
+                                    setBookingSuccessModal(false)
+                                    navigate('/customer/bookings')
+                                }}
+                                className="flex-1 py-3 px-4 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black italic tracking-wider text-xs uppercase rounded transition-colors cursor-pointer text-center"
+                            >
+                                View My Bookings
+                            </button>
+                            <button
+                                onClick={() => {
+                                    setBookingSuccessModal(false)
+                                    setSelectedSlot(null)
+                                }}
+                                className="flex-1 py-3 px-4 bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs uppercase tracking-wider rounded transition-colors cursor-pointer text-center border border-white/10"
+                            >
+                                Book Another
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     )
 }

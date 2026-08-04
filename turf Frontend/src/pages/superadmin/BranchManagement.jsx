@@ -11,7 +11,7 @@ import StatCard from '../../components/ui/StatCard'
 import ConfirmDialog from '../../components/ui/ConfirmDialog'
 import { useToast } from '../../components/ui/Toast'
 import { useAuth } from '../../context/AuthContext'
-import { FiEdit2, FiTrash2, FiPower, FiSearch, FiBriefcase, FiCheckCircle, FiSlash, FiTrendingUp, FiEye, FiMapPin, FiUser } from 'react-icons/fi'
+import { FiEdit2, FiTrash2, FiPower, FiSearch, FiBriefcase, FiCheckCircle, FiSlash, FiTrendingUp, FiEye, FiMapPin, FiUser, FiDownload, FiChevronLeft, FiChevronRight, FiFilter } from 'react-icons/fi'
 import { getOwners } from '../../services/ownerService'
 import { getAllPlans } from '../../services/subscriptionPlanService'
 import {
@@ -38,9 +38,9 @@ export default function BranchManagement() {
                 const normalizeRole = (r) => (r || '').toUpperCase().replace(/[-_]/g, '');
                 const rNorm = normalizeRole(user.role);
                 if (rNorm !== 'SUPERADMIN') {
-                    if (rNorm === 'OWNER') navigate('/dashboard/owner')
-                    else if (rNorm === 'STAFF') navigate('/dashboard/staff')
-                    else if (rNorm === 'CUSTOMER') navigate('/dashboard/customer')
+                    if (rNorm === 'OWNER') navigate('/admin')
+                    else if (rNorm === 'STAFF') navigate('/staff')
+                    else if (rNorm === 'CUSTOMER') navigate('/customer')
                     else navigate('/login')
                 }
             }
@@ -468,6 +468,34 @@ export default function BranchManagement() {
         }
     }, [user])
 
+    const handleExportCSV = () => {
+        if (!branches || branches.length === 0) {
+            addToast({ title: 'Export Failed', message: 'No branch data available to export', type: 'error' })
+            return
+        }
+        const headers = ['Branch Name', 'Branch Code', 'City', 'Owner Name', 'Owner Email', 'Plan', 'Status', 'Revenue', 'Created Date']
+        const rows = branches.map(b => [
+            `"${b.branchName || ''}"`,
+            `"${b.branchCode || ''}"`,
+            `"${b.city || ''}"`,
+            `"${b.ownerId?.fullName || ''}"`,
+            `"${b.ownerId?.email || ''}"`,
+            `"${b.subscriptionPlanId?.planName || ''}"`,
+            `"${b.status || ''}"`,
+            `"${b.totalRevenue || 0}"`,
+            `"${b.createdAt ? new Date(b.createdAt).toLocaleDateString() : ''}"`
+        ])
+        const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows.map(e => e.join(','))].join('\n')
+        const encodedUri = encodeURI(csvContent)
+        const link = document.createElement('a')
+        link.setAttribute('href', encodedUri)
+        link.setAttribute('download', `Branches_Export_${new Date().toISOString().split('T')[0]}.csv`)
+        document.body.appendChild(link)
+        link.click()
+        document.body.removeChild(link)
+        addToast({ title: 'Export Success', message: 'Branch data exported as CSV file', type: 'success' })
+    }
+
     if (isPageLoading || authLoading) {
         return (
             <div className="min-h-[50vh] flex flex-col items-center justify-center gap-4">
@@ -478,311 +506,311 @@ export default function BranchManagement() {
     }
 
     return (
-        <div className="space-y-6">
-            <div className="flex items-center justify-between">
+        <div className="space-y-6 bg-[#F6F8FC] min-h-screen p-6 rounded-3xl animate-in fade-in duration-500">
+            {/* Header Title Section */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-gradient-to-r from-blue-50/70 via-indigo-50/50 to-purple-50/70 p-6 rounded-3xl border border-indigo-100/60 shadow-soft">
                 <div>
-                    <h1 className="text-2xl font-bold text-surface-900">Branch Management</h1>
-                    <p className="text-surface-500 text-sm mt-1">Manage all registered branches</p>
+                    <h1 className="text-2xl font-black text-surface-900 tracking-tight">Branch Management</h1>
+                    <p className="text-surface-500 text-sm mt-0.5 font-medium">Manage and monitor all registered turf branches across India</p>
                 </div>
-                <Button onClick={() => handleOpenModal()}>+ Add Branch</Button>
+                <div className="flex items-center gap-3">
+                    <button
+                        onClick={handleExportCSV}
+                        className="flex items-center gap-2 text-xs font-bold text-surface-700 hover:text-emerald-600 transition-colors px-4 py-2.5 rounded-2xl bg-white hover:bg-surface-50 border border-surface-200/80 shadow-soft cursor-pointer"
+                    >
+                        <FiDownload className="w-4 h-4 text-emerald-600" /> Export CSV
+                    </button>
+                    <Button onClick={() => handleOpenModal()} className="shadow-lg shadow-emerald-500/20">
+                        + Add Branch
+                    </Button>
+                </div>
             </div>
 
-            {/* Dashboard Cards Grid */}
+            {/* Dashboard Cards Grid (4 StatCards) */}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-5">
-                <Card hover={true} className="border border-surface-200/60 shadow-soft relative overflow-hidden">
-                    <div className="flex items-center justify-between">
-                        <div className="space-y-1">
-                            <p className="text-xs font-semibold text-surface-400 uppercase tracking-wider">Total Branches</p>
-                            <p className="text-3xl font-extrabold text-surface-900 tracking-tight">{stats.totalBranches || 0}</p>
-                        </div>
-                        <div className="w-12 h-12 rounded-2xl bg-indigo-50 flex items-center justify-center text-indigo-600 shadow-soft">
-                            <FiBriefcase className="w-6 h-6" />
-                        </div>
-                    </div>
-                    <div className="absolute top-0 left-0 h-1 w-full bg-indigo-500"></div>
-                </Card>
+                <StatCard
+                    label="Total Branches"
+                    value={stats.totalBranches || 0}
+                    icon={<FiBriefcase />}
+                    colorTheme="indigo"
+                />
 
-                <Card hover={true} className="border border-surface-200/60 shadow-soft relative overflow-hidden">
-                    <div className="flex items-center justify-between">
-                        <div className="space-y-1">
-                            <p className="text-xs font-semibold text-surface-400 uppercase tracking-wider">Active Branches</p>
-                            <p className="text-3xl font-extrabold text-emerald-600 tracking-tight">{stats.activeBranches || 0}</p>
-                        </div>
-                        <div className="w-12 h-12 rounded-2xl bg-emerald-50 flex items-center justify-center text-emerald-600 shadow-soft">
-                            <FiCheckCircle className="w-6 h-6" />
-                        </div>
-                    </div>
-                    <div className="absolute top-0 left-0 h-1 w-full bg-emerald-500"></div>
-                </Card>
+                <StatCard
+                    label="Active Branches"
+                    value={stats.activeBranches || 0}
+                    icon={<FiCheckCircle />}
+                    colorTheme="emerald"
+                />
 
-                <Card hover={true} className="border border-surface-200/60 shadow-soft relative overflow-hidden">
-                    <div className="flex items-center justify-between">
-                        <div className="space-y-1">
-                            <p className="text-xs font-semibold text-surface-400 uppercase tracking-wider">Inactive Branches</p>
-                            <p className="text-3xl font-extrabold text-danger-500 tracking-tight">{stats.inactiveBranches || 0}</p>
-                        </div>
-                        <div className="w-12 h-12 rounded-2xl bg-red-50 flex items-center justify-center text-danger-500 shadow-soft">
-                            <FiSlash className="w-6 h-6" />
-                        </div>
-                    </div>
-                    <div className="absolute top-0 left-0 h-1 w-full bg-red-500"></div>
-                </Card>
+                <StatCard
+                    label="Inactive Branches"
+                    value={stats.inactiveBranches || 0}
+                    icon={<FiSlash />}
+                    colorTheme="rose"
+                />
 
-                <Card hover={true} className="border border-surface-200/60 shadow-soft relative overflow-hidden">
-                    <div className="flex items-center justify-between">
-                        <div className="space-y-1">
-                            <p className="text-xs font-semibold text-surface-400 uppercase tracking-wider">Total Revenue</p>
-                            <p className="text-3xl font-extrabold text-surface-900 tracking-tight">₹{Number(stats.totalRevenue || 0).toLocaleString('en-IN')}</p>
-                        </div>
-                        <div className="w-12 h-12 rounded-2xl bg-amber-50 flex items-center justify-center text-warning-500 shadow-soft">
-                            <FiTrendingUp className="w-6 h-6" />
-                        </div>
-                    </div>
-                    <div className="absolute top-0 left-0 h-1 w-full bg-warning-500"></div>
-                </Card>
+                <StatCard
+                    label="Total Revenue"
+                    value={`₹${Number(stats.totalRevenue || 0).toLocaleString('en-IN')}`}
+                    icon={<FiTrendingUp />}
+                    colorTheme="amber"
+                />
             </div>
 
-            {/* Toolbar for Search Box & Dropdown Filters */}
-            <div className="p-5 flex flex-col md:flex-row gap-4 items-center justify-between border border-surface-200/80 rounded-2xl bg-white/40 shadow-soft backdrop-blur-sm">
-                {/* Search Box */}
-                <div className="relative w-full md:max-w-xs">
-                    <span className="absolute inset-y-0 left-0 flex items-center pl-3.5 pointer-events-none text-surface-400">
-                        <FiSearch className="w-5 h-5" />
-                    </span>
-                    <input 
-                        type="text"
-                        placeholder="Search name, city, owner..."
-                        value={searchTerm}
-                        onChange={e => {
-                            setSearchTerm(e.target.value)
-                            setPage(1)
-                        }}
-                        className="w-full pl-11 pr-4 py-2.5 rounded-xl border border-surface-200 bg-white text-surface-900 text-sm outline-none transition-all duration-200 focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 placeholder:text-surface-400 font-medium shadow-sm"
-                    />
+            {/* Modern Unified Toolbar (Search + Filters + Summary) */}
+            <div className="p-5 border border-surface-200/80 rounded-3xl bg-white shadow-soft space-y-4">
+                <div className="flex flex-col lg:flex-row gap-4 items-center justify-between">
+                    {/* Search Input */}
+                    <div className="relative w-full lg:max-w-md">
+                        <span className="absolute inset-y-0 left-0 flex items-center pl-3.5 pointer-events-none text-surface-400">
+                            <FiSearch className="w-4 h-4" />
+                        </span>
+                        <input
+                            type="text"
+                            placeholder="Search by branch name, code, city, owner..."
+                            value={searchTerm}
+                            onChange={e => {
+                                setSearchTerm(e.target.value)
+                                setPage(1)
+                            }}
+                            className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-surface-200 bg-white text-surface-900 text-sm outline-none transition-all duration-200 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 placeholder:text-surface-400 font-medium shadow-soft"
+                        />
+                    </div>
+
+                    {/* Filter Select Dropdowns */}
+                    <div className="flex flex-wrap gap-3 items-center w-full lg:w-auto">
+                        <Select
+                            value={selectedStatus}
+                            onChange={e => { setSelectedStatus(e.target.value); setPage(1); }}
+                            options={[
+                                { value: 'ALL', label: 'All Statuses' },
+                                { value: 'ACTIVE', label: '🟢 Active' },
+                                { value: 'INACTIVE', label: '🔴 Inactive' },
+                                { value: 'SUSPENDED', label: '🟡 Suspended' }
+                            ]}
+                            className="w-40"
+                        />
+
+                        <Select
+                            value={selectedOwnerId}
+                            onChange={e => { setSelectedOwnerId(e.target.value); setPage(1); }}
+                            options={[
+                                { value: 'ALL', label: 'All Owners' },
+                                ...owners.map(o => ({ value: o._id || o.id, label: o.fullName || o.name || 'Owner' }))
+                            ]}
+                            className="w-44"
+                        />
+
+                        <Select
+                            value={selectedPlanId}
+                            onChange={e => { setSelectedPlanId(e.target.value); setPage(1); }}
+                            options={[
+                                { value: 'ALL', label: 'All Plans' },
+                                ...subscriptionPlans.map(p => ({ value: p._id, label: p.planName }))
+                            ]}
+                            className="w-44"
+                        />
+                    </div>
                 </div>
 
-                {/* Filters Row */}
-                <div className="flex flex-wrap gap-3 items-center w-full md:w-auto">
-                    <Select 
-                        value={selectedStatus}
-                        onChange={e => { setSelectedStatus(e.target.value); setPage(1); }}
-                        options={[
-                            { value: 'ALL', label: 'All Statuses' },
-                            { value: 'ACTIVE', label: 'Active' },
-                            { value: 'INACTIVE', label: 'Inactive' },
-                            { value: 'SUSPENDED', label: 'Suspended' }
-                        ]}
-                        className="w-40"
-                    />
-
-                    <Select 
-                        value={selectedOwnerId}
-                        onChange={e => { setSelectedOwnerId(e.target.value); setPage(1); }}
-                        options={[
-                            { value: 'ALL', label: 'All Owners' },
-                            ...owners.map(o => ({ value: o._id || o.id, label: o.fullName || o.name || 'Owner' }))
-                        ]}
-                        className="w-48"
-                    />
-
-                    <Select 
-                        value={selectedPlanId}
-                        onChange={e => { setSelectedPlanId(e.target.value); setPage(1); }}
-                        options={[
-                            { value: 'ALL', label: 'All Plans' },
-                            ...subscriptionPlans.map(p => {
-                                const limit = p.monthlyPricing?.branchLimit ?? -1;
-                                const limitStr = limit === -1 ? 'Unlimited' : limit;
-                                return {
-                                    value: p._id,
-                                    label: `${p.planName} (Limit: ${limitStr})`
-                                }
-                            })
-                        ]}
-                        className="w-48"
-                    />
+                {/* Summary bar below search */}
+                <div className="flex items-center justify-between text-xs font-semibold text-surface-500 pt-2 border-t border-surface-100">
+                    <div className="flex items-center gap-2">
+                        <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                        <span>Showing <strong className="text-surface-900">{branches.length}</strong> of <strong className="text-surface-900">{pagination.total}</strong> Branches</span>
+                    </div>
+                    <div className="text-surface-400">Last updated: {new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
                 </div>
             </div>
 
-            {/* Table Content Section */}
-            <Card variant="glass" padding={false} className="border border-surface-200/60 shadow-soft-lg overflow-hidden">
+            {/* Premium Card-Style Data Grid Container */}
+            <div className="rounded-3xl border border-surface-200/80 shadow-soft bg-white overflow-hidden p-6 space-y-4">
+                {/* 1. Premium Header Strip (Normal case 15px, Light Gray/Blue background #F8FAFC) */}
+                <div className="hidden md:grid grid-cols-12 gap-4 px-6 py-3.5 bg-[#F8FAFC] rounded-2xl border border-surface-200/60 text-[15px] font-semibold text-surface-700 items-center">
+                    <div className="col-span-3">Branch Name</div>
+                    <div className="col-span-2">City</div>
+                    <div className="col-span-2">Owner</div>
+                    <div className="col-span-1">Plan</div>
+                    <div className="col-span-1">Status</div>
+                    <div className="col-span-1 text-right">Revenue</div>
+                    <div className="col-span-2 text-right pr-4">Actions</div>
+                </div>
+
+                {/* Loading State */}
                 {isTableLoading ? (
                     <div className="min-h-[300px] flex flex-col items-center justify-center gap-4 py-12">
-                        <div className="w-10 h-10 border-4 border-primary-600 border-t-transparent rounded-full animate-spin"></div>
+                        <div className="w-10 h-10 border-4 border-emerald-600 border-t-transparent rounded-full animate-spin"></div>
                         <span className="text-surface-500 text-sm font-semibold">Retrieving branches...</span>
                     </div>
+                ) : branches.length === 0 ? (
+                    <div className="text-center py-16 text-surface-400 font-semibold text-sm bg-[#F8FAFC] rounded-2xl border border-dashed border-surface-200">
+                        No branches found matching your search or filters.
+                    </div>
                 ) : (
-                    <>
-                        <div className="overflow-x-auto rounded-2xl border border-surface-200/50">
-                            <table className="w-full text-sm font-sans">
-                                <thead>
-                                    <tr className="bg-surface-50 border-b border-surface-200">
-                                        <th className="text-left px-5 py-3.5 text-xs font-semibold text-surface-500 uppercase tracking-wider">Branch Name</th>
-                                        <th className="text-left px-5 py-3.5 text-xs font-semibold text-surface-500 uppercase tracking-wider">City</th>
-                                        <th className="text-left px-5 py-3.5 text-xs font-semibold text-surface-500 uppercase tracking-wider">Owner Name</th>
-                                        <th className="text-left px-5 py-3.5 text-xs font-semibold text-surface-500 uppercase tracking-wider">Subscription Plan</th>
-                                        <th className="text-left px-5 py-3.5 text-xs font-semibold text-surface-500 uppercase tracking-wider">Status</th>
-                                        <th className="text-left px-5 py-3.5 text-xs font-semibold text-surface-500 uppercase tracking-wider">Revenue</th>
-                                        <th className="text-left px-5 py-3.5 text-xs font-semibold text-surface-500 uppercase tracking-wider">Created Date</th>
-                                        <th className="text-right px-5 py-3.5 text-xs font-semibold text-surface-500 uppercase tracking-wider pr-8">Actions</th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-surface-100">
-                                    {branches.map((r, i) => (
-                                        <tr key={r._id || i} className="bg-white hover:bg-surface-50 transition-colors">
-                                            {/* Branch Info with Logo */}
-                                            <td className="px-5 py-4 whitespace-nowrap">
-                                                <div className="flex items-center gap-3">
-                                                    {r.logo ? (
-                                                        <img 
-                                                            src={r.logo} 
-                                                            alt={r.branchName} 
-                                                            className="w-10 h-10 rounded-xl object-cover border border-surface-200 bg-white"
-                                                        />
-                                                    ) : (
-                                                        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary-400 to-primary-600 flex items-center justify-center text-white text-xs font-bold shadow-soft">
-                                                            {((r.branchName || '').split(' ').map(n => n[0]).join('') || '?').substring(0, 2).toUpperCase()}
-                                                        </div>
-                                                    )}
-                                                    <div>
-                                                        <div className="font-semibold text-surface-900 text-sm">{r.branchName || 'N/A'}</div>
-                                                        <div className="text-xs text-surface-400 font-medium">{r.branchCode}</div>
-                                                    </div>
-                                                </div>
-                                            </td>
-
-                                            {/* City */}
-                                            <td className="px-5 py-4 whitespace-nowrap text-surface-700 font-medium text-sm">
-                                                {r.city || 'N/A'}
-                                            </td>
-
-                                            {/* Owner Name */}
-                                            <td className="px-5 py-4 whitespace-nowrap">
-                                                <div className="font-semibold text-surface-800 text-sm">{r.ownerId?.fullName || 'N/A'}</div>
-                                                {r.ownerId?.email && <div className="text-xs text-surface-400 font-medium mt-0.5">{r.ownerId.email}</div>}
-                                            </td>
-
-                                            {/* Subscription Plan */}
-                                            <td className="px-5 py-4 whitespace-nowrap text-sm font-semibold text-surface-700">
-                                                {r.subscriptionPlanId?.planName || 'N/A'}
-                                            </td>
-
-                                            {/* Status */}
-                                            <td className="px-5 py-4 whitespace-nowrap">
-                                                {(() => {
-                                                    const upper = (r.status || '').toUpperCase()
-                                                    const variant = upper === 'ACTIVE' ? 'success' : (upper === 'SUSPENDED' ? 'danger' : 'default')
-                                                    return <Badge variant={variant} dot>{upper}</Badge>
-                                                })()}
-                                            </td>
-
-                                            {/* Revenue */}
-                                            <td className="px-5 py-4 whitespace-nowrap text-surface-900 font-bold text-sm">
-                                                ₹{Number(r.totalRevenue || 0).toLocaleString()}
-                                            </td>
-
-                                            {/* Created Date */}
-                                            <td className="px-5 py-4 whitespace-nowrap text-surface-500 font-semibold text-sm">
-                                                {r.createdAt ? new Date(r.createdAt).toLocaleDateString('en-IN', { dateStyle: 'medium' }) : 'N/A'}
-                                            </td>
-
-                                            {/* Actions */}
-                                            <td className="px-5 py-4 whitespace-nowrap text-right pr-8">
-                                                <div className="flex gap-1.5 justify-end items-center">
-                                                    <button
-                                                        onClick={() => handleViewBranch(r)}
-                                                        className="p-2 rounded-xl text-surface-500 hover:text-primary-600 hover:bg-primary-50 border border-transparent hover:border-primary-100 transition-all duration-200 cursor-pointer"
-                                                        title="View Details"
-                                                    >
-                                                        <FiEye className="w-4 h-4" />
-                                                    </button>
-                                                    <button
-                                                        onClick={() => handleOpenModal(r)}
-                                                        className="p-2 rounded-xl text-surface-500 hover:text-primary-600 hover:bg-primary-50 border border-transparent hover:border-primary-100 transition-all duration-200 cursor-pointer"
-                                                        title="Edit Branch"
-                                                    >
-                                                        <FiEdit2 className="w-4 h-4" />
-                                                    </button>
-                                                    <button 
-                                                        onClick={() => setConfirm({ open: true, type: 'status', id: r._id })}
-                                                        className="p-2 rounded-xl text-surface-500 hover:text-warning-600 hover:bg-amber-50 border border-transparent hover:border-amber-100 transition-all duration-200 cursor-pointer"
-                                                        title="Toggle Status"
-                                                    >
-                                                        <FiPower className="w-4 h-4" />
-                                                    </button>
-                                                    <button 
-                                                        onClick={() => setConfirm({ open: true, type: 'delete', id: r._id })}
-                                                        className="p-2 rounded-xl text-danger-500 hover:text-danger-600 hover:bg-red-50 border border-transparent hover:border-red-100 transition-all duration-200 cursor-pointer"
-                                                        title="Delete Branch"
-                                                    >
-                                                        <FiTrash2 className="w-4 h-4" />
-                                                    </button>
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    ))}
-                                    {branches.length === 0 && (
-                                        <tr>
-                                            <td colSpan="8" className="py-12 text-center text-surface-400 font-semibold text-sm">
-                                                No branches available matching criteria.
-                                            </td>
-                                        </tr>
+                    /* 2. Individual Card-Style Rows with 10-12px gaps (Linear / Stripe SaaS feel) */
+                    <div className="space-y-3">
+                        {branches.map((r, i) => (
+                            <div
+                                key={r._id || i}
+                                className="grid grid-cols-1 md:grid-cols-12 gap-4 px-6 py-4 bg-white hover:bg-blue-50/30 rounded-2xl border border-surface-200/80 shadow-soft hover:shadow-md hover:-translate-y-0.5 hover:border-emerald-300 transition-all duration-200 items-center min-h-[76px]"
+                            >
+                                {/* Branch Name & Avatar */}
+                                <div className="col-span-3 flex items-center gap-3.5">
+                                    {r.logo ? (
+                                        <img
+                                            src={r.logo}
+                                            alt={r.branchName}
+                                            className="w-11 h-11 rounded-2xl object-cover border border-surface-200 bg-white shadow-soft"
+                                        />
+                                    ) : (
+                                        <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-emerald-500 via-teal-600 to-cyan-600 flex items-center justify-center text-white text-xs font-black shadow-soft tracking-wider">
+                                            {((r.branchName || '').split(' ').map(n => n[0]).join('') || '?').substring(0, 2).toUpperCase()}
+                                        </div>
                                     )}
-                                </tbody>
-                            </table>
-                        </div>
-
-                        {/* Pagination footer */}
-                        {pagination.pages > 1 && (
-                            <div className="flex flex-col sm:flex-row items-center justify-between border-t border-surface-150 p-5 gap-4 bg-surface-50/20">
-                                <p className="text-sm text-surface-500 font-medium">
-                                    Showing <span className="font-semibold text-surface-700">{((pagination.page - 1) * pagination.limit) + 1}</span> to{' '}
-                                    <span className="font-semibold text-surface-700">
-                                        {Math.min(pagination.page * pagination.limit, pagination.total)}
-                                    </span>{' '}
-                                    of <span className="font-semibold text-surface-700">{pagination.total}</span> branches
-                                </p>
-                                <div className="flex items-center gap-3">
-                                    <Button
-                                        variant="secondary"
-                                        size="sm"
-                                        disabled={pagination.page === 1}
-                                        onClick={() => handlePageChange(pagination.page - 1)}
-                                    >
-                                        Previous
-                                    </Button>
-                                    <div className="flex gap-1.5">
-                                        {Array.from({ length: pagination.pages }, (_, index) => {
-                                            const p = index + 1
-                                            return (
-                                                <button
-                                                    key={p}
-                                                    onClick={() => handlePageChange(p)}
-                                                    className={`px-3 py-1.5 text-xs font-bold rounded-lg border transition-all duration-150 cursor-pointer ${
-                                                        pagination.page === p
-                                                            ? 'bg-primary-600 border-primary-600 text-white shadow-soft'
-                                                            : 'bg-white border-surface-200 text-surface-600 hover:bg-surface-50 hover:border-surface-300'
-                                                    }`}
-                                                >
-                                                    {p}
-                                                </button>
-                                            )
-                                        })}
+                                    <div className="truncate">
+                                        <div className="font-bold text-surface-900 text-sm tracking-tight truncate">{r.branchName || 'N/A'}</div>
+                                        <div className="text-xs text-surface-400 font-semibold">{r.branchCode || '—'}</div>
                                     </div>
-                                    <Button
-                                        variant="secondary"
-                                        size="sm"
-                                        disabled={pagination.page === pagination.pages}
-                                        onClick={() => handlePageChange(pagination.page + 1)}
+                                </div>
+
+                                {/* City */}
+                                <div className="col-span-2 text-surface-700 font-semibold text-sm flex items-center gap-1.5 truncate">
+                                    <FiMapPin className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                                    <span className="truncate">{r.city || 'N/A'}</span>
+                                </div>
+
+                                {/* Owner */}
+                                <div className="col-span-2 truncate">
+                                    <div className="font-semibold text-surface-800 text-sm flex items-center gap-1.5 truncate">
+                                        <FiUser className="w-3.5 h-3.5 text-indigo-500 shrink-0" />
+                                        <span className="truncate">{r.ownerId?.fullName || 'N/A'}</span>
+                                    </div>
+                                    {r.ownerId?.email && <div className="text-xs text-surface-400 truncate">{r.ownerId.email}</div>}
+                                </div>
+
+                                {/* Plan */}
+                                <div className="col-span-1 text-sm font-bold text-surface-800">
+                                    <span className="px-2.5 py-1 rounded-xl bg-purple-50 text-purple-700 border border-purple-200/80 text-xs font-bold">
+                                        {r.subscriptionPlanId?.planName || 'Standard'}
+                                    </span>
+                                </div>
+
+                                {/* Status Badge */}
+                                <div className="col-span-1">
+                                    {(() => {
+                                        const upper = (r.status || '').toUpperCase()
+                                        if (upper === 'ACTIVE') {
+                                            return (
+                                                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200/80 text-xs font-bold shadow-sm">
+                                                    <span className="w-2 h-2 rounded-full bg-emerald-500"></span> Active
+                                                </span>
+                                            )
+                                        } else if (upper === 'SUSPENDED') {
+                                            return (
+                                                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-50 text-amber-700 border border-amber-200/80 text-xs font-bold shadow-sm">
+                                                    <span className="w-2 h-2 rounded-full bg-amber-500"></span> Suspended
+                                                </span>
+                                            )
+                                        } else {
+                                            return (
+                                                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-rose-50 text-rose-700 border border-rose-200/80 text-xs font-bold shadow-sm">
+                                                    <span className="w-2 h-2 rounded-full bg-rose-500"></span> Inactive
+                                                </span>
+                                            )
+                                        }
+                                    })()}
+                                </div>
+
+                                {/* Revenue */}
+                                <div className="col-span-1 text-right">
+                                    <span className="text-emerald-600 font-black text-base tracking-tight">
+                                        ₹{Number(r.totalRevenue || 0).toLocaleString('en-IN')}
+                                    </span>
+                                </div>
+
+                                {/* Actions - 40x40 Rounded Square Light Background Buttons */}
+                                <div className="col-span-2 flex items-center justify-end gap-2 pr-2">
+                                    <button
+                                        onClick={() => handleViewBranch(r)}
+                                        className="w-10 h-10 rounded-xl bg-slate-100/90 hover:bg-emerald-500 text-surface-600 hover:text-white border border-surface-200/60 hover:border-emerald-500 transition-all duration-200 shadow-soft flex items-center justify-center cursor-pointer"
+                                        title="View Details"
                                     >
-                                        Next
-                                    </Button>
+                                        <FiEye className="w-4 h-4" />
+                                    </button>
+                                    <button
+                                        onClick={() => handleOpenModal(r)}
+                                        className="w-10 h-10 rounded-xl bg-slate-100/90 hover:bg-indigo-500 text-surface-600 hover:text-white border border-surface-200/60 hover:border-indigo-500 transition-all duration-200 shadow-soft flex items-center justify-center cursor-pointer"
+                                        title="Edit Branch"
+                                    >
+                                        <FiEdit2 className="w-4 h-4" />
+                                    </button>
+                                    <button
+                                        onClick={() => setConfirm({ open: true, type: 'status', id: r._id })}
+                                        className="w-10 h-10 rounded-xl bg-slate-100/90 hover:bg-amber-500 text-surface-600 hover:text-white border border-surface-200/60 hover:border-amber-500 transition-all duration-200 shadow-soft flex items-center justify-center cursor-pointer"
+                                        title="Toggle Status"
+                                    >
+                                        <FiPower className="w-4 h-4" />
+                                    </button>
+                                    <button
+                                        onClick={() => setConfirm({ open: true, type: 'delete', id: r._id })}
+                                        className="w-10 h-10 rounded-xl bg-slate-100/90 hover:bg-rose-500 text-surface-600 hover:text-white border border-surface-200/60 hover:border-rose-500 transition-all duration-200 shadow-soft flex items-center justify-center cursor-pointer"
+                                        title="Delete Branch"
+                                    >
+                                        <FiTrash2 className="w-4 h-4" />
+                                    </button>
                                 </div>
                             </div>
-                        )}
-                    </>
+                        ))}
+                    </div>
                 )}
-            </Card>
+
+                {/* 11. Modern SaaS Pagination */}
+                {pagination.pages > 1 && (
+                    <div className="flex flex-col sm:flex-row items-center justify-between border-t border-surface-150 pt-5 mt-4 gap-4">
+                        <p className="text-xs text-surface-500 font-semibold">
+                            Showing <span className="font-bold text-surface-900">{((pagination.page - 1) * pagination.limit) + 1}</span> to{' '}
+                            <span className="font-bold text-surface-900">
+                                {Math.min(pagination.page * pagination.limit, pagination.total)}
+                            </span>{' '}
+                            of <span className="font-bold text-surface-900">{pagination.total}</span> entries
+                        </p>
+                        <div className="flex items-center gap-2">
+                            <button
+                                disabled={pagination.page === 1}
+                                onClick={() => handlePageChange(pagination.page - 1)}
+                                className="px-4 py-2 text-xs font-bold rounded-xl border border-surface-200 bg-white hover:bg-surface-50 disabled:opacity-40 disabled:hover:bg-white text-surface-700 transition-all cursor-pointer shadow-soft flex items-center gap-1"
+                            >
+                                <FiChevronLeft className="w-3.5 h-3.5" /> Previous
+                            </button>
+                            <div className="flex gap-1.5">
+                                {Array.from({ length: pagination.pages }, (_, index) => {
+                                    const p = index + 1
+                                    return (
+                                        <button
+                                            key={p}
+                                            onClick={() => handlePageChange(p)}
+                                            className={`w-9 h-9 text-xs font-bold rounded-xl border transition-all duration-150 cursor-pointer flex items-center justify-center ${
+                                                pagination.page === p
+                                                    ? 'bg-emerald-600 border-emerald-600 text-white shadow-soft'
+                                                    : 'bg-white border-surface-200 text-surface-600 hover:bg-surface-50 hover:border-emerald-300'
+                                            }`}
+                                        >
+                                            {p}
+                                        </button>
+                                    )
+                                })}
+                            </div>
+                            <button
+                                disabled={pagination.page === pagination.pages}
+                                onClick={() => handlePageChange(pagination.page + 1)}
+                                className="px-4 py-2 text-xs font-bold rounded-xl border border-surface-200 bg-white hover:bg-surface-50 disabled:opacity-40 disabled:hover:bg-white text-surface-700 transition-all cursor-pointer shadow-soft flex items-center gap-1"
+                            >
+                                Next <FiChevronRight className="w-3.5 h-3.5" />
+                            </button>
+                        </div>
+                    </div>
+                )}
+            </div>
 
             {/* In-depth 8-section Add/Edit Modal */}
             <Modal 

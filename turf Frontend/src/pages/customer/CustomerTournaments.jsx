@@ -1,56 +1,116 @@
+import { useState, useEffect } from 'react'
 import Card from '../../components/ui/Card'
 import Badge from '../../components/ui/Badge'
 import Button from '../../components/ui/Button'
 import { useNavigate } from 'react-router-dom'
-
-const activeTournaments = [
-    { id: 1, name: 'Premier Cricket League', sport: 'Cricket', team: 'Thunder XI', nextMatch: 'Mar 15, 10:00 AM', status: 'In Progress' },
-    { id: 2, name: 'Esports Championship', sport: 'Esports', team: '—', nextMatch: 'Apr 5', status: 'Registered' },
-]
-const pastTournaments = [
-    { id: 3, name: 'Winter Badminton Cup', sport: 'Badminton', team: 'Smash Masters', result: '3rd Place', prize: '₹3,000' },
-]
+import { getPublicTournaments } from '../../services/tournamentService'
 
 export default function CustomerTournaments() {
     const navigate = useNavigate()
+    const [tournaments, setTournaments] = useState([])
+    const [loading, setLoading] = useState(true)
+
+    useEffect(() => {
+        fetchTournaments()
+    }, [])
+
+    const fetchTournaments = async () => {
+        setLoading(true)
+        try {
+            const res = await getPublicTournaments()
+            if (res.success && Array.isArray(res.data)) {
+                setTournaments(res.data)
+            }
+        } catch (error) {
+            console.error('Error fetching customer tournaments:', error)
+        } finally {
+            setLoading(false)
+        }
+    }
+
+    const activeTournaments = tournaments.filter(t => ['Approved', 'Active'].includes(t.status))
+    const pastTournaments = tournaments.filter(t => ['Completed', 'Cancelled'].includes(t.status))
+
     return (
         <div className="space-y-8">
             <div className="flex items-center justify-between">
-                <div><h1 className="text-2xl font-bold text-surface-900">My Tournaments</h1><p className="text-surface-500 text-sm mt-1">Active and past tournament participation</p></div>
+                <div>
+                    <h1 className="text-2xl font-bold text-surface-900">My Tournaments</h1>
+                    <p className="text-surface-500 text-sm mt-1">Active and past tournament participation</p>
+                </div>
                 <Button variant="outline" onClick={() => navigate('/tournaments')}>Browse Tournaments</Button>
             </div>
-            <div>
-                <h2 className="text-lg font-semibold text-surface-900 mb-4">Active Tournaments</h2>
-                <div className="grid md:grid-cols-2 gap-5">
-                    {activeTournaments.map(t => (
-                        <Card key={t.id} hover>
-                            <div className="flex items-center gap-2 mb-3"><Badge variant="primary">{t.sport}</Badge><Badge variant={t.status === 'In Progress' ? 'success' : 'warning'} dot>{t.status}</Badge></div>
-                            <h3 className="font-semibold text-surface-900 mb-2">{t.name}</h3>
-                            <div className="space-y-1.5 text-sm text-surface-500">
-                                <p>Team: <span className="text-surface-700 font-medium">{t.team}</span></p>
-                                <p>Next: <span className="text-surface-700 font-medium">{t.nextMatch}</span></p>
-                            </div>
-                            <Button variant="outline" size="sm" className="mt-4" onClick={() => navigate(`/tournaments/${t.id}`)}>View Bracket</Button>
-                        </Card>
-                    ))}
+
+            {loading ? (
+                <div className="animate-pulse space-y-8">
+                    <div>
+                        <div className="h-6 bg-surface-200 rounded w-48 mb-4" />
+                        <div className="grid md:grid-cols-2 gap-5">
+                            <div className="h-40 bg-surface-100 rounded-xl" />
+                            <div className="h-40 bg-surface-100 rounded-xl" />
+                        </div>
+                    </div>
                 </div>
-            </div>
-            <div>
-                <h2 className="text-lg font-semibold text-surface-900 mb-4">Past Tournaments</h2>
-                <div className="space-y-3">
-                    {pastTournaments.map(t => (
-                        <Card key={t.id}>
-                            <div className="flex items-center justify-between">
-                                <div className="flex items-center gap-4">
-                                    <div className="w-11 h-11 rounded-xl bg-accent-50 flex items-center justify-center text-accent-600 font-bold">🏆</div>
-                                    <div><p className="font-medium text-surface-900 text-sm">{t.name}</p><p className="text-xs text-surface-400">{t.sport} · {t.team}</p></div>
-                                </div>
-                                <div className="text-right"><Badge variant="success">{t.result}</Badge><p className="text-xs text-accent-600 font-medium mt-1">{t.prize}</p></div>
+            ) : (
+                <>
+                    <div>
+                        <h2 className="text-lg font-semibold text-surface-900 mb-4">Active Tournaments</h2>
+                        {activeTournaments.length > 0 ? (
+                            <div className="grid md:grid-cols-2 gap-5">
+                                {activeTournaments.map(t => (
+                                    <Card key={t.id || t._id} hover>
+                                        <div className="flex items-center gap-2 mb-3">
+                                            <Badge variant="primary">{t.sport || 'Sports'}</Badge>
+                                            <Badge variant={t.status === 'Active' ? 'success' : 'warning'} dot>{t.status}</Badge>
+                                        </div>
+                                        <h3 className="font-semibold text-surface-900 mb-2">{t.name || t.title}</h3>
+                                        <div className="space-y-1.5 text-sm text-surface-500">
+                                            <p>Location: <span className="text-surface-700 font-medium">{t.courtName || t.court_name || 'Main Turf'}</span></p>
+                                            <p>Date: <span className="text-surface-700 font-medium">{t.date}</span></p>
+                                        </div>
+                                        <Button variant="outline" size="sm" className="mt-4 w-full" onClick={() => navigate(`/customer/tournaments/${t.id || t._id}`)}>
+                                            View Tournament Details
+                                        </Button>
+                                    </Card>
+                                ))}
                             </div>
-                        </Card>
-                    ))}
-                </div>
-            </div>
+                        ) : (
+                            <div className="text-center py-10 bg-surface-50 border border-surface-100 rounded-xl">
+                                <p className="text-surface-500 text-sm">No active tournaments found.</p>
+                                <Button variant="outline" size="sm" className="mt-4" onClick={() => navigate('/tournaments')}>Find Tournaments</Button>
+                            </div>
+                        )}
+                    </div>
+
+                    <div>
+                        <h2 className="text-lg font-semibold text-surface-900 mb-4">Past Tournaments</h2>
+                        {pastTournaments.length > 0 ? (
+                            <div className="space-y-3">
+                                {pastTournaments.map(t => (
+                                    <Card key={t.id || t._id}>
+                                        <div className="flex items-center justify-between">
+                                            <div className="flex items-center gap-4">
+                                                <div className="w-11 h-11 rounded-xl bg-surface-100 flex items-center justify-center text-surface-600 font-bold">🏅</div>
+                                                <div>
+                                                    <p className="font-medium text-surface-900 text-sm">{t.name || t.title}</p>
+                                                    <p className="text-xs text-surface-400">{t.sport || 'Sports'}</p>
+                                                </div>
+                                            </div>
+                                            <div className="text-right">
+                                                <Badge variant="default">{t.status}</Badge>
+                                            </div>
+                                        </div>
+                                    </Card>
+                                ))}
+                            </div>
+                        ) : (
+                            <div className="text-center py-10 bg-surface-50 border border-surface-100 rounded-xl">
+                                <p className="text-surface-500 text-sm">No past tournaments found.</p>
+                            </div>
+                        )}
+                    </div>
+                </>
+            )}
         </div>
     )
 }

@@ -65,9 +65,9 @@ export default function SADashboard() {
                 const rNorm = normalizeRole(user.role);
                 if (rNorm !== 'SUPERADMIN') {
                     const routesMap = {
-                        OWNER: '/dashboard/owner',
-                        STAFF: '/dashboard/staff',
-                        CUSTOMER: '/dashboard/customer'
+                        OWNER: '/admin',
+                        STAFF: '/staff',
+                        CUSTOMER: '/customer'
                     }
                     navigate(routesMap[rNorm] || '/login')
                 }
@@ -230,6 +230,7 @@ export default function SADashboard() {
                                     change="Platform Total" 
                                     trend="up" 
                                     icon="🏢" 
+                                    accentColor="bg-indigo-500"
                                 />
                                 <StatCard 
                                     label="Total Revenue" 
@@ -237,6 +238,7 @@ export default function SADashboard() {
                                     change={`${growthVal >= 0 ? '+' : ''}${growthVal}%`} 
                                     trend={growthVal >= 0 ? 'up' : 'down'} 
                                     icon="💰" 
+                                    accentColor="bg-emerald-500"
                                 />
                                 <StatCard 
                                     label="Total Users" 
@@ -244,6 +246,7 @@ export default function SADashboard() {
                                     change="Platform Registered" 
                                     trend="up" 
                                     icon="👥" 
+                                    accentColor="bg-purple-500"
                                 />
                                 <StatCard 
                                     label="Active Subscriptions" 
@@ -251,6 +254,7 @@ export default function SADashboard() {
                                     change="Running subscriptions" 
                                     trend="up" 
                                     icon="📋" 
+                                    accentColor="bg-amber-500"
                                 />
                             </>
                         )}

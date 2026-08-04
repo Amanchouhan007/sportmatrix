@@ -240,7 +240,7 @@ export default function MembershipPage() {
                             <button
                                 onClick={() => {
                                     setActiveModalPlan(null)
-                                    navigate('/dashboard/customer')
+                                    navigate('/customer')
                                 }}
                                 className="flex-1 py-3 px-4 bg-gradient-to-r from-emerald-500 to-[#16a34a] hover:from-emerald-400 hover:to-green-500 text-white font-black italic tracking-wider text-xs uppercase rounded-xl transition-all shadow-[0_0_15px_rgba(22,163,74,0.3)] cursor-pointer text-center"
                             >

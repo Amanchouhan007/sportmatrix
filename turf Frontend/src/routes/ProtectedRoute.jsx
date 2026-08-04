@@ -29,10 +29,10 @@ export default function ProtectedRoute({ children, allowedRoles }) {
 
         if (!allowedRolesNorm.includes(userRoleNorm)) {
             const roleRoutes = {
-                SUPERADMIN: '/dashboard/super-admin',
-                OWNER: '/dashboard/owner',
-                STAFF: '/dashboard/staff',
-                CUSTOMER: '/dashboard/customer',
+                SUPERADMIN: '/super-admin',
+                OWNER: '/admin',
+                STAFF: '/staff',
+                CUSTOMER: '/customer',
             };
             const targetRoute = roleRoutes[userRoleNorm] || '/login';
             return <Navigate to={targetRoute} replace />;

@@ -67,6 +67,10 @@ app.use('/api/v1/branches', branchesRouter);
 const holidaysRouter = require('./modules/holidays/holidays.routes');
 app.use('/api/v1/holidays', holidaysRouter);
 
+// Turfs Routes registration
+const turfsRouter = require('./modules/turfs/turfs.routes');
+app.use('/api/v1/turfs', turfsRouter);
+
 // Basic Root Health Check Route
 app.get('/api/v1/health', (req, res) => {
     res.status(200).json({

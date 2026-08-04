@@ -2,7 +2,7 @@ export default function SlotGrid({ slots = [], onSelect, selectedSlot }) {
     return (
         <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2">
             {slots.map((slot) => {
-                const isSelected = selectedSlot === slot.id
+                const isSelected = Array.isArray(selectedSlot) ? selectedSlot.includes(slot.id) : selectedSlot === slot.id
                 const isBooked = slot.status === 'booked'
                 const isBlocked = slot.status === 'blocked'
                 return (

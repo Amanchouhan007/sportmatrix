@@ -199,9 +199,9 @@ export default function StaffPOS() {
                 <>
                 {/* Stats */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 no-print">
-                    <StatCard label="Today's Sales" value="₹2,840" change="+15%" trend="up" icon="💰" />
-                    <StatCard label="Bookings" value="6" icon="📅" />
-                    <StatCard label="Items Sold" value="18" icon="📦" />
+                    <StatCard label="Today's Sales" value="₹2,840" change="+15%" trend="up" icon="💰" colorTheme="emerald" />
+                    <StatCard label="Bookings" value="6" icon="📅" colorTheme="blue" />
+                    <StatCard label="Items Sold" value="18" icon="📦" colorTheme="purple" />
                 </div>
 
                 <div className="grid lg:grid-cols-3 gap-6 no-print">

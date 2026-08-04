@@ -212,31 +212,46 @@ export default function PaymentLogs() {
             label: 'Total Transactions',
             value: isStatsLoading ? '—' : (stats?.summary?.totalTransactions ?? 0).toLocaleString(),
             change: `${stats?.summary?.completedCount ?? 0} completed`,
-            trend: 'up', icon: <HiChartBar />
+            trend: 'up', icon: <HiChartBar />,
+            cardBg: 'bg-blue-50/70 border-blue-200/80',
+            iconBg: 'bg-blue-500 text-white',
+            accent: 'bg-blue-500'
         },
         {
             label: 'Total Revenue',
             value: isStatsLoading ? '—' : fmtINR(stats?.summary?.totalRevenue),
             change: `Net platform earnings`,
-            trend: 'up', icon: <HiCash />
+            trend: 'up', icon: <HiCash />,
+            cardBg: 'bg-emerald-50/70 border-emerald-200/80',
+            iconBg: 'bg-emerald-500 text-white',
+            accent: 'bg-emerald-500'
         },
         {
             label: 'Total Commission',
             value: isStatsLoading ? '—' : fmtINR(stats?.summary?.totalCommission),
             change: 'Platform commission earned',
-            trend: 'up', icon: <HiCreditCard />
+            trend: 'up', icon: <HiCreditCard />,
+            cardBg: 'bg-purple-50/70 border-purple-200/80',
+            iconBg: 'bg-purple-500 text-white',
+            accent: 'bg-purple-500'
         },
         {
             label: 'Pending Payments',
             value: isStatsLoading ? '—' : fmtINR(stats?.summary?.pendingPayments),
             change: `${stats?.summary?.pendingCount ?? 0} pending`,
-            trend: 'down', icon: <HiClock />
+            trend: 'down', icon: <HiClock />,
+            cardBg: 'bg-amber-50/70 border-amber-200/80',
+            iconBg: 'bg-amber-500 text-white',
+            accent: 'bg-amber-500'
         },
         {
             label: 'Refunded Amount',
             value: isStatsLoading ? '—' : fmtINR(stats?.summary?.refundedAmount),
             change: `${stats?.summary?.refundedCount ?? 0} refunds`,
-            trend: 'down', icon: <HiReceiptRefund />
+            trend: 'down', icon: <HiReceiptRefund />,
+            cardBg: 'bg-rose-50/70 border-rose-200/80',
+            iconBg: 'bg-rose-500 text-white',
+            accent: 'bg-rose-500'
         },
     ]
 
@@ -251,49 +266,56 @@ export default function PaymentLogs() {
     }
 
     return (
-        <div className="space-y-6">
-            {/* Page Header */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="space-y-6 bg-[#F8FAFC] min-h-screen p-6 rounded-3xl animate-in fade-in duration-500">
+            {/* Page Header with Light Gradient Background */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-gradient-to-r from-blue-50/70 via-indigo-50/50 to-purple-50/70 p-6 rounded-3xl border border-indigo-100/60 shadow-soft">
                 <div>
-                    <h1 className="text-2xl font-bold text-surface-900">Payment Logs</h1>
-                    <p className="text-surface-500 text-sm mt-1">Platform earnings and escrow logs</p>
+                    <h1 className="text-2xl font-black text-surface-900 tracking-tight">Payment Logs</h1>
+                    <p className="text-surface-500 text-sm mt-0.5 font-medium">Platform earnings and escrow logs</p>
                 </div>
                 <button
                     onClick={() => { fetchLogs(currentPage); fetchStats() }}
-                    className="flex items-center gap-2 text-xs font-bold text-surface-500 hover:text-primary-600 transition-colors px-3 py-2 rounded-xl hover:bg-primary-50 border border-surface-200 cursor-pointer"
+                    className="flex items-center gap-2 text-xs font-bold text-surface-700 hover:text-primary-600 transition-colors px-4 py-2.5 rounded-2xl bg-white hover:bg-surface-50 border border-surface-200/80 shadow-soft cursor-pointer"
                 >
                     <FiRefreshCw className={`w-3.5 h-3.5 ${isTableLoading ? 'animate-spin' : ''}`} />
                     Refresh
                 </button>
             </div>
 
-            {/* Stats Cards */}
+            {/* Stats Cards with Soft Background Colors */}
             <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
                 {summaryCards.map((card) => (
-                    <StatCard
-                        key={card.label}
-                        label={card.label}
-                        value={card.value}
-                        change={card.change}
-                        trend={card.trend}
-                        icon={card.icon}
-                    />
+                    <div key={card.label} className={`rounded-2xl border p-5 relative overflow-hidden shadow-soft transition-all hover:-translate-y-0.5 ${card.cardBg}`}>
+                        <div className={`absolute top-0 left-0 h-1 w-full ${card.accent}`}></div>
+                        <div className="flex items-start justify-between">
+                            <div className="space-y-1">
+                                <p className="text-xs font-bold text-surface-500 uppercase tracking-wider">{card.label}</p>
+                                <p className="text-2xl font-black text-surface-900 tracking-tight">{card.value}</p>
+                                {card.change && (
+                                    <p className={`text-xs font-bold flex items-center gap-1 ${card.trend === 'up' ? 'text-emerald-600' : 'text-rose-600'}`}>
+                                        {card.trend === 'up' ? '↑' : '↓'} {card.change}
+                                    </p>
+                                )}
+                            </div>
+                            {card.icon && <div className={`w-11 h-11 rounded-2xl flex items-center justify-center text-lg shadow-soft ${card.iconBg}`}>{card.icon}</div>}
+                        </div>
+                    </div>
                 ))}
             </div>
 
-            {/* Filters Panel */}
-            <Card className="border border-surface-200/80 shadow-soft p-5 space-y-4">
+            {/* Search & Filters Area with Mint / Soft Green Background */}
+            <Card className="bg-emerald-50/40 border border-emerald-200/60 shadow-soft p-5 rounded-3xl space-y-4">
                 {/* Row 1: Search + dropdowns */}
                 <div className="flex flex-wrap gap-3 items-end">
                     {/* Search */}
                     <div className="relative flex-1 min-w-[200px]">
-                        <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-surface-400" />
+                        <FiSearch className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-surface-400" />
                         <input
                             type="text"
                             placeholder="Search by Payment ID, Transaction ID, User name..."
                             value={search}
                             onChange={e => setSearch(e.target.value)}
-                            className="w-full pl-9 pr-4 py-2.5 border border-surface-200 rounded-xl text-sm outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 bg-white transition-all"
+                            className="w-full pl-10 pr-4 py-2.5 border border-surface-200/80 rounded-xl text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 bg-white transition-all shadow-soft"
                         />
                         {search && (
                             <button onClick={() => setSearch('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-surface-400 hover:text-surface-600 cursor-pointer">
@@ -306,7 +328,7 @@ export default function PaymentLogs() {
                     <select
                         value={filterStatus}
                         onChange={e => setFilterStatus(e.target.value)}
-                        className="px-3 py-2.5 border border-surface-200 rounded-xl text-sm text-surface-700 outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 bg-white cursor-pointer"
+                        className="px-3.5 py-2.5 border border-surface-200/80 rounded-xl text-sm font-medium text-surface-700 outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 bg-white cursor-pointer shadow-soft"
                     >
                         <option value="">All Status</option>
                         <option value="COMPLETED">Completed</option>
@@ -320,7 +342,7 @@ export default function PaymentLogs() {
                     <select
                         value={filterType}
                         onChange={e => setFilterType(e.target.value)}
-                        className="px-3 py-2.5 border border-surface-200 rounded-xl text-sm text-surface-700 outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 bg-white cursor-pointer"
+                        className="px-3.5 py-2.5 border border-surface-200/80 rounded-xl text-sm font-medium text-surface-700 outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 bg-white cursor-pointer shadow-soft"
                     >
                         <option value="">All Types</option>
                         <option value="BOOKING">Booking</option>
@@ -336,7 +358,7 @@ export default function PaymentLogs() {
                     <select
                         value={filterMethod}
                         onChange={e => setFilterMethod(e.target.value)}
-                        className="px-3 py-2.5 border border-surface-200 rounded-xl text-sm text-surface-700 outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 bg-white cursor-pointer"
+                        className="px-3.5 py-2.5 border border-surface-200/80 rounded-xl text-sm font-medium text-surface-700 outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 bg-white cursor-pointer shadow-soft"
                     >
                         <option value="">All Methods</option>
                         <option value="CASH">Cash</option>
@@ -351,7 +373,7 @@ export default function PaymentLogs() {
                     {hasActiveFilters && (
                         <button
                             onClick={handleClearFilters}
-                            className="flex items-center gap-1.5 text-xs font-bold text-danger-500 hover:text-danger-700 px-3 py-2.5 rounded-xl border border-danger-200 hover:bg-danger-50 transition-all cursor-pointer"
+                            className="flex items-center gap-1.5 text-xs font-bold text-danger-500 hover:text-danger-700 px-3 py-2.5 rounded-xl border border-danger-200 hover:bg-danger-50 transition-all cursor-pointer bg-white shadow-soft"
                         >
                             <FiX className="w-3.5 h-3.5" /> Clear All
                         </button>
@@ -360,68 +382,68 @@ export default function PaymentLogs() {
 
                 {/* Row 2: Date range */}
                 <div className="flex flex-wrap gap-2 items-center">
-                    <span className="text-xs font-bold text-surface-400 uppercase tracking-wide">Date Range:</span>
+                    <span className="text-xs font-bold text-surface-500 uppercase tracking-wide">DATE RANGE:</span>
                     {DATE_PRESETS.map(preset => (
                         <button
                             key={preset.label}
                             onClick={() => handleDatePreset(preset)}
                             className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer border ${
                                 activeDatePreset === preset.label
-                                    ? 'bg-primary-600 text-white border-primary-600 shadow-soft'
-                                    : 'bg-white text-surface-600 border-surface-200 hover:border-primary-300 hover:text-primary-600'
+                                    ? 'bg-emerald-600 text-white border-emerald-600 shadow-soft'
+                                    : 'bg-white text-surface-600 border-surface-200 hover:border-emerald-300 hover:text-emerald-600'
                             }`}
                         >
                             {preset.label}
                         </button>
                     ))}
-                    <span className="text-xs text-surface-400 font-medium">or custom:</span>
+                    <span className="text-xs text-surface-500 font-medium">or custom:</span>
                     <input
                         type="date"
                         value={startDate}
                         onChange={e => { setStartDate(e.target.value); setActiveDatePreset('') }}
-                        className="px-3 py-1.5 border border-surface-200 rounded-lg text-xs outline-none focus:border-primary-500 bg-white cursor-pointer"
+                        className="px-3 py-1.5 border border-surface-200 rounded-lg text-xs outline-none focus:border-emerald-500 bg-white cursor-pointer"
                     />
                     <span className="text-xs text-surface-400">to</span>
                     <input
                         type="date"
                         value={endDate}
                         onChange={e => { setEndDate(e.target.value); setActiveDatePreset('') }}
-                        className="px-3 py-1.5 border border-surface-200 rounded-lg text-xs outline-none focus:border-primary-500 bg-white cursor-pointer"
+                        className="px-3 py-1.5 border border-surface-200 rounded-lg text-xs outline-none focus:border-emerald-500 bg-white cursor-pointer"
                     />
                 </div>
             </Card>
 
-            {/* Table */}
-            <Card className="border border-surface-200/80 shadow-soft overflow-hidden">
+            {/* Table Section with Dark Header & Alternate Rows */}
+            <Card className="border border-surface-200/80 shadow-soft rounded-3xl overflow-hidden p-0 bg-white">
                 {/* Table header row with total count */}
-                <div className="flex items-center justify-between px-5 py-3.5 border-b border-surface-100">
+                <div className="flex items-center justify-between px-6 py-4 border-b border-surface-200 bg-surface-50/50">
                     <div className="flex items-center gap-2">
-                        <FiFilter className="w-4 h-4 text-surface-400" />
-                        <span className="text-xs font-bold text-surface-500 uppercase tracking-wider">
+                        <FiFilter className="w-4 h-4 text-emerald-600" />
+                        <span className="text-xs font-black text-surface-700 uppercase tracking-wider">
                             {pagination.total.toLocaleString()} Transactions
                         </span>
                     </div>
                     {isTableLoading && (
                         <div className="flex items-center gap-2 text-xs text-surface-400 font-medium">
-                            <div className="w-4 h-4 border-2 border-primary-500 border-t-transparent rounded-full animate-spin" />
+                            <div className="w-4 h-4 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin" />
                             Loading...
                         </div>
                     )}
                 </div>
 
                 <div className="overflow-x-auto">
-                    <table className="w-full">
+                    <table className="w-full text-left border-collapse">
                         <thead>
-                            <tr className="bg-surface-50/60 border-b border-surface-100">
-                                <th className="text-left px-5 py-3 text-xs font-bold text-surface-500 uppercase tracking-wider">Payment ID</th>
-                                <th className="text-left px-5 py-3 text-xs font-bold text-surface-500 uppercase tracking-wider">User</th>
-                                <th className="text-left px-5 py-3 text-xs font-bold text-surface-500 uppercase tracking-wider">Type</th>
-                                <th className="text-right px-5 py-3 text-xs font-bold text-surface-500 uppercase tracking-wider">Amount</th>
-                                <th className="text-right px-5 py-3 text-xs font-bold text-surface-500 uppercase tracking-wider">Commission</th>
-                                <th className="text-left px-5 py-3 text-xs font-bold text-surface-500 uppercase tracking-wider">Method</th>
-                                <th className="text-left px-5 py-3 text-xs font-bold text-surface-500 uppercase tracking-wider">Status</th>
-                                <th className="text-left px-5 py-3 text-xs font-bold text-surface-500 uppercase tracking-wider">Date</th>
-                                <th className="text-center px-5 py-3 text-xs font-bold text-surface-500 uppercase tracking-wider">Action</th>
+                            <tr className="bg-[#2D3748] text-white">
+                                <th className="px-5 py-3.5 text-xs font-bold uppercase tracking-wider text-white">Payment ID</th>
+                                <th className="px-5 py-3.5 text-xs font-bold uppercase tracking-wider text-white">User</th>
+                                <th className="px-5 py-3.5 text-xs font-bold uppercase tracking-wider text-white">Type</th>
+                                <th className="text-right px-5 py-3.5 text-xs font-bold uppercase tracking-wider text-white">Amount</th>
+                                <th className="text-right px-5 py-3.5 text-xs font-bold uppercase tracking-wider text-white">Commission</th>
+                                <th className="px-5 py-3.5 text-xs font-bold uppercase tracking-wider text-white">Notice</th>
+                                <th className="px-5 py-3.5 text-xs font-bold uppercase tracking-wider text-white">Status</th>
+                                <th className="px-5 py-3.5 text-xs font-bold uppercase tracking-wider text-white">Date</th>
+                                <th className="text-center px-5 py-3.5 text-xs font-bold uppercase tracking-wider text-white">Action</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-surface-100">
@@ -454,7 +476,7 @@ export default function PaymentLogs() {
                                 logs.map((log) => (
                                     <tr
                                         key={log._id}
-                                        className={`hover:bg-surface-50/60 transition-colors duration-150 ${isTableLoading ? 'opacity-50' : ''}`}
+                                        className={`even:bg-slate-50/70 odd:bg-white hover:bg-blue-50/40 transition-colors duration-150 ${isTableLoading ? 'opacity-50' : ''}`}
                                     >
                                         {/* Payment ID */}
                                         <td className="px-5 py-4">

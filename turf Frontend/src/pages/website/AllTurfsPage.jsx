@@ -1,24 +1,25 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { HiLocationMarker, HiStar, HiSearch, HiFilter, HiX, HiCheckCircle, HiArrowRight } from 'react-icons/hi'
+import { HiLocationMarker, HiStar, HiSearch, HiFilter, HiX, HiCheckCircle, HiArrowRight, HiOutlineUserGroup, HiOutlineCalendar, HiOutlineShieldCheck, HiOutlineLocationMarker, HiOutlineClock, HiRefresh } from 'react-icons/hi'
+import { FaTrophy } from 'react-icons/fa'
 
 const allTurfs = [
-    { id: 1, name: 'SportZone Arena', location: 'Andheri West, Mumbai', city: 'Mumbai', sport: 'Cricket', sports: ['Cricket'], rating: 4.8, reviews: 124, price: 800, amenities: ['Floodlights', 'Parking', 'Washroom', 'Drinking Water'], image: 'https://images.unsplash.com/photo-1531415074968-036ba1b575da?auto=format&fit=crop&q=80&w=1200' },
-    { id: 3, name: 'GameVault Center', location: 'Koramangala, Bangalore', city: 'Bangalore', sport: 'Multi-Sport', sports: ['Football', 'Cricket'], rating: 4.9, reviews: 203, price: 1200, amenities: ['Floodlights', 'Parking', 'Washroom', 'Seating', 'Drinking Water'], image: 'https://images.unsplash.com/photo-1504450758481-7338eba7524a?auto=format&fit=crop&q=80&w=1200' },
-    { id: 4, name: 'ProKick Stadium', location: 'Indiranagar, Bangalore', city: 'Bangalore', sport: 'Football', sports: ['Football'], rating: 4.7, reviews: 156, price: 900, amenities: ['Floodlights', 'Parking', 'Washroom'], image: 'https://images.unsplash.com/photo-1508098682722-e99c43a406b2?auto=format&fit=crop&q=80&w=1200' },
-    { id: 6, name: 'NetPoint Arena', location: 'NetPoint Arena, Delhi', city: 'Delhi', sport: 'Football', sports: ['Football'], rating: 4.4, reviews: 65, price: 500, amenities: ['Parking', 'Washroom'], image: 'https://images.unsplash.com/photo-1546519638-68e109498ffc?auto=format&fit=crop&q=80&w=1200' },
-    { id: 7, name: 'DunkZone', location: 'Bandra, Mumbai', city: 'Mumbai', sport: 'Football', sports: ['Football'], rating: 4.3, reviews: 48, price: 750, amenities: ['Floodlights', 'Parking'], image: 'https://images.unsplash.com/photo-1504450758481-7338eba7524a?auto=format&fit=crop&q=80&w=1200' },
-    { id: 8, name: 'PixelArena', location: 'HSR Layout, Bangalore', city: 'Bangalore', sport: 'Multi-Sport', sports: ['Football', 'Cricket'], rating: 4.8, reviews: 178, price: 1500, amenities: ['Floodlights', 'Parking', 'Washroom', 'Seating', 'Drinking Water', 'AC'], image: 'https://images.unsplash.com/photo-1529900748604-07564a03e7a6?auto=format&fit=crop&q=80&w=1200' },
-    { id: 9, name: 'StrikeZone Cricket', location: 'Noida, Delhi', city: 'Delhi', sport: 'Cricket', sports: ['Cricket'], rating: 4.6, reviews: 92, price: 850, amenities: ['Floodlights', 'Parking', 'Washroom', 'Drinking Water'], image: 'https://images.unsplash.com/photo-1531415074968-036ba1b575da?auto=format&fit=crop&q=80&w=1200' },
-    { id: 10, name: 'Royal Cricket Ground', location: 'Vijay Nagar, Indore', city: 'Indore', sport: 'Cricket', sports: ['Cricket'], rating: 4.7, reviews: 110, price: 600, amenities: ['Floodlights', 'Parking', 'Drinking Water'], image: 'https://images.unsplash.com/photo-1531415074968-036ba1b575da?auto=format&fit=crop&q=80&w=1200' },
-    { id: 12, name: 'Pune Football Arena', location: 'Kothrud, Pune', city: 'Pune', sport: 'Football', sports: ['Football'], rating: 4.5, reviews: 67, price: 1000, amenities: ['Floodlights', 'Parking', 'Washroom', 'Seating'], image: 'https://images.unsplash.com/photo-1529900245041-3560295ef247?auto=format&fit=crop&q=80&w=1200' },
-    { id: 14, name: 'Indore Sports Complex', location: 'LIG Colony, Indore', city: 'Indore', sport: 'Football', sports: ['Football'], rating: 4.9, reviews: 120, price: 800, amenities: ['Floodlights', 'Parking', 'Seating', 'Washroom', 'AC'], image: 'https://images.unsplash.com/photo-1504450758481-7338eba7524a?auto=format&fit=crop&q=80&w=1200' },
-    { id: 15, name: 'Rajiv Gandhi Stadium Turf', location: 'Navlakha, Indore', city: 'Indore', sport: 'Football', sports: ['Football', 'Cricket'], rating: 4.5, reviews: 88, price: 700, amenities: ['Floodlights', 'Parking', 'Seating', 'Drinking Water'], image: 'https://images.unsplash.com/photo-1508098682722-e99c43a406b2?auto=format&fit=crop&q=80&w=1200' },
-    { id: 17, name: 'Deccan Arena Football', location: 'Madhapur, Hyderabad', city: 'Hyderabad', sport: 'Football', sports: ['Football'], rating: 4.8, reviews: 90, price: 1100, amenities: ['Floodlights', 'Parking', 'Washroom'], image: 'https://images.unsplash.com/photo-1508098682722-e99c43a406b2?auto=format&fit=crop&q=80&w=1200' },
-    { id: 18, name: 'Grand Turf Cricket Ground', location: 'OMR, Chennai', city: 'Chennai', sport: 'Cricket', sports: ['Cricket'], rating: 4.7, reviews: 64, price: 950, amenities: ['Floodlights', 'Seating', 'Drinking Water'], image: 'https://images.unsplash.com/photo-1531415074968-036ba1b575da?auto=format&fit=crop&q=80&w=1200' },
-    { id: 19, name: 'Metro Sports Club', location: 'Vijay Nagar, Indore', city: 'Indore', sport: 'Multi-Sport', sports: ['Football', 'Cricket'], rating: 4.9, reviews: 145, price: 1300, amenities: ['Floodlights', 'Parking', 'Washroom', 'Seating', 'Drinking Water', 'AC'], image: 'https://images.unsplash.com/photo-1546519638-68e109498ffc?auto=format&fit=crop&q=80&w=1200' },
-    { id: 20, name: 'Cyber City Soccer Turf', location: 'Gachibowli, Hyderabad', city: 'Hyderabad', sport: 'Football', sports: ['Football'], rating: 4.6, reviews: 78, price: 1000, amenities: ['Floodlights', 'Parking', 'Washroom'], image: 'https://images.unsplash.com/photo-1546519638-68e109498ffc?auto=format&fit=crop&q=80&w=1200' },
-    { id: 21, name: 'Apex Sports Arena', location: 'Whitefield, Bangalore', city: 'Bangalore', sport: 'Multi-Sport', sports: ['Football', 'Cricket'], rating: 4.8, reviews: 112, price: 1100, amenities: ['Floodlights', 'Parking', 'Washroom', 'Drinking Water'], image: 'https://images.unsplash.com/photo-1518063319789-7217e6706b04?auto=format&fit=crop&q=80&w=1200' },
+    { id: 1, name: 'SportZone Arena', location: 'Andheri West, Mumbai', city: 'Mumbai', sport: 'Cricket', sports: ['Cricket'], rating: 4.8, reviews: 124, price: 800, amenities: ['Floodlights', 'Parking', 'Washroom', 'Drinking Water'], image: '/images/turf1.png' },
+    { id: 3, name: 'GameVault Center', location: 'Koramangala, Bangalore', city: 'Bangalore', sport: 'Multi-Sport', sports: ['Football', 'Cricket'], rating: 4.9, reviews: 203, price: 1200, amenities: ['Floodlights', 'Parking', 'Washroom', 'Seating', 'Drinking Water'], image: '/images/turf2.png' },
+    { id: 4, name: 'ProKick Stadium', location: 'Indiranagar, Bangalore', city: 'Bangalore', sport: 'Football', sports: ['Football'], rating: 4.7, reviews: 156, price: 900, amenities: ['Floodlights', 'Parking', 'Washroom'], image: '/images/turf3.png' },
+    { id: 6, name: 'NetPoint Arena', location: 'NetPoint Arena, Delhi', city: 'Delhi', sport: 'Football', sports: ['Football'], rating: 4.4, reviews: 65, price: 500, amenities: ['Parking', 'Washroom'], image: '/images/turf4.png' },
+    { id: 7, name: 'DunkZone', location: 'Bandra, Mumbai', city: 'Mumbai', sport: 'Football', sports: ['Football'], rating: 4.3, reviews: 48, price: 750, amenities: ['Floodlights', 'Parking'], image: '/images/turf2.png' },
+    { id: 8, name: 'PixelArena', location: 'HSR Layout, Bangalore', city: 'Bangalore', sport: 'Multi-Sport', sports: ['Football', 'Cricket'], rating: 4.8, reviews: 178, price: 1500, amenities: ['Floodlights', 'Parking', 'Washroom', 'Seating', 'Drinking Water', 'AC'], image: '/images/turf6.png' },
+    { id: 9, name: 'StrikeZone Cricket', location: 'Noida, Delhi', city: 'Delhi', sport: 'Cricket', sports: ['Cricket'], rating: 4.6, reviews: 92, price: 850, amenities: ['Floodlights', 'Parking', 'Washroom', 'Drinking Water'], image: '/images/turf7.png' },
+    { id: 10, name: 'Royal Cricket Ground', location: 'Vijay Nagar, Indore', city: 'Indore', sport: 'Cricket', sports: ['Cricket'], rating: 4.7, reviews: 110, price: 600, amenities: ['Floodlights', 'Parking', 'Drinking Water'], image: '/images/turf1.png' },
+    { id: 12, name: 'Pune Football Arena', location: 'Kothrud, Pune', city: 'Pune', sport: 'Football', sports: ['Football'], rating: 4.5, reviews: 67, price: 1000, amenities: ['Floodlights', 'Parking', 'Washroom', 'Seating'], image: '/images/turf2.png' },
+    { id: 14, name: 'Indore Sports Complex', location: 'LIG Colony, Indore', city: 'Indore', sport: 'Football', sports: ['Football'], rating: 4.9, reviews: 120, price: 800, amenities: ['Floodlights', 'Parking', 'Seating', 'Washroom', 'AC'], image: '/images/turf3.png' },
+    { id: 15, name: 'Rajiv Gandhi Stadium Turf', location: 'Navlakha, Indore', city: 'Indore', sport: 'Football', sports: ['Football', 'Cricket'], rating: 4.5, reviews: 88, price: 700, amenities: ['Floodlights', 'Parking', 'Seating', 'Drinking Water'], image: '/images/turf4.png' },
+    { id: 17, name: 'Deccan Arena Football', location: 'Madhapur, Hyderabad', city: 'Hyderabad', sport: 'Football', sports: ['Football'], rating: 4.8, reviews: 90, price: 1100, amenities: ['Floodlights', 'Parking', 'Washroom'], image: '/images/turf1.png' },
+    { id: 18, name: 'Grand Turf Cricket Ground', location: 'OMR, Chennai', city: 'Chennai', sport: 'Cricket', sports: ['Cricket'], rating: 4.7, reviews: 64, price: 950, amenities: ['Floodlights', 'Seating', 'Drinking Water'], image: '/images/turf6.png' },
+    { id: 19, name: 'Metro Sports Club', location: 'Vijay Nagar, Indore', city: 'Indore', sport: 'Multi-Sport', sports: ['Football', 'Cricket'], rating: 4.9, reviews: 145, price: 1300, amenities: ['Floodlights', 'Parking', 'Washroom', 'Seating', 'Drinking Water', 'AC'], image: '/images/turf7.png' },
+    { id: 20, name: 'Cyber City Soccer Turf', location: 'Gachibowli, Hyderabad', city: 'Hyderabad', sport: 'Football', sports: ['Football'], rating: 4.6, reviews: 78, price: 1000, amenities: ['Floodlights', 'Parking', 'Washroom'], image: '/images/turf1.png' },
+    { id: 21, name: 'Apex Sports Arena', location: 'Whitefield, Bangalore', city: 'Bangalore', sport: 'Multi-Sport', sports: ['Football', 'Cricket'], rating: 4.8, reviews: 112, price: 1100, amenities: ['Floodlights', 'Parking', 'Washroom', 'Drinking Water'], image: '/images/turf4.png' },
 ]
 
 const sportSlugs = {
@@ -91,69 +92,129 @@ export default function AllTurfsPage() {
 
             <div className="relative z-10">
                 {/* Header Section */}
-                <div className="w-full px-5 md:px-10 lg:px-20 py-6 sm:py-8">
-                    <div className="w-full">
-                        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 mb-6">
-                            <div className="shrink-0">
-                                <h1 className="text-2xl md:text-3xl font-black text-white tracking-tight mb-2 drop-shadow-2xl">
-                                    {sport ? `${sport} Turfs` : city ? `Turfs in ${city}` : 'Discover the Best Turfs'}
+                <div className="w-full relative overflow-hidden mb-8 border-b border-white/5 bg-[#020617]">
+                    {/* The right-side image */}
+                    <div className="absolute top-0 right-0 w-full lg:w-[65%] h-full z-0">
+                        <img src="https://images.unsplash.com/photo-1551958219-acbc608c6377?auto=format&fit=crop&q=80&w=1200" className="w-full h-full object-cover" alt="Turf" />
+                        <div className="absolute inset-0 bg-gradient-to-r from-[#020617] via-[#020617]/90 to-transparent" />
+                        <div className="absolute inset-0 bg-gradient-to-t from-[#020617] via-transparent to-transparent lg:hidden" />
+                    </div>
+
+                    <div className="w-full px-5 md:px-10 lg:px-20 py-10 sm:pt-20 sm:pb-12 relative z-10">
+                        <div className="flex flex-col gap-8">
+                            <div className="shrink-0 max-w-2xl">
+                                <div className="flex items-center gap-3 mb-6">
+                                    <span className="w-8 h-[2px] bg-emerald-500 rounded-full" />
+                                    <span className="text-white/80 text-[11px] font-bold tracking-[0.2em] uppercase">Play. Compete. Win.</span>
+                                </div>
+                                <h1 className="text-5xl md:text-7xl font-black text-white tracking-tight mb-6 drop-shadow-2xl leading-[1.05]">
+                                    Discover the <br className="hidden md:block" /> Best <span className="text-emerald-400">Turfs</span>
                                 </h1>
-                                <p className="text-white/50 text-sm font-medium flex items-center gap-2">
-                                    <span className="w-6 h-[2px] bg-emerald-500 rounded-full" />
-                                    {filtered.length} Premium {filtered.length === 1 ? 'Venue' : 'Venues'} available
+                                <p className="text-white/70 text-base md:text-lg max-w-md mb-12 leading-relaxed">
+                                    Book premium turfs near you and enjoy the best playing experience.
                                 </p>
+                                
+                                {/* Stats */}
+                                <div className="flex flex-wrap items-center gap-8 md:gap-12">
+                                    <div className="flex items-center gap-3">
+                                        <div className="text-emerald-400">
+                                            <FaTrophy className="w-7 h-7" />
+                                        </div>
+                                        <div className="flex flex-col">
+                                            <span className="text-white font-black text-xl leading-tight">200+</span>
+                                            <span className="text-white/60 text-[10px] font-bold uppercase tracking-wider">Premium Turfs</span>
+                                        </div>
+                                    </div>
+                                    <div className="flex items-center gap-3">
+                                        <div className="text-emerald-400">
+                                            <HiOutlineUserGroup className="w-8 h-8" />
+                                        </div>
+                                        <div className="flex flex-col">
+                                            <span className="text-white font-black text-xl leading-tight">10K+</span>
+                                            <span className="text-white/60 text-[10px] font-bold uppercase tracking-wider">Happy Players</span>
+                                        </div>
+                                    </div>
+                                    <div className="flex items-center gap-3">
+                                        <div className="text-emerald-400">
+                                            <HiOutlineCalendar className="w-8 h-8" />
+                                        </div>
+                                        <div className="flex flex-col">
+                                            <span className="text-white font-black text-xl leading-tight">50K+</span>
+                                            <span className="text-white/60 text-[10px] font-bold uppercase tracking-wider">Bookings</span>
+                                        </div>
+                                    </div>
+                                    <div className="flex items-center gap-3">
+                                        <div className="text-emerald-400">
+                                            <HiOutlineShieldCheck className="w-8 h-8" />
+                                        </div>
+                                        <div className="flex flex-col">
+                                            <span className="text-white font-black text-xl leading-tight">100%</span>
+                                            <span className="text-white/60 text-[10px] font-bold uppercase tracking-wider">Secure</span>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
 
-                            {/* Top Control Bar - Integrated Search */}
-                            <div className="flex-1 max-w-3xl w-full bg-white/5 backdrop-blur-3xl border border-white/10 p-1.5 md:p-2 rounded-2xl md:rounded-[2rem] shadow-2xl flex flex-col md:flex-row items-stretch gap-1">
-                                <div className="flex-[1.5] relative group">
-                                    <HiSearch className="absolute left-5 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40 group-focus-within:text-emerald-400 transition-colors" />
+                            {/* Search Bar matching screenshot */}
+                            <div className="mt-5 max-w-4xl bg-[#080d1a] border border-white/5 p-2 rounded-[2.5rem] shadow-2xl flex flex-col md:flex-row items-center gap-2 relative z-20">
+                                <div className="flex-[1.5] w-full px-6 py-2 flex flex-col">
+                                    <div className="flex items-center gap-2 mb-1">
+                                        <HiOutlineLocationMarker className="text-emerald-400 w-[14px] h-[14px]" />
+                                        <span className="text-[10px] font-bold text-white/50 uppercase tracking-widest">Location</span>
+                                    </div>
                                     <input
                                         type="text"
-                                        placeholder="Search by name..."
+                                        placeholder="Explore Venues..."
                                         value={search}
                                         onChange={e => setSearch(e.target.value)}
-                                        className="w-full pl-12 pr-4 py-3 bg-white/5 md:bg-transparent rounded-xl md:rounded-none text-base font-bold text-white placeholder:text-white/20 outline-none focus:ring-0"
+                                        className="w-full bg-transparent text-sm font-bold text-white placeholder:text-white/70 outline-none focus:ring-0"
                                     />
                                 </div>
-                                
-                                <div className="hidden md:block w-px bg-white/10 my-3" />
 
-                                <div className="flex-1 relative group">
-                                    <HiLocationMarker className="absolute left-5 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40 group-hover:text-emerald-400 transition-colors" />
-                                    <select 
-                                        value={city} 
-                                        onChange={e => setCity(e.target.value)} 
-                                        className="w-full pl-12 pr-8 py-3 bg-white/5 md:bg-transparent rounded-xl md:rounded-none text-sm font-bold text-white appearance-none outline-none cursor-pointer focus:bg-slate-900"
-                                    >
-                                        <option value="" className="bg-slate-900">All Cities</option>
-                                        {['Mumbai', 'Delhi', 'Bangalore', 'Pune', 'Indore', 'Hyderabad', 'Chennai'].map(c => (
-                                            <option key={c} value={c} className="bg-slate-900">{c}</option>
-                                        ))}
-                                    </select>
+                                <div className="hidden md:block w-px h-10 bg-white/5" />
+
+                                <div className="flex-1 w-full px-6 py-2 flex flex-col">
+                                    <div className="flex items-center gap-2 mb-1">
+                                        <HiOutlineCalendar className="text-emerald-400 w-[14px] h-[14px]" />
+                                        <span className="text-[10px] font-bold text-white/50 uppercase tracking-widest">Date</span>
+                                    </div>
+                                    <input
+                                        type="text"
+                                        placeholder="Choose Date"
+                                        className="w-full bg-transparent text-sm font-bold text-white placeholder:text-white/70 outline-none focus:ring-0"
+                                    />
                                 </div>
 
-                                <div className="hidden md:block w-px bg-white/10 my-3" />
+                                <div className="hidden md:block w-px h-10 bg-white/5" />
 
-                                <div className="flex-1 relative group">
-                                    <HiStar className="absolute left-5 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40 group-hover:text-emerald-400 transition-colors" />
-                                    <select 
-                                        value={sport} 
-                                        onChange={e => setSport(e.target.value)} 
-                                        className="w-full pl-12 pr-8 py-3 bg-white/5 md:bg-transparent rounded-xl md:rounded-none text-sm font-bold text-white appearance-none outline-none cursor-pointer focus:bg-slate-900"
-                                    >
-                                        <option value="" className="bg-slate-900">All Sports</option>
-                                        {['Football', 'Cricket', 'Multi-Sport'].map(s => (
-                                            <option key={s} value={s} className="bg-slate-900">{s}</option>
-                                        ))}
-                                    </select>
+                                <div className="flex-1 w-full px-6 py-2 flex flex-col">
+                                    <div className="flex items-center gap-2 mb-1">
+                                        <HiOutlineClock className="text-emerald-400 w-[14px] h-[14px]" />
+                                        <span className="text-[10px] font-bold text-white/50 uppercase tracking-widest">Time Slot</span>
+                                    </div>
+                                    <input
+                                        type="text"
+                                        placeholder="Any Time"
+                                        className="w-full bg-transparent text-sm font-bold text-white placeholder:text-white/70 outline-none focus:ring-0"
+                                    />
+                                </div>
+
+                                <div className="flex items-center gap-3 pr-2 w-full md:w-auto mt-2 md:mt-0 pb-1 md:pb-0 justify-end md:justify-start">
+                                    <button onClick={clearFilters} className="w-10 h-10 flex items-center justify-center rounded-full bg-white/5 text-white/50 hover:text-white hover:bg-white/10 transition-colors">
+                                        <HiRefresh className="w-4 h-4" />
+                                    </button>
+                                    <button className="px-8 py-3 bg-gradient-to-r from-emerald-400 to-cyan-400 hover:from-emerald-300 hover:to-cyan-300 text-slate-950 font-black uppercase tracking-widest text-xs rounded-full transition-all shadow-[0_0_20px_rgba(16,185,129,0.3)]">
+                                        Search
+                                    </button>
                                 </div>
                             </div>
 
+
+
                             {/* Filters Trigger for Mobile */}
-                            <button 
+                            <button
                                 onClick={() => setShowFilters(true)}
-                                className="lg:hidden flex items-center justify-center gap-2 px-5 py-3.5 bg-white/5 backdrop-blur-xl border border-white/10 rounded-xl text-white font-black uppercase tracking-widest text-xs hover:bg-white/10 transition-all active:scale-95"
+                                className="lg:hidden flex items-center justify-center gap-2 px-5 py-3.5 bg-white/5 backdrop-blur-xl border border-white/10 rounded-xl text-white font-black uppercase tracking-widest text-xs hover:bg-white/10 transition-all active:scale-95 w-fit"
                             >
                                 <HiFilter className="w-4 h-4 text-emerald-400" /> Filters
                             </button>
@@ -163,12 +224,12 @@ export default function AllTurfsPage() {
 
                 <div className="w-full px-5 md:px-10 lg:px-20 py-4">
                     <div className="flex flex-col lg:flex-row gap-8">
-                         {/* Sidebar Filters - Desktop Glass Card */}
-                          <div className={`
+                        {/* Sidebar Filters - Desktop Glass Card */}
+                        <div className={`
                               ${showFilters ? 'fixed inset-0 z-50 p-6 bg-slate-950/90 backdrop-blur-md' : 'hidden'} 
                               lg:block lg:w-[260px] lg:shrink-0 lg:bg-transparent lg:p-0 lg:z-auto lg:sticky lg:top-24 h-fit
                           `}>
-                              <div className="bg-white/5 backdrop-blur-3xl border border-white/10 rounded-[2.5rem] p-4 space-y-10 shadow-2xl">
+                            <div className="bg-white/5 backdrop-blur-3xl border border-white/10 rounded-[2.5rem] p-4 space-y-10 shadow-2xl">
                                 <div className="flex items-center justify-between">
                                     <h3 className="text-xl font-black text-white uppercase tracking-wider">Filters</h3>
                                     <div className="flex items-center gap-3">
@@ -202,9 +263,9 @@ export default function AllTurfsPage() {
                                     <label className="text-[10px] font-black text-emerald-400 uppercase tracking-[0.2em] mb-4 block">Rating</label>
                                     <div className="grid grid-cols-4 gap-2">
                                         {[0, 3, 4, 4.5].map(r => (
-                                            <button 
-                                                key={r} 
-                                                onClick={() => setMinRating(r)} 
+                                            <button
+                                                key={r}
+                                                onClick={() => setMinRating(r)}
                                                 className={`flex flex-col items-center justify-center py-3 rounded-2xl text-xs font-black border transition-all ${minRating === r ? 'bg-emerald-500 border-emerald-500 text-white shadow-[0_0_20px_rgba(16,185,129,0.3)]' : 'bg-white/5 border-white/10 text-white/60 hover:bg-white/10'}`}
                                             >
                                                 {r === 0 ? 'Any' : <><HiStar className={`w-3 h-3 mb-1 ${minRating === r ? 'text-white' : 'text-amber-500'}`} /> {r}+</>}
@@ -217,9 +278,9 @@ export default function AllTurfsPage() {
                                 <div>
                                     <label className="text-[10px] font-black text-emerald-400 uppercase tracking-[0.2em] mb-4 block">Sort By</label>
                                     <div className="relative group">
-                                        <select 
-                                            value={sortBy} 
-                                            onChange={e => setSortBy(e.target.value)} 
+                                        <select
+                                            value={sortBy}
+                                            onChange={e => setSortBy(e.target.value)}
                                             className="w-full px-5 py-3.5 bg-slate-900 border border-white/10 rounded-2xl text-xs font-black text-white hover:border-emerald-500/50 appearance-none outline-none cursor-pointer focus:ring-0 uppercase tracking-wider transition-all"
                                         >
                                             <option value="rating" className="bg-slate-900">Best Rated</option>
@@ -263,31 +324,19 @@ export default function AllTurfsPage() {
                                         const turfNameLower = (t.name || '').toLowerCase()
                                         let promo = null
                                         if (turfNameLower.includes('indore sports arena') || turfNameLower.includes('indore sports complex')) {
-                                            promo = {
-                                                ribbon: '⚡ 9AM–10AM OFFER • Save 30% OFF',
-                                                strip: '🎯 Today 9:00 AM – 10:00 AM • Flat 30% OFF'
-                                            }
+                                            promo = { icon: '🎁', text: 'Today 9:00 AM - 10:00 AM' }
                                         } else if (turfNameLower.includes('royal cricket ground')) {
-                                            promo = {
-                                                ribbon: '🔥 MORNING SLOT • ₹200 OFF • 9AM–10AM',
-                                                strip: '⏰ Early Bird Offer • ₹200 OFF on morning booking'
-                                            }
+                                            promo = { icon: '🏷️', text: 'Early Bird Offer • ₹200 OFF' }
                                         } else if (turfNameLower.includes('green arena') || turfNameLower.includes('sportzone arena')) {
-                                            promo = {
-                                                ribbon: '⚡ EVENING DEAL • Save 25% OFF',
-                                                strip: '⚽ Peak Hour Offer • Flat 25% OFF on booking'
-                                            }
+                                            promo = { icon: '⚽', text: 'Peak Hour Offer • 25% OFF' }
                                         } else if (turfNameLower.includes('champion cricket') || turfNameLower.includes('prokick stadium')) {
-                                            promo = {
-                                                ribbon: '🔥 WEEKEND SPECIAL • ₹300 OFF',
-                                                strip: '🏏 Prime Time Deal • ₹300 OFF on pitch booking'
-                                            }
+                                            promo = { icon: '🏏', text: 'Weekend Special • ₹300 OFF' }
                                         }
 
                                         return (
-                                            <div 
-                                                key={t.id} 
-                                                 className="group relative bg-white/5 backdrop-blur-3xl border border-white/10 rounded-xl overflow-hidden transition-all duration-700 hover:shadow-[0_40px_80px_-20px_rgba(0,0,0,0.6)] hover:-translate-y-3 flex flex-col h-full cursor-pointer"
+                                            <div
+                                                key={t.id}
+                                                className="group relative bg-white/5 backdrop-blur-3xl border border-white/10 rounded-xl overflow-hidden transition-all duration-700 hover:shadow-[0_40px_80px_-20px_rgba(0,0,0,0.6)] hover:-translate-y-3 flex flex-col h-full cursor-pointer"
                                                 style={{ animationDelay: `${i * 100}ms` }}
                                                 onClick={() => navigate(`/turfs/${t.id}`)}
                                             >
@@ -295,17 +344,16 @@ export default function AllTurfsPage() {
                                                 <div className="relative h-36 overflow-hidden">
                                                     <img src={t.image} alt={t.name} className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-110" />
                                                     <div className="absolute inset-0 bg-gradient-to-t from-[#020617] via-transparent to-transparent opacity-80" />
-                                                    
-                                                    {/* Floating Promotional Ribbon (Top-Left) */}
+
+                                                    {/* Top Left: Glass Badge Offer */}
                                                     {promo && (
-                                                        <div 
-                                                            className="absolute top-3 left-3 z-10 max-w-[calc(100%-90px)] font-bold text-[11px] text-white px-3 py-1.5 flex items-center gap-1 leading-none transition-all duration-300 pointer-events-none shadow-[0_0_12px_rgba(0,230,167,0.35)] group-hover:shadow-[0_0_18px_rgba(0,230,167,0.6)] truncate"
-                                                            style={{
-                                                                background: 'linear-gradient(135deg, #00E6A7, #00C2FF)',
-                                                                borderRadius: '9999px',
-                                                            }}
-                                                        >
-                                                            <span className="truncate">{promo.ribbon}</span>
+                                                        <div className="absolute top-2.5 left-2.5 z-20 bg-slate-950/80 backdrop-blur-md border border-white/10 rounded px-2 py-1.5 flex flex-col shadow-lg pointer-events-none">
+                                                            <span className="text-[8px] font-black text-orange-500 uppercase tracking-tight flex items-center gap-1 leading-none mb-1">
+                                                                <span className="text-[9px]">{promo.icon}</span> {promo.text.includes('•') ? promo.text.split('•')[0].trim() : 'SPECIAL OFFER'}
+                                                            </span>
+                                                            <span className="text-[7.5px] font-bold text-white uppercase tracking-widest leading-none">
+                                                                {promo.text.includes('•') ? promo.text.split('•')[1].trim() : promo.text}
+                                                            </span>
                                                         </div>
                                                     )}
 
@@ -329,20 +377,6 @@ export default function AllTurfsPage() {
                                                         <HiLocationMarker className="w-3.5 h-3.5 text-emerald-500" /> {t.location}
                                                     </p>
 
-                                                    {/* Additional Mini Offer Strip */}
-                                                    {promo && (
-                                                        <div 
-                                                            className="mt-2 mb-2 px-2 py-1.5 rounded-lg text-[10px] font-semibold text-[#00E6A7] flex items-center gap-1 leading-tight"
-                                                            style={{
-                                                                background: 'rgba(0, 230, 167, 0.12)',
-                                                                border: '1px solid rgba(0, 230, 167, 0.25)',
-                                                                borderRadius: '8px'
-                                                            }}
-                                                        >
-                                                            <span className="truncate">{promo.strip}</span>
-                                                        </div>
-                                                    )}
-
                                                     {/* Pricing & CTA */}
                                                     <div className="flex items-center justify-between mt-auto pt-4 border-t border-white/5">
                                                         <div className="flex flex-col">
@@ -353,8 +387,8 @@ export default function AllTurfsPage() {
                                                             </div>
                                                         </div>
                                                         <div className="flex gap-2">
-                                                            <button 
-                                                                onClick={(e) => { e.stopPropagation(); navigate(`/booking/${t.id}`) }} 
+                                                            <button
+                                                                onClick={(e) => { e.stopPropagation(); navigate(`/turfs/${t.id}`) }}
                                                                 className="flex items-center gap-1 px-4 py-2.5 bg-emerald-500 text-slate-950 font-black uppercase tracking-wider text-[9px] rounded-xl hover:bg-emerald-400 transition-all active:scale-95 group/btn shadow-lg"
                                                             >
                                                                 Book Now <HiArrowRight className="w-3.5 h-3.5 group-hover/btn:translate-x-0.5 transition-transform" />
@@ -378,7 +412,7 @@ export default function AllTurfsPage() {
 function Chip({ label, onRemove, icon }) {
     return (
         <span className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[10px] font-black uppercase tracking-widest rounded-2xl hover:bg-emerald-500/20 transition-all">
-            {icon && icon} {label} 
+            {icon && icon} {label}
             <HiX className="w-3.5 h-3.5 cursor-pointer hover:text-white transition-colors" onClick={onRemove} />
         </span>
     )

@@ -1,47 +1,125 @@
-import { HiHome, HiOfficeBuilding, HiUsers, HiCreditCard, HiChartBar, HiCog, HiClipboardList, HiShieldCheck, HiExclamationCircle, HiCash } from 'react-icons/hi'
-import { HiTrophy, HiCalendar, HiUserGroup, HiBolt, HiWallet, HiWrench, HiCube, HiDocumentText, HiUser, HiTicket } from 'react-icons/hi2'
+import { 
+    HiHome, HiOfficeBuilding, HiUsers, HiCreditCard, HiChartBar, HiCog, HiClipboardList, 
+    HiShieldCheck, HiExclamationCircle, HiCash, HiSpeakerphone, HiCurrencyDollar, HiPlusCircle, 
+    HiTag, HiCheckCircle, HiStar, HiAdjustments, HiViewGrid
+} from 'react-icons/hi'
+import { 
+    HiTrophy, HiCalendar, HiUserGroup, HiBolt, HiWallet, HiWrench, HiCube, 
+    HiDocumentText, HiUser, HiTicket, HiMegaphone, HiSparkles, HiPlay
+} from 'react-icons/hi2'
 
 const sidebarConfig = {
     superadmin: [
-        { label: 'Dashboard', icon: <HiHome />, path: '/dashboard/super-admin' },
-        { label: 'Branches', icon: <HiOfficeBuilding />, path: '/dashboard/super-admin/branches' },
-        { label: 'Owners', icon: <HiUsers />, path: '/dashboard/super-admin/owners' },
-        { label: 'Subscriptions', icon: <HiCreditCard />, path: '/dashboard/super-admin/subscriptions' },
-        { label: 'Analytics', icon: <HiChartBar />, path: '/dashboard/super-admin/analytics' },
-        { label: 'Payment Logs', icon: <HiClipboardList />, path: '/dashboard/super-admin/payments' },
-        { label: 'Settings', icon: <HiCog />, path: '/dashboard/super-admin/settings' },
+        { label: 'Dashboard', icon: <HiHome />, path: '/super-admin' },
+        { label: 'Branches', icon: <HiOfficeBuilding />, path: '/super-admin/branches' },
+        { label: 'Owners', icon: <HiUsers />, path: '/super-admin/owners' },
+        { label: 'Subscriptions', icon: <HiCreditCard />, path: '/super-admin/subscriptions' },
+        
+        { isHeader: true, label: 'System Logs' },
+        { label: 'Analytics Logs', icon: <HiChartBar />, path: '/super-admin/analytics' },
+        { label: 'Payment Logs', icon: <HiClipboardList />, path: '/super-admin/payments' },
+        { label: 'Settings', icon: <HiCog />, path: '/super-admin/settings' },
     ],
     owner: [
-        { label: 'Dashboard', icon: <HiHome />, path: '/dashboard/owner' },
-        { label: 'Sports', icon: <HiBolt />, path: '/dashboard/owner/sports' },
-        { label: 'Slots', icon: <HiCalendar />, path: '/dashboard/owner/slots' },
-        { label: 'Bookings', icon: <HiTicket />, path: '/dashboard/owner/bookings' },
-        { label: 'POS Billing', icon: <HiCreditCard />, path: '/dashboard/owner/pos' },
-        { label: 'Billing History', icon: <HiClipboardList />, path: '/dashboard/owner/billing-history' },
-        { label: 'Tournaments', icon: <HiTrophy />, path: '/dashboard/owner/tournaments' },
-        { label: 'Teams', icon: <HiUserGroup />, path: '/dashboard/owner/teams' },
-        { label: 'Wallet', icon: <HiWallet />, path: '/dashboard/owner/wallet' },
-        { label: 'Reports', icon: <HiChartBar />, path: '/dashboard/owner/reports' },
-        { label: 'Inventory', icon: <HiCube />, path: '/dashboard/owner/inventory' },
-        { label: 'Maintenance', icon: <HiWrench />, path: '/dashboard/owner/maintenance' },
-        { label: 'Staff', icon: <HiUsers />, path: '/dashboard/owner/staff' },
+        { label: 'Dashboard', icon: <HiHome />, path: '/admin' },
+        
+        { isHeader: true, label: 'Marketing & Ads' },
+        {
+            isCollapsible: true,
+            label: 'Advertising Management',
+            icon: <HiSpeakerphone />,
+            pathPrefix: '/admin/ads',
+            children: [
+                { label: 'All Advertisements', icon: <HiSpeakerphone />, path: '/admin/ads' },
+                { label: 'Create Advertisement', icon: <HiPlusCircle />, path: '/admin/ads/create' },
+                { label: 'Commission Management', icon: <HiCurrencyDollar />, path: '/admin/ads/commissions' },
+                { label: 'Analytics', icon: <HiChartBar />, path: '/admin/ads/analytics' },
+                { label: 'Payments', icon: <HiCreditCard />, path: '/admin/ads/payments' },
+            ]
+        },
+
+        { isHeader: true, label: 'Tournaments' },
+        {
+            isCollapsible: true,
+            label: 'Tournament Management',
+            icon: <HiTrophy />,
+            pathPrefix: '/admin/tournaments',
+            children: [
+                { label: 'Dashboard', icon: <HiChartBar />, path: '/admin/tournaments/dashboard' },
+                { label: 'All Tournaments', icon: <HiTrophy />, path: '/admin/tournaments/all' },
+                { label: 'Create Tournament', icon: <HiPlusCircle />, path: '/admin/tournaments/create' },
+                { label: 'Pending Approvals', icon: <HiExclamationCircle />, path: '/admin/tournaments/pending' },
+                { label: 'Categories', icon: <HiTag />, path: '/admin/tournaments/categories' },
+                { label: 'Team Registrations', icon: <HiUserGroup />, path: '/admin/tournaments/registrations' },
+                { label: 'Fixtures', icon: <HiViewGrid />, path: '/admin/tournaments/fixtures' },
+                { label: 'Matches', icon: <HiPlay />, path: '/admin/tournaments/matches' },
+                { label: 'Payments', icon: <HiCreditCard />, path: '/admin/tournaments/payments' },
+                { label: 'Sponsors', icon: <HiStar />, path: '/admin/tournaments/sponsors' },
+                { label: 'Reports', icon: <HiClipboardList />, path: '/admin/tournaments/reports' },
+                { label: 'Settings', icon: <HiAdjustments />, path: '/admin/tournaments/settings' },
+            ]
+        },
+
+        { isHeader: true, label: 'Operations' },
+        { label: 'Sports', icon: <HiBolt />, path: '/admin/sports' },
+        { label: 'Slots', icon: <HiCalendar />, path: '/admin/slots' },
+        { label: 'Bookings', icon: <HiTicket />, path: '/admin/bookings' },
+        { label: 'POS Billing', icon: <HiCreditCard />, path: '/admin/pos' },
+        { label: 'Billing History', icon: <HiClipboardList />, path: '/admin/billing-history' },
+        { label: 'Teams', icon: <HiUserGroup />, path: '/admin/teams' },
+        { label: 'Wallet', icon: <HiWallet />, path: '/admin/wallet' },
+        { label: 'Reports', icon: <HiChartBar />, path: '/admin/reports' },
+        { label: 'Inventory', icon: <HiCube />, path: '/admin/inventory' },
+        { label: 'Maintenance', icon: <HiWrench />, path: '/admin/maintenance' },
+        { label: 'Staff', icon: <HiUsers />, path: '/admin/staff' },
     ],
     staff: [
-        { label: 'Dashboard', icon: <HiHome />, path: '/dashboard/staff' },
-        { label: 'Bookings', icon: <HiTicket />, path: '/dashboard/staff/bookings' },
-        { label: 'Tournaments', icon: <HiTrophy />, path: '/dashboard/staff/tournaments' },
-        { label: 'Refunds', icon: <HiCash />, path: '/dashboard/staff/refunds' },
-        { label: 'Maintenance', icon: <HiWrench />, path: '/dashboard/staff/maintenance' },
-        { label: 'Equipment', icon: <HiCube />, path: '/dashboard/staff/equipment' },
+        { label: 'Dashboard', icon: <HiHome />, path: '/staff' },
+        
+        { isHeader: true, label: 'Marketing' },
+        {
+            isCollapsible: true,
+            label: 'Advertising Management',
+            icon: <HiMegaphone />,
+            pathPrefix: '/staff/ads',
+            children: [
+                { label: 'My Advertisements', icon: <HiMegaphone />, path: '/staff/ads' },
+                { label: 'Create Advertisement', icon: <HiPlusCircle />, path: '/staff/ads/create' },
+                { label: 'Advertisement Analytics', icon: <HiChartBar />, path: '/staff/ads/analytics' },
+            ]
+        },
+
+        { isHeader: true, label: 'Tournaments' },
+        {
+            isCollapsible: true,
+            label: 'Tournament Management',
+            icon: <HiTrophy />,
+            pathPrefix: '/staff/tournaments',
+            children: [
+                { label: 'Dashboard', icon: <HiChartBar />, path: '/staff/tournaments/dashboard' },
+                { label: 'All Tournaments', icon: <HiTrophy />, path: '/staff/tournaments/all' },
+                { label: 'Create Tournament', icon: <HiPlusCircle />, path: '/staff/tournaments/create' },
+                { label: 'Pending Approvals', icon: <HiExclamationCircle />, path: '/staff/tournaments/pending' },
+                { label: 'Team Registrations', icon: <HiUserGroup />, path: '/staff/tournaments/registrations' },
+                { label: 'Fixtures', icon: <HiViewGrid />, path: '/staff/tournaments/fixtures' },
+                { label: 'Matches', icon: <HiPlay />, path: '/staff/tournaments/matches' },
+            ]
+        },
+
+        { isHeader: true, label: 'Staff Operations' },
+        { label: 'Bookings', icon: <HiTicket />, path: '/staff/bookings' },
+        { label: 'Refunds', icon: <HiCash />, path: '/staff/refunds' },
+        { label: 'Maintenance', icon: <HiWrench />, path: '/staff/maintenance' },
+        { label: 'Equipment', icon: <HiCube />, path: '/staff/equipment' },
     ],
     customer: [
-        { label: 'Dashboard', icon: <HiHome />, path: '/dashboard/customer' },
-        { label: 'My Bookings', icon: <HiTicket />, path: '/dashboard/customer/bookings' },
-        { label: 'My Teams', icon: <HiUserGroup />, path: '/dashboard/customer/teams' },
-        { label: 'My Matches', icon: <HiTrophy />, path: '/dashboard/customer/matches' },
-        { label: 'Tournaments', icon: <HiDocumentText />, path: '/dashboard/customer/tournaments' },
-        { label: 'Wallet', icon: <HiWallet />, path: '/dashboard/customer/wallet' },
-        { label: 'Profile', icon: <HiUser />, path: '/dashboard/customer/profile' },
+        { label: 'Dashboard', icon: <HiHome />, path: '/customer' },
+        { label: 'My Bookings', icon: <HiTicket />, path: '/customer/bookings' },
+        { label: 'My Teams', icon: <HiUserGroup />, path: '/customer/teams' },
+        { label: 'My Matches', icon: <HiTrophy />, path: '/customer/matches' },
+        { label: 'Tournaments', icon: <HiDocumentText />, path: '/customer/tournaments' },
+        { label: 'Wallet', icon: <HiWallet />, path: '/customer/wallet' },
+        { label: 'Profile', icon: <HiUser />, path: '/customer/profile' },
     ],
 }
 

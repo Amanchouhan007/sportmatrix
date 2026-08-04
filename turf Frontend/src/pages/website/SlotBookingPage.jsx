@@ -24,6 +24,7 @@ export default function SlotBookingPage() {
     const navigate = useNavigate()
     const [selectedDate, setSelectedDate] = useState('2026-03-15')
     const [selectedSlot, setSelectedSlot] = useState(null)
+    const [duration, setDuration] = useState(1)
     const [selectedAddOns, setSelectedAddOns] = useState([])
     const [sport, setSport] = useState('Football')
     const [isDeploying, setIsDeploying] = useState(false)
@@ -63,9 +64,23 @@ export default function SlotBookingPage() {
         }, 800)
     }
 
-    const slotPrice = selectedSlot !== null ? slots[selectedSlot]?.price || 0 : 0
+    const handleSelectSlot = (slotId) => {
+        const isInvalid = Array.from({length: duration}).some((_, i) => {
+            const s = slots.find(slot => slot.id === slotId + i)
+            return !s || s.status === 'booked' || s.status === 'blocked'
+        })
+        if (isInvalid) {
+            if (addToast) addToast(`Cannot select ${duration} hours from this time slot`, 'error')
+            return
+        }
+        setSelectedSlot(slotId)
+    }
+
+    const slotPrice = selectedSlot !== null ? Array.from({length: duration}).reduce((sum, _, i) => sum + (slots.find(s => s.id === selectedSlot + i)?.price || 0), 0) : 0
     const addOnTotal = selectedAddOns.reduce((sum, addOnId) => sum + (addOns.find(a => a.id === addOnId)?.price || 0), 0)
     const total = slotPrice + addOnTotal
+    
+    const selectedSlotsArray = selectedSlot !== null ? Array.from({length: duration}).map((_, i) => selectedSlot + i) : []
 
     return (
         <div className="min-h-screen bg-slate-950 pt-24 pb-16 relative">
@@ -114,14 +129,31 @@ export default function SlotBookingPage() {
                                         ))}
                                     </div>
                                 </div>
-                                <div className="sm:w-48">
-                                    <label className="text-[9px] font-bold tracking-widest text-slate-500 uppercase mb-3 block">Deployment Date</label>
-                                    <input
-                                        type="date"
-                                        value={selectedDate}
-                                        onChange={e => setSelectedDate(e.target.value)}
-                                        className="w-full px-4 py-2 border border-white/10 bg-slate-950/50 rounded-sm text-sm font-medium text-white outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-colors [color-scheme:dark]"
-                                    />
+                                <div className="sm:w-64 flex gap-3">
+                                    <div className="flex-1">
+                                        <label className="text-[9px] font-bold tracking-widest text-slate-500 uppercase mb-3 block">Deployment Date</label>
+                                        <input
+                                            type="date"
+                                            value={selectedDate}
+                                            onChange={e => setSelectedDate(e.target.value)}
+                                            className="w-full px-4 py-2 border border-white/10 bg-slate-950/50 rounded-sm text-sm font-medium text-white outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-colors [color-scheme:dark]"
+                                        />
+                                    </div>
+                                    <div className="flex-1">
+                                        <label className="text-[9px] font-bold tracking-widest text-slate-500 uppercase mb-3 block">Duration</label>
+                                        <select
+                                            value={duration}
+                                            onChange={e => {
+                                                setDuration(Number(e.target.value))
+                                                setSelectedSlot(null)
+                                            }}
+                                            className="w-full px-4 py-2 border border-white/10 bg-slate-950/50 rounded-sm text-sm font-medium text-white outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-colors cursor-pointer"
+                                        >
+                                            <option value={1} className="bg-slate-900">1 Hour</option>
+                                            <option value={2} className="bg-slate-900">2 Hours</option>
+                                            <option value={3} className="bg-slate-900">3 Hours</option>
+                                        </select>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -139,7 +171,7 @@ export default function SlotBookingPage() {
                                 <span className="flex items-center gap-2 text-slate-600"><span className="w-2.5 h-2.5 rounded-sm bg-slate-900 border border-white/5" /> Booked</span>
                             </div>
 
-                            <SlotGrid slots={slots} selectedSlot={selectedSlot} onSelect={s => setSelectedSlot(s.id)} />
+                            <SlotGrid slots={slots} selectedSlot={selectedSlotsArray} onSelect={s => handleSelectSlot(s.id)} />
                         </div>
 
                         {/* Add-ons */}
@@ -193,7 +225,7 @@ export default function SlotBookingPage() {
                                         <div className="flex justify-between items-center">
                                             <span className="text-slate-500">Time Vector</span>
                                             <span className="text-emerald-400 bg-emerald-500/10 px-2 py-1 rounded-sm border border-emerald-500/30">
-                                                {selectedSlot !== null ? slots[selectedSlot]?.time : 'AWAITING SELECTION'}
+                                                {selectedSlot !== null ? `${slots.find(s => s.id === selectedSlot)?.time} (${duration} ${duration === 1 ? 'hr' : 'hrs'})` : 'AWAITING SELECTION'}
                                             </span>
                                         </div>
                                         <div className="flex justify-between items-center">
@@ -302,7 +334,7 @@ export default function SlotBookingPage() {
                             <button
                                 onClick={() => {
                                     setBookingSuccessModal(false)
-                                    navigate('/dashboard/customer/bookings')
+                                    navigate('/customer/bookings')
                                 }}
                                 className="flex-1 py-3 px-4 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black italic tracking-wider text-xs uppercase rounded transition-colors cursor-pointer text-center"
                             >

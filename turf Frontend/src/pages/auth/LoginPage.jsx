@@ -17,10 +17,10 @@ export default function LoginPage() {
             const normalizeRole = (r) => (r || '').toUpperCase().replace(/[-_]/g, '');
             const rNorm = normalizeRole(user.role);
             const roleRoutes = {
-                SUPERADMIN: '/dashboard/super-admin',
-                OWNER: '/dashboard/owner',
-                STAFF: '/dashboard/staff',
-                CUSTOMER: '/dashboard/customer'
+                SUPERADMIN: '/super-admin',
+                OWNER: '/admin',
+                STAFF: '/staff',
+                CUSTOMER: '/customer'
             };
             if (roleRoutes[rNorm]) {
                 navigate(roleRoutes[rNorm]);

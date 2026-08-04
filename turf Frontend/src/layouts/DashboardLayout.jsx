@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
-import { NavLink, Outlet, useNavigate } from 'react-router-dom'
-import { HiMenu, HiX, HiLogout, HiBell, HiSearch } from 'react-icons/hi'
+import { NavLink, Outlet, useNavigate, useLocation } from 'react-router-dom'
+import { HiMenu, HiX, HiLogout, HiBell, HiSearch, HiChevronDown } from 'react-icons/hi'
 import sidebarConfig from '../config/sidebarConfig'
 import { useAuth } from '../context/AuthContext'
 
@@ -34,8 +34,12 @@ export default function DashboardLayout({ role = 'owner' }) {
     const [dropdownOpen, setDropdownOpen] = useState(false)
     const [notifOpen, setNotifOpen] = useState(false)
     const [notifications, setNotifications] = useState(roleNotifications[role] || roleNotifications.customer)
+    
+    // Collapsible Menu Open States
+    const [openMenus, setOpenMenus] = useState({})
 
     const navigate = useNavigate()
+    const location = useLocation()
     const { logout } = useAuth()
     const menu = sidebarConfig[role] || []
 
@@ -43,14 +47,34 @@ export default function DashboardLayout({ role = 'owner' }) {
         setNotifications(roleNotifications[role] || roleNotifications.customer)
     }, [role])
 
+    // Auto-expand parent menu if current location matches any child item
+    useEffect(() => {
+        menu.forEach(item => {
+            if (item.isCollapsible && item.children) {
+                const isActive = item.children.some(child => 
+                    location.pathname === child.path || 
+                    (child.path !== '/admin/ads' && location.pathname.startsWith(child.path)) ||
+                    location.pathname.startsWith(item.pathPrefix)
+                )
+                if (isActive) {
+                    setOpenMenus(prev => ({ ...prev, [item.label]: true }))
+                }
+            }
+        })
+    }, [location.pathname, menu])
+
+    const toggleMenu = (label) => {
+        setOpenMenus(prev => ({ ...prev, [label]: !prev[label] }))
+    }
+
     // Role-based profile/settings route map matching sidebar config paths
     const profileRouteMap = {
-        superadmin: '/dashboard/super-admin/settings',
-        owner:      '/dashboard/owner',
-        staff:      '/dashboard/staff',
-        customer:   '/dashboard/customer/profile',
+        superadmin: '/super-admin/settings',
+        owner: '/admin',
+        staff: '/staff',
+        customer: '/customer/profile',
     }
-    
+
     // Close dropdowns on click away
     useEffect(() => {
         const handleClickOutside = (event) => {
@@ -86,19 +110,85 @@ export default function DashboardLayout({ role = 'owner' }) {
                     <div className="px-3 py-2 rounded-xl bg-slate-800/50 text-xs font-semibold text-slate-400 uppercase tracking-wider">{roleLabels[role]}</div>
                 </div>
 
-                <nav className="flex-1 overflow-y-auto px-3 py-2 space-y-0.5">
-                    {menu.map((item) => (
-                        <NavLink
-                            key={item.path}
-                            to={item.path}
-                            end={item.path === `/dashboard/${role}` || item.path === '/dashboard/super-admin'}
-                            onClick={() => setSidebarOpen(false)}
-                            className={({ isActive }) => `flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 border ${isActive ? 'bg-primary-600/10 text-primary-400 border-primary-600/20 shadow-[0_0_15px_rgba(var(--color-primary-600-rgb),0.15)]' : 'border-transparent text-slate-400 hover:bg-slate-800/50 hover:text-slate-200'}`}
-                        >
-                            <span className="text-lg">{item.icon}</span>
-                            {item.label}
-                        </NavLink>
-                    ))}
+                <nav className="flex-1 overflow-y-auto px-3 py-2 space-y-1">
+                    {menu.map((item, idx) => {
+                        if (item.isHeader) {
+                            return (
+                                <div key={idx} className="pt-4 pb-1 px-3 text-[10px] font-black text-slate-500 uppercase tracking-widest">
+                                    {item.label}
+                                </div>
+                            )
+                        }
+
+                        if (item.isCollapsible) {
+                            const isOpen = !!openMenus[item.label]
+                            const isParentActive = item.children?.some(child => 
+                                location.pathname === child.path || 
+                                (child.path !== '/admin/ads' && child.path !== '/staff/ads' && location.pathname.startsWith(child.path)) ||
+                                location.pathname.startsWith(item.pathPrefix)
+                            )
+
+                            return (
+                                <div key={item.label} className="space-y-1">
+                                    {/* Parent Collapsible Item */}
+                                    <button
+                                        type="button"
+                                        onClick={() => toggleMenu(item.label)}
+                                        className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200 border cursor-pointer ${
+                                            isParentActive
+                                                ? 'bg-primary-600/10 text-primary-400 border-primary-600/20 shadow-[0_0_15px_rgba(var(--color-primary-600-rgb),0.15)]'
+                                                : 'border-transparent text-slate-400 hover:bg-slate-800/50 hover:text-slate-200'
+                                        }`}
+                                    >
+                                        <div className="flex items-center gap-3 truncate">
+                                            <span className="text-lg">{item.icon}</span>
+                                            <span className="truncate">{item.label}</span>
+                                        </div>
+                                        <HiChevronDown className={`w-4 h-4 shrink-0 transition-transform duration-300 ${isOpen ? 'rotate-180 text-primary-400' : 'text-slate-500'}`} />
+                                    </button>
+
+                                    {/* Submenu Children List */}
+                                    <div
+                                        className={`transition-all duration-300 overflow-hidden ${
+                                            isOpen ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'
+                                        }`}
+                                    >
+                                        <div className="pl-4 border-l-2 border-slate-800 ml-4 my-1 space-y-1">
+                                            {item.children.map((child) => (
+                                                <NavLink
+                                                    key={child.path}
+                                                    to={child.path}
+                                                    end={child.path === '/admin/ads' || child.path === '/staff/ads'}
+                                                    onClick={() => setSidebarOpen(false)}
+                                                    className={({ isActive }) => `flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-semibold transition-all duration-200 ${
+                                                        isActive
+                                                            ? 'bg-primary-500/20 text-primary-300 border border-primary-500/30 font-bold shadow-sm'
+                                                            : 'text-slate-400 hover:bg-slate-800/60 hover:text-slate-200 border border-transparent'
+                                                    }`}
+                                                >
+                                                    <span className="text-base shrink-0">{child.icon}</span>
+                                                    <span className="truncate">{child.label}</span>
+                                                </NavLink>
+                                            ))}
+                                        </div>
+                                    </div>
+                                </div>
+                            )
+                        }
+
+                        return (
+                            <NavLink
+                                key={item.path}
+                                to={item.path}
+                                end={item.path === '/super-admin' || item.path === '/admin' || item.path === '/staff' || item.path === '/customer'}
+                                onClick={() => setSidebarOpen(false)}
+                                className={({ isActive }) => `flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 border ${isActive ? 'bg-primary-600/10 text-primary-400 border-primary-600/20 shadow-[0_0_15px_rgba(var(--color-primary-600-rgb),0.15)]' : 'border-transparent text-slate-400 hover:bg-slate-800/50 hover:text-slate-200'}`}
+                            >
+                                <span className="text-lg">{item.icon}</span>
+                                {item.label}
+                            </NavLink>
+                        )
+                    })}
                 </nav>
 
                 <div className="p-3 border-t border-slate-800 shrink-0">
@@ -124,7 +214,7 @@ export default function DashboardLayout({ role = 'owner' }) {
                     <div className="flex items-center gap-3">
                         {/* Notifications Bell Dropdown */}
                         <div className="relative notif-dropdown-container">
-                            <button 
+                            <button
                                 onClick={() => setNotifOpen(!notifOpen)}
                                 className="relative p-2 rounded-lg hover:bg-surface-200/50 cursor-pointer transition-colors"
                             >
@@ -146,8 +236,8 @@ export default function DashboardLayout({ role = 'owner' }) {
                                             )}
                                         </div>
                                         {hasUnread && (
-                                            <button 
-                                                onClick={markAllRead} 
+                                            <button
+                                                onClick={markAllRead}
                                                 className="text-[11px] font-semibold text-primary-600 hover:text-primary-700 cursor-pointer"
                                             >
                                                 Mark all read
@@ -158,8 +248,8 @@ export default function DashboardLayout({ role = 'owner' }) {
                                     <div className="max-h-72 overflow-y-auto divide-y divide-surface-100">
                                         {notifications.length > 0 ? (
                                             notifications.map(n => (
-                                                <div 
-                                                    key={n.id} 
+                                                <div
+                                                    key={n.id}
                                                     onClick={() => {
                                                         setNotifications(prev => prev.map(item => item.id === n.id ? { ...item, unread: false } : item))
                                                     }}
@@ -183,8 +273,8 @@ export default function DashboardLayout({ role = 'owner' }) {
 
                         {/* Dynamic User Profile Dropdown */}
                         <div className="relative profile-dropdown-container">
-                            <button 
-                                onClick={() => setDropdownOpen(!dropdownOpen)} 
+                            <button
+                                onClick={() => setDropdownOpen(!dropdownOpen)}
                                 className="w-9 h-9 rounded-xl bg-primary-100 flex items-center justify-center text-sm font-bold text-primary-600 hover:scale-105 active:scale-95 transition-all cursor-pointer select-none"
                             >
                                 {role.charAt(0).toUpperCase()}
@@ -196,10 +286,11 @@ export default function DashboardLayout({ role = 'owner' }) {
                                         Account Ops
                                     </div>
                                     <div className="py-1">
-                                        <button 
+                                        <button
                                             onClick={() => {
                                                 setDropdownOpen(false);
-                                                navigate(profileRouteMap[role] || `/dashboard/${role}`);
+                                                const fallbackRoute = role === 'owner' ? '/admin' : role === 'superadmin' ? '/super-admin' : `/${role}`;
+                                                navigate(profileRouteMap[role] || fallbackRoute);
                                             }}
                                             className="w-full text-left px-4 py-2.5 text-sm text-surface-700 hover:bg-surface-50 transition-colors flex items-center gap-2"
                                         >
@@ -207,7 +298,7 @@ export default function DashboardLayout({ role = 'owner' }) {
                                         </button>
                                     </div>
                                     <div className="py-1">
-                                        <button 
+                                        <button
                                             onClick={() => {
                                                 setDropdownOpen(false);
                                                 logout();

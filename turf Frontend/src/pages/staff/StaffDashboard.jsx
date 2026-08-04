@@ -76,10 +76,10 @@ export default function StaffDashboard() {
             </div>
             
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                <StatCard label="Today's Bookings" value={stats.total} icon="📅" />
-                <StatCard label="Check-ins Done" value={stats.checkIns} icon="✅" />
-                <StatCard label="Pending/Upcoming" value={stats.pending} icon="⏳" />
-                <StatCard label="Today's Revenue" value={`₹${stats.revenue.toLocaleString()}`} icon="💰" />
+                <StatCard label="Today's Bookings" value={stats.total} icon="📅" colorTheme="blue" />
+                <StatCard label="Check-ins Done" value={stats.checkIns} icon="✅" colorTheme="emerald" />
+                <StatCard label="Pending/Upcoming" value={stats.pending} icon="⏳" colorTheme="amber" />
+                <StatCard label="Today's Revenue" value={`₹${stats.revenue.toLocaleString()}`} icon="💰" colorTheme="purple" />
             </div>
             
             <div>

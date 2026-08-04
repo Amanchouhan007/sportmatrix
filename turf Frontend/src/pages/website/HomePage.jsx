@@ -1,19 +1,21 @@
 import { useNavigate } from 'react-router-dom'
 import { useEffect, useRef, useState, useCallback } from 'react'
-import { HiLocationMarker, HiStar, HiArrowRight, HiShieldCheck, HiOutlineDesktopComputer } from 'react-icons/hi'
-import { IoFootball, IoGameController } from 'react-icons/io5'
+import { getPublicTournaments } from '../../services/tournamentService'
+import { HiLocationMarker, HiStar, HiArrowRight, HiShieldCheck, HiOutlineDesktopComputer, HiOutlineCalendar, HiOutlineShieldCheck } from 'react-icons/hi'
+import { IoFootball, IoGameController, IoTrophyOutline, IoPeopleOutline, IoLocationOutline } from 'react-icons/io5'
 import { GiCricketBat, GiAxeInLog } from 'react-icons/gi'
 import { MdStadium, MdPayments, MdQrCodeScanner } from 'react-icons/md'
 import { RiTrophyFill, RiGamepadFill } from 'react-icons/ri'
 import TurfSearchBar from '../../components/TurfSearchBar'
 import TurfResultsGrid from '../../components/TurfResultsGrid'
 import CategoryBar from '../../components/CategoryBar'
+import TurfMapExplorer from '../../components/TurfMapExplorer'
 function useReveal() {
     const ref = useRef(null)
     const [v, setV] = useState(false)
     useEffect(() => {
-        const obs = new IntersectionObserver(([e]) => { 
-            setV(e.isIntersecting) 
+        const obs = new IntersectionObserver(([e]) => {
+            setV(e.isIntersecting)
         }, { threshold: 0.1 })
         if (ref.current) obs.observe(ref.current)
         return () => obs.disconnect()
@@ -46,6 +48,7 @@ export default function HomePage() {
     const subReveal = useReveal()
     const tourneyReveal = useReveal()
     const ecosystemReveal = useReveal()
+    const searchReveal = useReveal()
 
     /* ── Search State ── */
     const [searchValues, setSearchValues] = useState({
@@ -65,6 +68,16 @@ export default function HomePage() {
     const [showResults, setShowResults] = useState(false)
     const [recentSearches, setRecentSearches] = useState([])
     const [userLocation, setUserLocation] = useState(null)
+    const [upcomingTournaments, setUpcomingTournaments] = useState([])
+
+    /* ── Fetch Upcoming Tournaments ── */
+    useEffect(() => {
+        getPublicTournaments().then(res => {
+            if (res.success && Array.isArray(res.data)) {
+                setUpcomingTournaments(res.data.slice(0, 4))
+            }
+        }).catch(() => {})
+    }, [])
 
     /* ── Geolocation & Initial Nearby Sort ── */
     useEffect(() => {
@@ -146,42 +159,90 @@ export default function HomePage() {
             {/* ══════════════════════════════════════════════
                 CINEMATIC HERO FIRST SCREEN SECTION
             ══════════════════════════════════════════════ */}
-            <section className="relative flex flex-col pt-[110px] pb-8 z-40 justify-start items-center border-b border-white/5">
-                
+            <section className="relative flex flex-col pt-[60px] pb-16 lg:pb-24 z-40 justify-center min-h-[95vh] md:min-h-screen">
+
                 {/* ── CINEMATIC GLOWING GRID BACKGROUND ── */}
                 <style>{`
-                    @keyframes pulse-grid {
-                        0%, 100% { opacity: 0.08; }
-                        50% { opacity: 0.18; }
+                    .collage-card {
+                        transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
                     }
-                    .animate-pulse-grid {
-                        animation: pulse-grid 8s ease-in-out infinite;
-                    }
-                    .vignette-bottom {
-                        background: linear-gradient(to top, #020617 0%, rgba(2, 6, 23, 0.4) 50%, rgba(2, 6, 23, 0.8) 100%);
+                    .collage-card:hover {
+                        transform: scale(1.08) translateY(-10px) rotate(0deg) !important;
+                        z-index: 50;
+                        box-shadow: 0 0 30px rgba(25, 230, 140, 0.4);
+                        border-color: rgba(25, 230, 140, 0.8);
                     }
                 `}</style>
                 <div className="absolute inset-0 z-0 bg-[#020617] overflow-hidden">
-                    {/* Immersive Stadium Field Visual (Faded Background Cover) */}
-                    <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1543351611-58f69d7c1781?auto=format&fit=crop&q=80&w=2000')] bg-cover bg-center opacity-[0.14] mix-blend-screen scale-105" />
-                    
-                    {/* Layered Cyber Grid */}
-                    <div className="absolute inset-0 bg-[linear-gradient(to_right,#1e293b_1px,transparent_1px),linear-gradient(to_bottom,#1e293b_1px,transparent_1px)] bg-[size:4rem_4rem] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_40%,#000_70%,transparent_100%)] opacity-10 animate-pulse-grid" />
-                    
-                    {/* Cinematic Radial Ambient Vignette */}
-                    <div className="absolute inset-0 bg-radial-vignette opacity-90 pointer-events-none vignette-bottom" />
-
-                    {/* Dual Stage Spotlights */}
-                    <div className="absolute -top-[10%] -left-[10%] w-[55vw] h-[55vw] bg-blue-500/10 blur-[130px] rounded-full mix-blend-screen pointer-events-none" />
-                    <div className="absolute -top-[5%] -right-[10%] w-[45vw] h-[45vw] bg-purple-600/10 blur-[120px] rounded-full mix-blend-screen pointer-events-none" />
+                    <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1518605368461-1e1e38ce8ba8?q=80&w=2000&auto=format&fit=crop')] bg-cover bg-center opacity-[0.3] mix-blend-screen" />
+                    <div className="absolute inset-0 bg-gradient-to-r from-[#020617] via-[#020617]/95 to-transparent" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-[#020617] via-transparent to-transparent" />
+                    {/* Soft Fog / Glow */}
+                    <div className="absolute -bottom-32 -left-32 w-[600px] h-[600px] bg-[#19E68C]/10 blur-[150px] rounded-full pointer-events-none" />
                 </div>
 
-                <div className="relative z-30 w-full px-6 max-w-5xl mx-auto flex flex-col items-center">
+                <div className="relative z-30 w-full px-6 lg:px-12 max-w-[1400px] mx-auto flex flex-col lg:flex-row items-center gap-12 lg:gap-16">
+                    
+                    {/* LEFT CONTENT */}
+                    <div className="flex-1 flex flex-col items-start text-left w-full max-w-2xl pt-4">
 
-                    {/* Tabbed Search Panel */}
-                    <div className="w-full flex flex-col items-center mt-0">
-                        {/* Search Capsule with selective glassmorphism */}
-                        <div className="w-full relative z-10">
+
+                        {/* Headings */}
+                        <h1 className="text-3xl sm:text-4xl md:text-[56px] font-black text-white leading-[1.1] tracking-tight mb-4">
+                            Play Any <span className="text-[#19E68C] drop-shadow-[0_0_15px_rgba(25,230,140,0.4)]">Sport.</span><br />
+                            Book Any <span className="text-[#19E68C] drop-shadow-[0_0_15px_rgba(25,230,140,0.4)]">Turf.</span><br />
+                            Join Any <span className="text-[#19E68C] drop-shadow-[0_0_15px_rgba(25,230,140,0.4)]">Tournament.</span>
+                        </h1>
+
+                        {/* Subtitle */}
+                        <p className="text-sm md:text-base text-slate-400 font-medium max-w-xl mb-6 leading-relaxed">
+                            Book Football, Cricket, Badminton, Pickleball,<br className="hidden sm:block" />
+                            Box Cricket, Tennis and more from verified venues near you.
+                        </p>
+
+                        {/* Buttons */}
+                        <div className="flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto mb-8">
+                            <button onClick={() => resultsRef.current?.scrollIntoView({ behavior: 'smooth' })} className="w-full sm:w-auto px-6 py-3 text-sm bg-[#19E68C] hover:bg-[#15c577] text-[#020617] font-black rounded-xl transition-all flex items-center justify-center gap-2 group shadow-[0_0_20px_rgba(25,230,140,0.3)] hover:shadow-[0_0_30px_rgba(25,230,140,0.5)]">
+                                Find Turfs <HiArrowRight className="group-hover:translate-x-1 transition-transform" />
+                            </button>
+                            <button onClick={() => navigate('/tournaments')} className="w-full sm:w-auto px-6 py-3 text-sm bg-white/5 border border-white/20 hover:border-white/50 hover:bg-white/10 backdrop-blur-sm text-white font-bold rounded-xl transition-all text-center">
+                                Explore Tournaments
+                            </button>
+                        </div>
+
+                        {/* Trust Statistics */}
+                        <div className="flex justify-between items-start w-full max-w-2xl border-t border-white/10 pt-6">
+                            <div>
+                                <div className="text-xl font-black text-white flex items-center justify-center gap-1"><IoTrophyOutline className="text-[#19E68C] w-4 h-4" /> 250+</div>
+                                <div className="text-[9px] text-center uppercase tracking-wider font-bold text-slate-500 mt-1">Venues</div>
+                            </div>
+                            <div>
+                                <div className="text-xl font-black text-white flex items-center justify-center gap-1"><IoPeopleOutline className="text-[#19E68C] w-4 h-4" /> 12K+</div>
+                                <div className="text-[9px] text-center uppercase tracking-wider font-bold text-slate-500 mt-1">Players</div>
+                            </div>
+                            <div>
+                                <div className="text-xl font-black text-white flex items-center justify-center gap-1"><HiOutlineCalendar className="text-[#19E68C] w-4 h-4" /> 900+</div>
+                                <div className="text-[9px] text-center uppercase tracking-wider font-bold text-slate-500 mt-1">Events</div>
+                            </div>
+                            <div>
+                                <div className="text-xl font-black text-white flex items-center justify-center gap-1"><IoLocationOutline className="text-[#19E68C] w-4 h-4" /> 35+</div>
+                                <div className="text-[9px] text-center uppercase tracking-wider font-bold text-slate-500 mt-1">Cities</div>
+                            </div>
+                            <div>
+                                <div className="text-xl font-black text-white flex items-center justify-center gap-1"><span className="text-[#19E68C] text-base">★</span> 4.9</div>
+                                <div className="text-[9px] text-center uppercase tracking-wider font-bold text-slate-500 mt-1">Rating</div>
+                            </div>
+                            <div>
+                                <div className="text-xl font-black text-white flex items-center justify-center gap-1"><HiOutlineShieldCheck className="text-[#19E68C] w-4 h-4" /> 99%</div>
+                                <div className="text-[9px] text-center uppercase tracking-wider font-bold text-slate-500 mt-1">Verified</div>
+                            </div>
+                        </div>
+
+                        {/* SEARCH SECTION (MOVED DOWN) */}
+                        <div 
+                            ref={searchReveal.ref}
+                            className={`relative z-50 w-full mt-10 transition-all duration-300 ease-out ${searchReveal.visible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'}`}
+                        >
                             <TurfSearchBar
                                 values={searchValues}
                                 onChange={handleSearchChange}
@@ -190,30 +251,88 @@ export default function HomePage() {
                             />
                         </div>
                     </div>
+
+                    {/* RIGHT CONTENT (PREMIUM COLLAGE) */}
+                    <div className="flex-1 w-full relative hidden lg:block h-[500px] perspective-1000 origin-center scale-[0.85]">
+                        <div className="absolute inset-0 flex items-center justify-center">
+                            
+                            {/* Card 1 - Football (Now in Cricket's position) */}
+                            <div className="collage-card absolute w-[260px] h-[340px] rounded-2xl overflow-hidden border border-white/20 shadow-2xl z-30" style={{ transform: 'translate(40px, -150px) rotate(4deg)' }}>
+                                <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent z-10" />
+                                <img src="https://images.unsplash.com/photo-1579952363873-27f3bade9f55?q=80&w=600&auto=format&fit=crop" className="w-full h-full object-cover" alt="Football" />
+                                <div className="absolute bottom-4 left-4 z-20 text-white font-bold tracking-widest uppercase text-sm">Football</div>
+                            </div>
+                            
+                            {/* Card 2 - Cricket (Now in Football's position) */}
+                            <div className="collage-card absolute w-[220px] h-[300px] rounded-2xl overflow-hidden border border-white/20 shadow-2xl z-20" style={{ transform: 'translate(-140px, -100px) rotate(-8deg)' }}>
+                                <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent z-10" />
+                                <img src="https://images.unsplash.com/photo-1540747913346-19e32dc3e97e?q=80&w=600&auto=format&fit=crop" className="w-full h-full object-cover" alt="Cricket" />
+                                <div className="absolute bottom-4 left-4 z-20 text-white font-bold tracking-widest uppercase text-sm">Cricket</div>
+                            </div>
+                            
+                            {/* Card 3 - Basketball */}
+                            <div className="collage-card absolute w-[200px] h-[260px] rounded-2xl overflow-hidden border border-white/20 shadow-2xl z-10" style={{ transform: 'translate(200px, -30px) rotate(12deg)' }}>
+                                <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent z-10" />
+                                <img src="https://images.unsplash.com/photo-1546519638-68e109498ffc?q=80&w=600&auto=format&fit=crop" className="w-full h-full object-cover" alt="Basketball" />
+                                <div className="absolute bottom-4 left-4 z-20 text-white font-bold tracking-widest uppercase text-sm">Basketball</div>
+                            </div>
+                            
+                            {/* Card 4 - Badminton */}
+                            <div className="collage-card absolute w-[240px] h-[320px] rounded-2xl overflow-hidden border border-[#19E68C]/40 shadow-[0_0_30px_rgba(25,230,140,0.15)] z-40" style={{ transform: 'translate(-100px, 120px) rotate(5deg)' }}>
+                                <div className="absolute inset-0 bg-gradient-to-t from-[#020617] via-transparent to-transparent z-10" />
+                                <img src="https://images.unsplash.com/photo-1626224583764-f87db24ac4ea?q=80&w=600&auto=format&fit=crop" className="w-full h-full object-cover" alt="Badminton" />
+                                <div className="absolute bottom-4 left-4 z-20 text-[#19E68C] font-black tracking-widest uppercase text-sm drop-shadow-md">Badminton</div>
+                            </div>
+
+                            {/* Card 5 - Tennis */}
+                            <div className="collage-card absolute w-[220px] h-[280px] rounded-2xl overflow-hidden border border-white/20 shadow-2xl z-20" style={{ transform: 'translate(130px, 140px) rotate(-6deg)' }}>
+                                <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent z-10" />
+                                <img src="https://images.unsplash.com/photo-1622279457486-62dcc4a431d6?q=80&w=600&auto=format&fit=crop" className="w-full h-full object-cover" alt="Tennis" />
+                                <div className="absolute bottom-4 left-4 z-20 text-white font-bold tracking-widest uppercase text-sm">Tennis</div>
+                            </div>
+                            
+                            {/* Card 6 - Pickleball */}
+                            <div className="collage-card absolute w-[180px] h-[220px] rounded-2xl overflow-hidden border border-white/20 shadow-2xl z-10" style={{ transform: 'translate(-240px, 50px) rotate(-15deg)' }}>
+                                <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent z-10" />
+                                <img src="https://images.unsplash.com/photo-1595435934249-5df7ed86e1c0?q=80&w=600&auto=format&fit=crop" className="w-full h-full object-cover" alt="Pickleball" />
+                                <div className="absolute bottom-4 left-4 z-20 text-white font-bold tracking-widest uppercase text-sm">Pickleball</div>
+                            </div>
+
+                        </div>
+                    </div>
                 </div>
+
             </section>
+            
+
 
             {/* ══════════════════════════════════════════════
-                TURF & ARENA RESULTS GRID SECTION
+                PREMIUM GOOGLE MAPS NEARBY SEARCH SECTION
             ══════════════════════════════════════════════ */}
             <div ref={resultsRef} className="relative z-30">
-                <TurfResultsGrid
-                    turfs={showResults ? filteredTurfs : filteredTurfs.slice(0, 8)}
-                    searchValues={searchValues}
-                    recentSearches={recentSearches}
-                    onClear={clearFilters}
-                />
+                {showResults ? (
+                    <div className="animate-fade-in duration-500 ease-out transition-all">
+                        <TurfMapExplorer />
+                    </div>
+                ) : (
+                    <TurfResultsGrid
+                        turfs={filteredTurfs.slice(0, 8)}
+                        searchValues={searchValues}
+                        recentSearches={recentSearches}
+                        onClear={clearFilters}
+                    />
+                )}
             </div>
 
             {/* ══════════════════════════════════════════════
                 SECTION 2: ENERGETIC UPCOMING TOURNAMENTS
             ══════════════════════════════════════════════ */}
-            <section className="pt-8 pb-10 bg-[#020617] border-t border-white/5 relative overflow-hidden">
+            <section className="pt-6 pb-8 bg-[#020617] border-t border-white/5 relative overflow-hidden">
                 {/* Visual Glow */}
                 <div className="absolute top-[20%] right-[10%] w-[35vw] h-[35vw] bg-blue-600/5 blur-[120px] rounded-full pointer-events-none" />
 
                 <div className="max-w-[1400px] mx-auto px-6 relative z-10">
-                    <div className="text-center mb-12">
+                    <div className="text-center mb-6">
                         <span className="text-blue-400 text-[10px] font-black uppercase tracking-[0.25em] bg-blue-500/10 border border-blue-500/25 px-4 py-1.5 rounded-full">Competitive Arena</span>
                         <h2 className="text-2xl md:text-4xl font-black italic uppercase tracking-tight text-white mt-3 mb-1.5">
                             Upcoming <span className="text-blue-500">Tournaments</span>
@@ -221,66 +340,53 @@ export default function HomePage() {
                         <p className="text-xs text-slate-400 max-w-lg mx-auto font-semibold">Bring your squad, dominate division tables, and earn high-stakes victory across the region</p>
                     </div>
 
-                    <div 
+                    <div
                         ref={tourneyReveal.ref}
-                        className={`grid grid-cols-1 md:grid-cols-2 max-w-4xl mx-auto gap-8 transition-all duration-[1000ms] ease-out ${
-                            tourneyReveal.visible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-16'
-                        }`}
+                        className={`grid grid-cols-1 md:grid-cols-2 max-w-4xl mx-auto gap-8 transition-all duration-[1000ms] ease-out ${tourneyReveal.visible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-16'
+                            }`}
                     >
-                        {[
-                            {
-                                name: 'Matrix Football League',
-                                sport: 'Football (7v7)',
-                                prize: '₹50,000 Cash Pool',
-                                fee: '₹2,500 / SQUAD',
-                                slots: '3 / 16 SLOTS REMAINING',
-                                status: 'Few Slots Left',
-                                statusColor: 'border-amber-500/35 bg-amber-500/5 text-amber-400',
-                                color: 'from-blue-600 to-indigo-600'
-                            },
-                            {
-                                name: 'Indore Turf Cricket Cup',
-                                sport: 'Cricket (11v11)',
-                                prize: '₹75,000 Cash Pool',
-                                fee: '₹3,000 / SQUAD',
-                                slots: '6 / 12 SLOTS REMAINING',
-                                status: 'Registration Open',
-                                statusColor: 'border-emerald-500/35 bg-emerald-500/5 text-emerald-400',
-                                color: 'from-emerald-600 to-teal-600'
-                            }
-                        ].map((t, idx) => (
-                            <div 
-                                key={idx} 
+                        {(upcomingTournaments.length > 0 ? upcomingTournaments : [
+                            { id: 'fallback-1', title: 'Matrix Football League', sport: 'Football', prize: '₹50,000', entryFee: '2500', maxTeams: 16, registrations: 13, status: 'Approved' },
+                            { id: 'fallback-2', title: 'Indore Turf Cricket Cup', sport: 'Cricket', prize: '₹75,000', entryFee: '3000', maxTeams: 12, registrations: 6, status: 'Approved' }
+                        ]).slice(0, 4).map((t, idx) => {
+                            const spotsLeft = (t.maxTeams || 16) - (t.registrations || 0)
+                            const isOpen = t.status === 'Approved'
+                            const statusColor = spotsLeft <= 3 ? 'border-amber-500/35 bg-amber-500/5 text-amber-400' : 'border-emerald-500/35 bg-emerald-500/5 text-emerald-400'
+                            const statusText = !isOpen ? t.status : (spotsLeft <= 3 ? 'Few Slots Left' : 'Registration Open')
+                            const colors = ['from-blue-600 to-indigo-600', 'from-emerald-600 to-teal-600', 'from-purple-600 to-indigo-600', 'from-amber-600 to-orange-600']
+                            return (
+                            <div
+                                key={t.id || t._id || idx}
                                 className="group bg-slate-900 border border-white/5 hover:border-slate-800 rounded-2xl p-6 flex flex-col justify-between shadow-2xl transition-all duration-300 hover:scale-[1.02] relative"
                             >
                                 <div>
                                     <div className="flex items-center justify-between mb-4 gap-2">
-                                        <span className={`text-[8px] font-black uppercase tracking-widest px-2.5 py-1 rounded-md border ${t.statusColor}`}>
-                                            {t.status}
+                                        <span className={`text-[8px] font-black uppercase tracking-widest px-2.5 py-1 rounded-md border ${statusColor}`}>
+                                            {statusText}
                                         </span>
-                                        <span className="text-[9px] font-black text-slate-500 uppercase tracking-wide">{t.sport}</span>
+                                        <span className="text-[9px] font-black text-slate-500 uppercase tracking-wide">{t.sport || 'Sports'}</span>
                                     </div>
-                                    <h3 className="text-lg font-black uppercase text-white tracking-tight mb-4">{t.name}</h3>
-                                    
+                                    <h3 className="text-lg font-black uppercase text-white tracking-tight mb-4">{t.title || t.name}</h3>
+
                                     <div className="p-3 bg-slate-950 border border-white/5 rounded-xl space-y-2 mb-6">
                                         <div className="flex justify-between items-center text-[10px]">
                                             <span className="text-slate-500 font-bold uppercase tracking-wide">GRAND PRIZE</span>
-                                            <span className="text-white font-black">{t.prize}</span>
+                                            <span className="text-white font-black">{t.prize || `₹${t.entryFee || 0}`} Cash Pool</span>
                                         </div>
                                         <div className="flex justify-between items-center text-[10px]">
                                             <span className="text-slate-500 font-bold uppercase tracking-wide">ENTRY FEE</span>
-                                            <span className="text-slate-300 font-black">{t.fee}</span>
+                                            <span className="text-slate-300 font-black">₹{t.entryFee || 0} / SQUAD</span>
                                         </div>
                                         <div className="flex justify-between items-center text-[9px] pt-1.5 border-t border-white/5 text-slate-400">
-                                            <span className="font-semibold uppercase tracking-wider">{t.slots}</span>
+                                            <span className="font-semibold uppercase tracking-wider">{spotsLeft} / {t.maxTeams || 16} SLOTS REMAINING</span>
                                         </div>
                                     </div>
                                 </div>
-                                <button onClick={() => navigate('/tournaments')} className={`w-full py-3 bg-gradient-to-r ${t.color} text-white font-black text-[10px] uppercase tracking-widest rounded-xl transition-all shadow-[0_5px_15px_rgba(0,0,0,0.3)] hover:scale-[1.02]`}>
+                                <button onClick={() => navigate(`/tournaments/${t.id || t._id}`)} className={`w-full py-3 bg-gradient-to-r ${colors[idx % colors.length]} text-white font-black text-[10px] uppercase tracking-widest rounded-xl transition-all shadow-[0_5px_15px_rgba(0,0,0,0.3)] hover:scale-[1.02]`}>
                                     Register Squad
                                 </button>
                             </div>
-                        ))}
+                        )})}
                     </div>
                 </div>
             </section>
@@ -301,11 +407,10 @@ export default function HomePage() {
                         <p className="text-xs text-slate-400 max-w-lg mx-auto font-semibold">Elevate your game. Unlock unlimited field bookings, priority access, and tactical squad advantages.</p>
                     </div>
 
-                    <div 
+                    <div
                         ref={subReveal.ref}
-                        className={`grid grid-cols-1 md:grid-cols-3 max-w-5xl mx-auto gap-8 items-start transition-all duration-[1000ms] ease-out ${
-                            subReveal.visible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-16'
-                        }`}
+                        className={`grid grid-cols-1 md:grid-cols-3 max-w-5xl mx-auto gap-8 items-start transition-all duration-[1000ms] ease-out ${subReveal.visible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-16'
+                            }`}
                     >
                         {[
                             {
@@ -353,7 +458,7 @@ export default function HomePage() {
                                 )}
                                 <h3 className="text-lg font-black text-white italic tracking-tighter uppercase mb-1">{p.name}</h3>
                                 <p className="text-[9px] font-bold text-slate-500 tracking-wider mb-4 uppercase">{p.desc}</p>
-                                
+
                                 <div className="flex items-baseline gap-1 mb-6 pb-6 border-b border-white/5">
                                     <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest">INR</span>
                                     <span className="text-3xl font-black text-white">{p.price}</span>
@@ -371,13 +476,12 @@ export default function HomePage() {
 
                                 <button
                                     onClick={() => navigate('/membership')}
-                                    className={`w-full py-3.5 text-[10px] font-black italic tracking-[0.2em] uppercase rounded-xl border transition-all duration-300 cursor-pointer ${
-                                        p.accent === 'slate'
+                                    className={`w-full py-3.5 text-[10px] font-black italic tracking-[0.2em] uppercase rounded-xl border transition-all duration-300 cursor-pointer ${p.accent === 'slate'
                                             ? 'bg-white/5 border-white/10 text-white hover:bg-white/10 hover:border-white/30 hover:shadow-[0_0_20px_rgba(255,255,255,0.05)]'
                                             : p.accent === 'blue'
                                                 ? 'bg-gradient-to-r from-blue-600 to-indigo-600 border-blue-500/20 text-white hover:from-blue-500 hover:to-indigo-500 hover:shadow-[0_0_20px_rgba(59,130,246,0.3)]'
                                                 : 'bg-gradient-to-r from-emerald-500 to-[#16a34a] border-emerald-500/20 text-white hover:from-emerald-400 hover:to-green-500 hover:shadow-[0_0_20px_rgba(22,163,74,0.3)]'
-                                    }`}
+                                        }`}
                                 >
                                     GET STARTED
                                 </button>
@@ -390,14 +494,14 @@ export default function HomePage() {
             {/* ══════════════════════════════════════════════
                 SECTION 3: WHY CHOOSE SPORTMATRIX (ECOSYSTEM STORYTELLING)
             ══════════════════════════════════════════════ */}
-            <section className="py-16 bg-[#050b18] border-t border-white/5 relative overflow-hidden">
+            <section className="py-10 bg-[#050b18] border-t border-white/5 relative overflow-hidden">
                 {/* Ambient Glow Effects */}
                 <div className="absolute top-[10%] left-[5%] w-[50vw] h-[50vw] bg-blue-600/[0.04] blur-[150px] rounded-full pointer-events-none" />
                 <div className="absolute bottom-[10%] right-[5%] w-[40vw] h-[40vw] bg-emerald-500/[0.03] blur-[130px] rounded-full pointer-events-none" />
                 <div className="absolute top-[40%] left-[50%] w-[30vw] h-[30vw] bg-purple-600/[0.03] blur-[120px] rounded-full pointer-events-none -translate-x-1/2" />
 
                 <div className="max-w-7xl mx-auto px-6 relative z-10">
-                    <div className="text-center mb-14">
+                    <div className="text-center mb-8">
                         <h2 className="text-2xl md:text-3xl lg:text-4xl font-black uppercase tracking-tight text-white mb-3 leading-[1.1]">
                             Why Choose{' '}
                             <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-cyan-400 to-blue-500 drop-shadow-[0_0_30px_rgba(59,130,246,0.3)]">SportMatrix</span>
@@ -405,11 +509,10 @@ export default function HomePage() {
                         <div className="w-16 h-0.5 bg-gradient-to-r from-blue-500 to-cyan-400 mx-auto rounded-full shadow-[0_0_10px_rgba(59,130,246,0.4)]" />
                     </div>
 
-                    <div 
+                    <div
                         ref={ecosystemReveal.ref}
-                        className={`grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-5 transition-all duration-[1000ms] ease-out ${
-                            ecosystemReveal.visible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-16'
-                        }`}
+                        className={`grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-5 transition-all duration-[1000ms] ease-out ${ecosystemReveal.visible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-16'
+                            }`}
                     >
                         {[
                             {
@@ -453,8 +556,8 @@ export default function HomePage() {
                                 iconBg: 'bg-gradient-to-br from-rose-500/20 to-pink-500/10 border-rose-500/20'
                             }
                         ].map((item, idx) => (
-                            <div 
-                                key={idx} 
+                            <div
+                                key={idx}
                                 className={`group bg-slate-950/60 border border-white/[0.06] rounded-2xl p-7 flex flex-col items-center text-center transition-all duration-500 hover:-translate-y-2 backdrop-blur-xl ${item.borderGlow}`}
                             >
                                 {/* Icon Container */}
@@ -474,7 +577,7 @@ export default function HomePage() {
             {/* ══════════════════════════════════════════════
                 SECTION 5: OWNER COMMAND CENTRAL CTA
             ══════════════════════════════════════════════ */}
-            <section className="py-16 bg-[#050b18] border-t border-white/5 relative overflow-hidden">
+            <section className="py-10 bg-[#050b18] border-t border-white/5 relative overflow-hidden">
                 {/* Lights decoration */}
                 <div className="absolute top-0 left-[20%] w-[35vw] h-[35vw] bg-blue-600/5 blur-[120px] rounded-full pointer-events-none" />
                 <div className="absolute bottom-0 right-[20%] w-[35vw] h-[35vw] bg-purple-600/5 blur-[120px] rounded-full pointer-events-none" />
@@ -487,11 +590,11 @@ export default function HomePage() {
                         <span className="text-blue-400 text-[9px] font-black uppercase tracking-[0.3em] bg-blue-500/10 border border-blue-500/25 px-4 py-1.5 rounded-full inline-block mb-4">
                             Enterprise Operations
                         </span>
-                        
+
                         <h2 className="text-2xl sm:text-4xl font-black italic uppercase text-white tracking-tight mb-4">
                             “Run Your Turf Professionally”
                         </h2>
-                        
+
                         <p className="text-sm text-slate-400 max-w-2xl mx-auto leading-relaxed mb-10 font-semibold">
                             Scale your business with SportMatrix. Oversee match bookings, handle cashless POS billing, launch tournaments, set subscription membership passes, and audit multi-branch operations within a unified command dashboard.
                         </p>
