@@ -67,7 +67,16 @@ export default function TurfCard({ turf, onMouseEnter, onMouseLeave, i = 0 }) {
                 </h3>
 
                 <div className="text-[11px] text-slate-400 mb-0.5 flex items-center gap-1.5 truncate">
-                    <span>📍 {turf.location}</span>
+                    <a
+                        href={`https://www.google.com/maps/dir/?api=1&destination=${turf.lat || 19.1136},${turf.lng || 72.8697}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={(e) => e.stopPropagation()}
+                        className="hover:text-emerald-400 hover:underline flex items-center gap-1 cursor-pointer transition-colors"
+                        title="Open directions in Google Maps"
+                    >
+                        <span>📍 {turf.location}</span>
+                    </a>
                     <span className="text-slate-600">•</span>
                     <span>{(Number(turf.distance) || 4.2).toFixed(1)} km</span>
                 </div>
