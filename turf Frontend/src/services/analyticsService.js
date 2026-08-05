@@ -139,8 +139,8 @@ export const getSportsAnalytics = async () => {
         data: [
             { sport: 'Football', bookingsCount: 1850, revenue: 2220000 },
             { sport: 'Cricket', bookingsCount: 1420, revenue: 1420000 },
-            { sport: 'Badminton', bookingsCount: 890, revenue: 534000 },
-            { sport: 'Basketball', bookingsCount: 400, revenue: 400000 }
+            { sport: 'Football', bookingsCount: 890, revenue: 534000 },
+            { sport: 'Football', bookingsCount: 400, revenue: 400000 }
         ]
     };
 };
@@ -204,8 +204,8 @@ export const getTopSports = async () => {
         data: [
             { sport: 'Football', name: 'Football', bookingsCount: 1850, bookings: 1850, revenue: 2220000 },
             { sport: 'Cricket', name: 'Cricket', bookingsCount: 1420, bookings: 1420, revenue: 1420000 },
-            { sport: 'Badminton', name: 'Badminton', bookingsCount: 890, bookings: 890, revenue: 534000 },
-            { sport: 'Basketball', name: 'Basketball', bookingsCount: 400, bookings: 400, revenue: 400000 }
+            { sport: 'Football', name: 'Football', bookingsCount: 890, bookings: 890, revenue: 534000 },
+            { sport: 'Football', name: 'Football', bookingsCount: 400, bookings: 400, revenue: 400000 }
         ]
     };
 };

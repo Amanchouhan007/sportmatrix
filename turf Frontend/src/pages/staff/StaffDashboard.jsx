@@ -9,7 +9,7 @@ import Modal from '../../components/ui/Modal'
 const initialBookings = [
     { id: 'BK-001', customer: 'Rahul K.', sport: 'Cricket', time: '10:00 AM', court: 'Turf A', amount: 800, status: 'Confirmed' },
     { id: 'BK-002', customer: 'Priya S.', sport: 'Football', time: '11:30 AM', court: 'Turf B', amount: 900, status: 'Pending' },
-    { id: 'BK-003', customer: 'Arjun M.', sport: 'Badminton', time: '02:00 PM', court: 'Court 1', amount: 400, status: 'Confirmed' },
+    { id: 'BK-003', customer: 'Arjun M.', sport: 'Football', time: '02:00 PM', court: 'Court 1', amount: 400, status: 'Confirmed' },
     { id: 'BK-004', customer: 'Walk-in', sport: 'Cricket', time: '04:30 PM', court: 'Turf A', amount: 1200, status: 'Pending' },
 ]
 

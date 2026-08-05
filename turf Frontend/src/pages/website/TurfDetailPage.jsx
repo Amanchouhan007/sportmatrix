@@ -352,16 +352,16 @@ export default function TurfDetailPage() {
                             <div className="relative bg-slate-950 border border-white/10 rounded-sm p-6 sm:p-8 shadow-2xl">
                                 <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-8 gap-4 pb-6 border-b border-white/10">
                                     <h2 className="text-2xl font-black italic tracking-tighter uppercase text-white">RESERVE SLOT</h2>
-                                    <div className="flex flex-wrap items-center gap-4">
+                                    <div className="flex items-center gap-6">
                                         <div className="flex items-center gap-3">
-                                            <label className="text-[10px] font-bold tracking-widest text-slate-500 uppercase">Duration</label>
+                                            <label className="text-[10px] font-bold tracking-widest text-slate-500 uppercase whitespace-nowrap">Duration</label>
                                             <select
                                                 value={duration}
                                                 onChange={e => {
                                                     setDuration(Number(e.target.value))
                                                     setSelectedSlot(null)
                                                 }}
-                                                className="px-4 py-2 bg-slate-900 border border-white/10 rounded-sm text-sm font-medium text-white outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all cursor-pointer"
+                                                className="px-4 py-2 bg-slate-900 border border-white/10 rounded-sm text-sm font-medium text-white outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all cursor-pointer whitespace-nowrap"
                                             >
                                                 <option value={1}>1 Hour</option>
                                                 <option value={2}>2 Hours</option>
@@ -369,7 +369,7 @@ export default function TurfDetailPage() {
                                             </select>
                                         </div>
                                         <div className="flex items-center gap-3">
-                                            <label className="text-[10px] font-bold tracking-widest text-slate-500 uppercase">Deploy Date</label>
+                                            <label className="text-[10px] font-bold tracking-widest text-slate-500 uppercase whitespace-nowrap">Deploy Date</label>
                                             <input
                                                 type="date"
                                                 value={selectedDate}
@@ -377,7 +377,7 @@ export default function TurfDetailPage() {
                                                     setSelectedDate(e.target.value)
                                                     setSelectedSlot(null)
                                                 }}
-                                                className="px-4 py-2 bg-slate-900 border border-white/10 rounded-sm text-sm font-medium text-white outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all cursor-pointer [color-scheme:dark]"
+                                                className="px-4 py-2 bg-slate-900 border border-white/10 rounded-sm text-sm font-medium text-white outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all cursor-pointer [color-scheme:dark] whitespace-nowrap"
                                             />
                                         </div>
                                     </div>

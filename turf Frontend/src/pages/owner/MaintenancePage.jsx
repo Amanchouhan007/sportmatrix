@@ -153,7 +153,7 @@ export default function MaintenancePage() {
                             options={[
                                 { value: 'Turf A', label: 'Turf A Field' },
                                 { value: 'Turf B', label: 'Turf B Field' },
-                                { value: 'Court 1', label: 'Badminton Court 1' },
+                                { value: 'Court 1', label: 'Football Court 1' },
                                 { value: 'Facility', label: 'Branch Facility' }
                             ]}
                         />

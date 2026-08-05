@@ -25,7 +25,7 @@ export default function TournamentLowerSections() {
                                         <span className="text-amber-400">₹50K</span>
                                     </div>
                                     <div className="flex justify-between items-center text-[10px] font-bold">
-                                        <span className="text-slate-300">20th - Badminton</span>
+                                        <span className="text-slate-300">20th - Football</span>
                                         <span className="text-amber-400">₹20K</span>
                                     </div>
                                 </div>
@@ -57,7 +57,7 @@ export default function TournamentLowerSections() {
                 <div className="grid sm:grid-cols-3 gap-6">
                     {[
                         { team: 'Team Titans', prize: '₹50,000', sport: 'Football' },
-                        { team: 'Smash Masters', prize: '₹20,000', sport: 'Badminton' },
+                        { team: 'Smash Masters', prize: '₹20,000', sport: 'Football' },
                         { team: 'Cricket Kings', prize: '₹80,000', sport: 'Cricket' }
                     ].map((w, idx) => (
                         <div key={idx} className="bg-gradient-to-t from-slate-900 to-slate-900/40 p-6 rounded-2xl border border-amber-500/20 text-center relative overflow-hidden group cursor-pointer hover:-translate-y-1 transition-transform">

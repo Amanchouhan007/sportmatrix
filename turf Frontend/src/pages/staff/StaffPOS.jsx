@@ -217,7 +217,7 @@ export default function StaffPOS() {
                                     options={[
                                         { value: 'Turf A', label: 'Turf A (Main)' },
                                         { value: 'Turf B', label: 'Turf B (Indoor)' },
-                                        { value: 'Court 1', label: 'Badminton Court 1' }
+                                        { value: 'Court 1', label: 'Football Court 1' }
                                     ]}
                                 />
                                 <Select 
@@ -228,7 +228,7 @@ export default function StaffPOS() {
                                     options={[
                                         { value: 'Cricket', label: 'Cricket' },
                                         { value: 'Football', label: 'Football' },
-                                        { value: 'Badminton', label: 'Badminton' }
+                                        { value: 'Football', label: 'Football' }
                                     ]}
                                 />
                                 <Input label="Date" type="date" value={booking.date} onChange={(e) => setBooking({...booking, date: e.target.value})} />

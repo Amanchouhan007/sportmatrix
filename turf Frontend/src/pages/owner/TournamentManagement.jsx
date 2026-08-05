@@ -15,7 +15,7 @@ import { HiTrophy } from 'react-icons/hi2'
 const initialTournaments = [
     { id: 1, name: 'Premier Cricket Cup', sport: 'Cricket', date: 'Mar 15, 2026', entryFee: '500', prize: '₹50,000', teams: '12/16', status: 'Active', registrations: 12, maxTeams: 16 },
     { id: 2, name: 'Indore Football Cup', sport: 'Football', date: 'Mar 22, 2026', entryFee: '800', prize: '₹30,000', teams: '6/8', status: 'Upcoming', registrations: 6, maxTeams: 8 },
-    { id: 3, name: 'Badminton Open Arena', sport: 'Badminton', date: 'Feb 28, 2026', entryFee: '300', prize: '₹15,000', teams: '16/16', status: 'Completed', registrations: 16, maxTeams: 16 },
+    { id: 3, name: 'Football Open Arena', sport: 'Football', date: 'Feb 28, 2026', entryFee: '300', prize: '₹15,000', teams: '16/16', status: 'Completed', registrations: 16, maxTeams: 16 },
 ]
 
 const bracketRounds = [
@@ -183,7 +183,7 @@ export default function TournamentManagement() {
                 <div className="space-y-4 animate-in fade-in">
                     <Input
                         label="Tournament Name"
-                        placeholder="e.g. Indore Badminton Open"
+                        placeholder="e.g. Indore Football Open"
                         value={newTourney.name}
                         onChange={(e) => setNewTourney({ ...newTourney, name: e.target.value })}
                     />
@@ -195,7 +195,7 @@ export default function TournamentManagement() {
                             options={[
                                 { value: 'Cricket', label: 'Cricket' },
                                 { value: 'Football', label: 'Football' },
-                                { value: 'Badminton', label: 'Badminton' },
+                                { value: 'Football', label: 'Football' },
                             ]}
                         />
                         <Input

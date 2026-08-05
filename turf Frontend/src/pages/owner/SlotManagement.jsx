@@ -212,7 +212,7 @@ export default function SlotManagement() {
             return [
                 { value: 'Turf A', label: 'Turf A (Main Field)' },
                 { value: 'Turf B', label: 'Turf B (Indoor Arena)' },
-                { value: 'Court 1', label: 'Badminton Court 1' }
+                { value: 'Court 1', label: 'Football Court 1' }
             ]
         }
         return courts

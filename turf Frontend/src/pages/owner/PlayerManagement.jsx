@@ -8,7 +8,7 @@ import ConfirmDialog from '../../components/ui/ConfirmDialog'
 
 const initialPlayers = [
     { id: 1, name: 'Arjun Sharma', sport: 'Cricket', skill: 'Advanced', matches: 45, rating: 4.8, status: 'Active' },
-    { id: 2, name: 'Priya Patel', sport: 'Badminton', skill: 'Expert', matches: 62, rating: 4.9, status: 'Active' },
+    { id: 2, name: 'Priya Patel', sport: 'Football', skill: 'Expert', matches: 62, rating: 4.9, status: 'Active' },
     { id: 3, name: 'Rahul Kumar', sport: 'Football', skill: 'Intermediate', matches: 28, rating: 4.5, status: 'Inactive' },
     { id: 4, name: 'Vikram Singh', sport: 'Esports', skill: 'Expert', matches: 120, rating: 4.9, status: 'Active' },
 ]

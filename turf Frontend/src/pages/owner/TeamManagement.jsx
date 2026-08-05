@@ -10,7 +10,7 @@ const initialTeams = [
     { id: 1, name: 'Thunder XI', sport: 'Cricket', players: 11, ranking: 1, wins: 8, losses: 2 },
     { id: 2, name: 'Royal Challengers', sport: 'Cricket', players: 12, ranking: 2, wins: 7, losses: 3 },
     { id: 3, name: 'Urban FC', sport: 'Football', players: 15, ranking: 1, wins: 12, losses: 1 },
-    { id: 4, name: 'Smash Masters', sport: 'Badminton', players: 4, ranking: 3, wins: 5, losses: 4 },
+    { id: 4, name: 'Smash Masters', sport: 'Football', players: 4, ranking: 3, wins: 5, losses: 4 },
 ]
 
 export default function TeamManagement() {

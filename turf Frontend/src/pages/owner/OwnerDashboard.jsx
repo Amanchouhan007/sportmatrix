@@ -20,7 +20,7 @@ const peakData = [
 const bookings = [
     { id: '1', time: '10:00 AM', customer: 'Rahul K.', sport: 'Cricket', court: 'Turf A', amount: '₹800', status: 'Confirmed' },
     { id: '2', time: '11:30 AM', customer: 'Priya S.', sport: 'Football', court: 'Turf B', amount: '₹900', status: 'Confirmed' },
-    { id: '3', time: '02:00 PM', customer: 'Arjun M.', sport: 'Badminton', court: 'Court 1', amount: '₹400', status: 'Pending' },
+    { id: '3', time: '02:00 PM', customer: 'Arjun M.', sport: 'Football', court: 'Court 1', amount: '₹400', status: 'Pending' },
     { id: '4', time: '04:30 PM', customer: 'Sneha R.', sport: 'Cricket', court: 'Turf A', amount: '₹1,200', status: 'Confirmed' },
 ]
 
@@ -182,7 +182,7 @@ export default function OwnerDashboard() {
                                                 </span>
                                             ) : (
                                                 <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-purple-50 text-purple-700 border border-purple-200/80 text-xs font-bold shadow-sm">
-                                                    🏸 {b.sport}
+                                                    ⚽ {b.sport}
                                                 </span>
                                             )}
                                         </td>

@@ -60,7 +60,7 @@ export default function TournamentFixturesPage() {
                         options={[
                             { value: 't_001', label: 'Premier Cricket Cup (Knockout)' },
                             { value: 't_002', label: 'Indore Football Cup (League)' },
-                            { value: 't_003', label: 'Badminton Open (Hybrid)' },
+                            { value: 't_003', label: 'Football Open (Hybrid)' },
                         ]}
                     />
                     <Button onClick={handleGenerateFixtures} className="whitespace-nowrap">

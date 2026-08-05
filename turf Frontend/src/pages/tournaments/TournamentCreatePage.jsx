@@ -96,9 +96,9 @@ export default function TournamentCreatePage({ role = 'owner' }) {
                             options={[
                                 { value: 'sp_master_01', label: 'Football ⚽' },
                                 { value: 'sp_master_02', label: 'Cricket 🏏' },
-                                { value: 'sp_master_03', label: 'Badminton 🏸' },
-                                { value: 'sp_master_04', label: 'Basketball 🏀' },
-                                { value: 'sp_master_05', label: 'Tennis 🎾' },
+                                { value: 'sp_master_03', label: 'Football ⚽' },
+                                { value: 'sp_master_04', label: 'Football ⚽' },
+                                { value: 'sp_master_05', label: 'Cricket 🏏' },
                             ]}
                         />
                     </div>

@@ -9,7 +9,7 @@ import ConfirmDialog from '../../components/ui/ConfirmDialog'
 const initialBookings = [
     { id: 'BK-001', sport: 'Cricket', venue: 'SportZone Arena', date: '2026-03-15', time: '10:00 AM', amount: '₹800', status: 'Confirmed' },
     { id: 'BK-002', sport: 'Football', venue: 'ProKick Stadium', date: '2026-03-18', time: '04:30 PM', amount: '₹900', status: 'Pending' },
-    { id: 'BK-003', sport: 'Badminton', venue: 'SmashCourt', date: '2026-03-12', time: '11:00 AM', amount: '₹400', status: 'Completed' },
+    { id: 'BK-003', sport: 'Football', venue: 'SmashCourt', date: '2026-03-12', time: '11:00 AM', amount: '₹400', status: 'Completed' },
     { id: 'BK-004', sport: 'Cricket', venue: 'SportZone Arena', date: '2026-03-05', time: '06:00 PM', amount: '₹1,200', status: 'Cancelled' },
 ]
 

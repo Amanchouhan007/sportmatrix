@@ -57,11 +57,38 @@ export default function TurfCardPremium({ turf, onMouseEnter, onClick, isActive 
                         <span className="text-[8px] font-bold text-emerald-400 uppercase tracking-widest">{turf.status === 'ACTIVE' ? 'Open Now' : 'Available'}</span>
                     </div>
 
-                    <div className="flex gap-1 flex-wrap mb-2">
+                    <div className="flex gap-1 flex-wrap mb-1.5">
                         {sportsArr.slice(0, 2).map((sport, idx) => (
                             <span key={idx} className="text-[8px] font-black uppercase tracking-widest bg-slate-800 border border-slate-700 text-slate-300 px-1.5 py-0.5 rounded">
                                 {sport}
                             </span>
+                        ))}
+                    </div>
+
+                    {/* Format & Surface Tags */}
+                    <div className="flex items-center gap-1.5 mb-1.5">
+                        <span className="text-[8px] font-bold text-slate-400 bg-white/5 px-1 py-0.5 rounded border border-white/5 flex items-center gap-0.5">
+                            📏 {turf.format || '5v5'}
+                        </span>
+                        <span className="text-[8px] font-bold text-slate-400 bg-white/5 px-1 py-0.5 rounded border border-white/5 flex items-center gap-0.5">
+                            🌱 {turf.surface || 'Artificial'}
+                        </span>
+                    </div>
+
+                    {/* Amenities */}
+                    <div className="flex items-center gap-1 mb-1">
+                        {[
+                            { icon: '💡', label: 'Floodlights' },
+                            { icon: '🅿️', label: 'Parking' },
+                            { icon: '👕', label: 'Changing Room' },
+                            { icon: '🚰', label: 'Drinking Water' }
+                        ].map((amenity, i) => (
+                            <div key={i} className="group/tooltip relative flex items-center justify-center w-4 h-4 rounded-sm bg-white/5 hover:bg-white/10 border border-white/5 transition-colors cursor-help">
+                                <span className="text-[8px] grayscale brightness-150 opacity-80">{amenity.icon}</span>
+                                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 px-1.5 py-0.5 bg-slate-800 text-slate-200 text-[8px] font-black tracking-wide rounded opacity-0 group-hover/tooltip:opacity-100 pointer-events-none transition-opacity whitespace-nowrap z-50 shadow-xl border border-white/10">
+                                    {amenity.label}
+                                </div>
+                            </div>
                         ))}
                     </div>
                 </div>
@@ -92,7 +119,7 @@ export default function TurfCardPremium({ turf, onMouseEnter, onClick, isActive 
                         <button 
                             onClick={(e) => {
                                 e.stopPropagation();
-                                navigate(`/turf/${turf.slug || turf.id}`);
+                                navigate(`/turfs/${turf._id || turf.slug || turf.id}`);
                             }} 
                             className="px-4 h-7 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white text-[9px] font-black uppercase tracking-widest rounded-lg transition-all shadow-[0_5px_10px_rgba(59,130,246,0.2)] flex items-center justify-center"
                         >

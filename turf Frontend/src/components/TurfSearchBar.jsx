@@ -160,24 +160,24 @@ export default function TurfSearchBar({ onSearch, values, onChange, onClear }) {
     const selectedSportObj = sportsOptions.find(s => s.name === sport)
 
     return (
-        <div className="w-full max-w-[1200px] mx-auto relative z-40 select-none">
-            <div className="relative bg-white/5 backdrop-blur-xl border border-white/20 shadow-2xl rounded-2xl lg:rounded-[22px] p-2 flex flex-col md:grid md:grid-cols-2 lg:flex lg:flex-row items-stretch justify-between lg:h-[72px] gap-2 lg:gap-0">
+        <div className="w-full max-w-[1070px] mx-auto relative z-40 select-none">
+            <div className="relative bg-[#0b1120]/95 backdrop-blur-xl border border-white/10 shadow-2xl rounded-[32px] lg:rounded-full p-2 flex flex-col lg:flex-row items-stretch justify-between lg:h-[76px] gap-2 lg:gap-0">
                 
                 {/* 1. CITY */}
-                <div ref={locRef} className="flex-1 relative group/sec border-b border-white/10 md:border-b-0 md:border-r lg:border-r lg:border-b-0 lg:border-white/10">
+                <div ref={locRef} className="flex-1 min-w-0 relative group/sec border-b border-white/10 lg:border-b-0 lg:border-r lg:border-white/10">
                     <div
-                        className="transition-all duration-300 cursor-pointer h-full px-5 py-4 flex items-center justify-between hover:bg-white/5 rounded-xl lg:rounded-l-2xl"
+                        className="transition-all duration-300 cursor-pointer h-full px-5 py-3 flex items-center justify-between hover:bg-white/5 rounded-2xl lg:rounded-full lg:rounded-r-none"
                         onClick={() => { setLocOpen(true); setTimeout(() => locInputRef.current?.focus(), 50) }}
                     >
                         <div className="flex gap-4 items-center">
                             <IoLocationOutline className="text-[#19E68C] w-6 h-6 shrink-0" />
                             <div className="flex flex-col">
-                                <span className="text-[12px] font-bold text-white">City</span>
+                                <span className="text-[13px] font-bold text-white tracking-wide">City</span>
                                 {locOpen ? (
                                     <input
                                         ref={locInputRef}
                                         type="text"
-                                        className="text-[11px] text-white bg-transparent outline-none w-full placeholder:text-slate-500 font-medium p-0 m-0 border-none h-4"
+                                        className="text-[12px] text-white bg-transparent outline-none w-[120px] placeholder:text-slate-500 font-medium p-0 m-0 border-none h-4"
                                         placeholder="Select City"
                                         value={locInput}
                                         onChange={(e) => { setLocInput(e.target.value); setLocOpen(true); setLocHighlight(-1); emit('location', e.target.value, false) }}
@@ -185,16 +185,15 @@ export default function TurfSearchBar({ onSearch, values, onChange, onClear }) {
                                         onKeyDown={handleLocKeyDown}
                                     />
                                 ) : (
-                                    <span className="text-[11px] font-medium text-slate-400 truncate max-w-[100px]">
+                                    <span className="text-[12px] font-medium text-slate-400 truncate max-w-[120px]">
                                         {location || 'Select City'}
                                     </span>
                                 )}
                             </div>
                         </div>
-                        <svg className="w-3 h-3 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
                     </div>
                     {locOpen && (
-                        <div className="absolute top-full left-0 w-full md:w-[250px] bg-slate-900 border border-white/10 text-white rounded-xl mt-2 overflow-hidden shadow-2xl z-[60]">
+                        <div className="absolute top-full left-0 w-full md:w-[250px] bg-slate-900 border border-white/10 text-white rounded-2xl mt-4 overflow-hidden shadow-2xl z-[9999]">
                             {filteredLocations.length === 0 ? (
                                 <div className="p-3 text-center text-slate-500 text-xs">No locations found</div>
                             ) : (
@@ -214,27 +213,26 @@ export default function TurfSearchBar({ onSearch, values, onChange, onClear }) {
                 </div>
                 
                 {/* 2. SPORT */}
-                <div ref={sportRef} className="flex-1 relative group/sec border-b border-white/10 md:border-b-0 md:border-r lg:border-r lg:border-b-0 lg:border-white/10">
+                <div ref={sportRef} className="flex-1 min-w-0 relative group/sec border-b border-white/10 lg:border-b-0 lg:border-r lg:border-white/10">
                     <div
-                        className="transition-all duration-300 cursor-pointer h-full px-5 py-4 flex items-center justify-between hover:bg-white/5 rounded-xl"
+                        className="transition-all duration-300 cursor-pointer h-full px-5 py-3 flex items-center justify-between hover:bg-white/5 rounded-2xl lg:rounded-none"
                         onClick={() => setSportOpen(!sportOpen)}
                     >
                         <div className="flex gap-4 items-center">
                             <IoTrophyOutline className="text-[#19E68C] w-6 h-6 shrink-0" />
                             <div className="flex flex-col">
-                                <span className="text-[12px] font-bold text-white">Sport</span>
-                                <span className="text-[11px] font-medium text-slate-400 truncate max-w-[100px]">
+                                <span className="text-[13px] font-bold text-white tracking-wide">Sport</span>
+                                <span className="text-[12px] font-medium text-slate-400 truncate max-w-[120px]">
                                     {selectedSportObj ? selectedSportObj.name : 'Select Sport'}
                                 </span>
                             </div>
                         </div>
-                        <svg className="w-3 h-3 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
                     </div>
                     {sportOpen && (
-                        <div className="absolute top-full left-0 w-full md:w-[200px] bg-slate-900 border border-white/10 text-white rounded-xl mt-2 overflow-hidden shadow-2xl z-[60]">
+                        <div className="absolute top-full left-0 w-full md:w-[200px] bg-slate-900 border border-white/10 text-white rounded-2xl mt-4 overflow-hidden shadow-2xl z-[9999]">
                             {sportsOptions.map(s => (
-                                <div key={s.name} className="flex items-center gap-2 px-4 py-2 cursor-pointer hover:bg-white/5 text-xs" onClick={() => selectSport(s.name)}>
-                                    <span>{s.icon}</span> <span>{s.name}</span>
+                                <div key={s.name} className="flex items-center gap-2 px-4 py-3 cursor-pointer hover:bg-white/5 text-xs" onClick={() => selectSport(s.name)}>
+                                    <span className="text-sm">{s.icon}</span> <span className="font-medium">{s.name}</span>
                                 </div>
                             ))}
                         </div>
@@ -242,57 +240,55 @@ export default function TurfSearchBar({ onSearch, values, onChange, onClear }) {
                 </div>
 
                 {/* 3. DATE */}
-                <div ref={dateRef} className="flex-1 relative group/sec border-b border-white/10 md:border-b-0 lg:border-r lg:border-b-0 lg:border-white/10">
+                <div ref={dateRef} className="flex-1 min-w-0 relative group/sec border-b border-white/10 lg:border-b-0 lg:border-r lg:border-white/10">
                     <div
-                        className="transition-all duration-300 cursor-pointer h-full px-5 py-4 flex items-center justify-between hover:bg-white/5 rounded-xl"
+                        className="transition-all duration-300 cursor-pointer h-full px-5 py-3 flex items-center justify-between hover:bg-white/5 rounded-2xl lg:rounded-none"
                         onClick={() => setDateOpen(!dateOpen)}
                     >
                         <div className="flex gap-4 items-center">
                             <IoCalendarOutline className="text-[#19E68C] w-6 h-6 shrink-0" />
                             <div className="flex flex-col">
-                                <span className="text-[12px] font-bold text-white">Date</span>
-                                <span className="text-[11px] font-medium text-slate-400 truncate max-w-[100px]">
+                                <span className="text-[13px] font-bold text-white tracking-wide">Date</span>
+                                <span className="text-[12px] font-medium text-slate-400 truncate max-w-[120px]">
                                     {date ? formatDate(date) : 'Select Date'}
                                 </span>
                             </div>
                         </div>
-                        <svg className="w-3 h-3 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
                     </div>
                     {dateOpen && (
-                        <div className="absolute top-full left-0 md:left-1/2 md:-translate-x-1/2 w-[280px] bg-slate-900 border border-white/10 p-3 rounded-xl mt-2 shadow-2xl z-[60]">
-                            <div className="flex gap-2 mb-2 flex-wrap">
+                        <div className="absolute top-full left-0 md:left-1/2 md:-translate-x-1/2 w-[280px] bg-slate-900 border border-white/10 p-4 rounded-2xl mt-4 shadow-2xl z-[9999]">
+                            <div className="flex gap-2 mb-3 flex-wrap">
                                 {[{ l: 'Today', v: getDateString(0) }, { l: 'Tomorrow', v: getDateString(1) }, { l: 'Weekend', v: getWeekendDate() }].map(opt => (
-                                    <button key={opt.l} className="px-2 py-1 bg-white/5 hover:bg-white/10 rounded text-[10px] font-bold text-white" onClick={() => selectDate(opt.v)}>{opt.l}</button>
+                                    <button key={opt.l} className="px-3 py-1.5 bg-white/5 hover:bg-white/10 rounded-lg text-[11px] font-bold text-white transition-colors" onClick={() => selectDate(opt.v)}>{opt.l}</button>
                                 ))}
                             </div>
-                            <input type="date" className="w-full bg-slate-800 border border-white/10 rounded-lg px-2 py-1.5 text-xs text-white outline-none [color-scheme:dark]" value={date} min={todayStr} onChange={(e) => selectDate(e.target.value)} />
+                            <input type="date" className="w-full bg-slate-800 border border-white/10 rounded-xl px-3 py-2 text-sm text-white outline-none [color-scheme:dark]" value={date} min={todayStr} onChange={(e) => selectDate(e.target.value)} />
                         </div>
                     )}
                 </div>
 
                 {/* 4. TIME */}
-                <div ref={timeRef} className="flex-1 relative group/sec border-b border-white/10 md:border-b-0 md:border-r lg:border-r lg:border-b-0 lg:border-white/10 mt-2 md:mt-0">
+                <div ref={timeRef} className="flex-1 min-w-0 relative group/sec">
                     <div
-                        className="transition-all duration-300 cursor-pointer h-full px-5 py-4 flex items-center justify-between hover:bg-white/5 rounded-xl"
+                        className="transition-all duration-300 cursor-pointer h-full px-5 py-3 flex items-center justify-between hover:bg-white/5 rounded-2xl lg:rounded-full lg:rounded-l-none"
                         onClick={() => setTimeOpen(!timeOpen)}
                     >
                         <div className="flex gap-4 items-center">
                             <IoTimeOutline className="text-[#19E68C] w-6 h-6 shrink-0" />
                             <div className="flex flex-col">
-                                <span className="text-[12px] font-bold text-white">Time</span>
-                                <span className="text-[11px] font-medium text-slate-400 truncate max-w-[100px]">
+                                <span className="text-[13px] font-bold text-white tracking-wide">Time</span>
+                                <span className="text-[12px] font-medium text-slate-400 truncate max-w-[120px]">
                                     {selectedTime ? selectedTime.label : 'Any Time'}
                                 </span>
                             </div>
                         </div>
-                        <svg className="w-3 h-3 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
                     </div>
                     {timeOpen && (
-                        <div className="absolute top-full right-0 w-[240px] bg-slate-900 border border-white/10 p-2 rounded-xl mt-2 shadow-2xl z-[60]">
-                            <div className="grid grid-cols-2 gap-1.5">
+                        <div className="absolute top-full right-0 w-[240px] bg-slate-900 border border-white/10 p-3 rounded-2xl mt-4 shadow-2xl z-[9999]">
+                            <div className="grid grid-cols-2 gap-2">
                                 {timeSlots.map(t => (
-                                    <button key={t.value} className="flex flex-col items-center p-1.5 bg-white/5 hover:bg-white/10 rounded-lg text-white" onClick={() => selectTime(t.value)}>
-                                        <span className="text-[10px] font-bold">{t.label}</span>
+                                    <button key={t.value} className="flex flex-col items-center p-2 bg-white/5 hover:bg-white/10 rounded-xl text-white transition-colors" onClick={() => selectTime(t.value)}>
+                                        <span className="text-[11px] font-bold">{t.label}</span>
                                     </button>
                                 ))}
                             </div>
@@ -300,13 +296,11 @@ export default function TurfSearchBar({ onSearch, values, onChange, onClear }) {
                     )}
                 </div>
 
-
-
                 {/* SEARCH BUTTON */}
-                <div className="flex items-center shrink-0 justify-center h-full p-2 mt-2 md:mt-0 md:col-span-2 lg:col-span-1 lg:mt-0">
+                <div className="flex items-center shrink-0 justify-center h-full pl-2 pr-1 py-1 mt-2 lg:mt-0">
                     <button
                         onClick={() => onSearch?.({ location, sport, date, time, players })}
-                        className="w-full lg:w-auto h-full px-10 py-3 bg-[#19E68C] hover:bg-[#15c577] text-[#020617] font-black text-sm uppercase tracking-widest rounded-xl transition-all shadow-[0_0_20px_rgba(25,230,140,0.3)] hover:shadow-[0_0_30px_rgba(25,230,140,0.5)] flex items-center justify-center cursor-pointer min-h-[50px] lg:min-h-full"
+                        className="w-full lg:w-auto h-full px-8 py-3 bg-[#19E68C] hover:bg-[#15c577] text-[#020617] font-black text-[15px] uppercase tracking-[0.15em] rounded-full transition-all shadow-[0_0_15px_rgba(25,230,140,0.2)] hover:shadow-[0_0_25px_rgba(25,230,140,0.6)] flex items-center justify-center cursor-pointer min-h-[52px] lg:min-h-full"
                     >
                         Search
                     </button>

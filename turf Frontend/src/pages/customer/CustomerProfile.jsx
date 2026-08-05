@@ -24,7 +24,7 @@ export default function CustomerProfile() {
     // Sports Preferences State
     const [sports, setSports] = useState(() => {
         const saved = localStorage.getItem('customer_sports')
-        return saved ? JSON.parse(saved) : ['Cricket', 'Football', 'Badminton']
+        return saved ? JSON.parse(saved) : ['Cricket', 'Football', 'Football']
     })
     const [newSport, setNewSport] = useState('')
     const [isAddingSport, setIsAddingSport] = useState(false)

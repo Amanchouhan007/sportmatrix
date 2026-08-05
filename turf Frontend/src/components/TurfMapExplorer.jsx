@@ -5,7 +5,7 @@ import TurfCardPremium from './TurfCardPremium';
 import { HiOutlineMap, HiOutlineViewList, HiOutlineLocationMarker } from 'react-icons/hi';
 
 const radii = ['All', 1, 3, 5, 10, 20, 50];
-const sportsList = ['Football', 'Cricket', 'Badminton', 'Basketball', 'Pickleball'];
+const sportsList = ['Football', 'Cricket'];
 const sortOptions = ['Nearest First', 'Price Low to High', 'Price High to Low', 'Highest Rated', 'Newest'];
 
 export default function TurfMapExplorer() {
@@ -56,7 +56,7 @@ export default function TurfMapExplorer() {
                 { id: 'mock1', name: 'Elite Sports Complex', city: 'Indore', latitude: 22.7196, longitude: 75.8577, price: 1200, rating: 4.8, distance: 2.1, sports: '["Football", "Cricket"]' },
                 { id: 'mock2', name: 'Rajiv Gandhi Stadium Turf', city: 'Indore', latitude: 22.7000, longitude: 75.8752, price: 700, rating: 4.5, distance: 3.2, sports: '["Football"]' },
                 { id: 'mock3', name: 'Royal Cricket Ground', city: 'Indore', latitude: 22.7533, longitude: 75.8937, price: 600, rating: 4.7, distance: 4.8, sports: '["Cricket"]' },
-                { id: 'mock4', name: 'Spike Football Turf', city: 'Indore', latitude: 22.6953, longitude: 75.8690, price: 500, rating: 4.6, distance: 6.3, sports: '["Football", "Basketball"]' },
+                { id: 'mock4', name: 'Spike Football Turf', city: 'Indore', latitude: 22.6953, longitude: 75.8690, price: 500, rating: 4.6, distance: 6.3, sports: '["Football", "Football"]' },
                 { id: 'mock5', name: 'Indore Sports Arena', city: 'Indore', latitude: 22.7380, longitude: 75.8916, price: 800, rating: 4.9, distance: 7.1, sports: '["Football", "Cricket"]' }
             ]);
         } finally {

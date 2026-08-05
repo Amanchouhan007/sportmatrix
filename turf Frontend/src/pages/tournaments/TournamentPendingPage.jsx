@@ -25,8 +25,8 @@ const mockPendingTournaments = [
     },
     { 
         id: 't_005', 
-        title: 'Central Zone Badminton Clash', 
-        sport: 'Badminton', 
+        title: 'Central Zone Football Clash', 
+        sport: 'Football', 
         createdBy: 'Amit Kumar (Staff)', 
         startDate: '2026-04-05', 
         endDate: '2026-04-07', 
@@ -36,7 +36,7 @@ const mockPendingTournaments = [
         maxTeams: 16, 
         format: 'Knockout', 
         status: 'Pending Approval',
-        description: 'Singles badminton tournament.'
+        description: 'Singles football tournament.'
     }
 ]
 

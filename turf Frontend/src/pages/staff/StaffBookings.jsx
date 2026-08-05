@@ -10,7 +10,7 @@ import { useToast } from '../../components/ui/Toast'
 const initialBookings = [
     { id: 'BK-001', customer: 'Rahul K.', phone: '9876543210', sport: 'Cricket', date: 'Mar 15', time: '10:00 AM', court: 'Turf A', amount: '800', duration: '1 Hour', paymentMethod: 'UPI', notes: '', status: 'Confirmed' },
     { id: 'BK-002', customer: 'Priya S.', phone: '9123456789', sport: 'Football', date: 'Mar 15', time: '11:30 AM', court: 'Turf B', amount: '900', duration: '1 Hour', paymentMethod: 'Cash', notes: '', status: 'Confirmed' },
-    { id: 'BK-003', customer: 'Walk-in', phone: '9988776655', sport: 'Badminton', date: 'Mar 15', time: '02:00 PM', court: 'Court 1', amount: '400', duration: '30 Min', paymentMethod: 'Card', notes: 'First time player', status: 'Pending' },
+    { id: 'BK-003', customer: 'Walk-in', phone: '9988776655', sport: 'Football', date: 'Mar 15', time: '02:00 PM', court: 'Court 1', amount: '400', duration: '30 Min', paymentMethod: 'Card', notes: 'First time player', status: 'Pending' },
 ]
 
 export default function StaffBookings() {
@@ -177,7 +177,7 @@ export default function StaffBookings() {
                             options={[
                                 { value: 'Cricket', label: 'Cricket' },
                                 { value: 'Football', label: 'Football' },
-                                { value: 'Badminton', label: 'Badminton' }
+                                { value: 'Football', label: 'Football' }
                             ]}
                             value={formData.sport}
                             onChange={(e) => setFormData({...formData, sport: e.target.value})}

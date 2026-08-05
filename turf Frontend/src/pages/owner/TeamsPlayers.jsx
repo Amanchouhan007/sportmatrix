@@ -8,12 +8,12 @@ const teams = [
     { name: 'Thunder XI', sport: 'Cricket', players: 11, ranking: 1, wins: 8, losses: 2, logo: '🏏' },
     { name: 'Royal Challengers', sport: 'Cricket', players: 12, ranking: 2, wins: 7, losses: 3, logo: '⚡' },
     { name: 'Urban FC', sport: 'Football', players: 15, ranking: 1, wins: 12, losses: 1, logo: '⚽' },
-    { name: 'Smash Masters', sport: 'Badminton', players: 4, ranking: 3, wins: 5, losses: 4, logo: '🏸' },
+    { name: 'Smash Masters', sport: 'Football', players: 4, ranking: 3, wins: 5, losses: 4, logo: '⚽' },
 ]
 
 const players = [
     { name: 'Arjun Sharma', sport: 'Cricket', skill: 'Advanced', matches: 45, rating: 4.8, status: 'Active' },
-    { name: 'Priya Patel', sport: 'Badminton', skill: 'Expert', matches: 62, rating: 4.9, status: 'Active' },
+    { name: 'Priya Patel', sport: 'Football', skill: 'Expert', matches: 62, rating: 4.9, status: 'Active' },
     { name: 'Rahul Kumar', sport: 'Football', skill: 'Intermediate', matches: 28, rating: 4.5, status: 'Inactive' },
     { name: 'Vikram Singh', sport: 'Esports', skill: 'Expert', matches: 120, rating: 4.9, status: 'Active' },
 ]

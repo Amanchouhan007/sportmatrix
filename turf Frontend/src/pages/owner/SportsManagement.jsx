@@ -156,12 +156,12 @@ export default function SportsManagement() {
         }
 
         // Restrict only to allowed master sports
-        const allowedSports = ['Cricket', 'Football', 'Badminton', 'Tennis']
+        const allowedSports = ['Cricket', 'Football', 'Football', 'Cricket']
         const selectedSportObj = masterSports.find(s => (s.id || s._id) === currentSport.sportId)
         const sportName = selectedSportObj ? selectedSportObj.name : currentSport.name
 
         if (!sportName || !allowedSports.includes(sportName)) {
-            addToast({ message: 'Only Cricket, Football, Badminton, and Tennis are allowed.', type: 'error' })
+            addToast({ message: 'Only Cricket, Football, Football, and Cricket are allowed.', type: 'error' })
             return
         }
 
@@ -514,7 +514,7 @@ export default function SportsManagement() {
                                 }))
                             }}
                             options={masterSports
-                                .filter(s => ['Cricket', 'Football', 'Badminton', 'Tennis'].includes(s.name))
+                                .filter(s => ['Cricket', 'Football', 'Football', 'Cricket'].includes(s.name))
                                 .map(s => ({
                                     value: s.id || s._id,
                                     label: `${s.icon} ${s.name}`

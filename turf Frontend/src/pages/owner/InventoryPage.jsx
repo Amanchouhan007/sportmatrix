@@ -215,7 +215,7 @@ export default function InventoryPage() {
                 <div className="space-y-4 animate-in fade-in">
                     <Input
                         label="Item Name"
-                        placeholder="e.g. Badminton Grips"
+                        placeholder="e.g. Football Grips"
                         value={newItem.name}
                         onChange={(e) => setNewItem({ ...newItem, name: e.target.value })}
                     />

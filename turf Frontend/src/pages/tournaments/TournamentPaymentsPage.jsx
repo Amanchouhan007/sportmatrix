@@ -9,7 +9,7 @@ const mockPayments = [
     { id: 1, tournamentTitle: 'Premier Cricket Cup', transactionType: 'Entry Fee', invoiceNumber: 'INV-TRN-1001', payerName: 'Indore Thunders', amount: 500, commissionAmount: 50, paymentMethod: 'UPI', status: 'COMPLETED', date: '2026-03-01' },
     { id: 2, tournamentTitle: 'Premier Cricket Cup', transactionType: 'Sponsor Payment', invoiceNumber: 'INV-SPN-2001', payerName: 'RedBull Energy', amount: 50000, commissionAmount: 5000, paymentMethod: 'CARD', status: 'COMPLETED', date: '2026-03-02' },
     { id: 3, tournamentTitle: 'Indore Football Cup', transactionType: 'Entry Fee', invoiceNumber: 'INV-TRN-1002', payerName: 'Red Devils Futsal', amount: 800, commissionAmount: 80, paymentMethod: 'WALLET', status: 'COMPLETED', date: '2026-03-05' },
-    { id: 4, tournamentTitle: 'Badminton Open Arena', transactionType: 'Sponsor Payment', invoiceNumber: 'INV-SPN-2002', payerName: 'Nike Sports', amount: 30000, commissionAmount: 3000, paymentMethod: 'UPI', status: 'COMPLETED', date: '2026-02-28' },
+    { id: 4, tournamentTitle: 'Football Open Arena', transactionType: 'Sponsor Payment', invoiceNumber: 'INV-SPN-2002', payerName: 'Nike Sports', amount: 30000, commissionAmount: 3000, paymentMethod: 'UPI', status: 'COMPLETED', date: '2026-02-28' },
 ]
 
 export default function TournamentPaymentsPage() {

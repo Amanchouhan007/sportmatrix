@@ -1,6 +1,6 @@
 import React from 'react';
 
-const sportsList = ['Football', 'Cricket', 'Badminton', 'Pickleball', 'Basketball'];
+const sportsList = ['Football', 'Cricket'];
 const sortOptions = ['Nearest First', 'Price Low to High', 'Price High to Low', 'Highest Rated', 'Newest'];
 
 export default function PremiumFilters({ filters, onFilterChange }) {

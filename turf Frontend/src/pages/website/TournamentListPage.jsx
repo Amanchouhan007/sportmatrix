@@ -49,17 +49,14 @@ export default function TournamentListPage() {
     });
 
     return (
-        <div className="min-h-screen bg-slate-950 pt-24 pb-20 relative overflow-hidden">
+        <div className="min-h-screen bg-slate-950 pt-[88px] pb-20 relative overflow-hidden">
             {/* Background elements */}
             <div className="absolute inset-x-0 top-0 h-[60vh] z-0 pointer-events-none">
                 <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-10" />
                 <div className="absolute inset-0 bg-gradient-to-b from-slate-900/40 via-slate-950/90 to-slate-950" />
             </div>
 
-            {/* 1. HERO SECTION (Includes Search Bar) - FULL WIDTH */}
-            <div className="relative z-10 mt-[0.4px]">
-                <TournamentHero />
-            </div>
+
 
             <div className="max-w-[1400px] mx-auto px-5 md:px-8 relative z-10">
                 {/* Filter Pills above grid */}

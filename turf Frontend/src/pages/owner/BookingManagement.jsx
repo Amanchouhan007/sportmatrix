@@ -14,9 +14,9 @@ import {
 const initialBookings = [
     { id: 'BK-001', customer: 'Rahul Kumar', phone: '+91 98765 00001', email: 'rahul@gmail.com', sport: 'Cricket', court: 'Court A', date: '2026-03-16', dayOfWeek: 'Mon', time: '10:00 AM', slotRange: '10:00–11:00 AM', amount: '₹800', type: 'Online', status: 'Confirmed', notes: 'Advance paid via UPI' },
     { id: 'BK-002', customer: 'Priya Sharma', phone: '+91 98765 00002', email: 'priya@gmail.com', sport: 'Football', court: 'Turf 2', date: '2026-03-17', dayOfWeek: 'Tue', time: '11:30 AM', slotRange: '11:30–12:30 PM', amount: '₹900', type: 'Online', status: 'Confirmed', notes: 'Full payment received' },
-    { id: 'BK-003', customer: 'Arjun Mehta', phone: '+91 98765 00003', email: 'arjun@gmail.com', sport: 'Badminton', court: 'Court 1', date: '2026-03-18', dayOfWeek: 'Wed', time: '02:00 PM', slotRange: '02:00–03:00 PM', amount: '₹400', type: 'Walk-in', status: 'Pending', notes: 'Cash payment pending' },
+    { id: 'BK-003', customer: 'Arjun Mehta', phone: '+91 98765 00003', email: 'arjun@gmail.com', sport: 'Football', court: 'Court 1', date: '2026-03-18', dayOfWeek: 'Wed', time: '02:00 PM', slotRange: '02:00–03:00 PM', amount: '₹400', type: 'Walk-in', status: 'Pending', notes: 'Cash payment pending' },
     { id: 'BK-004', customer: 'Sneha Reddy', phone: '+91 98765 00004', email: 'sneha@gmail.com', sport: 'Cricket', court: 'Court B', date: '2026-03-19', dayOfWeek: 'Thu', time: '04:30 PM', slotRange: '04:30–05:30 PM', amount: '₹1,200', type: 'Online', status: 'Cancelled', notes: 'Requested refund' },
-    { id: 'BK-005', customer: 'Vikram Singh', phone: '+91 98765 00005', email: 'vikram@gmail.com', sport: 'Tennis', court: 'Court 3', date: '2026-03-20', dayOfWeek: 'Fri', time: '06:00 PM', slotRange: '06:00–07:00 PM', amount: '₹700', type: 'Walk-in', status: 'Confirmed', notes: 'Walk-in guest' },
+    { id: 'BK-005', customer: 'Vikram Singh', phone: '+91 98765 00005', email: 'vikram@gmail.com', sport: 'Cricket', court: 'Court 3', date: '2026-03-20', dayOfWeek: 'Fri', time: '06:00 PM', slotRange: '06:00–07:00 PM', amount: '₹700', type: 'Walk-in', status: 'Confirmed', notes: 'Walk-in guest' },
     { id: 'BK-006', customer: 'Amit Verma', phone: '+91 98111 22334', email: 'amit@gmail.com', sport: 'Football', court: 'Turf 1', date: '2026-03-21', dayOfWeek: 'Sat', time: '08:00 AM', slotRange: '08:00–09:00 AM', amount: '₹1,500', type: 'Online', status: 'Confirmed', notes: 'Weekend league match' },
     { id: 'BK-007', customer: 'Rohan Shah', phone: '+91 99223 34455', email: 'rohan@gmail.com', sport: 'Cricket', court: 'Court A', date: '2026-03-22', dayOfWeek: 'Sun', time: '06:00 PM', slotRange: '06:00–07:00 PM', amount: '₹1,100', type: 'Online', status: 'Confirmed', notes: 'Evening prime slot' }
 ]
@@ -420,9 +420,9 @@ export default function BookingManagement() {
                             {[
                                 { time: '10:00 AM', title: 'Cricket • Court A', customer: 'Rahul Kumar', type: 'Online', amount: '₹800', status: 'Confirmed' },
                                 { time: '11:30 AM', title: 'Football • Turf 2', customer: 'Priya Sharma', type: 'Online', amount: '₹900', status: 'Confirmed' },
-                                { time: '02:00 PM', title: 'Badminton • Court 1', customer: 'Arjun Mehta', type: 'Walk-in', amount: '₹400', status: 'Pending' },
+                                { time: '02:00 PM', title: 'Football • Court 1', customer: 'Arjun Mehta', type: 'Walk-in', amount: '₹400', status: 'Pending' },
                                 { time: '04:30 PM', title: 'Cricket • Court B', customer: 'Sneha Reddy', type: 'Online', amount: '₹1,200', status: 'Cancelled' },
-                                { time: '06:00 PM', title: 'Tennis • Court 3', customer: 'Vikram Singh', type: 'Walk-in', amount: '₹700', status: 'Confirmed' }
+                                { time: '06:00 PM', title: 'Cricket • Court 3', customer: 'Vikram Singh', type: 'Walk-in', amount: '₹700', status: 'Confirmed' }
                             ].map((item, idx) => (
                                 <div 
                                     key={idx}

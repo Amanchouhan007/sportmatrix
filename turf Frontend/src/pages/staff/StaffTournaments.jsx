@@ -152,7 +152,7 @@ export default function StaffTournaments() {
                     <div className="grid grid-cols-2 gap-4">
                         <Select 
                             label="Sport" required 
-                            options={[{ value: 'Cricket', label: 'Cricket' }, { value: 'Football', label: 'Football' }, { value: 'Badminton', label: 'Badminton' }]} 
+                            options={[{ value: 'Cricket', label: 'Cricket' }, { value: 'Football', label: 'Football' }, { value: 'Football', label: 'Football' }]} 
                             value={newTournament.sport} 
                             onChange={(e) => setNewTournament({...newTournament, sport: e.target.value})}
                         />

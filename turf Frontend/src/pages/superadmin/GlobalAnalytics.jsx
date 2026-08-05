@@ -159,8 +159,8 @@ export default function GlobalAnalytics() {
                 setSportsData(mappedSports.length > 0 ? mappedSports : [
                     { name: 'Football', value: 1850, revenue: 2220000 },
                     { name: 'Cricket', value: 1420, revenue: 1420000 },
-                    { name: 'Badminton', value: 890, revenue: 534000 },
-                    { name: 'Basketball', value: 400, revenue: 400000 }
+                    { name: 'Football', value: 890, revenue: 534000 },
+                    { name: 'Football', value: 400, revenue: 400000 }
                 ]);
             }
 
@@ -235,8 +235,8 @@ export default function GlobalAnalytics() {
                 setTopSports(mappedTopSports.length > 0 ? mappedTopSports : [
                     { sport: 'Football', bookingsCount: 1850, revenue: 2220000 },
                     { sport: 'Cricket', bookingsCount: 1420, revenue: 1420000 },
-                    { sport: 'Badminton', bookingsCount: 890, revenue: 534000 },
-                    { sport: 'Basketball', bookingsCount: 400, revenue: 400000 }
+                    { sport: 'Football', bookingsCount: 890, revenue: 534000 },
+                    { sport: 'Football', bookingsCount: 400, revenue: 400000 }
                 ]);
             }
 

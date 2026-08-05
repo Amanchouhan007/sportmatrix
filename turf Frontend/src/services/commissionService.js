@@ -7,8 +7,8 @@ let commissionSettingsState = {
     sportsRates: [
         { sportName: 'Football', commissionRate: 5.0 },
         { sportName: 'Cricket', commissionRate: 5.0 },
-        { sportName: 'Badminton', commissionRate: 4.0 },
-        { sportName: 'Basketball', commissionRate: 4.5 }
+        { sportName: 'Football', commissionRate: 4.0 },
+        { sportName: 'Football', commissionRate: 4.5 }
     ]
 };
 

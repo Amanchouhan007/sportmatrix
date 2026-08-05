@@ -14,7 +14,7 @@ import { HiTrophy } from 'react-icons/hi2'
 const initialTournaments = [
     { id: 't_001', title: 'Premier Cricket Cup', sport: 'Cricket', startDate: '2026-03-15', endDate: '2026-03-20', date: 'Mar 15 - Mar 20, 2026', entryFee: '500', prizePool: '50000', prize: '₹50,000', teams: '12/16', registrations: 12, maxTeams: 16, status: 'Approved', format: 'Knockout' },
     { id: 't_002', title: 'Indore Football Cup', sport: 'Football', startDate: '2026-03-22', endDate: '2026-03-25', date: 'Mar 22 - Mar 25, 2026', entryFee: '800', prizePool: '30000', prize: '₹30,000', teams: '6/8', registrations: 6, maxTeams: 8, status: 'Pending Approval', format: 'League' },
-    { id: 't_003', title: 'Badminton Open Arena', sport: 'Badminton', startDate: '2026-02-28', endDate: '2026-03-02', date: 'Feb 28 - Mar 02, 2026', entryFee: '300', prizePool: '15000', prize: '₹15,000', teams: '16/16', registrations: 16, maxTeams: 16, status: 'Completed', format: 'League + Knockout' },
+    { id: 't_003', title: 'Football Open Arena', sport: 'Football', startDate: '2026-02-28', endDate: '2026-03-02', date: 'Feb 28 - Mar 02, 2026', entryFee: '300', prizePool: '15000', prize: '₹15,000', teams: '16/16', registrations: 16, maxTeams: 16, status: 'Completed', format: 'League + Knockout' },
     { id: 't_004', title: 'Monsoon Futsal League', sport: 'Football', startDate: '2026-04-10', endDate: '2026-04-12', date: 'Apr 10 - Apr 12, 2026', entryFee: '600', prizePool: '20000', prize: '₹20,000', teams: '4/12', registrations: 4, maxTeams: 12, status: 'Draft', format: 'Knockout' },
 ]
 

@@ -20,8 +20,8 @@ const revenueData = [
 const sportData = [
     { name: 'Cricket', value: 40 }, 
     { name: 'Football', value: 25 }, 
-    { name: 'Badminton', value: 20 }, 
-    { name: 'Tennis', value: 10 }, 
+    { name: 'Football', value: 20 }, 
+    { name: 'Cricket', value: 10 }, 
     { name: 'Esports', value: 5 }
 ]
 

@@ -213,7 +213,7 @@ export default function GoogleMapView({ turfs, center, hoveredTurfId, onMarkerCl
                             <TurfCardPremium 
                                 turf={selectedMarker}
                                 isActive={true}
-                                onClick={() => navigate(`/turf/${selectedMarker.slug || selectedMarker.id}`)}
+                                onClick={() => navigate(`/turfs/${selectedMarker._id || selectedMarker.slug || selectedMarker.id}`)}
                             />
                         </div>
                     </InfoWindow>
