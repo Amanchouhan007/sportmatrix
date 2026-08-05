@@ -24,6 +24,34 @@ export default function CustomerBookings() {
     const [formData, setFormData] = useState({ date: '', time: '' })
 
     useEffect(() => {
+        const fetchBookings = async () => {
+            try {
+                const token = localStorage.getItem('token');
+                if (!token) return;
+                const res = await fetch('http://localhost:5000/api/v1/bookings/history', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const data = await res.json();
+                if (data.success && Array.isArray(data.data) && data.data.length > 0) {
+                    const mapped = data.data.map(b => ({
+                        id: `BK-${b.booking_id}`,
+                        sport: b.sport_name || 'Football',
+                        venue: b.court_name || 'SportZone Arena',
+                        date: b.slot_date ? b.slot_date.substring(0, 10) : '2026-03-15',
+                        time: b.start_time ? b.start_time.substring(0, 5) : '10:00 AM',
+                        amount: `₹${b.amount}`,
+                        status: b.booking_status === 'CONFIRMED' ? 'Confirmed' : b.booking_status === 'CANCELLED' ? 'Cancelled' : 'Completed'
+                    }));
+                    setBookingsList(mapped);
+                }
+            } catch (err) {
+                console.error('Error fetching live customer bookings:', err);
+            }
+        };
+        fetchBookings();
+    }, []);
+
+    useEffect(() => {
         localStorage.setItem('customer_bookings', JSON.stringify(bookingsList))
     }, [bookingsList])
 

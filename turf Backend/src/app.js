@@ -75,6 +75,10 @@ app.use('/api/v1/turfs', turfsRouter);
 const uploadRouter = require('./modules/upload/upload.routes');
 app.use('/api/v1/upload', uploadRouter);
 
+// Ads / Campaigns Routes registration
+const adsRouter = require('./modules/ads/ads.routes');
+app.use('/api/v1/ads', adsRouter);
+
 // Basic Root Health Check Route
 app.get('/api/v1/health', (req, res) => {
     res.status(200).json({

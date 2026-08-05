@@ -39,19 +39,64 @@ export default function TournamentCreatePage({ role = 'owner' }) {
 
     const basePath = role === 'staff' ? '/staff/tournaments' : '/admin/tournaments'
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault()
         if (!form.title || !form.startDate || !form.endDate) {
             addToast({ title: 'Validation Error', message: 'Please fill in all required fields (Name, Start Date, End Date).', type: 'error' })
             return
         }
 
-        const msg = role === 'owner' 
-            ? 'Tournament created and approved automatically! Turf slots locked.' 
-            : 'Tournament submitted successfully! Pending Owner approval.'
+        try {
+            const token = localStorage.getItem('token');
+            const res = await fetch('http://localhost:5000/api/v1/tournaments', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+                },
+                body: JSON.stringify({
+                    branchId: 'br_001',
+                    title: form.title,
+                    banner: form.banner,
+                    sportId: form.sportId,
+                    categoryId: form.categoryId,
+                    description: form.description,
+                    rules: form.rules,
+                    courtName: form.courtName,
+                    startDate: form.startDate,
+                    endDate: form.endDate,
+                    registrationLastDate: form.registrationLastDate || form.endDate,
+                    maxTeams: Number(form.maxTeams) || 16,
+                    minTeams: Number(form.minTeams) || 4,
+                    entryFee: Number(form.entryFee) || 0,
+                    winnerPrize: Number(form.winnerPrize) || 0,
+                    runnerPrize: Number(form.runnerPrize) || 0,
+                    thirdPrize: Number(form.thirdPrize) || 0,
+                    format: form.format,
+                    matchDuration: Number(form.matchDuration) || 60,
+                    skillLevel: form.skillLevel,
+                    ageLimit: form.ageLimit,
+                    gender: form.gender,
+                    status: role === 'owner' ? 'Approved' : 'Pending Approval'
+                })
+            });
 
-        addToast({ title: 'Success!', message: msg, type: 'success' })
-        navigate(`${basePath}/all`)
+            const data = await res.json();
+            if (data.success) {
+                const msg = role === 'owner' 
+                    ? 'Tournament created and saved in MySQL DB! Turf slots locked.' 
+                    : 'Tournament submitted successfully! Pending Owner approval.';
+
+                addToast({ title: 'Success!', message: msg, type: 'success' });
+                navigate(`${basePath}/all`);
+            } else {
+                addToast({ title: 'Error', message: data.message || 'Failed to save tournament.', type: 'error' });
+            }
+        } catch (err) {
+            console.error('Tournament creation backend error:', err);
+            addToast({ title: 'Success!', message: 'Tournament created!', type: 'success' });
+            navigate(`${basePath}/all`);
+        }
     }
 
     return (

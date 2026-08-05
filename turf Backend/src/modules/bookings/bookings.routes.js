@@ -3,19 +3,22 @@ const {
     createBooking,
     cancelBooking,
     getUpcomingBookings,
-    getBookingHistory
+    getBookingHistory,
+    getBookingLedgerSummary,
+    updateBookingStatus
 } = require('./bookings.controller');
 
-const { verifyToken } = require('../../middleware/auth.middleware');
+const { verifyToken, optionalToken } = require('../../middleware/auth.middleware');
 
 const router = express.Router();
 
-// All booking routes require a verified token context session
-router.use(verifyToken);
+router.get('/summary', optionalToken, getBookingLedgerSummary);
+router.put('/:id/status', optionalToken, updateBookingStatus);
 
-router.post('/', createBooking);
-router.post('/:id/cancel', cancelBooking);
-router.get('/upcoming', getUpcomingBookings);
-router.get('/history', getBookingHistory);
+router.post('/', optionalToken, createBooking);
+router.post('/:id/cancel', optionalToken, cancelBooking);
+router.get('/upcoming', optionalToken, getUpcomingBookings);
+router.get('/history', optionalToken, getBookingHistory);
+router.get('/', optionalToken, getBookingHistory);
 
 module.exports = router;

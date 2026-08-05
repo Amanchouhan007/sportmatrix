@@ -231,10 +231,72 @@ async function initializeDatabase() {
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
         `);
 
-        // Migration check for category_id in tournaments
-        try {
-            await connection.query(`ALTER TABLE tournaments ADD COLUMN category_id VARCHAR(50);`);
-        } catch (e) {}
+        // Migration checks for tournaments table columns
+        try { await connection.query(`ALTER TABLE tournaments ADD COLUMN category_id VARCHAR(50);`); } catch (e) {}
+        try { await connection.query(`ALTER TABLE tournaments ADD COLUMN banner VARCHAR(255);`); } catch (e) {}
+        try { await connection.query(`ALTER TABLE tournaments ADD COLUMN court_name VARCHAR(100) DEFAULT 'Court A';`); } catch (e) {}
+        try { await connection.query(`ALTER TABLE tournaments ADD COLUMN rules TEXT;`); } catch (e) {}
+        try { await connection.query(`ALTER TABLE tournaments ADD COLUMN registration_last_date DATE;`); } catch (e) {}
+        try { await connection.query(`ALTER TABLE tournaments ADD COLUMN max_teams INT DEFAULT 16;`); } catch (e) {}
+        try { await connection.query(`ALTER TABLE tournaments ADD COLUMN min_teams INT DEFAULT 4;`); } catch (e) {}
+        try { await connection.query(`ALTER TABLE tournaments ADD COLUMN entry_fee INT DEFAULT 0;`); } catch (e) {}
+        try { await connection.query(`ALTER TABLE tournaments ADD COLUMN winner_prize INT DEFAULT 0;`); } catch (e) {}
+        try { await connection.query(`ALTER TABLE tournaments ADD COLUMN runner_prize INT DEFAULT 0;`); } catch (e) {}
+        try { await connection.query(`ALTER TABLE tournaments ADD COLUMN third_prize INT DEFAULT 0;`); } catch (e) {}
+        try { await connection.query(`ALTER TABLE tournaments ADD COLUMN prize_pool VARCHAR(150);`); } catch (e) {}
+        try { await connection.query(`ALTER TABLE tournaments ADD COLUMN format ENUM('Knockout', 'League', 'League + Knockout') DEFAULT 'Knockout';`); } catch (e) {}
+        try { await connection.query(`ALTER TABLE tournaments ADD COLUMN match_duration INT DEFAULT 60;`); } catch (e) {}
+        try { await connection.query(`ALTER TABLE tournaments ADD COLUMN skill_level ENUM('Beginner', 'Intermediate', 'Advanced', 'Open') DEFAULT 'Open';`); } catch (e) {}
+        try { await connection.query(`ALTER TABLE tournaments ADD COLUMN age_limit VARCHAR(50) DEFAULT 'Open';`); } catch (e) {}
+        try { await connection.query(`ALTER TABLE tournaments ADD COLUMN gender ENUM('Men', 'Women', 'Mixed', 'All') DEFAULT 'All';`); } catch (e) {}
+        try { await connection.query(`ALTER TABLE tournaments ADD COLUMN owner_remarks TEXT;`); } catch (e) {}
+        try { await connection.query(`ALTER TABLE tournaments ADD COLUMN created_by VARCHAR(50);`); } catch (e) {}
+        try { await connection.query(`ALTER TABLE tournaments ADD COLUMN approved_by VARCHAR(50);`); } catch (e) {}
+
+        // Advertisements / Marketing Campaigns
+        await connection.query(`
+            CREATE TABLE IF NOT EXISTS advertisements (
+                id VARCHAR(50) PRIMARY KEY,
+                branch_id VARCHAR(50) DEFAULT 'br_001',
+                name VARCHAR(150) NOT NULL,
+                type VARCHAR(50) DEFAULT 'Guaranteed Booking',
+                status ENUM('Active', 'Pending', 'Paused', 'Expired', 'Rejected') DEFAULT 'Active',
+                icon VARCHAR(10) DEFAULT '📢',
+                views INT DEFAULT 0,
+                clicks INT DEFAULT 0,
+                bookings INT DEFAULT 0,
+                revenue INT DEFAULT 0,
+                commission_paid INT DEFAULT 0,
+                ctr VARCHAR(20) DEFAULT '0%',
+                roi VARCHAR(20) DEFAULT '0%',
+                cpa VARCHAR(20) DEFAULT '₹0',
+                budget_spent INT DEFAULT 0,
+                budget_total INT DEFAULT 5000,
+                daily_budget INT DEFAULT 500,
+                start_date VARCHAR(50),
+                end_date VARCHAR(50),
+                description TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+        `);
+
+        // Commission Management / Ad Payouts
+        await connection.query(`
+            CREATE TABLE IF NOT EXISTS commissions (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                booking_id VARCHAR(50) NOT NULL UNIQUE,
+                ad_id VARCHAR(50) DEFAULT 'AD-1001',
+                ad_name VARCHAR(150) NOT NULL,
+                turf_name VARCHAR(100) DEFAULT 'Champions Turf Arena',
+                booking_amount INT NOT NULL,
+                commission_rate INT DEFAULT 12,
+                commission_amount INT NOT NULL,
+                owner_amount INT NOT NULL,
+                invoice_no VARCHAR(50) UNIQUE NOT NULL,
+                payment_status ENUM('Pending', 'Paid') DEFAULT 'Pending',
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+        `);
 
         // Teams (Tournament Participants)
         await connection.query(`

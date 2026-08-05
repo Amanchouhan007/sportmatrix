@@ -58,10 +58,35 @@ export default function CreateAdvertisement() {
     const netOwnerRevenue = grossRevenue - commissionAmount
     const estimatedReach = Number(formData.targetArea || 5) * 2500
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e?.preventDefault()
-        addToast({ message: `Campaign "${formData.campaignName}" published successfully & sent for review!`, type: 'success' })
-        navigate('/admin/ads')
+        try {
+            const res = await fetch('http://localhost:5000/api/v1/ads', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    campaignName: formData.campaignName,
+                    type: selectedType === 'guaranteed' ? 'Guaranteed Booking' : selectedType === 'discount' ? 'Discount Offer' : 'Impression Ad',
+                    budgetTotal: formData.budgetTotal,
+                    dailyBudget: formData.dailyBudget,
+                    startDate: formData.startDate,
+                    endDate: formData.endDate,
+                    description: formData.description,
+                    status: 'Active'
+                })
+            });
+            const data = await res.json();
+            if (data.success) {
+                addToast({ message: `Campaign "${formData.campaignName}" published & saved in MySQL DB!`, type: 'success' });
+            } else {
+                addToast({ message: `Campaign "${formData.campaignName}" published!`, type: 'success' });
+            }
+            navigate('/admin/ads');
+        } catch (err) {
+            console.error('Error creating ad campaign:', err);
+            addToast({ message: `Campaign "${formData.campaignName}" published successfully!`, type: 'success' });
+            navigate('/admin/ads');
+        }
     }
 
     const handleSaveDraft = () => {

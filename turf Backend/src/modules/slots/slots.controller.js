@@ -35,9 +35,38 @@ const getSlots = async (req, res) => {
             params.push(courtName);
         }
 
-        sql += ' ORDER BY sl.slot_date ASC, sl.start_time ASC';
+        let [rows] = await db.query(sql, params);
 
-        const [rows] = await db.query(sql, params);
+        // Auto-generate hourly slots for requested date if no slots exist in database
+        if (rows.length === 0 && date) {
+            const times = ['06:00', '07:00', '08:00', '09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00', '18:00', '19:00', '20:00', '21:00', '22:00'];
+            const targetBranch = branchId || 'br_001';
+            const targetSport = sportId || 'sp_master_01';
+            const court = courtName || 'Main Court';
+
+            const insertValues = times.map((t, i) => {
+                const endHour = parseInt(t.split(':')[0]) + 1;
+                const endTime = `${String(endHour).padStart(2, '0')}:00`;
+                const isPeak = (i >= 10 && i <= 14) || i >= 17;
+                const slotId = `slot_${targetBranch}_${date.replace(/-/g, '')}_${i}_${Math.random().toString(36).substring(2, 6)}`;
+                return [
+                    slotId, targetBranch, targetSport, court, date, `${t}:00`, `${endTime}:00`, 60, 800, 1200, isPeak ? 1 : 0, 'AVAILABLE', ''
+                ];
+            });
+
+            try {
+                await db.query(`
+                    INSERT IGNORE INTO slots (
+                        id, branch_id, sport_id, court_name, slot_date, start_time, end_time, duration, regular_price, peak_price, is_peak_hour, status, notes
+                    ) VALUES ?
+                `, [insertValues]);
+
+                const [newRows] = await db.query(sql, params);
+                if (newRows.length > 0) rows = newRows;
+            } catch (genErr) {
+                console.error('Error auto-generating date slots:', genErr);
+            }
+        }
 
         // Format dates and times to match expected frontend interface formats
         const formattedSlots = rows.map(r => {

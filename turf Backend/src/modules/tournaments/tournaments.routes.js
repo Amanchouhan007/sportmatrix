@@ -29,7 +29,7 @@ const {
     updateSettings
 } = require('./tournaments.controller');
 
-const { verifyToken, authorizeRoles } = require('../../middleware/auth.middleware');
+const { verifyToken, optionalToken, authorizeRoles } = require('../../middleware/auth.middleware');
 
 const router = express.Router();
 
@@ -47,8 +47,8 @@ router.get('/:id/leaderboard', getLeaderboard);
 router.post('/:id/register', registerTeam);
 
 // Staff & Owner Creation / Editing Endpoints
-router.post('/', verifyToken, authorizeRoles(['OWNER', 'SUPER_ADMIN', 'STAFF']), createTournament);
-router.put('/:id', verifyToken, authorizeRoles(['OWNER', 'SUPER_ADMIN', 'STAFF']), updateTournament);
+router.post('/', optionalToken, createTournament);
+router.put('/:id', optionalToken, updateTournament);
 
 // Owner-Only Approval & Control Flow Endpoints
 router.post('/:id/approve', verifyToken, authorizeRoles(['OWNER', 'SUPER_ADMIN']), approveTournament);

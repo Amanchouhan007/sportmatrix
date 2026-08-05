@@ -31,7 +31,6 @@ const sidebarConfig = {
             pathPrefix: '/admin/ads',
             children: [
                 { label: 'All Advertisements', icon: <HiSpeakerphone />, path: '/admin/ads' },
-                { label: 'Create Advertisement', icon: <HiPlusCircle />, path: '/admin/ads/create' },
                 { label: 'Commission Management', icon: <HiCurrencyDollar />, path: '/admin/ads/commissions' },
                 { label: 'Analytics', icon: <HiChartBar />, path: '/admin/ads/analytics' },
                 { label: 'Payments', icon: <HiCreditCard />, path: '/admin/ads/payments' },
@@ -47,7 +46,6 @@ const sidebarConfig = {
             children: [
                 { label: 'Dashboard', icon: <HiChartBar />, path: '/admin/tournaments/dashboard' },
                 { label: 'All Tournaments', icon: <HiTrophy />, path: '/admin/tournaments/all' },
-                { label: 'Create Tournament', icon: <HiPlusCircle />, path: '/admin/tournaments/create' },
                 { label: 'Pending Approvals', icon: <HiExclamationCircle />, path: '/admin/tournaments/pending' },
                 { label: 'Categories', icon: <HiTag />, path: '/admin/tournaments/categories' },
                 { label: 'Team Registrations', icon: <HiUserGroup />, path: '/admin/tournaments/registrations' },
@@ -84,7 +82,6 @@ const sidebarConfig = {
             pathPrefix: '/staff/ads',
             children: [
                 { label: 'My Advertisements', icon: <HiMegaphone />, path: '/staff/ads' },
-                { label: 'Create Advertisement', icon: <HiPlusCircle />, path: '/staff/ads/create' },
                 { label: 'Advertisement Analytics', icon: <HiChartBar />, path: '/staff/ads/analytics' },
             ]
         },
@@ -98,7 +95,6 @@ const sidebarConfig = {
             children: [
                 { label: 'Dashboard', icon: <HiChartBar />, path: '/staff/tournaments/dashboard' },
                 { label: 'All Tournaments', icon: <HiTrophy />, path: '/staff/tournaments/all' },
-                { label: 'Create Tournament', icon: <HiPlusCircle />, path: '/staff/tournaments/create' },
                 { label: 'Pending Approvals', icon: <HiExclamationCircle />, path: '/staff/tournaments/pending' },
                 { label: 'Team Registrations', icon: <HiUserGroup />, path: '/staff/tournaments/registrations' },
                 { label: 'Fixtures', icon: <HiViewGrid />, path: '/staff/tournaments/fixtures' },
