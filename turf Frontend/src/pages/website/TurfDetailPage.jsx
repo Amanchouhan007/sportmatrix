@@ -1,10 +1,11 @@
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { HiLocationMarker, HiStar, HiArrowLeft, HiShieldCheck, HiClock, HiPhone, HiMail, HiLightBulb, HiCheckCircle, HiX } from 'react-icons/hi'
 import { MdSportsCricket, MdWifi, MdLocalParking, MdLocalDrink, MdOutlineHealthAndSafety, MdSportsFootball, MdLock, MdWc } from 'react-icons/md'
 import { RiShieldStarFill } from 'react-icons/ri'
 import SlotGrid from '../../components/ui/SlotGrid'
 import { useToast } from '../../components/ui/Toast'
+import MediaUploadModal from '../../components/MediaUploadModal'
 
 const defaultTurfData = {
     id: 1, name: 'SportZone Arena', location: 'Andheri West, Mumbai', rating: 4.8, reviews: 124,
@@ -124,6 +125,48 @@ export default function TurfDetailPage() {
 
     const activeTurf = allTurfsList.find(t => t.id === Number(id)) || allTurfsList[0];
 
+    const uploadedFilesMedia = [
+        { type: 'video', url: 'http://localhost:5000/uploads/files-1785914796662-273628137.mp4', thumbnail: '', filename: 'Uploaded Video' },
+        { type: 'image', url: 'http://localhost:5000/uploads/files-1785914764936-630968668.jpeg', thumbnail: 'http://localhost:5000/uploads/files-1785914764936-630968668.jpeg', filename: 'Uploaded Photo' }
+    ];
+
+    const initialMedia = [
+        ...uploadedFilesMedia,
+        { type: 'image', url: activeTurf.image, thumbnail: activeTurf.image },
+        ...defaultTurfData.media.slice(1)
+    ];
+
+    const [isMediaModalOpen, setIsMediaModalOpen] = useState(false);
+    const [customMediaList, setCustomMediaList] = useState(() => {
+        try {
+            const saved = localStorage.getItem(`turf_media_${activeTurf.id}`);
+            if (saved) {
+                const parsed = JSON.parse(saved);
+                if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+            }
+        } catch (e) {}
+        return initialMedia;
+    });
+
+    useEffect(() => {
+        const fetchTurfMedia = async () => {
+            try {
+                const res = await fetch(`http://localhost:5000/api/v1/turfs/${activeTurf.id}`);
+                const data = await res.json();
+                if (data.success && data.data && data.data.media) {
+                    const backendMedia = typeof data.data.media === 'string' ? JSON.parse(data.data.media) : data.data.media;
+                    if (Array.isArray(backendMedia) && backendMedia.length > 0) {
+                        setCustomMediaList(backendMedia);
+                        localStorage.setItem(`turf_media_${activeTurf.id}`, JSON.stringify(backendMedia));
+                    }
+                }
+            } catch (err) {
+                console.error('Could not fetch turf media from server:', err);
+            }
+        };
+        fetchTurfMedia();
+    }, [activeTurf.id]);
+
     const turfData = {
         ...defaultTurfData,
         id: activeTurf.id,
@@ -136,15 +179,64 @@ export default function TurfDetailPage() {
             peakPrice: activeTurf.price + 400
         })),
         amenities: activeTurf.amenities.length > 0 ? activeTurf.amenities : defaultTurfData.amenities,
-        media: [
-            { type: 'image', url: activeTurf.image, thumbnail: activeTurf.image },
-            ...defaultTurfData.media.slice(1)
-        ],
+        media: customMediaList.length > 0 ? customMediaList : initialMedia,
         coordinates: { lat: activeTurf.lat, lng: activeTurf.lng }
     };
 
-    const activeMedia = turfData.media[selectedMediaId]
+    const activeMedia = turfData.media[selectedMediaId] || turfData.media[0] || initialMedia[0];
     const totalReviews = ratingBreakdown.reduce((a, b) => a + b.count, 0)
+
+    const saveMediaState = async (updatedMedia) => {
+        setCustomMediaList(updatedMedia);
+        try {
+            localStorage.setItem(`turf_media_${activeTurf.id}`, JSON.stringify(updatedMedia));
+        } catch (e) {}
+        try {
+            await fetch(`http://localhost:5000/api/v1/turfs/${activeTurf.id}/media`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ media: updatedMedia })
+            });
+        } catch (e) {
+            console.error('Failed to sync media with backend:', e);
+        }
+    };
+
+    const handleSaveMedia = async (updatedMedia) => {
+        setSelectedMediaId(0);
+        await saveMediaState(updatedMedia);
+        if (addToast) {
+            addToast(`Updated turf gallery with ${updatedMedia.length} media items!`, 'success');
+        }
+    };
+
+    const handleDeleteActiveMedia = async () => {
+        if (turfData.media.length <= 1) {
+            if (addToast) addToast('Cannot delete the only media item remaining!', 'error');
+            return;
+        }
+
+        const itemToDelete = turfData.media[selectedMediaId];
+        if (window.confirm(`Are you sure you want to delete this ${itemToDelete?.type === 'video' ? 'video' : 'photo'}?`)) {
+            if (itemToDelete?.url && itemToDelete.url.includes('/uploads/')) {
+                const filename = itemToDelete.url.split('/uploads/').pop();
+                try {
+                    await fetch(`http://localhost:5000/api/v1/upload/${filename}`, {
+                        method: 'DELETE'
+                    });
+                } catch (e) {
+                    console.error('Error deleting file:', e);
+                }
+            }
+
+            const updatedMedia = turfData.media.filter((_, idx) => idx !== selectedMediaId);
+            setSelectedMediaId(0);
+            await saveMediaState(updatedMedia);
+            if (addToast) {
+                addToast(`Deleted ${itemToDelete?.type === 'video' ? 'video' : 'photo'} successfully!`, 'info');
+            }
+        }
+    };
 
     const handleSelectSlot = (startId) => {
         let canBook = true;
@@ -253,9 +345,18 @@ export default function TurfDetailPage() {
                                         </span>
                                     </div>
                                 )}
+
+                                {/* Delete active photo/video action */}
+                                <button
+                                    onClick={handleDeleteActiveMedia}
+                                    className="absolute bottom-4 right-4 z-20 px-3 py-1.5 bg-red-500/80 hover:bg-red-600 backdrop-blur-md text-white text-[10px] font-black uppercase tracking-wider rounded border border-white/20 transition-all flex items-center gap-1 shadow-lg hover:scale-105 cursor-pointer"
+                                    title="Delete this photo/video permanently"
+                                >
+                                    <span>🗑️ Delete {activeMedia.type === 'video' ? 'Video' : 'Photo'}</span>
+                                </button>
                             </div>
 
-                            {/* Thumbnails */}
+                             {/* Thumbnails */}
                             <div className="flex gap-3 overflow-x-auto pb-2 custom-scrollbar">
                                 {turfData.media.map((media, i) => (
                                     <button
@@ -264,15 +365,33 @@ export default function TurfDetailPage() {
                                         className={`flex-shrink-0 w-24 h-24 rounded-sm overflow-hidden cursor-pointer transition-all relative border ${selectedMediaId === i ? 'border-emerald-500 opacity-100 shadow-[0_0_15px_rgba(16,185,129,0.3)]' : 'border-white/10 opacity-50 hover:opacity-100 hover:border-white/30'
                                             }`}
                                     >
-                                        <img src={media.thumbnail} alt={`Thumbnail ${i}`} className="w-full h-full object-cover" />
-                                        {media.type === 'video' && (
-                                            <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
-                                                <span className="w-8 h-8 rounded-full bg-slate-900/80 border border-white/20 backdrop-blur-sm flex items-center justify-center text-white text-xs pl-0.5">▶</span>
+                                        {media.type === 'video' ? (
+                                            <div className="w-full h-full relative bg-slate-950">
+                                                <video src={media.url} className="w-full h-full object-cover" muted />
+                                                <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
+                                                    <span className="w-8 h-8 rounded-full bg-slate-900/80 border border-white/20 backdrop-blur-sm flex items-center justify-center text-white text-xs pl-0.5">▶</span>
+                                                </div>
                                             </div>
+                                        ) : (
+                                            <img src={media.thumbnail || media.url} alt={`Thumbnail ${i}`} className="w-full h-full object-cover" />
                                         )}
                                     </button>
                                 ))}
                             </div>
+
+                            {/* Media Upload / Manage Action */}
+                            <button
+                                onClick={() => setIsMediaModalOpen(true)}
+                                className="w-full py-2.5 px-4 bg-slate-900/90 hover:bg-slate-900 border border-emerald-500/40 hover:border-emerald-400 text-emerald-400 font-black text-xs uppercase tracking-widest rounded-sm transition-all flex items-center justify-between shadow-lg group cursor-pointer"
+                            >
+                                <span className="flex items-center gap-2">
+                                    <span>📸 🎥</span>
+                                    <span>Upload Photos & Videos</span>
+                                </span>
+                                <span className="text-[10px] bg-emerald-500/20 px-2 py-1 rounded text-emerald-300 font-bold group-hover:bg-emerald-500 group-hover:text-slate-950 transition-colors">
+                                    + Add / Manage
+                                </span>
+                            </button>
                         </div>
                     </div>
 
@@ -750,6 +869,14 @@ export default function TurfDetailPage() {
                     </div>
                 </div>
             )}
+
+            {/* Media Upload Modal */}
+            <MediaUploadModal
+                isOpen={isMediaModalOpen}
+                onClose={() => setIsMediaModalOpen(false)}
+                currentMedia={turfData.media}
+                onSaveMedia={handleSaveMedia}
+            />
         </div>
     )
 }
