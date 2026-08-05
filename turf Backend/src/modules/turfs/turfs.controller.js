@@ -122,9 +122,48 @@ const filterTurfs = async (req, res) => {
     }
 };
 
+const getTurfById = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const connection = await mysql.createConnection(dbConfig);
+        const [rows] = await connection.execute('SELECT * FROM turfs WHERE id = ?', [id]);
+        await connection.end();
+
+        if (rows.length === 0) {
+            return res.status(404).json({ success: false, message: 'Turf not found' });
+        }
+
+        res.json({ success: true, data: rows[0] });
+    } catch (error) {
+        console.error('Error fetching turf by id:', error);
+        res.status(500).json({ success: false, message: 'Server Error' });
+    }
+};
+
+const updateTurfMedia = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { media } = req.body;
+        if (!media || !Array.isArray(media)) {
+            return res.status(400).json({ success: false, message: 'Media array is required' });
+        }
+
+        const connection = await mysql.createConnection(dbConfig);
+        await connection.execute('UPDATE turfs SET media = ? WHERE id = ?', [JSON.stringify(media), id]);
+        await connection.end();
+
+        res.json({ success: true, message: 'Turf media updated successfully', media });
+    } catch (error) {
+        console.error('Error updating turf media:', error);
+        res.status(500).json({ success: false, message: 'Server Error' });
+    }
+};
+
 module.exports = {
     getTurfs,
+    getTurfById,
     getTurfsNearby,
     searchTurfs,
-    filterTurfs
+    filterTurfs,
+    updateTurfMedia
 };

@@ -1,9 +1,11 @@
 const express = require('express');
 const {
     getTurfs,
+    getTurfById,
     getTurfsNearby,
     searchTurfs,
-    filterTurfs
+    filterTurfs,
+    updateTurfMedia
 } = require('./turfs.controller');
 
 const router = express.Router();
@@ -12,7 +14,8 @@ router.get('/', getTurfs);
 router.get('/nearby', getTurfsNearby);
 router.get('/search', searchTurfs);
 router.get('/filter', filterTurfs);
-// Map can just use filter or nearby depending on frontend needs
-router.get('/map', getTurfsNearby); 
+router.get('/map', getTurfsNearby);
+router.get('/:id', getTurfById);
+router.put('/:id/media', updateTurfMedia);
 
 module.exports = router;
