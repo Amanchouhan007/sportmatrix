@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Badge from '../../components/ui/Badge'
 import Card from '../../components/ui/Card'
 import Button from '../../components/ui/Button'
@@ -75,11 +75,33 @@ const INITIAL_COMMISSIONS = [
 export default function CommissionManagement() {
     const { addToast } = useToast()
     const [commissions, setCommissions] = useState(INITIAL_COMMISSIONS)
+    const [summary, setSummary] = useState({ totalPool: 2422, pendingPayouts: 2038, settledCommissions: 384 })
     const [search, setSearch] = useState('')
     const [statusFilter, setStatusFilter] = useState('ALL')
     const [currentPage, setCurrentPage] = useState(1)
     const [selectedInvoice, setSelectedInvoice] = useState(null)
     const itemsPerPage = 5
+
+    const fetchLiveCommissions = async () => {
+        try {
+            const res = await fetch('http://localhost:5000/api/v1/ads/commissions');
+            const data = await res.json();
+            if (data.success) {
+                if (Array.isArray(data.data) && data.data.length > 0) {
+                    setCommissions(data.data);
+                }
+                if (data.summary) {
+                    setSummary(data.summary);
+                }
+            }
+        } catch (err) {
+            console.error('Error fetching dynamic commissions:', err);
+        }
+    };
+
+    useEffect(() => {
+        fetchLiveCommissions();
+    }, []);
 
     const filteredData = commissions.filter(item => {
         const matchesSearch = item.bookingId.toLowerCase().includes(search.toLowerCase()) ||
@@ -93,9 +115,15 @@ export default function CommissionManagement() {
     const totalPages = Math.ceil(filteredData.length / itemsPerPage) || 1
     const paginatedData = filteredData.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)
 
-    const handleMarkPaid = (id) => {
+    const handleMarkPaid = async (id) => {
         setCommissions(prev => prev.map(item => item.bookingId === id ? { ...item, paymentStatus: 'Paid' } : item))
         addToast({ message: `Commission for Booking ${id} marked as Paid!`, type: 'success' })
+        try {
+            await fetch(`http://localhost:5000/api/v1/ads/commissions/${id}/pay`, { method: 'PATCH' });
+            fetchLiveCommissions();
+        } catch (err) {
+            console.error('Error marking commission paid:', err);
+        }
     }
 
     return (
@@ -123,7 +151,7 @@ export default function CommissionManagement() {
                         </div>
                         <div>
                             <p className="text-xs font-bold text-surface-400 uppercase tracking-wider">Total Commission Pool</p>
-                            <h3 className="text-2xl font-extrabold text-surface-900 mt-0.5">₹2,422.00</h3>
+                            <h3 className="text-2xl font-extrabold text-surface-900 mt-0.5">₹{Number(summary.totalPool).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</h3>
                         </div>
                     </div>
                 </Card>
@@ -136,7 +164,7 @@ export default function CommissionManagement() {
                         </div>
                         <div>
                             <p className="text-xs font-bold text-surface-400 uppercase tracking-wider">Pending Payouts</p>
-                            <h3 className="text-2xl font-extrabold text-amber-600 mt-0.5">₹2,038.00</h3>
+                            <h3 className="text-2xl font-extrabold text-amber-600 mt-0.5">₹{Number(summary.pendingPayouts).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</h3>
                         </div>
                     </div>
                 </Card>
@@ -149,7 +177,7 @@ export default function CommissionManagement() {
                         </div>
                         <div>
                             <p className="text-xs font-bold text-surface-400 uppercase tracking-wider">Settled Commissions</p>
-                            <h3 className="text-2xl font-extrabold text-emerald-600 mt-0.5">₹384.00</h3>
+                            <h3 className="text-2xl font-extrabold text-emerald-600 mt-0.5">₹{Number(summary.settledCommissions).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</h3>
                         </div>
                     </div>
                 </Card>

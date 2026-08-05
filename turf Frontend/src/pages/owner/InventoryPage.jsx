@@ -35,6 +35,21 @@ export default function InventoryPage() {
         threshold: '5'
     })
 
+    useEffect(() => {
+        const fetchInventory = async () => {
+            try {
+                const res = await fetch('http://localhost:5000/api/v1/inventory?branchId=br_001');
+                const data = await res.json();
+                if (data.success && Array.isArray(data.data) && data.data.length > 0) {
+                    setItems(data.data);
+                }
+            } catch (e) {
+                console.error('Error fetching inventory from backend:', e);
+            }
+        };
+        fetchInventory();
+    }, []);
+
     const handleCreateItem = () => {
         if (!newItem.name || !newItem.stock || !newItem.price) {
             addToast({ title: 'Missing Information', message: 'Please enter name, initial stock and unit price', type: 'error' })

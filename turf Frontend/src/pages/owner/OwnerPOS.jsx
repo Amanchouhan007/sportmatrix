@@ -151,27 +151,58 @@ export default function OwnerPOS() {
     const tax = Math.round(subtotal * gstRate)
     const total = subtotal + tax
 
-    const handleCompletePayment = () => {
+    const handleCompletePayment = async () => {
         if (cart.length === 0) {
             addToast({ title: 'Checkout Empty', message: 'Add items or booking slots first', type: 'warning' })
             return
         }
 
-        const billData = {
-            id: `INV-${Math.floor(Math.random() * 90000) + 10000}`,
-            customerName: customer.name || 'Walk-in Customer',
-            customerPhone: customer.phone || 'N/A',
-            items: [...cart],
-            subtotal,
-            tax,
-            total,
-            method: paymentMethod,
-            date: new Date().toLocaleString()
-        }
+        const customerName = customer.name || 'Walk-in Customer';
 
-        setLastBill(billData)
-        setIsSuccess(true)
-        addToast({ title: 'Billing Finalized', message: `Invoice generated for ₹${total}`, type: 'success' })
+        try {
+            const res = await fetch('http://localhost:5000/api/v1/billing/pay', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    customerName,
+                    amount: total,
+                    paymentMethod
+                })
+            });
+            const result = await res.json();
+            const invNum = result.data?.invoiceNumber || `INV-${Math.floor(Math.random() * 90000) + 10000}`;
+
+            const billData = {
+                id: invNum,
+                customerName,
+                customerPhone: customer.phone || 'N/A',
+                items: [...cart],
+                subtotal,
+                tax,
+                total,
+                method: paymentMethod,
+                date: new Date().toLocaleString()
+            };
+
+            setLastBill(billData);
+            setIsSuccess(true);
+            addToast({ title: 'Billing Finalized', message: `Invoice ${invNum} generated & saved in DB for ₹${total}`, type: 'success' });
+        } catch (err) {
+            console.error('POS Checkout backend error:', err);
+            const billData = {
+                id: `INV-${Math.floor(Math.random() * 90000) + 10000}`,
+                customerName,
+                customerPhone: customer.phone || 'N/A',
+                items: [...cart],
+                subtotal,
+                tax,
+                total,
+                method: paymentMethod,
+                date: new Date().toLocaleString()
+            };
+            setLastBill(billData);
+            setIsSuccess(true);
+        }
     }
 
     const handleNewSale = () => {

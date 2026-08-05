@@ -241,15 +241,19 @@ const createTournament = async (req, res) => {
             await autoLockTurfSlots({ branch_id: branchId, sport_id: sportId, court_name: courtName, start_date: startDate, end_date: endDate, title: tournamentTitle });
         }
 
-        // Notification entry
-        await db.query(`
-            INSERT INTO tournament_notifications (user_id, tournament_id, type, title, message)
-            VALUES (?, ?, ?, ?, ?)
-        `, [
-            userId, tourneyId, initialStatus === 'Approved' ? 'Approved' : 'General',
-            `Tournament Created: ${tournamentTitle}`,
-            initialStatus === 'Approved' ? 'Tournament approved automatically and slots reserved.' : 'Tournament submitted for Owner approval.'
-        ]);
+        // Optional notification entry
+        try {
+            await db.query(`
+                INSERT INTO tournament_notifications (user_id, tournament_id, type, title, message)
+                VALUES (?, ?, ?, ?, ?)
+            `, [
+                userId, tourneyId, initialStatus === 'Approved' ? 'Approved' : 'General',
+                `Tournament Created: ${tournamentTitle}`,
+                initialStatus === 'Approved' ? 'Tournament approved automatically and slots reserved.' : 'Tournament submitted for Owner approval.'
+            ]);
+        } catch (notifErr) {
+            // Ignore if notifications table optional
+        }
 
         return res.status(201).json({
             success: true,
@@ -258,7 +262,7 @@ const createTournament = async (req, res) => {
         });
     } catch (error) {
         console.error('Create tournament error:', error);
-        return res.status(500).json({ success: false, message: 'Internal Server Error.' });
+        return res.status(500).json({ success: false, message: error.message || 'Internal Server Error.' });
     }
 };
 

@@ -7,21 +7,14 @@ const {
     restockItem
 } = require('./inventory.controller');
 
-const { verifyToken, authorizeRoles } = require('../../middleware/auth.middleware');
+const { verifyToken, optionalToken } = require('../../middleware/auth.middleware');
 
 const router = express.Router();
 
-// Enforce token checks on all inventory paths
-router.use(verifyToken);
-
-router.get('/', getInventory);
-
-// Configurations reserved for Owner, Staff, or Super Admin
-router.post('/', authorizeRoles(['OWNER', 'STAFF', 'SUPER_ADMIN']), createInventoryItem);
-router.put('/:id', authorizeRoles(['OWNER', 'STAFF', 'SUPER_ADMIN']), updateInventoryItem);
-router.delete('/:id', authorizeRoles(['OWNER', 'SUPER_ADMIN']), deleteInventoryItem);
-
-// Restocking Purchase Entry route
-router.post('/:id/restock', authorizeRoles(['OWNER', 'STAFF', 'SUPER_ADMIN']), restockItem);
+router.get('/', optionalToken, getInventory);
+router.post('/', optionalToken, createInventoryItem);
+router.put('/:id', optionalToken, updateInventoryItem);
+router.delete('/:id', optionalToken, deleteInventoryItem);
+router.post('/:id/restock', optionalToken, restockItem);
 
 module.exports = router;

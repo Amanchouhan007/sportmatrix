@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import Card from '../../components/ui/Card'
 import Badge from '../../components/ui/Badge'
@@ -103,6 +103,21 @@ export default function OwnerMyAdvertisements() {
     const [typeFilter, setTypeFilter] = useState('ALL')
     const [confirmModal, setConfirmModal] = useState({ open: false, type: '', ad: null })
 
+    useEffect(() => {
+        const fetchLiveAds = async () => {
+            try {
+                const res = await fetch('http://localhost:5000/api/v1/ads');
+                const data = await res.json();
+                if (data.success && Array.isArray(data.data) && data.data.length > 0) {
+                    setAds(data.data);
+                }
+            } catch (err) {
+                console.error('Error fetching live ad campaigns:', err);
+            }
+        };
+        fetchLiveAds();
+    }, []);
+
     const filteredAds = ads.filter(ad => {
         const matchesSearch = ad.name.toLowerCase().includes(search.toLowerCase()) || ad.id.toLowerCase().includes(search.toLowerCase())
         const matchesStatus = statusFilter === 'ALL' || ad.status === statusFilter
@@ -187,74 +202,7 @@ export default function OwnerMyAdvertisements() {
                 </div>
             </div>
 
-            {/* 2. KPI Cards with Insight Variations */}
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-                <Card variant="glass" hover className="p-4 relative overflow-hidden bg-white shadow-soft">
-                    <div className="absolute top-0 left-0 h-1 w-full bg-emerald-500"></div>
-                    <div className="space-y-1">
-                        <p className="text-[11px] font-bold text-surface-400 uppercase tracking-wider flex items-center gap-1">
-                            <FiTag className="text-emerald-500" /> Active Ads
-                        </p>
-                        <h3 className="text-2xl font-extrabold text-surface-900">2</h3>
-                        <p className="text-[11px] font-bold text-emerald-600">🟢 Live campaigns</p>
-                    </div>
-                </Card>
 
-                <Card variant="glass" hover className="p-4 relative overflow-hidden bg-white shadow-soft">
-                    <div className="absolute top-0 left-0 h-1 w-full bg-indigo-500"></div>
-                    <div className="space-y-1">
-                        <p className="text-[11px] font-bold text-surface-400 uppercase tracking-wider flex items-center gap-1">
-                            <FiEye className="text-indigo-500" /> Total Views
-                        </p>
-                        <h3 className="text-2xl font-extrabold text-surface-900">38.6K</h3>
-                        <p className="text-[11px] font-bold text-emerald-600">📈 +18% vs Last Month</p>
-                    </div>
-                </Card>
-
-                <Card variant="glass" hover className="p-4 relative overflow-hidden bg-white shadow-soft">
-                    <div className="absolute top-0 left-0 h-1 w-full bg-purple-500"></div>
-                    <div className="space-y-1">
-                        <p className="text-[11px] font-bold text-surface-400 uppercase tracking-wider flex items-center gap-1">
-                            <FiMousePointer className="text-purple-500" /> Avg CTR
-                        </p>
-                        <h3 className="text-2xl font-extrabold text-surface-900">11.3%</h3>
-                        <p className="text-[11px] font-semibold text-purple-700">Industry Avg 8.2%</p>
-                    </div>
-                </Card>
-
-                <Card variant="glass" hover className="p-4 relative overflow-hidden bg-white shadow-soft">
-                    <div className="absolute top-0 left-0 h-1 w-full bg-cyan-500"></div>
-                    <div className="space-y-1">
-                        <p className="text-[11px] font-bold text-surface-400 uppercase tracking-wider flex items-center gap-1">
-                            <FiShoppingBag className="text-cyan-500" /> Ad Bookings
-                        </p>
-                        <h3 className="text-2xl font-extrabold text-cyan-600">159</h3>
-                        <p className="text-[11px] font-bold text-emerald-600">High conversion</p>
-                    </div>
-                </Card>
-
-                <Card variant="glass" hover className="p-4 relative overflow-hidden bg-white shadow-soft">
-                    <div className="absolute top-0 left-0 h-1 w-full bg-emerald-500"></div>
-                    <div className="space-y-1">
-                        <p className="text-[11px] font-bold text-surface-400 uppercase tracking-wider flex items-center gap-1">
-                            <FiDollarSign className="text-emerald-500" /> Revenue
-                        </p>
-                        <h3 className="text-2xl font-extrabold text-emerald-600">₹2.85L</h3>
-                        <p className="text-[11px] font-bold text-emerald-600">↑ +21% vs Last Month</p>
-                    </div>
-                </Card>
-
-                <Card variant="glass" hover className="p-4 relative overflow-hidden bg-white shadow-soft">
-                    <div className="absolute top-0 left-0 h-1 w-full bg-amber-500"></div>
-                    <div className="space-y-1">
-                        <p className="text-[11px] font-bold text-surface-400 uppercase tracking-wider flex items-center gap-1">
-                            <FiTrendingUp className="text-amber-500" /> Campaign ROI
-                        </p>
-                        <h3 className="text-2xl font-extrabold text-amber-600">240%</h3>
-                        <p className="text-[11px] font-semibold text-amber-700">Platform Return</p>
-                    </div>
-                </Card>
-            </div>
 
             {/* 3. Ultra-Clean Single-Line Toolbar */}
             <div className="p-3 bg-white border border-surface-200/80 rounded-2xl shadow-soft">

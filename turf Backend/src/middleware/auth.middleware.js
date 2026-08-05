@@ -52,7 +52,26 @@ const authorizeRoles = (allowedRoles) => {
     };
 };
 
+/**
+ * Optional JWT Token middleware (does not reject if missing)
+ */
+const optionalToken = (req, res, next) => {
+    const authHeader = req.headers['authorization'];
+    const token = authHeader && authHeader.split(' ')[1];
+
+    if (token) {
+        try {
+            const decoded = jwt.verify(token, process.env.JWT_SECRET || 'sportmatrix_jwt_secret_key_2026');
+            req.user = decoded;
+        } catch (error) {
+            // Token invalid, proceed as guest
+        }
+    }
+    next();
+};
+
 module.exports = {
     verifyToken,
+    optionalToken,
     authorizeRoles
 };

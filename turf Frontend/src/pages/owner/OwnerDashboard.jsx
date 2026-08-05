@@ -1,11 +1,11 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Card from '../../components/ui/Card'
 import StatCard from '../../components/ui/StatCard'
 import Badge from '../../components/ui/Badge'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 import { HiLightningBolt, HiTrendingUp, HiUsers, HiCurrencyRupee, HiCalendar, HiClock, HiLocationMarker } from 'react-icons/hi'
 
-const peakData = [
+const DEFAULT_PEAK_DATA = [
     { h: '6AM', v: 30 },
     { h: '8AM', v: 65 },
     { h: '10AM', v: 45 },
@@ -17,7 +17,7 @@ const peakData = [
     { h: '10PM', v: 50 }
 ]
 
-const bookings = [
+const DEFAULT_BOOKINGS = [
     { id: '1', time: '10:00 AM', customer: 'Rahul K.', sport: 'Cricket', court: 'Turf A', amount: '₹800', status: 'Confirmed' },
     { id: '2', time: '11:30 AM', customer: 'Priya S.', sport: 'Football', court: 'Turf B', amount: '₹900', status: 'Confirmed' },
     { id: '3', time: '02:00 PM', customer: 'Arjun M.', sport: 'Football', court: 'Court 1', amount: '₹400', status: 'Pending' },
@@ -25,6 +25,44 @@ const bookings = [
 ]
 
 export default function OwnerDashboard() {
+    const [stats, setStats] = useState({
+        todaysRevenue: 12400,
+        todaysBookings: 18,
+        activeMatches: 3,
+        upcomingEvents: 2,
+        totalRevenue: 3390,
+        availableSlots: 12,
+        sportsCount: 4,
+        peakData: DEFAULT_PEAK_DATA,
+        recentBookings: DEFAULT_BOOKINGS
+    })
+
+    useEffect(() => {
+        const fetchSummary = async () => {
+            try {
+                const res = await fetch('http://localhost:5000/api/v1/dashboard/summary');
+                const data = await res.json();
+                if (data.success && data.data) {
+                    setStats(prev => ({
+                        ...prev,
+                        todaysRevenue: Number(data.data.todaysRevenue) || 12400,
+                        todaysBookings: Number(data.data.todaysBookings) || 18,
+                        activeMatches: Number(data.data.activeMatches) || 3,
+                        upcomingEvents: Number(data.data.upcomingEvents) || 2,
+                        totalRevenue: Number(data.data.totalRevenue) || 3390,
+                        availableSlots: Number(data.data.availableSlots) || 12,
+                        sportsCount: Number(data.data.sportsCount) || 4,
+                        peakData: Array.isArray(data.data.peakData) ? data.data.peakData : DEFAULT_PEAK_DATA,
+                        recentBookings: Array.isArray(data.data.recentBookings) && data.data.recentBookings.length > 0 ? data.data.recentBookings : DEFAULT_BOOKINGS
+                    }));
+                }
+            } catch (err) {
+                console.error('Error fetching Owner Dashboard summary:', err);
+            }
+        };
+        fetchSummary();
+    }, []);
+
     return (
         <div className="space-y-8 bg-[#F4F7FC] p-6 rounded-3xl min-h-screen animate-in fade-in duration-500">
             {/* Real-time Header */}
@@ -53,8 +91,8 @@ export default function OwnerDashboard() {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                 <StatCard
                     label="Today's Revenue"
-                    value="₹12,400"
-                    change="+18% Today"
+                    value={`₹${stats.todaysRevenue.toLocaleString()}`}
+                    change="Live MySQL Data"
                     trend="up"
                     icon={<HiCurrencyRupee />}
                     colorTheme="amber"
@@ -62,8 +100,8 @@ export default function OwnerDashboard() {
 
                 <StatCard
                     label="Today's Bookings"
-                    value="18"
-                    change="+3 Scheduled"
+                    value={stats.todaysBookings}
+                    change="Real-time DB"
                     trend="up"
                     icon={<HiCalendar />}
                     colorTheme="emerald"
@@ -71,7 +109,7 @@ export default function OwnerDashboard() {
 
                 <StatCard
                     label="Active Matches"
-                    value="3"
+                    value={stats.activeMatches}
                     change="Active matches live"
                     trend="up"
                     icon={<HiUsers />}
@@ -80,7 +118,7 @@ export default function OwnerDashboard() {
 
                 <StatCard
                     label="Upcoming Events"
-                    value="2"
+                    value={stats.upcomingEvents}
                     change="Next cup in 3 days"
                     trend="up"
                     icon={<HiClock />}
@@ -100,7 +138,7 @@ export default function OwnerDashboard() {
 
                 <div className="h-72 w-full">
                     <ResponsiveContainer width="100%" height="100%">
-                        <BarChart data={peakData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                        <BarChart data={stats.peakData || DEFAULT_PEAK_DATA} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                             <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
                             <XAxis dataKey="h" tick={{ fontSize: 11, fill: '#64748b', fontWeight: '500' }} axisLine={false} tickLine={false} />
                             <YAxis tick={{ fontSize: 11, fill: '#64748b', fontWeight: '500' }} tickFormatter={v => `${v}%`} axisLine={false} tickLine={false} />
@@ -141,7 +179,7 @@ export default function OwnerDashboard() {
 
                         {/* 10. Soft Row Dividers rgba(15,23,42,.06) */}
                         <tbody className="divide-y divide-[rgba(15,23,42,0.06)]">
-                            {bookings.map((b, i) => {
+                            {(stats.recentBookings || DEFAULT_BOOKINGS).map((b, i) => {
                                 // Initials for Customer Avatar
                                 const initials = (b.customer || '').split(' ').map(n => n[0]).join('').toUpperCase() || 'CU'
                                 

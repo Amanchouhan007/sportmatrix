@@ -30,6 +30,21 @@ export default function TournamentAllPage({ role = 'owner' }) {
 
     const basePath = role === 'staff' ? '/staff/tournaments' : '/admin/tournaments'
 
+    useEffect(() => {
+        const fetchLiveTournaments = async () => {
+            try {
+                const res = await fetch('http://localhost:5000/api/v1/tournaments');
+                const data = await res.json();
+                if (data.success && Array.isArray(data.data) && data.data.length > 0) {
+                    setTournaments(data.data);
+                }
+            } catch (err) {
+                console.error('Error fetching live tournaments:', err);
+            }
+        };
+        fetchLiveTournaments();
+    }, []);
+
     const handleApprove = (t, remarks = 'Approved by Owner') => {
         setTournaments(prev => prev.map(item => item.id === t.id ? { ...item, status: 'Approved', ownerRemarks: remarks } : item))
         setReviewModal({ open: false, tournament: null, remarks: '' })

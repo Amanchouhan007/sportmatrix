@@ -281,9 +281,8 @@ export default function CreateAdvertisement() {
         }
     }
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e?.preventDefault()
-        if (!validateStep()) return
         addToast({ message: `Campaign "${formData.campaignName}" published successfully & sent for review!`, type: 'success' })
         navigate('/admin/ads')
     }
@@ -341,22 +340,20 @@ export default function CreateAdvertisement() {
                             <div
                                 key={s.step}
                                 onClick={() => setCurrentStep(s.step)}
-                                className={`flex items-center gap-3 p-3 rounded-2xl cursor-pointer transition-all ${
-                                    isCurrent
+                                className={`flex items-center gap-3 p-3 rounded-2xl cursor-pointer transition-all ${isCurrent
                                         ? 'bg-emerald-50/80 border border-emerald-200/80 text-emerald-800'
                                         : isCompleted
-                                        ? 'bg-surface-50 text-emerald-700'
-                                        : 'text-surface-400 opacity-60'
-                                }`}
+                                            ? 'bg-surface-50 text-emerald-700'
+                                            : 'text-surface-400 opacity-60'
+                                    }`}
                             >
                                 <div
-                                    className={`w-8 h-8 rounded-xl flex items-center justify-center text-xs font-black shrink-0 transition-all ${
-                                        isCompleted
+                                    className={`w-8 h-8 rounded-xl flex items-center justify-center text-xs font-black shrink-0 transition-all ${isCompleted
                                             ? 'bg-emerald-600 text-white shadow-sm'
                                             : isCurrent
-                                            ? 'bg-emerald-600 text-white shadow-md ring-4 ring-emerald-100'
-                                            : 'bg-surface-200 text-surface-600'
-                                    }`}
+                                                ? 'bg-emerald-600 text-white shadow-md ring-4 ring-emerald-100'
+                                                : 'bg-surface-200 text-surface-600'
+                                        }`}
                                 >
                                     {isCompleted ? '✓' : s.step}
                                 </div>
@@ -386,11 +383,10 @@ export default function CreateAdvertisement() {
                                 {/* Card 1: Guaranteed Booking */}
                                 <div
                                     onClick={() => handleCampaignTypeSelect('guaranteed_booking')}
-                                    className={`p-6 rounded-3xl cursor-pointer relative overflow-hidden transition-all duration-300 border ${
-                                        campaignType === 'guaranteed_booking'
+                                    className={`p-6 rounded-3xl cursor-pointer relative overflow-hidden transition-all duration-300 border ${campaignType === 'guaranteed_booking'
                                             ? 'bg-gradient-to-b from-white to-emerald-50/40 border-emerald-500 ring-2 ring-emerald-500/20 shadow-xl scale-[1.02]'
                                             : 'bg-white border-surface-200/80 hover:border-emerald-300 hover:shadow-md'
-                                    }`}
+                                        }`}
                                 >
                                     <span className="px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-extrabold absolute top-4 right-4">
                                         ★ Commission Model
@@ -411,11 +407,10 @@ export default function CreateAdvertisement() {
                                 {/* Card 2: Impression Ad */}
                                 <div
                                     onClick={() => handleCampaignTypeSelect('impression_ad')}
-                                    className={`p-6 rounded-3xl cursor-pointer relative overflow-hidden transition-all duration-300 border ${
-                                        campaignType === 'impression_ad'
+                                    className={`p-6 rounded-3xl cursor-pointer relative overflow-hidden transition-all duration-300 border ${campaignType === 'impression_ad'
                                             ? 'bg-gradient-to-b from-white to-amber-50/40 border-amber-500 ring-2 ring-amber-500/20 shadow-xl scale-[1.02]'
                                             : 'bg-white border-surface-200/80 hover:border-amber-300 hover:shadow-md'
-                                    }`}
+                                        }`}
                                 >
                                     <span className="px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-800 text-[10px] font-extrabold absolute top-4 right-4">
                                         🚀 Max Exposure
@@ -621,11 +616,10 @@ export default function CreateAdvertisement() {
                                                 key={placement}
                                                 type="button"
                                                 onClick={() => togglePlacement(placement)}
-                                                className={`p-3 rounded-xl text-xs font-extrabold transition-all border text-left ${
-                                                    formData.placements.includes(placement)
+                                                className={`p-3 rounded-xl text-xs font-extrabold transition-all border text-left ${formData.placements.includes(placement)
                                                         ? 'bg-amber-500 text-slate-950 border-amber-500 shadow-sm'
                                                         : 'bg-white text-surface-600 border-surface-200 hover:bg-surface-100'
-                                                }`}
+                                                    }`}
                                             >
                                                 {formData.placements.includes(placement) ? '✓ ' : ''}{placement}
                                             </button>
@@ -900,7 +894,7 @@ export default function CreateAdvertisement() {
                                         />
                                     )}
                                     <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-transparent to-black/30" />
-                                    
+
                                     <div className="absolute top-3 left-3 flex gap-2">
                                         <span className="bg-emerald-500 text-slate-950 px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider shadow-lg">
                                             🔥 Promoted Ad

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import DataTable from '../../components/ui/DataTable'
 import Button from '../../components/ui/Button'
 import Badge from '../../components/ui/Badge'
@@ -24,6 +24,7 @@ const initialBookings = [
 export default function BookingManagement() {
     const { addToast } = useToast()
     const [bookings, setBookings] = useState(initialBookings)
+    const [summary, setSummary] = useState({ todayCount: 12, weekCount: 64, monthCount: 248, totalRevenue: 184500 })
     const [filterStatus, setFilterStatus] = useState('All')
     const [searchQuery, setSearchQuery] = useState('')
     const [filterDate, setFilterDate] = useState('')
@@ -39,6 +40,60 @@ export default function BookingManagement() {
     // Table detail modal
     const [detailModal, setDetailModal] = useState(false)
 
+    const fetchLiveBookings = async () => {
+        try {
+            const summaryRes = await fetch('http://localhost:5000/api/v1/bookings/summary');
+            const summaryData = await summaryRes.json();
+            if (summaryData.success && summaryData.data) {
+                setSummary(summaryData.data);
+            }
+
+            const res = await fetch('http://localhost:5000/api/v1/bookings/history');
+            const data = await res.json();
+            if (data.success && Array.isArray(data.data) && data.data.length > 0) {
+                const formatted = data.data.map(r => {
+                    const d = new Date(r.slot_date || r.booked_on || Date.now());
+                    const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+                    const formatTime = (tStr) => {
+                        if (!tStr) return '10:00 AM';
+                        const [h, m] = tStr.split(':');
+                        const hr = parseInt(h, 10);
+                        const ampm = hr >= 12 ? 'PM' : 'AM';
+                        const hr12 = hr % 12 || 12;
+                        const hrF = hr12 < 10 ? `0${hr12}` : `${hr12}`;
+                        return `${hrF}:${m} ${ampm}`;
+                    };
+                    const formattedTime = formatTime(r.start_time);
+                    const formattedEndTime = formatTime(r.end_time);
+
+                    return {
+                        id: String(r.booking_id || r.id || 'BK-001'),
+                        customer: r.customer_name || 'Rahul Kumar',
+                        phone: r.mobile_number || '+91 98765 00001',
+                        email: 'customer@gmail.com',
+                        sport: r.sport_name || 'Football',
+                        court: r.court_name || 'Turf A',
+                        date: r.slot_date ? new Date(r.slot_date).toISOString().split('T')[0] : '2026-03-16',
+                        dayOfWeek: dayNames[d.getDay()],
+                        time: formattedTime,
+                        slotRange: `${formattedTime}–${formattedEndTime}`,
+                        amount: `₹${(r.amount || 800).toLocaleString()}`,
+                        type: 'Online',
+                        status: r.booking_status === 'CONFIRMED' ? 'Confirmed' : r.booking_status === 'PENDING' ? 'Pending' : r.booking_status === 'CANCELLED' ? 'Cancelled' : r.booking_status || 'Confirmed',
+                        notes: r.booking_notes || 'Booking confirmed'
+                    };
+                });
+                setBookings(formatted);
+            }
+        } catch (err) {
+            console.error('Error fetching live bookings:', err);
+        }
+    };
+
+    useEffect(() => {
+        fetchLiveBookings();
+    }, []);
+
     const handleOpenSlideOver = (booking) => {
         setSelectedBooking(booking)
         setSlideOverOpen(true)
@@ -49,12 +104,22 @@ export default function BookingManagement() {
         setDetailModal(true)
     }
 
-    const handleUpdateStatus = (id, newStatus) => {
-        setBookings(bookings.map(b => b.id === id ? { ...b, status: newStatus } : b))
+    const handleUpdateStatus = async (id, newStatus) => {
+        setBookings(prev => prev.map(b => b.id === id ? { ...b, status: newStatus } : b))
         if (selectedBooking && selectedBooking.id === id) {
             setSelectedBooking({ ...selectedBooking, status: newStatus })
         }
         addToast({ title: 'Status Updated', message: `Booking status changed to ${newStatus}`, type: 'success' })
+        try {
+            await fetch(`http://localhost:5000/api/v1/bookings/${id}/status`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ status: newStatus })
+            });
+            fetchLiveBookings();
+        } catch (err) {
+            console.error('Error updating booking status:', err);
+        }
     }
 
     const handleReschedule = (id) => {
@@ -195,7 +260,7 @@ export default function BookingManagement() {
                     <div className="flex items-center justify-between">
                         <div>
                             <p className="text-[11px] font-bold text-surface-400 uppercase tracking-wider">Today</p>
-                            <p className="text-2xl font-extrabold text-surface-900 mt-0.5">12</p>
+                            <p className="text-2xl font-extrabold text-surface-900 mt-0.5">{summary.todayCount}</p>
                             <p className="text-[10px] text-surface-500 font-semibold mt-0.5">Bookings</p>
                         </div>
                         <div className="w-10 h-10 rounded-2xl bg-emerald-50 flex items-center justify-center text-emerald-600">
@@ -208,7 +273,7 @@ export default function BookingManagement() {
                     <div className="flex items-center justify-between">
                         <div>
                             <p className="text-[11px] font-bold text-surface-400 uppercase tracking-wider">This Week</p>
-                            <p className="text-2xl font-extrabold text-emerald-600 mt-0.5">64</p>
+                            <p className="text-2xl font-extrabold text-emerald-600 mt-0.5">{summary.weekCount}</p>
                             <p className="text-[10px] text-surface-500 font-semibold mt-0.5">Bookings</p>
                         </div>
                         <div className="w-10 h-10 rounded-2xl bg-emerald-50 flex items-center justify-center text-emerald-600">
@@ -221,7 +286,7 @@ export default function BookingManagement() {
                     <div className="flex items-center justify-between">
                         <div>
                             <p className="text-[11px] font-bold text-surface-400 uppercase tracking-wider">This Month</p>
-                            <p className="text-2xl font-extrabold text-surface-900 mt-0.5">248</p>
+                            <p className="text-2xl font-extrabold text-surface-900 mt-0.5">{summary.monthCount}</p>
                             <p className="text-[10px] text-surface-500 font-semibold mt-0.5">Bookings</p>
                         </div>
                         <div className="w-10 h-10 rounded-2xl bg-indigo-50 flex items-center justify-center text-indigo-600">
@@ -234,7 +299,7 @@ export default function BookingManagement() {
                     <div className="flex items-center justify-between">
                         <div>
                             <p className="text-[11px] font-bold text-surface-400 uppercase tracking-wider">Revenue</p>
-                            <p className="text-2xl font-extrabold text-surface-900 mt-0.5">₹1,84,500</p>
+                            <p className="text-2xl font-extrabold text-surface-900 mt-0.5">₹{Number(summary.totalRevenue).toLocaleString('en-IN')}</p>
                             <p className="text-[10px] text-emerald-600 font-bold mt-0.5">Collected</p>
                         </div>
                         <div className="w-10 h-10 rounded-2xl bg-amber-50 flex items-center justify-center text-amber-500">

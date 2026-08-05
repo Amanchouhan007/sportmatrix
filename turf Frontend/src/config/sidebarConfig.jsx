@@ -1,10 +1,10 @@
-import { 
-    HiHome, HiOfficeBuilding, HiUsers, HiCreditCard, HiChartBar, HiCog, HiClipboardList, 
-    HiShieldCheck, HiExclamationCircle, HiCash, HiSpeakerphone, HiCurrencyDollar, HiPlusCircle, 
+import {
+    HiHome, HiOfficeBuilding, HiUsers, HiCreditCard, HiChartBar, HiCog, HiClipboardList,
+    HiShieldCheck, HiExclamationCircle, HiCash, HiSpeakerphone, HiCurrencyDollar, HiPlusCircle,
     HiTag, HiCheckCircle, HiStar, HiAdjustments, HiViewGrid
 } from 'react-icons/hi'
-import { 
-    HiTrophy, HiCalendar, HiUserGroup, HiBolt, HiWallet, HiWrench, HiCube, 
+import {
+    HiTrophy, HiCalendar, HiUserGroup, HiBolt, HiWallet, HiWrench, HiCube,
     HiDocumentText, HiUser, HiTicket, HiMegaphone, HiSparkles, HiPlay
 } from 'react-icons/hi2'
 
@@ -13,7 +13,7 @@ const sidebarConfig = {
         { label: 'Dashboard', icon: <HiHome />, path: '/super-admin' },
         { label: 'Owners', icon: <HiUsers />, path: '/super-admin/owners' },
         { label: 'Subscriptions', icon: <HiCreditCard />, path: '/super-admin/subscriptions' },
-        
+
         { isHeader: true, label: 'System Logs' },
         { label: 'Analytics Logs', icon: <HiChartBar />, path: '/super-admin/analytics' },
         { label: 'Payment Logs', icon: <HiClipboardList />, path: '/super-admin/payments' },
@@ -21,7 +21,7 @@ const sidebarConfig = {
     ],
     owner: [
         { label: 'Dashboard', icon: <HiHome />, path: '/admin' },
-        
+
         { isHeader: true, label: 'Marketing & Ads' },
         {
             isCollapsible: true,
@@ -30,7 +30,7 @@ const sidebarConfig = {
             pathPrefix: '/admin/ads',
             children: [
                 { label: 'All Advertisements', icon: <HiSpeakerphone />, path: '/admin/ads' },
-                { label: 'Discount Offers', icon: <HiTag />, path: '/admin/discount-offers' },
+                { label: 'Create Advertisement', icon: <HiPlusCircle />, path: '/admin/ads/create' },
                 { label: 'Commission Management', icon: <HiCurrencyDollar />, path: '/admin/ads/commissions' },
                 { label: 'Analytics', icon: <HiChartBar />, path: '/admin/ads/analytics' },
                 { label: 'Payments', icon: <HiCreditCard />, path: '/admin/ads/payments' },
@@ -46,7 +46,6 @@ const sidebarConfig = {
             children: [
                 { label: 'Dashboard', icon: <HiChartBar />, path: '/admin/tournaments/dashboard' },
                 { label: 'All Tournaments', icon: <HiTrophy />, path: '/admin/tournaments/all' },
-                { label: 'Create Tournament', icon: <HiPlusCircle />, path: '/admin/tournaments/create' },
                 { label: 'Pending Approvals', icon: <HiExclamationCircle />, path: '/admin/tournaments/pending' },
                 { label: 'Categories', icon: <HiTag />, path: '/admin/tournaments/categories' },
                 { label: 'Team Registrations', icon: <HiUserGroup />, path: '/admin/tournaments/registrations' },
@@ -74,7 +73,7 @@ const sidebarConfig = {
     ],
     staff: [
         { label: 'Dashboard', icon: <HiHome />, path: '/staff' },
-        
+
         { isHeader: true, label: 'Marketing' },
         {
             isCollapsible: true,
@@ -83,7 +82,6 @@ const sidebarConfig = {
             pathPrefix: '/staff/ads',
             children: [
                 { label: 'My Advertisements', icon: <HiMegaphone />, path: '/staff/ads' },
-                { label: 'Create Advertisement', icon: <HiPlusCircle />, path: '/staff/ads/create' },
                 { label: 'Advertisement Analytics', icon: <HiChartBar />, path: '/staff/ads/analytics' },
             ]
         },
@@ -97,7 +95,6 @@ const sidebarConfig = {
             children: [
                 { label: 'Dashboard', icon: <HiChartBar />, path: '/staff/tournaments/dashboard' },
                 { label: 'All Tournaments', icon: <HiTrophy />, path: '/staff/tournaments/all' },
-                { label: 'Create Tournament', icon: <HiPlusCircle />, path: '/staff/tournaments/create' },
                 { label: 'Pending Approvals', icon: <HiExclamationCircle />, path: '/staff/tournaments/pending' },
                 { label: 'Team Registrations', icon: <HiUserGroup />, path: '/staff/tournaments/registrations' },
                 { label: 'Fixtures', icon: <HiViewGrid />, path: '/staff/tournaments/fixtures' },
