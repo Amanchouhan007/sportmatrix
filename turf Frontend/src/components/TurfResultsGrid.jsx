@@ -135,7 +135,7 @@ export default function TurfResultsGrid({ turfs, searchValues, recentSearches = 
 
 
                 {/* ── Header & Filters Control Bar ── */}
-                <div className="sticky top-[72px] z-30 bg-[#020617] flex flex-col lg:flex-row lg:items-center justify-between gap-4 mb-2 border-b border-white/5 pb-4 pt-1">
+                <div className="sticky top-[48px] z-30 bg-[#020617] flex flex-col lg:flex-row lg:items-center justify-between gap-4 mb-2 border-b border-white/5 pb-[12px] pt-1">
                     {/* Left: Heading & Count Pill */}
                     <div className="flex items-center gap-3 shrink-0">
                         <h2 className="text-2xl md:text-3xl font-black italic text-white uppercase tracking-tight leading-none flex items-center gap-2">
@@ -227,7 +227,7 @@ export default function TurfResultsGrid({ turfs, searchValues, recentSearches = 
                                 <button onClick={onClear} className="px-6 py-3 bg-blue-600 hover:bg-blue-500 text-white font-black text-xs uppercase tracking-widest rounded-full transition-all shadow-lg shadow-blue-500/20">Reset Filters</button>
                             </div>
                         ) : (
-                            <div className={`grid gap-6 xl:gap-8 items-stretch pt-[77px] ${viewMode === 'split'
+                            <div className={`grid gap-6 xl:gap-8 items-stretch pt-12 ${viewMode === 'split'
                                 ? 'grid-cols-1 sm:grid-cols-2'
                                 : 'grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5'
                                 }`}>

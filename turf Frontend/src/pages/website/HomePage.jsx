@@ -162,7 +162,7 @@ export default function HomePage() {
             {/* ══════════════════════════════════════════════
                 AIRBNB-STYLE SEARCH & CATEGORIES
             ══════════════════════════════════════════════ */}
-            <section className="pt-[80px] md:pt-[84px] pb-0 bg-[#020617] relative z-40">
+            <section className="pt-[61px] md:pt-[65px] pb-0 bg-[#020617] relative z-40">
                 <div className="w-full px-6 lg:px-12 max-w-[1400px] mx-auto">
                     <TurfSearchBar
                         values={searchValues}

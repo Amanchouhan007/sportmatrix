@@ -29,9 +29,9 @@ export default function WebsiteLayout({ children }) {
     return (
         <div className="min-h-screen bg-surface-50 overflow-x-clip">
             {/* Navbar: Transparent to Solid Transition */}
-            <nav className={`fixed top-0 inset-x-0 z-50 transition-all duration-[400ms] ${isScrolled || !isHomePage ? 'bg-[#0f172a] shadow-[0_4px_20px_rgba(0,0,0,0.4)] border-b border-white/5 py-0' : 'bg-transparent py-0'}`}>
+            <nav className={`fixed top-0 inset-x-0 z-50 transition-all duration-[400ms] ${isScrolled ? 'bg-[#0f172a] shadow-[0_4px_20px_rgba(0,0,0,0.4)] border-b border-white/5 py-0' : 'bg-transparent py-0'}`}>
 
-                <div className="w-full px-5 md:px-10 lg:px-20 h-[70px] flex items-center justify-between relative z-10">
+                <div className="w-full px-5 md:px-10 lg:px-20 h-[48px] flex items-center justify-between relative z-10">
                     {/* Logo */}
                     <NavLink to="/" className="flex items-center gap-2.5 group shrink-0">
                         <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center font-black text-white text-sm shadow-[0_0_15px_rgba(16,185,129,0.4)] group-hover:scale-105 transition-transform">SM</div>

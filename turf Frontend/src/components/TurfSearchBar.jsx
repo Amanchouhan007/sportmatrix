@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
-import { IoRefreshOutline, IoLocationOutline, IoCalendarOutline, IoTimeOutline, IoTrophyOutline, IoPeopleOutline } from 'react-icons/io5'
+import { IoRefreshOutline, IoLocationOutline, IoCalendarOutline, IoTimeOutline, IoTrophyOutline, IoPeopleOutline, IoSearch } from 'react-icons/io5'
 
 /* ── Location Data ── */
 const locationSuggestions = [
@@ -160,8 +160,8 @@ export default function TurfSearchBar({ onSearch, values, onChange, onClear }) {
     const selectedSportObj = sportsOptions.find(s => s.name === sport)
 
     return (
-        <div className="w-full max-w-[1070px] mx-auto relative z-40 select-none">
-            <div className="relative bg-[#0b1120]/95 backdrop-blur-xl border border-white/10 shadow-2xl rounded-[32px] lg:rounded-full p-[6px] flex flex-col lg:flex-row items-stretch justify-between lg:h-[72px] gap-2 lg:gap-0">
+        <div className="w-full max-w-[1060px] mx-auto relative z-40 select-none">
+            <div className="relative bg-[#0b1120]/95 backdrop-blur-xl border border-white/10 shadow-2xl rounded-[32px] lg:rounded-full p-[3px] flex flex-col lg:flex-row items-stretch justify-between lg:h-[66px] gap-2 lg:gap-0">
                 
                 {/* 1. CITY */}
                 <div ref={locRef} className="flex-1 min-w-0 relative group/sec border-b border-white/10 lg:border-b-0 lg:border-r lg:border-white/10">
@@ -300,9 +300,9 @@ export default function TurfSearchBar({ onSearch, values, onChange, onClear }) {
                 <div className="flex items-center shrink-0 justify-center h-full pl-2 pr-1 py-1 mt-2 lg:mt-0">
                     <button
                         onClick={() => onSearch?.({ location, sport, date, time, players })}
-                        className="w-full lg:w-auto h-full px-8 py-3 bg-[#19E68C] hover:bg-[#15c577] text-[#020617] font-black text-[15px] uppercase tracking-[0.15em] rounded-full transition-all shadow-[0_0_15px_rgba(25,230,140,0.2)] hover:shadow-[0_0_25px_rgba(25,230,140,0.6)] flex items-center justify-center cursor-pointer min-h-[52px] lg:min-h-full"
+                        className="w-full lg:w-auto h-full px-6 py-3 bg-[#19E68C] hover:bg-[#15c577] text-[#020617] font-black rounded-full transition-all shadow-[0_0_15px_rgba(25,230,140,0.2)] hover:shadow-[0_0_25px_rgba(25,230,140,0.6)] flex items-center justify-center cursor-pointer min-h-[52px] lg:min-h-full"
                     >
-                        Search
+                        <IoSearch className="w-6 h-6" />
                     </button>
                 </div>
             </div>
