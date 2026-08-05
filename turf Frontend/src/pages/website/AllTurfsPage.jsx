@@ -265,19 +265,7 @@ export default function AllTurfsPage() {
                     </div>
                 </div>
 
-                {/* Apply Button */}
-                <div className="px-5 py-4 border-t border-white/8 shrink-0">
-                    <button
-                        onClick={() => setDrawerOpen(false)}
-                        className="w-full py-3 bg-gradient-to-r from-emerald-400 to-cyan-400 text-slate-950 font-black uppercase tracking-widest text-[11px] rounded-xl shadow-[0_0_24px_rgba(16,185,129,0.25)] hover:shadow-[0_0_32px_rgba(16,185,129,0.45)] active:scale-95 transition-all flex items-center justify-center gap-2"
-                    >
-                        <HiFilter className="w-3.5 h-3.5" />
-                        Apply Filters
-                        {activeFilterCount > 0 && (
-                            <span className="bg-slate-950/30 px-1.5 py-0.5 rounded-full text-[9px]">{filtered.length} venues</span>
-                        )}
-                    </button>
-                </div>
+
             </div>
 
             {/* ── Main Page Content ── */}
