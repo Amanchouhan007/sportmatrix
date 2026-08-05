@@ -1,0 +1,488 @@
+const db = require('../../config/db');
+const bcrypt = require('bcryptjs');
+
+/**
+ * Format owner database row into clean JSON object (excluding password_hash)
+ */
+const formatOwner = (r) => {
+    if (!r) return null;
+    return {
+        id: r.id,
+        _id: r.id,
+        fullName: r.full_name,
+        email: r.email,
+        mobile: r.mobile,
+        alternateMobile: r.alternate_mobile || '',
+        status: r.status,
+        businessName: r.business_name || '',
+        businessType: r.business_type || '',
+        gstNumber: r.gst_number || '',
+        panNumber: r.pan_number || '',
+        country: r.country || 'India',
+        state: r.state || '',
+        city: r.city || '',
+        zipCode: r.zip_code || '',
+        fullAddress: r.full_address || '',
+        profileImage: r.profile_image || '',
+        createdBy: r.created_by || '',
+        updatedBy: r.updated_by || '',
+        createdAt: r.created_at,
+        updatedAt: r.updated_at
+    };
+};
+
+/**
+ * POST /api/v1/owners
+ * Register a new Owner
+ */
+const createOwner = async (req, res) => {
+    const conn = await db.getConnection();
+    try {
+        const {
+            fullName,
+            email,
+            mobile,
+            alternateMobile,
+            password,
+            status = 'ACTIVE',
+            businessName,
+            businessType,
+            gstNumber,
+            panNumber,
+            country = 'India',
+            state,
+            city,
+            zipCode,
+            fullAddress = req.body.fullAddress || req.body.address,
+            createdBy
+        } = req.body;
+
+        const normalizedEmail = email ? email.toLowerCase().trim() : '';
+        const normalizedMobile = mobile ? mobile.trim() : '';
+
+        // 1. Check if email already exists
+        const [existingEmail] = await conn.query('SELECT id FROM owners WHERE LOWER(email) = ?', [normalizedEmail]);
+        if (existingEmail.length > 0) {
+            conn.release();
+            return res.status(409).json({
+                success: false,
+                message: 'An owner with this Email address already exists.'
+            });
+        }
+
+        // 2. Check if mobile already exists
+        const [existingMobile] = await conn.query('SELECT id FROM owners WHERE mobile = ?', [normalizedMobile]);
+        if (existingMobile.length > 0) {
+            conn.release();
+            return res.status(409).json({
+                success: false,
+                message: 'An owner with this Mobile number already exists.'
+            });
+        }
+
+        // 3. Process Profile Image upload if provided
+        let profileImage = '';
+        if (req.file) {
+            profileImage = `/uploads/${req.file.filename}`;
+        } else if (req.body.profileImage) {
+            profileImage = req.body.profileImage;
+        }
+
+        // 4. Hash password securely
+        const passwordHash = await bcrypt.hash(password, 10);
+
+        // 5. Generate unique Owner ID
+        const ownerId = `own_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
+
+        // 6. Execute Transaction
+        await conn.beginTransaction();
+
+        const insertQuery = `
+            INSERT INTO owners (
+                id, full_name, email, mobile, alternate_mobile, password_hash, status,
+                business_name, business_type, gst_number, pan_number,
+                country, state, city, zip_code, full_address, profile_image,
+                created_by, updated_by
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `;
+
+        await conn.query(insertQuery, [
+            ownerId,
+            fullName.trim(),
+            normalizedEmail,
+            normalizedMobile,
+            alternateMobile ? alternateMobile.trim() : null,
+            passwordHash,
+            status,
+            businessName ? businessName.trim() : null,
+            businessType ? businessType.trim() : null,
+            gstNumber ? gstNumber.trim() : null,
+            panNumber ? panNumber.trim() : null,
+            country ? country.trim() : 'India',
+            state ? state.trim() : null,
+            city ? city.trim() : null,
+            zipCode ? zipCode.trim() : null,
+            fullAddress ? fullAddress.trim() : null,
+            profileImage || null,
+            createdBy || req.user?.id || 'SYSTEM',
+            createdBy || req.user?.id || 'SYSTEM'
+        ]);
+
+        // Also sync into users table for authentication access
+        try {
+            await conn.query(
+                `INSERT INTO users (id, name, email, password_hash, role, mobile, avatar, status) 
+                 VALUES (?, ?, ?, ?, 'OWNER', ?, ?, ?)
+                 ON DUPLICATE KEY UPDATE name = VALUES(name), password_hash = VALUES(password_hash), mobile = VALUES(mobile), status = VALUES(status)`,
+                [ownerId, fullName.trim(), normalizedEmail, passwordHash, normalizedMobile, profileImage || null, status]
+            );
+        } catch (uErr) {
+            console.warn('Sync to users table skipped:', uErr.message);
+        }
+
+        await conn.commit();
+        conn.release();
+
+        // 7. Fetch newly inserted owner
+        const [rows] = await db.query('SELECT * FROM owners WHERE id = ?', [ownerId]);
+        const createdOwner = formatOwner(rows[0]);
+
+        return res.status(201).json({
+            success: true,
+            message: 'Owner registered successfully',
+            data: createdOwner
+        });
+
+    } catch (error) {
+        await conn.rollback();
+        conn.release();
+        console.error('Error creating owner:', error);
+        return res.status(500).json({
+            success: false,
+            message: 'Failed to register owner',
+            error: error.message
+        });
+    }
+};
+
+/**
+ * GET /api/v1/owners
+ * Get all owners with search, status filter, and pagination
+ */
+const getOwners = async (req, res) => {
+    try {
+        const { status, search, page = 1, limit = 10 } = req.query;
+
+        let sql = 'SELECT * FROM owners WHERE 1=1';
+        const params = [];
+
+        if (status && status !== 'ALL') {
+            sql += ' AND status = ?';
+            params.push(status);
+        }
+
+        if (search) {
+            sql += ' AND (full_name LIKE ? OR email LIKE ? OR mobile LIKE ? OR business_name LIKE ? OR city LIKE ?)';
+            const q = `%${search}%`;
+            params.push(q, q, q, q, q);
+        }
+
+        const offset = (Number(page) - 1) * Number(limit);
+        const countSql = sql.replace('SELECT *', 'SELECT COUNT(*) as count');
+        const [[{ count }]] = await db.query(countSql, params);
+
+        sql += ' ORDER BY created_at DESC LIMIT ? OFFSET ?';
+        params.push(Number(limit), offset);
+
+        const [rows] = await db.query(sql, params);
+        const owners = rows.map(formatOwner);
+
+        return res.status(200).json({
+            success: true,
+            data: {
+                owners,
+                pagination: {
+                    total: count,
+                    page: Number(page),
+                    limit: Number(limit),
+                    totalPages: Math.ceil(count / Number(limit))
+                }
+            }
+        });
+    } catch (error) {
+        console.error('Error fetching owners:', error);
+        return res.status(500).json({
+            success: false,
+            message: 'Failed to fetch owners',
+            error: error.message
+        });
+    }
+};
+
+/**
+ * GET /api/v1/owners/:id
+ * Get single owner details by ID
+ */
+const getOwnerById = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const [rows] = await db.query('SELECT * FROM owners WHERE id = ?', [id]);
+
+        if (rows.length === 0) {
+            return res.status(404).json({
+                success: false,
+                message: 'Owner not found'
+            });
+        }
+
+        return res.status(200).json({
+            success: true,
+            data: formatOwner(rows[0])
+        });
+    } catch (error) {
+        console.error('Error fetching owner details:', error);
+        return res.status(500).json({
+            success: false,
+            message: 'Failed to fetch owner details',
+            error: error.message
+        });
+    }
+};
+
+/**
+ * PUT /api/v1/owners/:id
+ * Update owner information
+ */
+const updateOwner = async (req, res) => {
+    const conn = await db.getConnection();
+    try {
+        const { id } = req.params;
+
+        // Check if owner exists
+        const [existing] = await conn.query('SELECT * FROM owners WHERE id = ?', [id]);
+        if (existing.length === 0) {
+            conn.release();
+            return res.status(404).json({
+                success: false,
+                message: 'Owner not found'
+            });
+        }
+
+        const currentOwner = existing[0];
+        const {
+            fullName,
+            email,
+            mobile,
+            alternateMobile,
+            password,
+            status,
+            businessName,
+            businessType,
+            gstNumber,
+            panNumber,
+            country,
+            state,
+            city,
+            zipCode,
+            fullAddress,
+            updatedBy
+        } = req.body;
+
+        // 1. Email uniqueness check if changed
+        if (email && email.toLowerCase().trim() !== currentOwner.email.toLowerCase()) {
+            const [emailCheck] = await conn.query('SELECT id FROM owners WHERE LOWER(email) = ? AND id != ?', [email.toLowerCase().trim(), id]);
+            if (emailCheck.length > 0) {
+                conn.release();
+                return res.status(409).json({
+                    success: false,
+                    message: 'Email address is already in use by another owner.'
+                });
+            }
+        }
+
+        // 2. Mobile uniqueness check if changed
+        if (mobile && mobile.trim() !== currentOwner.mobile) {
+            const [mobileCheck] = await conn.query('SELECT id FROM owners WHERE mobile = ? AND id != ?', [mobile.trim(), id]);
+            if (mobileCheck.length > 0) {
+                conn.release();
+                return res.status(409).json({
+                    success: false,
+                    message: 'Mobile number is already in use by another owner.'
+                });
+            }
+        }
+
+        // 3. Process Profile Image update
+        let profileImage = currentOwner.profile_image;
+        if (req.file) {
+            profileImage = `/uploads/${req.file.filename}`;
+        } else if (req.body.profileImage !== undefined) {
+            profileImage = req.body.profileImage;
+        }
+
+        // 4. Process Password hash update if provided
+        let passwordHash = currentOwner.password_hash;
+        if (password && password.trim().length >= 6) {
+            passwordHash = await bcrypt.hash(password.trim(), 10);
+        }
+
+        // 5. Execute Update Transaction
+        await conn.beginTransaction();
+
+        const updateQuery = `
+            UPDATE owners SET
+                full_name = ?,
+                email = ?,
+                mobile = ?,
+                alternate_mobile = ?,
+                password_hash = ?,
+                status = ?,
+                business_name = ?,
+                business_type = ?,
+                gst_number = ?,
+                pan_number = ?,
+                country = ?,
+                state = ?,
+                city = ?,
+                zip_code = ?,
+                full_address = ?,
+                profile_image = ?,
+                updated_by = ?
+            WHERE id = ?
+        `;
+
+        await conn.query(updateQuery, [
+            fullName !== undefined ? fullName.trim() : currentOwner.full_name,
+            email !== undefined ? email.toLowerCase().trim() : currentOwner.email,
+            mobile !== undefined ? mobile.trim() : currentOwner.mobile,
+            alternateMobile !== undefined ? alternateMobile.trim() : currentOwner.alternate_mobile,
+            passwordHash,
+            status !== undefined ? status : currentOwner.status,
+            businessName !== undefined ? businessName.trim() : currentOwner.business_name,
+            businessType !== undefined ? businessType.trim() : currentOwner.business_type,
+            gstNumber !== undefined ? gstNumber.trim() : currentOwner.gst_number,
+            panNumber !== undefined ? panNumber.trim() : currentOwner.pan_number,
+            country !== undefined ? country.trim() : currentOwner.country,
+            state !== undefined ? state.trim() : currentOwner.state,
+            city !== undefined ? city.trim() : currentOwner.city,
+            zipCode !== undefined ? zipCode.trim() : currentOwner.zip_code,
+            fullAddress !== undefined ? fullAddress.trim() : currentOwner.full_address,
+            profileImage,
+            updatedBy || req.user?.id || 'SYSTEM',
+            id
+        ]);
+
+        await conn.commit();
+        conn.release();
+
+        // 6. Return updated object
+        const [updatedRows] = await db.query('SELECT * FROM owners WHERE id = ?', [id]);
+        return res.status(200).json({
+            success: true,
+            message: 'Owner updated successfully',
+            data: formatOwner(updatedRows[0])
+        });
+
+    } catch (error) {
+        await conn.rollback();
+        conn.release();
+        console.error('Error updating owner:', error);
+        return res.status(500).json({
+            success: false,
+            message: 'Failed to update owner',
+            error: error.message
+        });
+    }
+};
+
+/**
+ * PATCH /api/v1/owners/:id/status
+ * Change Owner Status (ACTIVE / INACTIVE / SUSPENDED)
+ */
+const changeOwnerStatus = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { status } = req.body;
+
+        if (!status || !['ACTIVE', 'INACTIVE', 'SUSPENDED'].includes(status)) {
+            return res.status(400).json({
+                success: false,
+                message: 'Valid status is required (ACTIVE, INACTIVE, SUSPENDED).'
+            });
+        }
+
+        const [existing] = await db.query('SELECT id FROM owners WHERE id = ?', [id]);
+        if (existing.length === 0) {
+            return res.status(404).json({
+                success: false,
+                message: 'Owner not found'
+            });
+        }
+
+        await db.query('UPDATE owners SET status = ?, updated_by = ? WHERE id = ?', [
+            status,
+            req.user?.id || 'SYSTEM',
+            id
+        ]);
+
+        return res.status(200).json({
+            success: true,
+            message: `Owner status updated to ${status}`
+        });
+    } catch (error) {
+        console.error('Error updating owner status:', error);
+        return res.status(500).json({
+            success: false,
+            message: 'Failed to update owner status',
+            error: error.message
+        });
+    }
+};
+
+/**
+ * DELETE /api/v1/owners/:id
+ * Delete Owner
+ */
+const deleteOwner = async (req, res) => {
+    const conn = await db.getConnection();
+    try {
+        const { id } = req.params;
+
+        const [existing] = await conn.query('SELECT id FROM owners WHERE id = ?', [id]);
+        if (existing.length === 0) {
+            conn.release();
+            return res.status(404).json({
+                success: false,
+                message: 'Owner not found'
+            });
+        }
+
+        await conn.beginTransaction();
+        await conn.query('DELETE FROM owners WHERE id = ?', [id]);
+        await conn.commit();
+        conn.release();
+
+        return res.status(200).json({
+            success: true,
+            message: 'Owner deleted successfully'
+        });
+    } catch (error) {
+        await conn.rollback();
+        conn.release();
+        console.error('Error deleting owner:', error);
+        return res.status(500).json({
+            success: false,
+            message: 'Failed to delete owner',
+            error: error.message
+        });
+    }
+};
+
+module.exports = {
+    createOwner,
+    getOwners,
+    getOwnerById,
+    updateOwner,
+    changeOwnerStatus,
+    deleteOwner
+};

@@ -102,8 +102,11 @@ export default function OwnerManagement() {
 
     // Fetch data from backend on mount, pagination, filter or search update
     useEffect(() => {
-        if (token && user?.role === 'SUPER_ADMIN') {
-            fetchData()
+        if (token && user) {
+            const normalizeRole = (r) => (r || '').toUpperCase().replace(/[-_]/g, '');
+            if (normalizeRole(user.role) === 'SUPERADMIN') {
+                fetchData()
+            }
         }
     }, [page, searchTerm, statusFilter, token, user])
 

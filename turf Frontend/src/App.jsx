@@ -72,6 +72,8 @@ import AdAnalyticsDashboard from './pages/advertising/AdAnalyticsDashboard'
 import AdPaymentsPage from './pages/advertising/AdPaymentsPage'
 import OwnerMyAdvertisements from './pages/advertising/OwnerMyAdvertisements'
 import OwnerAdAnalytics from './pages/advertising/OwnerAdAnalytics'
+import DiscountOffersList from './pages/discounts/DiscountOffersList'
+import CreateDiscountOffer from './pages/discounts/CreateDiscountOffer'
 
 // Tournament Management System Module Pages
 import TournamentDashboard from './pages/tournaments/TournamentDashboard'
@@ -135,6 +137,8 @@ export default function App() {
               <Route path="ads/analytics" element={<AdAnalyticsDashboard />} />
               <Route path="ads/payments" element={<AdPaymentsPage />} />
               <Route path="ads/owner-analytics" element={<OwnerAdAnalytics />} />
+              <Route path="discount-offers" element={<DiscountOffersList />} />
+              <Route path="discount-offers/create" element={<CreateDiscountOffer />} />
               <Route path="sports" element={<SportsManagement />} />
               <Route path="slots" element={<SlotManagement />} />
               <Route path="bookings" element={<BookingManagement />} />

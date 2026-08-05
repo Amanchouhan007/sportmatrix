@@ -5,7 +5,7 @@ import Input from '../../components/ui/Input'
 import Select from '../../components/ui/Select'
 import Button from '../../components/ui/Button'
 import { useToast } from '../../components/ui/Toast'
-import { HiCalendar, HiCurrencyRupee, HiUserGroup, HiUpload, HiArrowLeft } from 'react-icons/hi'
+import { HiCalendar, HiCurrencyRupee, HiUserGroup, HiUpload, HiArrowLeft, HiCog, HiPhone, HiUser } from 'react-icons/hi'
 import { HiTrophy } from 'react-icons/hi2'
 
 export default function TournamentCreatePage({ role = 'owner' }) {
@@ -14,15 +14,21 @@ export default function TournamentCreatePage({ role = 'owner' }) {
 
     const [form, setForm] = useState({
         title: '',
+        organizerName: 'SportMatrix Events Team',
+        organizerContact: '+91 98765 43210',
         banner: 'https://images.unsplash.com/photo-1551958219-acbc608c6377?auto=format&fit=crop&q=80&w=800',
+        bannerFile: null,
         sportId: 'sp_master_01',
         categoryId: 'cat_01',
         description: '',
         rules: '',
         courtName: 'Court A (Main Turf)',
+        registrationStartDate: '',
         startDate: '',
         endDate: '',
         registrationLastDate: '',
+        matchDuration: '60',
+        matchGapMinutes: '15',
         maxTeams: '16',
         minTeams: '4',
         entryFee: '500',
@@ -30,19 +36,54 @@ export default function TournamentCreatePage({ role = 'owner' }) {
         runnerPrize: '15000',
         thirdPrize: '5000',
         format: 'Knockout',
-        matchDuration: '60',
         skillLevel: 'Open',
         ageLimit: 'Open',
         gender: 'All',
+        playersPerTeam: '11',
+        substitutePlayers: '5',
+        tournamentVisibility: 'Public',
+        registrationApproval: 'Auto Approval',
+        refundPolicy: 'No Refund',
+        facilities: [
+            'Parking',
+            'Drinking Water',
+            'Washroom',
+            'Changing Room',
+            'First Aid',
+            'Flood Lights',
+            'Live Score'
+        ],
         status: role === 'owner' ? 'Approved' : 'Pending Approval'
     })
 
     const basePath = role === 'staff' ? '/staff/tournaments' : '/admin/tournaments'
 
+    const handleBannerFileChange = (e) => {
+        const file = e.target.files[0]
+        if (file) {
+            const reader = new FileReader()
+            reader.onloadend = () => {
+                setForm(prev => ({ ...prev, banner: reader.result, bannerFile: file }))
+            }
+            reader.readAsDataURL(file)
+        }
+    }
+
+    const toggleFacility = (facility) => {
+        setForm(prev => {
+            const current = prev.facilities || []
+            if (current.includes(facility)) {
+                return { ...prev, facilities: current.filter(f => f !== facility) }
+            } else {
+                return { ...prev, facilities: [...current, facility] }
+            }
+        })
+    }
+
     const handleSubmit = (e) => {
         e.preventDefault()
-        if (!form.title || !form.startDate || !form.endDate) {
-            addToast({ title: 'Validation Error', message: 'Please fill in all required fields (Name, Start Date, End Date).', type: 'error' })
+        if (!form.title || !form.startDate || !form.endDate || !form.organizerName || !form.organizerContact || !form.playersPerTeam) {
+            addToast({ title: 'Validation Error', message: 'Please fill in all required fields (Title, Start/End Date, Organizer Details, Players Per Team).', type: 'error' })
             return
         }
 
@@ -55,7 +96,7 @@ export default function TournamentCreatePage({ role = 'owner' }) {
     }
 
     return (
-        <div className="max-w-5xl mx-auto space-y-8 animate-in fade-in duration-500">
+        <div className="max-w-5xl mx-auto space-y-8 animate-in fade-in duration-500 pb-20">
             {/* Header */}
             <div className="flex items-center justify-between bg-white/70 backdrop-blur-md p-6 rounded-3xl border border-surface-200/50 shadow-soft">
                 <div className="flex items-center gap-3">
@@ -74,7 +115,7 @@ export default function TournamentCreatePage({ role = 'owner' }) {
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-6">
-                {/* Basic Details */}
+                {/* Section 1: Tournament Identity & Sport */}
                 <Card className="p-6 space-y-4">
                     <h2 className="text-base font-extrabold text-surface-900 border-b border-surface-100 pb-3 flex items-center gap-2">
                         <HiTrophy className="text-primary-600" /> Tournament Identity & Sport
@@ -96,10 +137,29 @@ export default function TournamentCreatePage({ role = 'owner' }) {
                             options={[
                                 { value: 'sp_master_01', label: 'Football ⚽' },
                                 { value: 'sp_master_02', label: 'Cricket 🏏' },
-                                { value: 'sp_master_03', label: 'Football ⚽' },
-                                { value: 'sp_master_04', label: 'Football ⚽' },
-                                { value: 'sp_master_05', label: 'Cricket 🏏' },
+                                { value: 'sp_master_03', label: 'Badminton 🏸' },
+                                { value: 'sp_master_04', label: 'Tennis 🎾' },
+                                { value: 'sp_master_05', label: 'Box Cricket 🏏' },
                             ]}
+                        />
+                    </div>
+
+                    {/* Organizer Fields */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <Input
+                            label="Organizer Name *"
+                            placeholder="e.g. SportMatrix Events Team"
+                            value={form.organizerName}
+                            onChange={(e) => setForm({ ...form, organizerName: e.target.value })}
+                            required
+                        />
+
+                        <Input
+                            label="Organizer Contact Number *"
+                            placeholder="e.g. +91 98765 43210"
+                            value={form.organizerContact}
+                            onChange={(e) => setForm({ ...form, organizerContact: e.target.value })}
+                            required
                         />
                     </div>
 
@@ -117,13 +177,25 @@ export default function TournamentCreatePage({ role = 'owner' }) {
                             ]}
                         />
 
-                        <Input
-                            label="Banner Image URL"
-                            placeholder="https://..."
-                            value={form.banner}
-                            onChange={(e) => setForm({ ...form, banner: e.target.value })}
-                        />
+                        {/* Tournament Banner Upload */}
+                        <div className="space-y-1">
+                            <label className="block text-xs font-bold text-surface-700">
+                                Tournament Banner Upload * <span className="text-surface-400 font-normal">(JPG, PNG, WEBP)</span>
+                            </label>
+                            <input
+                                type="file"
+                                accept="image/jpeg,image/png,image/webp"
+                                onChange={handleBannerFileChange}
+                                className="block w-full text-xs text-surface-500 file:mr-3 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-extrabold file:bg-primary-50 file:text-primary-700 hover:file:bg-primary-100 cursor-pointer"
+                            />
+                        </div>
                     </div>
+
+                    {form.banner && (
+                        <div className="h-32 w-full rounded-2xl overflow-hidden border border-surface-200 mt-2">
+                            <img src={form.banner} alt="Tournament Banner Preview" className="w-full h-full object-cover" />
+                        </div>
+                    )}
 
                     <div>
                         <label className="block text-xs font-bold text-surface-700 mb-1">Description</label>
@@ -148,13 +220,28 @@ export default function TournamentCreatePage({ role = 'owner' }) {
                     </div>
                 </Card>
 
-                {/* Date & Turf Selection */}
+                {/* Section 2: Date & Turf Schedule */}
                 <Card className="p-6 space-y-4">
                     <h2 className="text-base font-extrabold text-surface-900 border-b border-surface-100 pb-3 flex items-center gap-2">
                         <HiCalendar className="text-primary-600" /> Date & Turf Schedule
                     </h2>
 
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                        <Input
+                            label="Registration Start Date *"
+                            type="date"
+                            value={form.registrationStartDate}
+                            onChange={(e) => setForm({ ...form, registrationStartDate: e.target.value })}
+                            required
+                        />
+
+                        <Input
+                            label="Registration Last Date"
+                            type="date"
+                            value={form.registrationLastDate}
+                            onChange={(e) => setForm({ ...form, registrationLastDate: e.target.value })}
+                        />
+
                         <Input
                             label="Start Date *"
                             type="date"
@@ -170,16 +257,9 @@ export default function TournamentCreatePage({ role = 'owner' }) {
                             onChange={(e) => setForm({ ...form, endDate: e.target.value })}
                             required
                         />
-
-                        <Input
-                            label="Registration Last Date"
-                            type="date"
-                            value={form.registrationLastDate}
-                            onChange={(e) => setForm({ ...form, registrationLastDate: e.target.value })}
-                        />
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <Input
                             label="Select Turf / Court"
                             placeholder="e.g. Court A (Main Turf)"
@@ -194,10 +274,18 @@ export default function TournamentCreatePage({ role = 'owner' }) {
                             value={form.matchDuration}
                             onChange={(e) => setForm({ ...form, matchDuration: e.target.value })}
                         />
+
+                        <Input
+                            label="Match Gap Between Matches (Minutes)"
+                            type="number"
+                            placeholder="15"
+                            value={form.matchGapMinutes}
+                            onChange={(e) => setForm({ ...form, matchGapMinutes: e.target.value })}
+                        />
                     </div>
                 </Card>
 
-                {/* Team Limits, Fees & Prize Distribution */}
+                {/* Section 3: Entry Fee & Prize Pool Distribution */}
                 <Card className="p-6 space-y-4">
                     <h2 className="text-base font-extrabold text-surface-900 border-b border-surface-100 pb-3 flex items-center gap-2">
                         <HiCurrencyRupee className="text-emerald-600" /> Entry Fee & Prize Pool Distribution
@@ -256,13 +344,13 @@ export default function TournamentCreatePage({ role = 'owner' }) {
                     </div>
                 </Card>
 
-                {/* Tournament Format & Criteria */}
+                {/* Section 4: Format & Player Criteria */}
                 <Card className="p-6 space-y-4">
                     <h2 className="text-base font-extrabold text-surface-900 border-b border-surface-100 pb-3 flex items-center gap-2">
                         <HiUserGroup className="text-indigo-600" /> Format & Player Criteria
                     </h2>
 
-                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4">
                         <Select
                             label="Tournament Format"
                             value={form.format}
@@ -309,6 +397,98 @@ export default function TournamentCreatePage({ role = 'owner' }) {
                                 { value: 'Mixed', label: 'Mixed Teams' },
                             ]}
                         />
+
+                        <Input
+                            label="Players Per Team *"
+                            type="number"
+                            placeholder="11"
+                            value={form.playersPerTeam}
+                            onChange={(e) => setForm({ ...form, playersPerTeam: e.target.value })}
+                            required
+                        />
+
+                        <Input
+                            label="Substitute Players *"
+                            type="number"
+                            placeholder="5"
+                            value={form.substitutePlayers}
+                            onChange={(e) => setForm({ ...form, substitutePlayers: e.target.value })}
+                            required
+                        />
+                    </div>
+                </Card>
+
+                {/* Section 5: Visibility & Settings */}
+                <Card className="p-6 space-y-4">
+                    <h2 className="text-base font-extrabold text-surface-900 border-b border-surface-100 pb-3 flex items-center gap-2">
+                        <HiCog className="text-indigo-600" /> Visibility & Settings
+                    </h2>
+
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <Select
+                            label="Tournament Visibility *"
+                            value={form.tournamentVisibility}
+                            onChange={(e) => setForm({ ...form, tournamentVisibility: e.target.value })}
+                            options={[
+                                { value: 'Public', label: 'Public' },
+                                { value: 'Private', label: 'Private' },
+                            ]}
+                            required
+                        />
+
+                        <Select
+                            label="Registration Approval *"
+                            value={form.registrationApproval}
+                            onChange={(e) => setForm({ ...form, registrationApproval: e.target.value })}
+                            options={[
+                                { value: 'Auto Approval', label: 'Auto Approval' },
+                                { value: 'Manual Approval', label: 'Manual Approval' },
+                            ]}
+                            required
+                        />
+
+                        <Select
+                            label="Refund Policy *"
+                            value={form.refundPolicy}
+                            onChange={(e) => setForm({ ...form, refundPolicy: e.target.value })}
+                            options={[
+                                { value: 'No Refund', label: 'No Refund' },
+                                { value: 'Partial Refund', label: 'Partial Refund' },
+                                { value: 'Full Refund', label: 'Full Refund' },
+                            ]}
+                            required
+                        />
+                    </div>
+
+                    {/* Facilities Checkboxes */}
+                    <div className="space-y-2 pt-2">
+                        <label className="block text-xs font-bold text-surface-700">Facilities Available</label>
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                            {[
+                                'Parking',
+                                'Drinking Water',
+                                'Washroom',
+                                'Changing Room',
+                                'First Aid',
+                                'Flood Lights',
+                                'Live Score'
+                            ].map((facility) => {
+                                const isChecked = (form.facilities || []).includes(facility)
+                                return (
+                                    <label key={facility} className={`flex items-center gap-2 p-3 rounded-xl border cursor-pointer text-xs font-bold transition-all ${
+                                        isChecked ? 'bg-primary-50 border-primary-400 text-primary-900' : 'bg-white border-surface-200 text-surface-700 hover:bg-surface-50'
+                                    }`}>
+                                        <input
+                                            type="checkbox"
+                                            checked={isChecked}
+                                            onChange={() => toggleFacility(facility)}
+                                            className="w-4 h-4 accent-primary-600 rounded"
+                                        />
+                                        {facility}
+                                    </label>
+                                )
+                            })}
+                        </div>
                     </div>
                 </Card>
 

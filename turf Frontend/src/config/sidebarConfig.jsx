@@ -11,7 +11,6 @@ import {
 const sidebarConfig = {
     superadmin: [
         { label: 'Dashboard', icon: <HiHome />, path: '/super-admin' },
-        { label: 'Branches', icon: <HiOfficeBuilding />, path: '/super-admin/branches' },
         { label: 'Owners', icon: <HiUsers />, path: '/super-admin/owners' },
         { label: 'Subscriptions', icon: <HiCreditCard />, path: '/super-admin/subscriptions' },
         
@@ -31,7 +30,7 @@ const sidebarConfig = {
             pathPrefix: '/admin/ads',
             children: [
                 { label: 'All Advertisements', icon: <HiSpeakerphone />, path: '/admin/ads' },
-                { label: 'Create Advertisement', icon: <HiPlusCircle />, path: '/admin/ads/create' },
+                { label: 'Discount Offers', icon: <HiTag />, path: '/admin/discount-offers' },
                 { label: 'Commission Management', icon: <HiCurrencyDollar />, path: '/admin/ads/commissions' },
                 { label: 'Analytics', icon: <HiChartBar />, path: '/admin/ads/analytics' },
                 { label: 'Payments', icon: <HiCreditCard />, path: '/admin/ads/payments' },

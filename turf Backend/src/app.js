@@ -71,6 +71,14 @@ app.use('/api/v1/holidays', holidaysRouter);
 const turfsRouter = require('./modules/turfs/turfs.routes');
 app.use('/api/v1/turfs', turfsRouter);
 
+// Owners Routes registration
+const ownersRouter = require('./modules/owners/owners.routes');
+app.use('/api/v1/owners', ownersRouter);
+
+// Discount Offers Routes registration
+const discountOffersRouter = require('./modules/discounts/discounts.routes');
+app.use('/api/v1/discount-offers', discountOffersRouter);
+
 // Upload Routes registration (Photos & Videos)
 const uploadRouter = require('./modules/upload/upload.routes');
 app.use('/api/v1/upload', uploadRouter);

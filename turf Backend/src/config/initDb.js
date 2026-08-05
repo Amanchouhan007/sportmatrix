@@ -44,6 +44,33 @@ async function initializeDatabase() {
             );
         `);
 
+        // Owners
+        await connection.query(`
+            CREATE TABLE IF NOT EXISTS owners (
+                id VARCHAR(50) PRIMARY KEY,
+                full_name VARCHAR(100) NOT NULL,
+                email VARCHAR(100) UNIQUE NOT NULL,
+                mobile VARCHAR(20) UNIQUE NOT NULL,
+                alternate_mobile VARCHAR(20),
+                password_hash VARCHAR(255) NOT NULL,
+                status ENUM('ACTIVE', 'INACTIVE', 'SUSPENDED') DEFAULT 'ACTIVE',
+                business_name VARCHAR(150),
+                business_type VARCHAR(100),
+                gst_number VARCHAR(50),
+                pan_number VARCHAR(50),
+                country VARCHAR(100) DEFAULT 'India',
+                state VARCHAR(100),
+                city VARCHAR(100),
+                zip_code VARCHAR(20),
+                full_address TEXT,
+                profile_image VARCHAR(255),
+                created_by VARCHAR(50),
+                updated_by VARCHAR(50),
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+            );
+        `);
+
         // Branches
         await connection.query(`
             CREATE TABLE IF NOT EXISTS branches (
@@ -235,6 +262,49 @@ async function initializeDatabase() {
         try {
             await connection.query(`ALTER TABLE tournaments ADD COLUMN category_id VARCHAR(50);`);
         } catch (e) {}
+
+        // Discount Offers Table
+        await connection.query(`
+            CREATE TABLE IF NOT EXISTS discount_offers (
+                id VARCHAR(50) PRIMARY KEY,
+                owner_id VARCHAR(50),
+                turf_id VARCHAR(50) NOT NULL,
+                title VARCHAR(150) NOT NULL,
+                description TEXT,
+                discount_type ENUM('Percentage', 'Flat Amount', 'Buy One Get One', 'Free Slot', 'Cashback') DEFAULT 'Percentage',
+                discount_value DECIMAL(10, 2) NOT NULL DEFAULT 0.00,
+                minimum_booking_amount DECIMAL(10, 2) DEFAULT 0.00,
+                maximum_discount_amount DECIMAL(10, 2) DEFAULT 0.00,
+                promo_code VARCHAR(50) UNIQUE,
+                banner VARCHAR(255),
+                thumbnail VARCHAR(255),
+                applicable_sports TEXT,
+                applicable_days TEXT,
+                slot_types TEXT,
+                start_date DATE NOT NULL,
+                end_date DATE NOT NULL,
+                start_time TIME DEFAULT '00:00:00',
+                end_time TIME DEFAULT '23:59:59',
+                usage_limit INT DEFAULT 100,
+                used_count INT DEFAULT 0,
+                per_user_limit INT DEFAULT 1,
+                first_booking_only TINYINT(1) DEFAULT 0,
+                stackable TINYINT(1) DEFAULT 0,
+                auto_apply TINYINT(1) DEFAULT 0,
+                target_radius DECIMAL(5, 2) DEFAULT 5.00,
+                location VARCHAR(150),
+                target_cities TEXT,
+                gender ENUM('All', 'Male', 'Female') DEFAULT 'All',
+                age_group VARCHAR(50) DEFAULT 'All Ages',
+                customer_type ENUM('All Users', 'New Users', 'Existing Users', 'Premium Users') DEFAULT 'All Users',
+                estimated_audience INT DEFAULT 5000,
+                status ENUM('Active', 'Scheduled', 'Expired', 'Draft', 'Inactive') DEFAULT 'Active',
+                created_by VARCHAR(50) DEFAULT 'SYSTEM',
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                deleted_at TIMESTAMP NULL DEFAULT NULL
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+        `);
 
         // Teams (Tournament Participants)
         await connection.query(`
