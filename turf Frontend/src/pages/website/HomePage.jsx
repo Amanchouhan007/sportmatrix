@@ -81,7 +81,7 @@ export default function HomePage() {
             if (res.success && Array.isArray(res.data)) {
                 setUpcomingTournaments(res.data.slice(0, 4))
             }
-        }).catch(() => {})
+        }).catch(() => { })
     }, [])
 
     /* ── Geolocation & Initial Nearby Sort ── */
@@ -162,7 +162,7 @@ export default function HomePage() {
             {/* ══════════════════════════════════════════════
                 AIRBNB-STYLE SEARCH & CATEGORIES
             ══════════════════════════════════════════════ */}
-            <section className="pt-[80px] md:pt-[96px] pb-0 bg-[#020617] relative z-40">
+            <section className="pt-[80px] md:pt-[84px] pb-0 bg-[#020617] relative z-40">
                 <div className="w-full px-6 lg:px-12 max-w-[1400px] mx-auto">
                     <TurfSearchBar
                         values={searchValues}
@@ -176,7 +176,7 @@ export default function HomePage() {
             {/* ══════════════════════════════════════════════
                 POPULAR TURFS GRID
             ══════════════════════════════════════════════ */}
-            <div ref={resultsRef} className="relative z-30 pt-2 pb-4">
+            <div ref={resultsRef} className="relative z-30 pt-0 pb-4">
                 <TurfResultsGrid
                     turfs={filteredTurfs}
                     searchValues={searchValues}
@@ -216,38 +216,39 @@ export default function HomePage() {
                             const statusText = !isOpen ? t.status : (spotsLeft <= 3 ? 'Few Slots Left' : 'Registration Open')
                             const colors = ['from-blue-600 to-indigo-600', 'from-emerald-600 to-teal-600', 'from-purple-600 to-indigo-600', 'from-amber-600 to-orange-600']
                             return (
-                            <div
-                                key={t.id || t._id || idx}
-                                className="group bg-slate-900 border border-white/5 hover:border-slate-800 rounded-2xl p-6 flex flex-col justify-between shadow-2xl transition-all duration-300 hover:scale-[1.02] relative"
-                            >
-                                <div>
-                                    <div className="flex items-center justify-between mb-4 gap-2">
-                                        <span className={`text-[8px] font-black uppercase tracking-widest px-2.5 py-1 rounded-md border ${statusColor}`}>
-                                            {statusText}
-                                        </span>
-                                        <span className="text-[9px] font-black text-slate-500 uppercase tracking-wide">{t.sport || 'Sports'}</span>
-                                    </div>
-                                    <h3 className="text-lg font-black uppercase text-white tracking-tight mb-4">{t.title || t.name}</h3>
+                                <div
+                                    key={t.id || t._id || idx}
+                                    className="group bg-slate-900 border border-white/5 hover:border-slate-800 rounded-2xl p-6 flex flex-col justify-between shadow-2xl transition-all duration-300 hover:scale-[1.02] relative"
+                                >
+                                    <div>
+                                        <div className="flex items-center justify-between mb-4 gap-2">
+                                            <span className={`text-[8px] font-black uppercase tracking-widest px-2.5 py-1 rounded-md border ${statusColor}`}>
+                                                {statusText}
+                                            </span>
+                                            <span className="text-[9px] font-black text-slate-500 uppercase tracking-wide">{t.sport || 'Sports'}</span>
+                                        </div>
+                                        <h3 className="text-lg font-black uppercase text-white tracking-tight mb-4">{t.title || t.name}</h3>
 
-                                    <div className="p-3 bg-slate-950 border border-white/5 rounded-xl space-y-2 mb-6">
-                                        <div className="flex justify-between items-center text-[10px]">
-                                            <span className="text-slate-500 font-bold uppercase tracking-wide">GRAND PRIZE</span>
-                                            <span className="text-white font-black">{t.prize || `₹${t.entryFee || 0}`} Cash Pool</span>
-                                        </div>
-                                        <div className="flex justify-between items-center text-[10px]">
-                                            <span className="text-slate-500 font-bold uppercase tracking-wide">ENTRY FEE</span>
-                                            <span className="text-slate-300 font-black">₹{t.entryFee || 0} / SQUAD</span>
-                                        </div>
-                                        <div className="flex justify-between items-center text-[9px] pt-1.5 border-t border-white/5 text-slate-400">
-                                            <span className="font-semibold uppercase tracking-wider">{spotsLeft} / {t.maxTeams || 16} SLOTS REMAINING</span>
+                                        <div className="p-3 bg-slate-950 border border-white/5 rounded-xl space-y-2 mb-6">
+                                            <div className="flex justify-between items-center text-[10px]">
+                                                <span className="text-slate-500 font-bold uppercase tracking-wide">GRAND PRIZE</span>
+                                                <span className="text-white font-black">{t.prize || `₹${t.entryFee || 0}`} Cash Pool</span>
+                                            </div>
+                                            <div className="flex justify-between items-center text-[10px]">
+                                                <span className="text-slate-500 font-bold uppercase tracking-wide">ENTRY FEE</span>
+                                                <span className="text-slate-300 font-black">₹{t.entryFee || 0} / SQUAD</span>
+                                            </div>
+                                            <div className="flex justify-between items-center text-[9px] pt-1.5 border-t border-white/5 text-slate-400">
+                                                <span className="font-semibold uppercase tracking-wider">{spotsLeft} / {t.maxTeams || 16} SLOTS REMAINING</span>
+                                            </div>
                                         </div>
                                     </div>
+                                    <button onClick={() => navigate(`/tournaments/${t.id || t._id}`)} className={`w-full py-3 bg-gradient-to-r ${colors[idx % colors.length]} text-white font-black text-[10px] uppercase tracking-widest rounded-xl transition-all shadow-[0_5px_15px_rgba(0,0,0,0.3)] hover:scale-[1.02]`}>
+                                        Register Squad
+                                    </button>
                                 </div>
-                                <button onClick={() => navigate(`/tournaments/${t.id || t._id}`)} className={`w-full py-3 bg-gradient-to-r ${colors[idx % colors.length]} text-white font-black text-[10px] uppercase tracking-widest rounded-xl transition-all shadow-[0_5px_15px_rgba(0,0,0,0.3)] hover:scale-[1.02]`}>
-                                    Register Squad
-                                </button>
-                            </div>
-                        )})}
+                            )
+                        })}
                     </div>
                 </div>
             </section>
@@ -338,10 +339,10 @@ export default function HomePage() {
                                 <button
                                     onClick={() => navigate('/membership')}
                                     className={`w-full py-3.5 text-[10px] font-black italic tracking-[0.2em] uppercase rounded-xl border transition-all duration-300 cursor-pointer ${p.accent === 'slate'
-                                            ? 'bg-white/5 border-white/10 text-white hover:bg-white/10 hover:border-white/30 hover:shadow-[0_0_20px_rgba(255,255,255,0.05)]'
-                                            : p.accent === 'blue'
-                                                ? 'bg-gradient-to-r from-blue-600 to-indigo-600 border-blue-500/20 text-white hover:from-blue-500 hover:to-indigo-500 hover:shadow-[0_0_20px_rgba(59,130,246,0.3)]'
-                                                : 'bg-gradient-to-r from-emerald-500 to-[#16a34a] border-emerald-500/20 text-white hover:from-emerald-400 hover:to-green-500 hover:shadow-[0_0_20px_rgba(22,163,74,0.3)]'
+                                        ? 'bg-white/5 border-white/10 text-white hover:bg-white/10 hover:border-white/30 hover:shadow-[0_0_20px_rgba(255,255,255,0.05)]'
+                                        : p.accent === 'blue'
+                                            ? 'bg-gradient-to-r from-blue-600 to-indigo-600 border-blue-500/20 text-white hover:from-blue-500 hover:to-indigo-500 hover:shadow-[0_0_20px_rgba(59,130,246,0.3)]'
+                                            : 'bg-gradient-to-r from-emerald-500 to-[#16a34a] border-emerald-500/20 text-white hover:from-emerald-400 hover:to-green-500 hover:shadow-[0_0_20px_rgba(22,163,74,0.3)]'
                                         }`}
                                 >
                                     GET STARTED

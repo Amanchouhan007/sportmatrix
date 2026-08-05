@@ -112,7 +112,7 @@ export default function TurfResultsGrid({ turfs, searchValues, recentSearches = 
     }
 
     return (
-        <section className="pt-3 pb-8 bg-[#020617] relative overflow-hidden">
+        <section className="pt-0 pb-8 bg-[#020617] relative overflow-hidden">
             {/* Background Spotlights */}
             <div className="absolute top-[20%] left-[10%] w-[35vw] h-[35vw] bg-blue-600/5 blur-[120px] rounded-full pointer-events-none" />
             <div className="absolute bottom-[20%] right-[10%] w-[35vw] h-[35vw] bg-purple-600/5 blur-[120px] rounded-full pointer-events-none" />
@@ -135,7 +135,7 @@ export default function TurfResultsGrid({ turfs, searchValues, recentSearches = 
 
 
                 {/* ── Header & Filters Control Bar ── */}
-                <div className="sticky top-[72px] z-30 bg-[#020617] flex flex-col lg:flex-row lg:items-center justify-between gap-4 mb-6 border-b border-white/5 pb-4 pt-3">
+                <div className="sticky top-[72px] z-30 bg-[#020617] flex flex-col lg:flex-row lg:items-center justify-between gap-4 mb-2 border-b border-white/5 pb-4 pt-1">
                     {/* Left: Heading & Count Pill */}
                     <div className="flex items-center gap-3 shrink-0">
                         <h2 className="text-2xl md:text-3xl font-black italic text-white uppercase tracking-tight leading-none flex items-center gap-2">
@@ -152,11 +152,10 @@ export default function TurfResultsGrid({ turfs, searchValues, recentSearches = 
                         <div className="relative shrink-0">
                             <button
                                 onClick={() => setShowFilters(!showFilters)}
-                                className={`px-4 py-1.5 border rounded-full text-[10.5px] font-extrabold uppercase tracking-wider transition-all duration-300 cursor-pointer flex items-center gap-1.5 ${
-                                    activeFilter 
-                                        ? 'bg-gradient-to-r from-[#00E6A7] to-[#00C2FF] border-[#00E6A7] text-slate-950 font-black shadow-[0_0_15px_rgba(0,230,167,0.35)]'
-                                        : 'bg-slate-900/80 border-white/10 text-slate-300 hover:bg-slate-800 hover:text-white hover:border-white/20'
-                                }`}
+                                className={`px-4 py-1.5 border rounded-full text-[10.5px] font-extrabold uppercase tracking-wider transition-all duration-300 cursor-pointer flex items-center gap-1.5 ${activeFilter
+                                    ? 'bg-gradient-to-r from-[#00E6A7] to-[#00C2FF] border-[#00E6A7] text-slate-950 font-black shadow-[0_0_15px_rgba(0,230,167,0.35)]'
+                                    : 'bg-slate-900/80 border-white/10 text-slate-300 hover:bg-slate-800 hover:text-white hover:border-white/20'
+                                    }`}
                             >
                                 <HiFilter className="w-3.5 h-3.5" /> <span>Filters {activeFilter && '(1)'}</span>
                             </button>
@@ -173,11 +172,10 @@ export default function TurfResultsGrid({ turfs, searchValues, recentSearches = 
                                                     setActiveFilter(activeFilter === f.key ? '' : f.key)
                                                     setShowFilters(false)
                                                 }}
-                                                className={`w-full text-left px-4 py-2.5 text-[10.5px] font-bold uppercase tracking-wider transition-colors flex items-center justify-between ${
-                                                    activeFilter === f.key
-                                                        ? 'bg-[#00E6A7]/10 text-[#00E6A7]'
-                                                        : 'text-slate-300 hover:bg-white/5 hover:text-white'
-                                                }`}
+                                                className={`w-full text-left px-4 py-2.5 text-[10.5px] font-bold uppercase tracking-wider transition-colors flex items-center justify-between ${activeFilter === f.key
+                                                    ? 'bg-[#00E6A7]/10 text-[#00E6A7]'
+                                                    : 'text-slate-300 hover:bg-white/5 hover:text-white'
+                                                    }`}
                                             >
                                                 <span className="flex items-center gap-2"><span>{f.icon}</span> {f.label}</span>
                                                 {activeFilter === f.key && <HiCheckCircle className="w-4 h-4" />}
@@ -215,7 +213,7 @@ export default function TurfResultsGrid({ turfs, searchValues, recentSearches = 
 
                 {/* ── Split Layout Container ── */}
                 <div className={`flex flex-col lg:flex-row gap-6 relative ${viewMode === 'split' ? 'items-start' : ''}`}>
-                    
+
                     {/* Left Pane: Cards */}
                     <div
                         className={`w-full ${viewMode === 'split' ? 'lg:w-[55%] shrink-0' : 'lg:w-full'} overflow-y-auto`}
@@ -229,15 +227,14 @@ export default function TurfResultsGrid({ turfs, searchValues, recentSearches = 
                                 <button onClick={onClear} className="px-6 py-3 bg-blue-600 hover:bg-blue-500 text-white font-black text-xs uppercase tracking-widest rounded-full transition-all shadow-lg shadow-blue-500/20">Reset Filters</button>
                             </div>
                         ) : (
-                            <div className={`grid gap-6 xl:gap-8 items-stretch ${
-                                viewMode === 'split' 
-                                    ? 'grid-cols-1 sm:grid-cols-2' 
-                                    : 'grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5'
-                            }`}>
+                            <div className={`grid gap-6 xl:gap-8 items-stretch pt-[77px] ${viewMode === 'split'
+                                ? 'grid-cols-1 sm:grid-cols-2'
+                                : 'grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5'
+                                }`}>
                                 {sortedTurfs.map(turf => (
-                                    <TurfCard 
-                                        key={turf.id} 
-                                        turf={turf} 
+                                    <TurfCard
+                                        key={turf.id}
+                                        turf={turf}
                                         onMouseEnter={() => setHoveredTurfId(turf.id)}
                                         onMouseLeave={() => setHoveredTurfId(null)}
                                     />
@@ -250,7 +247,7 @@ export default function TurfResultsGrid({ turfs, searchValues, recentSearches = 
                     {viewMode === 'split' && (
                         <div className="hidden lg:block lg:w-[45%] shrink-0 sticky top-[100px] h-[calc(100vh-140px)] rounded-3xl overflow-hidden border border-white/5 shadow-[0_20px_50px_rgba(0,0,0,0.5)] z-20">
                             <GoogleMapView
-                                turfs={sortedTurfs.map(t => ({...t, latitude: t.lat, longitude: t.lng}))}
+                                turfs={sortedTurfs.map(t => ({ ...t, latitude: t.lat, longitude: t.lng }))}
                                 hoveredTurfId={hoveredTurfId}
                                 onMarkerClick={(id) => {
                                     setHoveredTurfId(id)

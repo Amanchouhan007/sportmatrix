@@ -161,7 +161,7 @@ export default function TurfSearchBar({ onSearch, values, onChange, onClear }) {
 
     return (
         <div className="w-full max-w-[1070px] mx-auto relative z-40 select-none">
-            <div className="relative bg-[#0b1120]/95 backdrop-blur-xl border border-white/10 shadow-2xl rounded-[32px] lg:rounded-full p-2 flex flex-col lg:flex-row items-stretch justify-between lg:h-[76px] gap-2 lg:gap-0">
+            <div className="relative bg-[#0b1120]/95 backdrop-blur-xl border border-white/10 shadow-2xl rounded-[32px] lg:rounded-full p-[6px] flex flex-col lg:flex-row items-stretch justify-between lg:h-[72px] gap-2 lg:gap-0">
                 
                 {/* 1. CITY */}
                 <div ref={locRef} className="flex-1 min-w-0 relative group/sec border-b border-white/10 lg:border-b-0 lg:border-r lg:border-white/10">

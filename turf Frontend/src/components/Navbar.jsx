@@ -53,7 +53,7 @@ export default function Navbar() {
     }
 
     return (
-        <nav className={`fixed top-0 left-0 right-0 z-[100] transition-all duration-500 ${scrolled ? 'bg-black/40 backdrop-blur-xl border-b border-white/10 py-3 shadow-sm' : 'bg-[rgba(0,0,0,0.35)] backdrop-blur-[6px] py-6'}`}>
+        <nav className={`fixed top-0 left-0 right-0 z-[100] transition-all duration-500 ${scrolled ? 'bg-black/40 backdrop-blur-xl border-b border-white/10 py-[9px] shadow-sm' : 'bg-[rgba(0,0,0,0.35)] backdrop-blur-[6px] py-[21px]'}`}>
             <div className="max-w-7xl mx-auto px-6 flex items-center justify-between">
                 {/* LOGO: FRESH SPORTS BRANDING */}
                 <div className="flex items-center gap-4 group cursor-pointer" onClick={() => {
