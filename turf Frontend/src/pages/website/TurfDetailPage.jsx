@@ -283,9 +283,19 @@ export default function TurfDetailPage() {
                             <div className="flex items-start justify-between mb-4">
                                 <div>
                                     <h1 className="text-4xl md:text-5xl font-black text-white italic tracking-tighter uppercase mb-2">{turfData.name}</h1>
-                                    <p className="flex items-center gap-1.5 text-sm text-slate-400 font-medium">
-                                        <HiLocationMarker className="text-emerald-500 shrink-0 w-4 h-4" /> {turfData.location}
-                                    </p>
+                                    <a
+                                        href={`https://www.google.com/maps/dir/?api=1&destination=${turfData.coordinates?.lat || 19.1136},${turfData.coordinates?.lng || 72.8697}`}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="inline-flex items-center gap-2 text-sm text-slate-300 hover:text-emerald-400 font-medium group transition-colors cursor-pointer"
+                                        title="Click to get directions on Google Maps"
+                                    >
+                                        <HiLocationMarker className="text-emerald-500 shrink-0 w-4 h-4 group-hover:scale-125 transition-transform" />
+                                        <span className="underline underline-offset-4 decoration-emerald-500/40 group-hover:decoration-emerald-400">{turfData.location}</span>
+                                        <span className="text-[10px] font-bold tracking-widest uppercase bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 px-2 py-0.5 rounded-full flex items-center gap-1 group-hover:bg-emerald-500 group-hover:text-slate-950 transition-all">
+                                            📍 Get Directions ↗
+                                        </span>
+                                    </a>
                                 </div>
                                 <div className="text-right flex-shrink-0 ml-4">
                                     <div className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-500 border border-emerald-400 rounded-sm shadow-[0_0_15px_rgba(16,185,129,0.2)]">
@@ -466,21 +476,31 @@ export default function TurfDetailPage() {
                         <div className="absolute top-0 right-[10%] w-[35vw] h-[35vw] bg-blue-500/[0.03] blur-[120px] rounded-full pointer-events-none" />
                         <SectionLabel accent="blue">Location & Directions</SectionLabel>
                         <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
-                            {/* Map Placeholder */}
-                            <div className="lg:col-span-3 relative rounded-xl overflow-hidden border border-white/[0.06] bg-slate-900/40 h-[300px] lg:h-auto group">
-                                <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1524661135-423995f22d0b?w=1200&q=80&fit=crop')] bg-cover bg-center opacity-20 group-hover:opacity-30 transition-opacity duration-700" />
-                                <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/60 to-transparent" />
-                                <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-6 z-10">
-                                    <div className="w-16 h-16 bg-blue-500/10 border border-blue-500/20 rounded-2xl flex items-center justify-center mb-4">
-                                        <HiLocationMarker className="w-8 h-8 text-blue-400" />
+                            {/* Live Interactive Google Map Embed */}
+                            <div className="lg:col-span-3 relative rounded-xl overflow-hidden border border-white/10 bg-slate-900 min-h-[350px] lg:h-auto group shadow-2xl flex flex-col">
+                                <iframe
+                                    title={`Google Map - ${turfData.name}`}
+                                    width="100%"
+                                    height="100%"
+                                    className="w-full h-full min-h-[320px] rounded-xl border-0 filter contrast-105 brightness-95"
+                                    loading="lazy"
+                                    allowFullScreen
+                                    src={`https://maps.google.com/maps?q=${turfData.coordinates?.lat || 19.1136},${turfData.coordinates?.lng || 72.8697}&t=&z=15&ie=UTF-8&iwloc=&output=embed`}
+                                />
+                                <div className="p-4 bg-slate-900/90 backdrop-blur border-t border-white/10 flex flex-wrap items-center justify-between gap-3 z-10">
+                                    <div className="flex items-center gap-2 text-slate-300 text-xs font-bold truncate max-w-md">
+                                        <HiLocationMarker className="text-blue-400 w-5 h-5 shrink-0" />
+                                        <span className="truncate">{turfData.fullAddress}</span>
                                     </div>
-                                    <h3 className="text-xl font-black uppercase text-white tracking-tight mb-2">Interactive Map</h3>
-                                    <p className="text-sm text-slate-300 font-bold max-w-sm mb-4">{turfData.fullAddress}</p>
-                                    <div
-                                        className="px-6 py-2.5 bg-blue-500/10 border border-blue-500/20 text-blue-400 text-[10px] font-black uppercase tracking-widest rounded-lg cursor-not-allowed opacity-80"
+                                    <a
+                                        href={`https://www.google.com/maps/dir/?api=1&destination=${turfData.coordinates?.lat || 19.1136},${turfData.coordinates?.lng || 72.8697}`}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="px-5 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-black text-xs uppercase tracking-wider rounded-lg transition-all flex items-center gap-2 shadow-[0_0_15px_rgba(59,130,246,0.3)] hover:scale-105"
                                     >
-                                        Map View Locked
-                                    </div>
+                                        <span>Open in Google Maps</span>
+                                        <span className="text-base leading-none">↗</span>
+                                    </a>
                                 </div>
                             </div>
 
