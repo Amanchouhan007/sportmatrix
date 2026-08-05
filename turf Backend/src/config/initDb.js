@@ -231,6 +231,11 @@ async function initializeDatabase() {
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
         `);
 
+        // Migration check for category_id in tournaments
+        try {
+            await connection.query(`ALTER TABLE tournaments ADD COLUMN category_id VARCHAR(50);`);
+        } catch (e) {}
+
         // Teams (Tournament Participants)
         await connection.query(`
             CREATE TABLE IF NOT EXISTS teams (
@@ -443,11 +448,19 @@ async function initializeDatabase() {
                 amenities JSON,
                 opening_time TIME DEFAULT '06:00:00',
                 closing_time TIME DEFAULT '23:00:00',
+                media JSON,
                 status ENUM('ACTIVE', 'INACTIVE') DEFAULT 'ACTIVE',
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
         `);
+
+        // Migration check for media column in turfs
+        try {
+            await connection.query(`ALTER TABLE turfs ADD COLUMN media JSON;`);
+        } catch (e) {
+            // Column already exists, ignore
+        }
 
         console.log('Tables created/verified successfully.');
 
