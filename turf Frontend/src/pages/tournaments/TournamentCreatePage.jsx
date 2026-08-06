@@ -58,7 +58,6 @@ export default function TournamentCreatePage({ role = 'owner' }) {
 
     const basePath = role === 'staff' ? '/staff/tournaments' : '/admin/tournaments'
 
-<<<<<<< HEAD
     const handleBannerFileChange = (e) => {
         const file = e.target.files[0]
         if (file) {
@@ -80,11 +79,8 @@ export default function TournamentCreatePage({ role = 'owner' }) {
             }
         })
     }
-
-    const handleSubmit = (e) => {
-=======
+    
     const handleSubmit = async (e) => {
->>>>>>> 8af0489ef283adf328e1043197e4e498ba201cdd
         e.preventDefault()
         if (!form.title || !form.startDate || !form.endDate || !form.organizerName || !form.organizerContact || !form.playersPerTeam) {
             addToast({ title: 'Validation Error', message: 'Please fill in all required fields (Title, Start/End Date, Organizer Details, Players Per Team).', type: 'error' })
