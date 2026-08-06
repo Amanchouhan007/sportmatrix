@@ -43,10 +43,8 @@ export const AuthProvider = ({ children }) => {
                 customer: 'CUSTOMER'
             };
 
-            const expectedRole = roleMapping[selectedRole] || 'SUPER_ADMIN';
-            
-            // Set role to match user selection for smooth frontend testing
-            const userObj = { ...data.user, role: expectedRole };
+            const activeRole = data.user?.role || expectedRole;
+            const userObj = { ...data.user, role: activeRole };
 
             // Save details to localStorage
             localStorage.setItem('token', data.token);
@@ -85,8 +83,21 @@ export const AuthProvider = ({ children }) => {
         setUser(updatedUser);
     };
 
+    /**
+     * Set active user session directly (e.g. after registration)
+     */
+    const setSession = (userObj, tokenStr) => {
+        const sessionUser = { ...userObj, role: userObj.role || 'OWNER' };
+        const sessionToken = tokenStr || `token_${Date.now()}`;
+        localStorage.setItem('token', sessionToken);
+        localStorage.setItem('user', JSON.stringify(sessionUser));
+        setUser(sessionUser);
+        setToken(sessionToken);
+        return sessionUser;
+    };
+
     return (
-        <AuthContext.Provider value={{ user, token, loading, login, logout, getCurrentUser, updateUser }}>
+        <AuthContext.Provider value={{ user, token, loading, login, setSession, logout, getCurrentUser, updateUser }}>
             {children}
         </AuthContext.Provider>
     );

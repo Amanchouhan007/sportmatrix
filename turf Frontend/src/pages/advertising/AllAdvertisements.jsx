@@ -11,7 +11,7 @@ import Pagination from '../../components/ui/Pagination'
 import { useToast } from '../../components/ui/Toast'
 import {
     FiSearch, FiPlus, FiEye, FiEdit2, FiCheckCircle,
-    FiXCircle, FiPauseCircle, FiPlayCircle, FiTrash2
+    FiXCircle, FiPauseCircle, FiPlayCircle, FiTrash2, FiTag
 } from 'react-icons/fi'
 import { HiSpeakerphone } from 'react-icons/hi'
 
@@ -218,13 +218,22 @@ export default function AllAdvertisements() {
                         <p className="text-surface-500 text-sm mt-0.5 font-medium">Manage, approve, and track advertisement campaigns across all turfs</p>
                     </div>
                 </div>
-                <Button
-                    variant="primary"
-                    onClick={() => navigate('/admin/ads/create')}
-                    className="flex items-center gap-2"
-                >
-                    <FiPlus /> Create Advertisement
-                </Button>
+                <div className="flex items-center gap-3">
+                    <Button
+                        variant="secondary"
+                        onClick={() => navigate('/admin/discount-offers')}
+                        className="flex items-center gap-2 border-emerald-200 text-emerald-700 bg-emerald-50 hover:bg-emerald-100 font-extrabold"
+                    >
+                        <FiTag /> Discount Offers
+                    </Button>
+                    <Button
+                        variant="primary"
+                        onClick={() => navigate('/admin/ads/create')}
+                        className="flex items-center gap-2"
+                    >
+                        <FiPlus /> Create Advertisement
+                    </Button>
+                </div>
             </div>
 
             {/* Filter & Search Bar */}

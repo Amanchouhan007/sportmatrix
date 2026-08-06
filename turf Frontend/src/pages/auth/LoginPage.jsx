@@ -1,35 +1,31 @@
 import { useState, useEffect } from 'react'
-import { useNavigate, Link } from 'react-router-dom'
+import { useNavigate, Link, useLocation } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 
 export default function LoginPage() {
     const navigate = useNavigate()
+    const location = useLocation()
     const { login, logout, token, user } = useAuth()
     
-    const [form, setForm] = useState({ email: '', password: '', role: 'customer' })
+    const [form, setForm] = useState({ 
+        email: location.state?.email || '', 
+        password: '', 
+        role: location.state?.role || 'customer' 
+    })
     const [error, setError] = useState('')
     const [fieldErrors, setFieldErrors] = useState({ email: '', password: '' })
     const [isSubmitting, setIsSubmitting] = useState(false)
 
-    // Redirect already authenticated users
+    // Pre-fill form from location state if provided
     useEffect(() => {
-        if (token && user) {
-            const normalizeRole = (r) => (r || '').toUpperCase().replace(/[-_]/g, '');
-            const rNorm = normalizeRole(user.role);
-            const roleRoutes = {
-                SUPERADMIN: '/super-admin',
-                OWNER: '/admin',
-                STAFF: '/staff',
-                CUSTOMER: '/customer'
-            };
-            if (roleRoutes[rNorm]) {
-                navigate(roleRoutes[rNorm]);
-            } else {
-                console.warn('Unknown user role:', user.role);
-                logout();
-            }
+        if (location.state?.email) {
+            setForm(prev => ({
+                ...prev,
+                email: location.state.email || '',
+                role: location.state.role || 'customer'
+            }));
         }
-    }, [token, user, navigate, logout]);
+    }, [location.state]);
 
     const handleEmailChange = (e) => {
         setForm({ ...form, email: e.target.value });
@@ -97,10 +93,25 @@ export default function LoginPage() {
         setIsSubmitting(true)
         
         try {
-            await login(form.email, form.password, form.role)
-            // Success redirect is handled reactively by the useEffect hook on token/user state change
+            const userObj = await login(form.email, form.password, form.role)
+            
+            const roleRoutes = {
+                SUPERADMIN: '/super-admin',
+                SUPER_ADMIN: '/super-admin',
+                OWNER: '/admin',
+                STAFF: '/staff',
+                CUSTOMER: '/customer'
+            };
+
+            const userRole = (userObj?.role || '').toUpperCase();
+            const targetRoute = roleRoutes[userRole] || (
+                userRole.includes('OWNER') ? '/admin' :
+                userRole.includes('STAFF') ? '/staff' :
+                userRole.includes('CUSTOMER') ? '/customer' : '/super-admin'
+            );
+            
+            navigate(targetRoute);
         } catch (err) {
-            // Handle error messages returned from backend or role mismatch
             if (err.response && err.response.data && err.response.data.message) {
                 setError(err.response.data.message);
             } else {
@@ -180,22 +191,7 @@ export default function LoginPage() {
                             {fieldErrors.password && <p className="text-red-500 text-xs mt-1">{fieldErrors.password}</p>}
                         </div>
 
-                        <div className="pt-2">
-                            <label className="block text-xs font-bold uppercase tracking-widest text-slate-500 mb-2.5">Login as</label>
-                            <div className="grid grid-cols-2 gap-3">
-                                {[{ k: 'superadmin', l: 'Super Admin' }, { k: 'owner', l: 'Admin' }, { k: 'staff', l: 'Staff' }, { k: 'customer', l: 'Customer' }].map((r) => (
-                                    <button 
-                                        key={r.k} 
-                                        type="button" 
-                                        disabled={isSubmitting}
-                                        onClick={() => handleRoleChange(r.k)} 
-                                        className={`px-4 py-3 rounded-xl text-xs font-bold uppercase tracking-widest transition-all cursor-pointer border disabled:opacity-50 ${form.role === r.k ? 'bg-emerald-500/10 border-emerald-500/50 text-emerald-400 shadow-[0_0_15px_rgba(16,185,129,0.1)]' : 'bg-slate-900 border-white/10 text-slate-400 hover:border-white/30 hover:text-white'}`}
-                                    >
-                                        {r.l}
-                                    </button>
-                                ))}
-                            </div>
-                        </div>
+
 
                         <button 
                             type="submit" 

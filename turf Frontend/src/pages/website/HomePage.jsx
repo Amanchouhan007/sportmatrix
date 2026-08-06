@@ -1,6 +1,7 @@
 import { useNavigate } from 'react-router-dom'
 import { useEffect, useRef, useState, useCallback } from 'react'
 import { getPublicTournaments } from '../../services/tournamentService'
+import { getAllPlans } from '../../services/subscriptionPlanService'
 import { HiLocationMarker, HiStar, HiArrowRight, HiShieldCheck, HiOutlineDesktopComputer, HiOutlineCalendar, HiOutlineShieldCheck } from 'react-icons/hi'
 import { IoFootball, IoGameController, IoTrophyOutline, IoPeopleOutline, IoLocationOutline } from 'react-icons/io5'
 import { GiCricketBat, GiAxeInLog } from 'react-icons/gi'
@@ -74,12 +75,19 @@ export default function HomePage() {
     const [recentSearches, setRecentSearches] = useState([])
     const [userLocation, setUserLocation] = useState(null)
     const [upcomingTournaments, setUpcomingTournaments] = useState([])
+    const [homePlans, setHomePlans] = useState([])
 
-    /* ── Fetch Upcoming Tournaments ── */
+    /* ── Fetch Upcoming Tournaments & Subscription Plans ── */
     useEffect(() => {
         getPublicTournaments().then(res => {
             if (res.success && Array.isArray(res.data)) {
                 setUpcomingTournaments(res.data.slice(0, 4))
+            }
+        }).catch(() => { })
+
+        getAllPlans().then(res => {
+            if (res.success && Array.isArray(res.data)) {
+                setHomePlans(res.data.filter(p => p.status === 'active'))
             }
         }).catch(() => { })
     }, [])
@@ -274,36 +282,49 @@ export default function HomePage() {
                         className={`grid grid-cols-1 md:grid-cols-3 max-w-5xl mx-auto gap-8 items-start transition-all duration-[1000ms] ease-out ${subReveal.visible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-16'
                             }`}
                     >
-                        {[
+                        {(homePlans.length > 0 ? homePlans.map((p, idx) => {
+                            const priceVal = p.monthlyPricing?.price ?? 0;
+                            const pNameLower = (p.planName || '').toLowerCase();
+                            let accent = 'blue';
+                            if (p.isPopular || pNameLower.includes('enterprise') || pNameLower.includes('premium')) accent = 'emerald';
+                            else if (priceVal === 0 || pNameLower.includes('starter') || pNameLower.includes('free')) accent = 'slate';
+
+                            return {
+                                name: p.planName,
+                                price: priceVal.toLocaleString('en-IN'),
+                                period: priceVal === 0 ? '/TRIAL' : '/MO',
+                                desc: p.description ? p.description.toUpperCase() : 'STANDARD OPERATIONAL ACCESS',
+                                accent,
+                                popular: Boolean(p.isPopular),
+                                features: p.features && p.features.length > 0 ? p.features : ['Standard Platform Support']
+                            };
+                        }) : [
                             {
-                                name: '7-Day Free Trial',
-                                price: '0',
-                                period: '/7 DAYS',
-                                desc: 'NO CREDIT CARD REQUIRED',
-                                color: 'from-slate-500 to-slate-700',
+                                name: 'Starter Plan',
+                                price: '999',
+                                period: '/MO',
+                                desc: 'IDEAL FOR SINGLE TURF OWNERS GETTING STARTED.',
                                 accent: 'slate',
-                                features: ['Full platform access for 7 days', 'Book up to 1 field / court', 'Join 1 open tournament free', 'Standard customer service']
+                                features: ['Online Slot Booking', 'Basic Analytics', 'Email Notifications', 'Standard Support']
                             },
                             {
-                                name: 'Basic Plan',
-                                price: '499',
+                                name: 'Professional Plan',
+                                price: '2,499',
                                 period: '/MO',
-                                desc: 'RECOMMENDED FOR REGULARS',
-                                color: 'from-blue-500 to-indigo-600',
-                                accent: 'blue',
-                                features: ['10 Field Bookings / Month', 'Squad / Team Authorization', 'Tournament entry access', 'Priority customer service']
-                            },
-                            {
-                                name: 'Premium Plan',
-                                price: '1,499',
-                                period: '/MO',
-                                desc: 'ELITE UNLIMITED OPERATIONS',
-                                color: 'from-[#16a34a] to-emerald-600',
+                                desc: 'PERFECT FOR GROWING MULTI-TURF SPORTS COMPLEXES.',
                                 accent: 'emerald',
                                 popular: true,
-                                features: ['Unlimited Tactical Bookings', 'Full Arena & Court Access', '24/7 VIP Dedicated Link', 'Private Tournament Hosting']
+                                features: ['All Starter Features', 'Multi-Branch Management', 'Advanced Analytics & Exports', 'POS Integration']
+                            },
+                            {
+                                name: 'Enterprise Arena',
+                                price: '4,999',
+                                period: '/MO',
+                                desc: 'CUSTOM TAILORED PLAN FOR LARGE STADIUM & TURF NETWORKS.',
+                                accent: 'blue',
+                                features: ['Unlimited Branches', 'Dedicated Account Manager', 'Custom Billing Integrations', 'White Label Branding']
                             }
-                        ].map((p, idx) => (
+                        ]).map((p, idx) => (
                             <div
                                 key={idx}
                                 className={`relative group flex flex-col bg-slate-900 border transition-all duration-300 hover:-translate-y-1.5 rounded-2xl p-6 h-full ${p.popular
@@ -327,10 +348,10 @@ export default function HomePage() {
                                     <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest">{p.period}</span>
                                 </div>
 
-                                <ul className="space-y-3 mb-8">
+                                <ul className="space-y-3 mb-8 flex-1">
                                     {p.features.map((f, fidx) => (
-                                        <li key={fidx} className="flex items-center gap-2.5">
-                                            <span className="w-1.5 h-1.5 rounded-full bg-[#16a34a]" />
+                                        <li key={fidx} className="flex items-start gap-2.5">
+                                            <span className="w-1.5 h-1.5 rounded-full bg-[#16a34a] mt-1 shrink-0" />
                                             <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide">{f}</span>
                                         </li>
                                     ))}

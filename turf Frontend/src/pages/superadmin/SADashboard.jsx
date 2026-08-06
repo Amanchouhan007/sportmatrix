@@ -19,7 +19,7 @@ import {
 } from '../../services/dashboardService'
 
 const branchColumns = [
-    { key: 'Branch Name', label: 'Branch' },
+    { key: 'Branch Name', label: 'Turf' },
     { key: 'City', label: 'City' },
     { key: 'Revenue', label: 'Revenue', render: v => `₹${Number(v).toLocaleString('en-IN')}` },
     { key: 'Bookings', label: 'Bookings' },
@@ -206,11 +206,11 @@ export default function SADashboard() {
 
             {/* Stat Cards Grid */}
             {(() => {
-                const numBranches = isNaN(Number(overview?.totalBranches)) ? 4 : Number(overview?.totalBranches);
-                const numRevenue = isNaN(Number(overview?.totalRevenue)) ? 4882000 : Number(overview?.totalRevenue);
-                const numUsers = isNaN(Number(overview?.totalUsers)) ? 1284 : Number(overview?.totalUsers);
-                const numSubs = isNaN(Number(overview?.activeSubscriptions)) ? 18 : Number(overview?.activeSubscriptions);
-                const growthVal = isNaN(Number(overview?.monthlyGrowth)) ? 14.8 : Number(overview?.monthlyGrowth);
+                const numBranches = Number(overview?.totalBranches || 0);
+                const numRevenue = Number(overview?.totalRevenue || 0);
+                const numUsers = Number(overview?.totalUsers ?? overview?.totalAdmin ?? 0);
+                const numSubs = Number(overview?.activeSubscriptions || 0);
+                const growthVal = Number(overview?.monthlyGrowth || 0);
 
                 return (
                     <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
@@ -225,11 +225,11 @@ export default function SADashboard() {
                         ) : (
                             <>
                                 <StatCard 
-                                    label="Total Branches" 
+                                    label="Total Turfs" 
                                     value={numBranches.toLocaleString('en-IN')} 
                                     change="Platform Total" 
                                     trend="up" 
-                                    icon="🏢" 
+                                    icon="🏟️" 
                                     accentColor="bg-indigo-500"
                                 />
                                 <StatCard 
@@ -241,7 +241,7 @@ export default function SADashboard() {
                                     accentColor="bg-emerald-500"
                                 />
                                 <StatCard 
-                                    label="Total Users" 
+                                    label="Total Admin" 
                                     value={numUsers.toLocaleString('en-IN')} 
                                     change="Platform Registered" 
                                     trend="up" 
@@ -328,8 +328,8 @@ export default function SADashboard() {
                 <div className="lg:col-span-2">
                     <Card className="h-full">
                         <div className="mb-4">
-                            <h2 className="text-lg font-bold text-surface-900">Branch Performance</h2>
-                            <p className="text-xs text-surface-500 mt-0.5">Top performing branches ranked by total revenue and bookings volume</p>
+                            <h2 className="text-lg font-bold text-surface-900">Turf Performance</h2>
+                            <p className="text-xs text-surface-500 mt-0.5">Top performing turfs ranked by total revenue and bookings volume</p>
                         </div>
                         {isTableLoading ? (
                             <div className="border border-surface-200 rounded-2xl overflow-hidden divide-y divide-surface-100 animate-pulse bg-white">
@@ -366,11 +366,14 @@ export default function SADashboard() {
                             {activities.map((act, i) => {
                                 const activityName = act?.activity || act?.title || act?.type || 'Activity'
                                 const badges = {
+                                    'Admin Created': 'bg-blue-50 text-blue-700 border-blue-100',
                                     'Owner Created': 'bg-blue-50 text-blue-700 border-blue-100',
-                                    'Branch Created': 'bg-emerald-50 text-emerald-700 border-emerald-100',
+                                    'Subscription Plan Created': 'bg-amber-50 text-amber-700 border-amber-100',
                                     'Subscription Assigned': 'bg-amber-50 text-amber-700 border-amber-100',
-                                    'Payment Received': 'bg-violet-50 text-violet-700 border-violet-100',
-                                    'Commission Generated': 'bg-cyan-50 text-cyan-700 border-cyan-100'
+                                    'Turf Created': 'bg-emerald-50 text-emerald-700 border-emerald-100',
+                                    'Branch Created': 'bg-emerald-50 text-emerald-700 border-emerald-100',
+                                    'Booking Logged': 'bg-cyan-50 text-cyan-700 border-cyan-100',
+                                    'Payment Received': 'bg-violet-50 text-violet-700 border-violet-100'
                                 }
                                 const badgeClass = badges[activityName] || 'bg-surface-50 text-surface-600 border-surface-200'
                                 

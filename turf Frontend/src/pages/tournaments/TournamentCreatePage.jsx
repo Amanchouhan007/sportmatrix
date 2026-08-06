@@ -80,6 +80,7 @@ export default function TournamentCreatePage({ role = 'owner' }) {
         })
     }
     
+
     const handleSubmit = async (e) => {
         e.preventDefault()
         if (!form.title || !form.startDate || !form.endDate || !form.organizerName || !form.organizerContact || !form.playersPerTeam) {

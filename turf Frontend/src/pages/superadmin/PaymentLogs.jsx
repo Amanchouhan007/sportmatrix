@@ -443,7 +443,7 @@ export default function PaymentLogs() {
                                 <th className="px-5 py-3.5 text-xs font-bold uppercase tracking-wider text-white">Notice</th>
                                 <th className="px-5 py-3.5 text-xs font-bold uppercase tracking-wider text-white">Status</th>
                                 <th className="px-5 py-3.5 text-xs font-bold uppercase tracking-wider text-white">Date</th>
-                                <th className="text-center px-5 py-3.5 text-xs font-bold uppercase tracking-wider text-white">Action</th>
+                                {/* <th className="text-center px-5 py-3.5 text-xs font-bold uppercase tracking-wider text-white">Action</th> */}
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-surface-100">
@@ -545,12 +545,12 @@ export default function PaymentLogs() {
                                         {/* Date */}
                                         <td className="px-5 py-4">
                                             <span className="text-sm text-surface-600 whitespace-nowrap">
-                                                {fmtDate(log.paymentDate)}
+                                                {fmtDate(log.paymentDate || log.createdAt || log.date)}
                                             </span>
                                         </td>
 
                                         {/* Action */}
-                                        <td className="px-5 py-4 text-center">
+                                        {/* <td className="px-5 py-4 text-center">
                                             <button
                                                 onClick={() => handleViewDetail(log._id)}
                                                 className="p-2 rounded-lg hover:bg-primary-50 text-surface-400 hover:text-primary-600 transition-colors cursor-pointer"
@@ -558,7 +558,7 @@ export default function PaymentLogs() {
                                             >
                                                 <FiEye className="w-4 h-4" />
                                             </button>
-                                        </td>
+                                        </td> */}
                                     </tr>
                                 ))
                             )}

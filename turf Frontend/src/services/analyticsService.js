@@ -3,9 +3,9 @@ import api from './api';
 /**
  * Fetch global overview aggregate statistics
  */
-export const getOverview = async () => {
+export const getOverview = async (filters = {}) => {
     try {
-        const response = await api.get('/reports/overview');
+        const response = await api.get('/reports/overview', { params: filters });
         if (response.data && response.data.success && response.data.data) {
             return response.data;
         }
@@ -15,22 +15,22 @@ export const getOverview = async () => {
     return {
         success: true,
         data: {
-            totalRevenue: 4882000,
-            monthlyRevenue: 980000,
-            yearlyRevenue: 4882000,
-            revenueGrowthPercentage: 14.8,
-            totalBookings: 4560,
-            todayBookings: 142,
-            monthlyBookings: 1250,
-            cancelledBookings: 45,
-            totalOwners: 12,
-            totalStaff: 28,
-            totalCustomers: 1284,
-            newRegistrations: 140,
-            totalBranches: 8,
-            activeBranches: 7,
+            totalRevenue: 0,
+            monthlyRevenue: 0,
+            yearlyRevenue: 0,
+            revenueGrowthPercentage: 0,
+            totalBookings: 0,
+            todayBookings: 0,
+            monthlyBookings: 0,
+            cancelledBookings: 0,
+            totalOwners: 0,
+            totalStaff: 0,
+            totalCustomers: 0,
+            newRegistrations: 0,
+            totalBranches: 0,
+            activeBranches: 0,
             suspendedBranches: 0,
-            inactiveBranches: 1
+            inactiveBranches: 0
         }
     };
 };
@@ -38,10 +38,10 @@ export const getOverview = async () => {
 /**
  * Fetch monthly revenue distribution stats
  */
-export const getRevenueAnalytics = async () => {
+export const getRevenueAnalytics = async (filters = {}) => {
     try {
-        const response = await api.get('/reports/revenue');
-        if (response.data && response.data.success && Array.isArray(response.data.data) && response.data.data.length > 0) {
+        const response = await api.get('/reports/revenue', { params: filters });
+        if (response.data && response.data.success && Array.isArray(response.data.data)) {
             return response.data;
         }
     } catch (error) {
@@ -64,10 +64,10 @@ export const getRevenueAnalytics = async () => {
 /**
  * Fetch monthly confirmed vs cancelled bookings statistics
  */
-export const getBookingAnalytics = async () => {
+export const getBookingAnalytics = async (filters = {}) => {
     try {
-        const response = await api.get('/reports/bookings');
-        if (response.data && response.data.success && Array.isArray(response.data.data) && response.data.data.length > 0) {
+        const response = await api.get('/reports/bookings', { params: filters });
+        if (response.data && response.data.success && Array.isArray(response.data.data)) {
             return response.data;
         }
     } catch (error) {
@@ -90,7 +90,15 @@ export const getBookingAnalytics = async () => {
 /**
  * Fetch new and total registered users metrics
  */
-export const getUserAnalytics = async () => {
+export const getUserAnalytics = async (filters = {}) => {
+    try {
+        const response = await api.get('/reports/users', { params: filters });
+        if (response.data && response.data.success) {
+            return response.data;
+        }
+    } catch (error) {
+        console.warn('User analytics API fallback triggered:', error);
+    }
     return {
         success: true,
         data: [
@@ -108,7 +116,15 @@ export const getUserAnalytics = async () => {
 /**
  * Fetch active vs pending branches metrics
  */
-export const getBranchAnalytics = async () => {
+export const getBranchAnalytics = async (filters = {}) => {
+    try {
+        const response = await api.get('/reports/top-branches', { params: filters });
+        if (response.data && response.data.success) {
+            return response.data;
+        }
+    } catch (error) {
+        console.warn('Branch analytics API fallback triggered:', error);
+    }
     return {
         success: true,
         data: [
@@ -125,10 +141,10 @@ export const getBranchAnalytics = async () => {
 /**
  * Fetch shares percentage ratios by sports category
  */
-export const getSportsAnalytics = async () => {
+export const getSportsAnalytics = async (filters = {}) => {
     try {
-        const response = await api.get('/reports/sports');
-        if (response.data && response.data.success && Array.isArray(response.data.data) && response.data.data.length > 0) {
+        const response = await api.get('/reports/sports', { params: filters });
+        if (response.data && response.data.success && Array.isArray(response.data.data)) {
             return response.data;
         }
     } catch (error) {
@@ -139,8 +155,8 @@ export const getSportsAnalytics = async () => {
         data: [
             { sport: 'Football', bookingsCount: 1850, revenue: 2220000 },
             { sport: 'Cricket', bookingsCount: 1420, revenue: 1420000 },
-            { sport: 'Football', bookingsCount: 890, revenue: 534000 },
-            { sport: 'Football', bookingsCount: 400, revenue: 400000 }
+            { sport: 'Badminton', bookingsCount: 890, revenue: 534000 },
+            { sport: 'Tennis', bookingsCount: 400, revenue: 400000 }
         ]
     };
 };
@@ -148,13 +164,21 @@ export const getSportsAnalytics = async () => {
 /**
  * Fetch platform subscription plans analytics
  */
-export const getSubscriptionAnalytics = async () => {
+export const getSubscriptionAnalytics = async (filters = {}) => {
+    try {
+        const response = await api.get('/reports/subscriptions', { params: filters });
+        if (response.data && response.data.success) {
+            return response.data;
+        }
+    } catch (error) {
+        console.warn('Subscription analytics API fallback triggered:', error);
+    }
     return {
         success: true,
         data: [
-            { planName: 'Starter', count: 18, totalUsers: 18, revenue: 17982 },
-            { planName: 'Professional', count: 24, totalUsers: 24, revenue: 59976 },
-            { planName: 'Enterprise', count: 6, totalUsers: 6, revenue: 29994 }
+            { planName: 'Starter', count: 18, totalUsers: 18, revenue: 17982, name: 'Starter', value: 18 },
+            { planName: 'Professional', count: 24, totalUsers: 24, revenue: 59976, name: 'Professional', value: 24 },
+            { planName: 'Enterprise', count: 6, totalUsers: 6, revenue: 29994, name: 'Enterprise', value: 6 }
         ]
     };
 };
@@ -162,7 +186,15 @@ export const getSubscriptionAnalytics = async () => {
 /**
  * Fetch top revenue-generating owners lists
  */
-export const getTopOwners = async () => {
+export const getTopOwners = async (filters = {}) => {
+    try {
+        const response = await api.get('/reports/top-owners', { params: filters });
+        if (response.data && response.data.success) {
+            return response.data;
+        }
+    } catch (error) {
+        console.warn('Top owners API fallback triggered:', error);
+    }
     return {
         success: true,
         data: [
@@ -176,7 +208,15 @@ export const getTopOwners = async () => {
 /**
  * Fetch top branch locations
  */
-export const getTopBranches = async () => {
+export const getTopBranches = async (filters = {}) => {
+    try {
+        const response = await api.get('/reports/top-branches', { params: filters });
+        if (response.data && response.data.success) {
+            return response.data;
+        }
+    } catch (error) {
+        console.warn('Top branches API fallback triggered:', error);
+    }
     return {
         success: true,
         data: [
@@ -190,10 +230,10 @@ export const getTopBranches = async () => {
 /**
  * Fetch top popular sports
  */
-export const getTopSports = async () => {
+export const getTopSports = async (filters = {}) => {
     try {
-        const response = await api.get('/reports/sports');
-        if (response.data && response.data.success && Array.isArray(response.data.data) && response.data.data.length > 0) {
+        const response = await api.get('/reports/sports', { params: filters });
+        if (response.data && response.data.success) {
             return response.data;
         }
     } catch (error) {
@@ -204,8 +244,8 @@ export const getTopSports = async () => {
         data: [
             { sport: 'Football', name: 'Football', bookingsCount: 1850, bookings: 1850, revenue: 2220000 },
             { sport: 'Cricket', name: 'Cricket', bookingsCount: 1420, bookings: 1420, revenue: 1420000 },
-            { sport: 'Football', name: 'Football', bookingsCount: 890, bookings: 890, revenue: 534000 },
-            { sport: 'Football', name: 'Football', bookingsCount: 400, bookings: 400, revenue: 400000 }
+            { sport: 'Badminton', name: 'Badminton', bookingsCount: 890, bookings: 890, revenue: 534000 },
+            { sport: 'Tennis', name: 'Tennis', bookingsCount: 400, bookings: 400, revenue: 400000 }
         ]
     };
 };

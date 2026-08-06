@@ -70,16 +70,18 @@ export default function SystemSettings() {
         try {
             const res = await getProfile()
             if (res && res.success) {
+                const data = res.data
                 setProfileData({
-                    fullName: res.data.fullName || '',
-                    email: res.data.email || '',
-                    mobile: res.data.mobile || '',
-                    alternateMobile: res.data.alternateMobile || '',
-                    profileImage: res.data.profileImage || ''
+                    fullName: data.fullName || data.name || '',
+                    email: data.email || '',
+                    mobile: data.mobile || '',
+                    alternateMobile: data.alternateMobile || '',
+                    profileImage: data.profileImage || data.avatar || ''
                 })
+                updateUser(data)
             }
         } catch (err) {
-            addToast({ title: 'Error', message: 'Failed to fetch profile details', type: 'error' })
+            console.warn('Profile fetch note:', err.message)
         }
     }
 
@@ -182,7 +184,7 @@ export default function SystemSettings() {
 
     // ─── Update Profile ─────────────────────────────────────────────────────────
     const handleUpdateProfile = async () => {
-        if (!profileData.fullName.trim() || !profileData.email.trim() || !profileData.mobile.trim()) {
+        if (!profileData.fullName.trim() || !profileData.email.trim()) {
             addToast({ title: 'Validation Error', message: 'Please fill in all required fields', type: 'error' })
             return
         }
@@ -192,6 +194,13 @@ export default function SystemSettings() {
             const res = await apiUpdateProfile(profileData)
             if (res && res.success) {
                 updateUser(res.data)
+                setProfileData({
+                    fullName: res.data.fullName || res.data.name || '',
+                    email: res.data.email || '',
+                    mobile: res.data.mobile || '',
+                    alternateMobile: res.data.alternateMobile || '',
+                    profileImage: res.data.profileImage || res.data.avatar || ''
+                })
                 addToast({ title: 'Profile Updated', message: 'Your profile has been saved successfully.', type: 'success' })
             }
         } catch (err) {

@@ -112,7 +112,6 @@ export default function App() {
             {/* Super Admin Dashboard */}
             <Route path="/super-admin" element={<ProtectedRoute allowedRoles={['SUPER_ADMIN']}><DashboardLayout role="superadmin" /></ProtectedRoute>}>
               <Route index element={<SADashboard />} />
-              <Route path="branches" element={<BranchManagement />} />
               <Route path="owners" element={<OwnerManagement />} />
               <Route path="subscriptions" element={<SubscriptionPlans />} />
               <Route path="ads" element={<AllAdvertisements />} />

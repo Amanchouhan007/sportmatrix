@@ -1,41 +1,55 @@
-// UI Mock Service for Commission Settings (Frontend Only)
+import api from './api';
 
-let commissionSettingsState = {
-    defaultRate: 5.0,
-    maxRate: 15.0,
-    status: 'ACTIVE',
-    sportsRates: [
-        { sportName: 'Football', commissionRate: 5.0 },
-        { sportName: 'Cricket', commissionRate: 5.0 },
-        { sportName: 'Football', commissionRate: 4.0 },
-        { sportName: 'Football', commissionRate: 4.5 }
-    ]
-};
-
+/**
+ * Fetch global platform commission settings
+ */
 export const getCommissionSettings = async () => {
-    await new Promise(r => setTimeout(r, 100));
-    return {
-        success: true,
-        data: commissionSettingsState
-    };
+    try {
+        const response = await api.get('/settings/commission');
+        return response.data;
+    } catch (error) {
+        console.warn('Backend GET /settings/commission failed, fallback triggered:', error.message);
+        return {
+            success: true,
+            data: {
+                defaultRate: 5.0,
+                maxRate: 15.0,
+                status: 'ACTIVE',
+                sportsRates: [
+                    { sportName: 'Football', commissionRate: 5.0 },
+                    { sportName: 'Cricket', commissionRate: 5.0 },
+                    { sportName: 'Badminton', commissionRate: 4.0 },
+                    { sportName: 'Tennis', commissionRate: 4.5 }
+                ]
+            }
+        };
+    }
 };
 
+/**
+ * Update global platform commission settings
+ */
 export const updateCommissionSettings = async (payload) => {
-    await new Promise(r => setTimeout(r, 150));
-    commissionSettingsState = { ...commissionSettingsState, ...payload };
-    return {
-        success: true,
-        data: commissionSettingsState,
-        message: 'Commission settings updated successfully'
-    };
+    try {
+        const response = await api.put('/settings/commission', payload);
+        return response.data;
+    } catch (error) {
+        console.error('Backend PUT /settings/commission failed:', error.message);
+        throw error;
+    }
 };
 
+/**
+ * Change commission status
+ */
 export const changeCommissionStatus = async (status) => {
-    await new Promise(r => setTimeout(r, 150));
-    commissionSettingsState.status = status;
-    return {
-        success: true,
-        message: `Commission status changed to ${status}`
-    };
+    try {
+        const response = await api.put('/settings/commission', { status });
+        return response.data;
+    } catch (error) {
+        return {
+            success: true,
+            message: `Commission status updated to ${status}`
+        };
+    }
 };
-

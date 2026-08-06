@@ -190,7 +190,7 @@ export default function SubscriptionPlans() {
         setIsSaving(true)
         try {
             if (editingPlan) {
-                await updatePlan(editingPlan._id, payload)
+                await updatePlan(editingPlan._id || editingPlan.id, payload)
                 addToast({ title: 'Updated', message: 'Plan updated successfully', type: 'success' })
                 setIsModalOpen(false)
                 fetchPlans()

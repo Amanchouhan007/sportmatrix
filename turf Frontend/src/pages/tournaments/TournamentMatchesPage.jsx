@@ -9,6 +9,7 @@ import Select from '../../components/ui/Select'
 import { useToast } from '../../components/ui/Toast'
 import { HiPlay, HiPencil, HiCheck, HiExclamation } from 'react-icons/hi'
 import { HiTrophy } from 'react-icons/hi2'
+import CricketScorerConsole from '../../components/cricket/CricketScorerConsole'
 
 const mockMatches = [
     {
@@ -67,7 +68,7 @@ export default function TournamentMatchesPage() {
     const { addToast } = useToast()
     const [matches, setMatches] = useState(mockMatches)
     const [scoreModal, setScoreModal] = useState({ open: false, match: null })
-
+    const [activeLiveScorerMatch, setActiveLiveScorerMatch] = useState(null)
     const [form, setForm] = useState({
         team1Score: '0',
         team2Score: '0',
@@ -111,6 +112,11 @@ export default function TournamentMatchesPage() {
 
         setScoreModal({ open: false, match: null })
         addToast({ title: 'Match Score Updated!', message: 'Scorecard, cards & live standings updated.', type: 'success' })
+    }
+
+    const handleLiveScore = (match) => {
+        setActiveLiveScorerMatch(match)
+        addToast({ title: 'Live Cricket Operator Console', message: `Opened live scoring console for Match #${match.matchNumber}`, type: 'info' })
     }
 
     const columns = [
@@ -163,9 +169,18 @@ export default function TournamentMatchesPage() {
             key: 'action',
             label: 'Action',
             render: (_, r) => (
-                <Button size="sm" onClick={() => handleOpenScoreModal(r)}>
-                    <HiPencil className="w-3.5 h-3.5 mr-1" /> Update Score
-                </Button>
+                <div className="flex items-center gap-2">
+                    <Button size="sm" onClick={() => handleOpenScoreModal(r)}>
+                        <HiPencil className="w-3.5 h-3.5 mr-1" /> Update Score
+                    </Button>
+                    <button
+                        onClick={() => handleLiveScore(r)}
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-red-600 hover:bg-red-700 text-white font-extrabold text-xs shadow-sm transition-all cursor-pointer whitespace-nowrap"
+                    >
+                        <span className="w-2 h-2 rounded-full bg-white animate-pulse"></span>
+                        <HiPlay className="w-3.5 h-3.5" /> Live Score
+                    </button>
+                </div>
             )
         }
     ]
@@ -258,6 +273,14 @@ export default function TournamentMatchesPage() {
                     </div>
                 )}
             </Modal>
+
+            {/* Professional Live Cricket Scoring Operator Console Overlay */}
+            {activeLiveScorerMatch && (
+                <CricketScorerConsole
+                    match={activeLiveScorerMatch}
+                    onClose={() => setActiveLiveScorerMatch(null)}
+                />
+            )}
         </div>
     )
 }

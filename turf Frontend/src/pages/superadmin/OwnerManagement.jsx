@@ -255,7 +255,10 @@ export default function OwnerManagement() {
             if (editingOwner) {
                 // Remove password fields for updates
                 const { password, confirmPassword, ...updateData } = formData
-                await updateOwner(editingOwner._id, updateData)
+                await updateOwner(editingOwner._id || editingOwner.id, {
+                    ...updateData,
+                    fullAddress: formData.address || formData.fullAddress
+                })
                 addToast({ title: 'Updated', message: 'Owner details updated successfully', type: 'success' })
                 setIsModalOpen(false)
                 fetchData()

@@ -31,6 +31,7 @@ const sidebarConfig = {
             children: [
                 { label: 'All Advertisements', icon: <HiSpeakerphone />, path: '/admin/ads' },
                 { label: 'Create Advertisement', icon: <HiPlusCircle />, path: '/admin/ads/create' },
+                { label: 'Discount Offers', icon: <HiTag />, path: '/admin/discount-offers' },
                 { label: 'Commission Management', icon: <HiCurrencyDollar />, path: '/admin/ads/commissions' },
                 { label: 'Analytics', icon: <HiChartBar />, path: '/admin/ads/analytics' },
                 { label: 'Payments', icon: <HiCreditCard />, path: '/admin/ads/payments' },
@@ -46,7 +47,6 @@ const sidebarConfig = {
             children: [
                 { label: 'Dashboard', icon: <HiChartBar />, path: '/admin/tournaments/dashboard' },
                 { label: 'All Tournaments', icon: <HiTrophy />, path: '/admin/tournaments/all' },
-                { label: 'Pending Approvals', icon: <HiExclamationCircle />, path: '/admin/tournaments/pending' },
                 { label: 'Categories', icon: <HiTag />, path: '/admin/tournaments/categories' },
                 { label: 'Team Registrations', icon: <HiUserGroup />, path: '/admin/tournaments/registrations' },
                 { label: 'Fixtures', icon: <HiViewGrid />, path: '/admin/tournaments/fixtures' },
@@ -95,7 +95,6 @@ const sidebarConfig = {
             children: [
                 { label: 'Dashboard', icon: <HiChartBar />, path: '/staff/tournaments/dashboard' },
                 { label: 'All Tournaments', icon: <HiTrophy />, path: '/staff/tournaments/all' },
-                { label: 'Pending Approvals', icon: <HiExclamationCircle />, path: '/staff/tournaments/pending' },
                 { label: 'Team Registrations', icon: <HiUserGroup />, path: '/staff/tournaments/registrations' },
                 { label: 'Fixtures', icon: <HiViewGrid />, path: '/staff/tournaments/fixtures' },
                 { label: 'Matches', icon: <HiPlay />, path: '/staff/tournaments/matches' },

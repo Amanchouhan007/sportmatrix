@@ -292,10 +292,8 @@ export const updateOwner = async (id, ownerData) => {
         }
     } catch (err) {
         const errMsg = err.response?.data?.message || err.message || 'Failed to update owner';
-        if (err.response && err.response.status < 500) {
-            throw new Error(errMsg);
-        }
-        console.warn(`Backend PUT /owners/${id} failed, updating in local fallback.`, errMsg);
+        console.warn(`Backend PUT /owners/${id} failed:`, errMsg);
+        throw new Error(errMsg);
     }
 
     ownersState = getLocalOwners();
@@ -317,7 +315,9 @@ export const changeOwnerStatus = async (id, status) => {
             return { success: true, message: response.data.message || `Owner status changed to ${status}` };
         }
     } catch (err) {
-        console.warn(`Backend PATCH /owners/${id}/status failed, toggling in local fallback.`, err.message);
+        const errMsg = err.response?.data?.message || err.message || 'Failed to change owner status';
+        console.warn(`Backend PATCH /owners/${id}/status failed:`, errMsg);
+        throw new Error(errMsg);
     }
 
     ownersState = getLocalOwners();
@@ -331,12 +331,15 @@ export const changeOwnerStatus = async (id, status) => {
  */
 export const resetOwnerPassword = async (id, newPassword) => {
     try {
-        const response = await api.put(`/owners/${id}`, { password: newPassword });
+        const passwordVal = typeof newPassword === 'string' ? newPassword : newPassword?.password;
+        const response = await api.put(`/owners/${id}`, { password: passwordVal });
         if (response.data && response.data.success) {
             return { success: true, message: 'Password reset successfully' };
         }
     } catch (err) {
-        console.warn(`Backend reset password failed, using local fallback.`, err.message);
+        const errMsg = err.response?.data?.message || err.message || 'Failed to reset password';
+        console.warn(`Backend reset password failed:`, errMsg);
+        throw new Error(errMsg);
     }
 
     return { success: true, message: 'Password reset successfully' };
@@ -354,7 +357,9 @@ export const deleteOwner = async (id) => {
             return { success: true, message: response.data.message || 'Owner deleted successfully' };
         }
     } catch (err) {
-        console.warn(`Backend DELETE /owners/${id} failed, deleting in local fallback.`, err.message);
+        const errMsg = err.response?.data?.message || err.message || 'Failed to delete owner';
+        console.warn(`Backend DELETE /owners/${id} failed:`, errMsg);
+        throw new Error(errMsg);
     }
 
     ownersState = getLocalOwners();

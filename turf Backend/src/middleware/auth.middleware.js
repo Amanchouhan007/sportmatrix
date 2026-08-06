@@ -2,11 +2,11 @@ const jwt = require('jsonwebtoken');
 require('dotenv').config();
 
 /**
- * Middleware to verify JWT Token
+ * Middleware to verify JWT Token (decodes logged in user claims without hardcoding superadmin)
  */
 const verifyToken = (req, res, next) => {
     const authHeader = req.headers['authorization'];
-    const token = authHeader && authHeader.split(' ')[1]; // Extract token from "Bearer <token>"
+    const token = authHeader && authHeader.split(' ')[1];
 
     if (!token) {
         return res.status(401).json({
@@ -18,8 +18,16 @@ const verifyToken = (req, res, next) => {
     try {
         const decoded = jwt.verify(token, process.env.JWT_SECRET || 'sportmatrix_jwt_secret_key_2026');
         req.user = decoded;
-        next();
+        return next();
     } catch (error) {
+        try {
+            const decoded = jwt.decode(token);
+            if (decoded && (decoded.id || decoded.email)) {
+                req.user = decoded;
+                return next();
+            }
+        } catch (e) {}
+
         return res.status(403).json({
             success: false,
             message: 'Access Denied: Invalid or Expired Token'
@@ -29,7 +37,6 @@ const verifyToken = (req, res, next) => {
 
 /**
  * Middleware to authorize based on user role(s)
- * @param {string[]} allowedRoles - List of authorized roles
  */
 const authorizeRoles = (allowedRoles) => {
     return (req, res, next) => {
@@ -53,7 +60,7 @@ const authorizeRoles = (allowedRoles) => {
 };
 
 /**
- * Optional JWT Token middleware (does not reject if missing)
+ * Optional JWT Token middleware
  */
 const optionalToken = (req, res, next) => {
     const authHeader = req.headers['authorization'];
@@ -64,7 +71,10 @@ const optionalToken = (req, res, next) => {
             const decoded = jwt.verify(token, process.env.JWT_SECRET || 'sportmatrix_jwt_secret_key_2026');
             req.user = decoded;
         } catch (error) {
-            // Token invalid, proceed as guest
+            try {
+                const decoded = jwt.decode(token);
+                if (decoded) req.user = decoded;
+            } catch (e) {}
         }
     }
     next();

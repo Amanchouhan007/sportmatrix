@@ -1,6 +1,7 @@
-// UI Mock Service for Subscription Plans (Frontend Only)
+import api from './api';
 
-const mockPlans = [
+// Fallback Seed Plans if backend is offline
+const defaultFallbackPlans = [
     {
         _id: 'plan_starter',
         id: 'plan_starter',
@@ -72,10 +73,67 @@ const mockPlans = [
     }
 ];
 
-let plansState = [...mockPlans];
+let localPlans = [...defaultFallbackPlans];
 
+/**
+ * Fetch all Subscription Plans (Real Backend + Persistent Fallback)
+ */
+export const getAllPlans = async () => {
+    try {
+        const response = await api.get('/subscriptions');
+        if (response.data && response.data.success) {
+            localPlans = response.data.data;
+            return {
+                success: true,
+                data: response.data.data
+            };
+        }
+    } catch (err) {
+        console.warn('Backend /subscriptions API offline, using local fallback state.', err.message);
+    }
+    return { success: true, data: [...localPlans] };
+};
+
+/**
+ * Fetch single plan details by ID
+ */
+export const getPlanById = async (id) => {
+    try {
+        const response = await api.get(`/subscriptions/${id}`);
+        if (response.data && response.data.success) {
+            return {
+                success: true,
+                data: response.data.data
+            };
+        }
+    } catch (err) {
+        console.warn(`Backend GET /subscriptions/${id} failed, using local fallback.`, err.message);
+    }
+    const plan = localPlans.find(p => p._id === id || p.id === id) || localPlans[0];
+    return { success: true, data: plan };
+};
+
+/**
+ * Create a new Subscription Plan
+ */
 export const createPlan = async (planData) => {
-    await new Promise(r => setTimeout(r, 150));
+    try {
+        const response = await api.post('/subscriptions', planData);
+        if (response.data && response.data.success) {
+            const created = response.data.data;
+            localPlans.push(created);
+            return {
+                success: true,
+                data: created,
+                message: response.data.message || 'Plan created successfully'
+            };
+        }
+    } catch (err) {
+        const errMsg = err.response?.data?.message || err.message || 'Failed to create plan';
+        console.warn('Backend POST /subscriptions failed:', errMsg);
+        throw new Error(errMsg);
+    }
+
     const newPlan = {
         _id: 'plan_' + Date.now(),
         id: 'plan_' + Date.now(),
@@ -83,43 +141,101 @@ export const createPlan = async (planData) => {
         isPopular: false,
         ...planData
     };
-    plansState.push(newPlan);
+    localPlans.push(newPlan);
     return { success: true, data: newPlan, message: 'Plan created successfully' };
 };
 
-export const getAllPlans = async () => {
-    await new Promise(r => setTimeout(r, 100));
-    return { success: true, data: [...plansState] };
-};
-
-export const getPlanById = async (id) => {
-    await new Promise(r => setTimeout(r, 100));
-    const plan = plansState.find(p => p._id === id || p.id === id) || plansState[0];
-    return { success: true, data: plan };
-};
-
+/**
+ * Update an existing Subscription Plan
+ */
 export const updatePlan = async (id, planData) => {
-    await new Promise(r => setTimeout(r, 150));
-    plansState = plansState.map(p => (p._id === id || p.id === id) ? { ...p, ...planData } : p);
-    const updated = plansState.find(p => p._id === id || p.id === id);
+    try {
+        const response = await api.put(`/subscriptions/${id}`, planData);
+        if (response.data && response.data.success) {
+            const updated = response.data.data;
+            localPlans = localPlans.map(p => (p._id === id || p.id === id) ? updated : p);
+            return {
+                success: true,
+                data: updated,
+                message: response.data.message || 'Plan updated successfully'
+            };
+        }
+    } catch (err) {
+        const errMsg = err.response?.data?.message || err.message || 'Failed to update plan';
+        console.warn(`Backend PUT /subscriptions/${id} failed:`, errMsg);
+        throw new Error(errMsg);
+    }
+
+    localPlans = localPlans.map(p => (p._id === id || p.id === id) ? { ...p, ...planData } : p);
+    const updated = localPlans.find(p => p._id === id || p.id === id);
     return { success: true, data: updated, message: 'Plan updated successfully' };
 };
 
+/**
+ * Delete a Subscription Plan
+ */
 export const deletePlan = async (id) => {
-    await new Promise(r => setTimeout(r, 150));
-    plansState = plansState.filter(p => p._id !== id && p.id !== id);
+    try {
+        const response = await api.delete(`/subscriptions/${id}`);
+        if (response.data && response.data.success) {
+            localPlans = localPlans.filter(p => p._id !== id && p.id !== id);
+            return {
+                success: true,
+                message: response.data.message || 'Plan deleted successfully'
+            };
+        }
+    } catch (err) {
+        const errMsg = err.response?.data?.message || err.message || 'Failed to delete plan';
+        console.warn(`Backend DELETE /subscriptions/${id} failed:`, errMsg);
+        throw new Error(errMsg);
+    }
+
+    localPlans = localPlans.filter(p => p._id !== id && p.id !== id);
     return { success: true, message: 'Plan deleted successfully' };
 };
 
+/**
+ * Toggle Plan Active Status (active / inactive)
+ */
 export const toggleStatus = async (id, status) => {
-    await new Promise(r => setTimeout(r, 150));
-    plansState = plansState.map(p => (p._id === id || p.id === id) ? { ...p, status } : p);
+    try {
+        const response = await api.patch(`/subscriptions/${id}/status`, { status });
+        if (response.data && response.data.success) {
+            localPlans = localPlans.map(p => (p._id === id || p.id === id) ? { ...p, status } : p);
+            return {
+                success: true,
+                message: response.data.message || `Status updated to ${status}`
+            };
+        }
+    } catch (err) {
+        const errMsg = err.response?.data?.message || err.message || 'Failed to update plan status';
+        console.warn(`Backend PATCH /subscriptions/${id}/status failed:`, errMsg);
+        throw new Error(errMsg);
+    }
+
+    localPlans = localPlans.map(p => (p._id === id || p.id === id) ? { ...p, status } : p);
     return { success: true, message: `Status updated to ${status}` };
 };
 
+/**
+ * Toggle Plan Popularity Flag (true / false)
+ */
 export const togglePopular = async (id, isPopular) => {
-    await new Promise(r => setTimeout(r, 150));
-    plansState = plansState.map(p => (p._id === id || p.id === id) ? { ...p, isPopular } : p);
+    try {
+        const response = await api.patch(`/subscriptions/${id}/popular`, { isPopular });
+        if (response.data && response.data.success) {
+            localPlans = localPlans.map(p => (p._id === id || p.id === id) ? { ...p, isPopular } : p);
+            return {
+                success: true,
+                message: response.data.message || 'Popular status updated'
+            };
+        }
+    } catch (err) {
+        const errMsg = err.response?.data?.message || err.message || 'Failed to update popular status';
+        console.warn(`Backend PATCH /subscriptions/${id}/popular failed:`, errMsg);
+        throw new Error(errMsg);
+    }
+
+    localPlans = localPlans.map(p => (p._id === id || p.id === id) ? { ...p, isPopular } : p);
     return { success: true, message: 'Popular status updated' };
 };
-

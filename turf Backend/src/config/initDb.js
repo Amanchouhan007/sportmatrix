@@ -37,7 +37,8 @@ async function initializeDatabase() {
                 password_hash VARCHAR(255) NOT NULL,
                 role ENUM('SUPER_ADMIN', 'OWNER', 'STAFF', 'CUSTOMER') DEFAULT 'CUSTOMER',
                 mobile VARCHAR(20),
-                avatar VARCHAR(255),
+                alternate_mobile VARCHAR(20),
+                avatar LONGTEXT,
                 status ENUM('ACTIVE', 'INACTIVE') DEFAULT 'ACTIVE',
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
@@ -63,7 +64,7 @@ async function initializeDatabase() {
                 city VARCHAR(100),
                 zip_code VARCHAR(20),
                 full_address TEXT,
-                profile_image VARCHAR(255),
+                profile_image LONGTEXT,
                 created_by VARCHAR(50),
                 updated_by VARCHAR(50),
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -520,6 +521,23 @@ async function initializeDatabase() {
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
         `);
 
+        // Global Platform System & Commission Settings
+        await connection.query(`
+            CREATE TABLE IF NOT EXISTS system_settings (
+                id VARCHAR(50) PRIMARY KEY,
+                default_rate FLOAT DEFAULT 5.0,
+                max_rate FLOAT DEFAULT 15.0,
+                status VARCHAR(20) DEFAULT 'ACTIVE',
+                sports_rates JSON,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+        `);
+
+        await connection.query(`
+            INSERT IGNORE INTO system_settings (id, default_rate, max_rate, status, sports_rates)
+            VALUES ('global_commission', 5.0, 15.0, 'ACTIVE', '[{"sportName":"Football","commissionRate":5.0},{"sportName":"Cricket","commissionRate":5.0},{"sportName":"Badminton","commissionRate":4.0},{"sportName":"Tennis","commissionRate":4.5}]')
+        `);
+
         // Wallet Transactions
         await connection.query(`
             CREATE TABLE IF NOT EXISTS wallet_transactions (
@@ -592,6 +610,62 @@ async function initializeDatabase() {
             await connection.query(`ALTER TABLE turfs ADD COLUMN media JSON;`);
         } catch (e) {
             // Column already exists, ignore
+        }
+
+        // Subscription Plans
+        await connection.query(`
+            CREATE TABLE IF NOT EXISTS subscription_plans (
+                id VARCHAR(50) PRIMARY KEY,
+                plan_name VARCHAR(100) NOT NULL,
+                description TEXT,
+                is_popular BOOLEAN DEFAULT FALSE,
+                status ENUM('active', 'inactive') DEFAULT 'active',
+                monthly_price DECIMAL(10, 2) DEFAULT 0.00,
+                monthly_branch_limit INT DEFAULT 1,
+                monthly_sports_limit INT DEFAULT 2,
+                monthly_booking_limit INT DEFAULT 200,
+                monthly_active_users_limit INT DEFAULT 5,
+                yearly_price DECIMAL(10, 2) DEFAULT 0.00,
+                yearly_branch_limit INT DEFAULT 1,
+                yearly_sports_limit INT DEFAULT 2,
+                yearly_booking_limit INT DEFAULT 2500,
+                yearly_active_users_limit INT DEFAULT 5,
+                features JSON,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+        `);
+
+        // Seed Subscription Plans if empty
+        const [planCountRows] = await connection.query('SELECT COUNT(*) as count FROM subscription_plans');
+        if (planCountRows[0].count === 0) {
+            console.log('Seeding mock subscription plans...');
+            await connection.query(`
+                INSERT INTO subscription_plans (
+                    id, plan_name, description, is_popular, status,
+                    monthly_price, monthly_branch_limit, monthly_sports_limit, monthly_booking_limit, monthly_active_users_limit,
+                    yearly_price, yearly_branch_limit, yearly_sports_limit, yearly_booking_limit, yearly_active_users_limit,
+                    features
+                ) VALUES 
+                (
+                    'plan_starter', 'Starter Plan', 'Ideal for single turf owners getting started.', 0, 'active',
+                    999, 1, 2, 200, 5,
+                    9999, 1, 2, 2500, 5,
+                    '["Online Slot Booking", "Basic Analytics", "Email Notifications", "Standard Support"]'
+                ),
+                (
+                    'plan_pro', 'Professional Plan', 'Perfect for growing multi-turf sports complexes.', 1, 'active',
+                    2499, 5, 6, 1000, 20,
+                    24999, 5, 6, 15000, 20,
+                    '["All Starter Features", "Multi-Branch Management", "Advanced Analytics & Exports", "POS Integration", "Priority 24/7 Support"]'
+                ),
+                (
+                    'plan_enterprise', 'Enterprise Arena', 'Custom tailored plan for large stadium & turf networks.', 0, 'active',
+                    4999, 20, 15, 10000, 100,
+                    49999, 20, 15, 120000, 100,
+                    '["Unlimited Branches", "Dedicated Account Manager", "Custom Billing Integrations", "White Label Branding", "SLA Guarantee"]'
+                );
+            `);
         }
 
         console.log('Tables created/verified successfully.');

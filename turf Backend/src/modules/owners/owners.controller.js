@@ -1,5 +1,37 @@
 const db = require('../../config/db');
 const bcrypt = require('bcryptjs');
+const fs = require('fs');
+const path = require('path');
+
+/**
+ * Save base64 image string to disk in public/uploads directory
+ */
+const saveBase64Image = (base64String, prefix = 'owner_profile') => {
+    if (!base64String || typeof base64String !== 'string') return '';
+    if (!base64String.startsWith('data:image/')) return base64String;
+
+    try {
+        const matches = base64String.match(/^data:image\/([a-zA-Z0-9]+);base64,(.+)$/);
+        if (!matches || matches.length !== 3) return base64String;
+
+        const ext = matches[1] === 'jpeg' ? 'jpg' : matches[1];
+        const dataBuffer = Buffer.from(matches[2], 'base64');
+        
+        const uploadsDir = path.join(__dirname, '../../../public/uploads');
+        if (!fs.existsSync(uploadsDir)) {
+            fs.mkdirSync(uploadsDir, { recursive: true });
+        }
+
+        const filename = `${prefix}_${Date.now()}_${Math.floor(Math.random() * 10000)}.${ext}`;
+        const filePath = path.join(uploadsDir, filename);
+
+        fs.writeFileSync(filePath, dataBuffer);
+        return `/uploads/${filename}`;
+    } catch (err) {
+        console.error('Error saving base64 image:', err);
+        return base64String;
+    }
+};
 
 /**
  * Format owner database row into clean JSON object (excluding password_hash)
@@ -85,7 +117,7 @@ const createOwner = async (req, res) => {
         if (req.file) {
             profileImage = `/uploads/${req.file.filename}`;
         } else if (req.body.profileImage) {
-            profileImage = req.body.profileImage;
+            profileImage = saveBase64Image(req.body.profileImage, 'owner');
         }
 
         // 4. Hash password securely
@@ -269,6 +301,7 @@ const updateOwner = async (req, res) => {
         }
 
         const currentOwner = existing[0];
+        const fullAddress = req.body.fullAddress || req.body.address;
         const {
             fullName,
             email,
@@ -284,7 +317,6 @@ const updateOwner = async (req, res) => {
             state,
             city,
             zipCode,
-            fullAddress,
             updatedBy
         } = req.body;
 
@@ -317,7 +349,7 @@ const updateOwner = async (req, res) => {
         if (req.file) {
             profileImage = `/uploads/${req.file.filename}`;
         } else if (req.body.profileImage !== undefined) {
-            profileImage = req.body.profileImage;
+            profileImage = saveBase64Image(req.body.profileImage, 'owner');
         }
 
         // 4. Process Password hash update if provided
@@ -355,22 +387,48 @@ const updateOwner = async (req, res) => {
             fullName !== undefined ? fullName.trim() : currentOwner.full_name,
             email !== undefined ? email.toLowerCase().trim() : currentOwner.email,
             mobile !== undefined ? mobile.trim() : currentOwner.mobile,
-            alternateMobile !== undefined ? alternateMobile.trim() : currentOwner.alternate_mobile,
+            alternateMobile !== undefined ? (alternateMobile ? alternateMobile.trim() : null) : currentOwner.alternate_mobile,
             passwordHash,
             status !== undefined ? status : currentOwner.status,
-            businessName !== undefined ? businessName.trim() : currentOwner.business_name,
-            businessType !== undefined ? businessType.trim() : currentOwner.business_type,
-            gstNumber !== undefined ? gstNumber.trim() : currentOwner.gst_number,
-            panNumber !== undefined ? panNumber.trim() : currentOwner.pan_number,
-            country !== undefined ? country.trim() : currentOwner.country,
-            state !== undefined ? state.trim() : currentOwner.state,
-            city !== undefined ? city.trim() : currentOwner.city,
-            zipCode !== undefined ? zipCode.trim() : currentOwner.zip_code,
-            fullAddress !== undefined ? fullAddress.trim() : currentOwner.full_address,
+            businessName !== undefined ? (businessName ? businessName.trim() : null) : currentOwner.business_name,
+            businessType !== undefined ? (businessType ? businessType.trim() : null) : currentOwner.business_type,
+            gstNumber !== undefined ? (gstNumber ? gstNumber.trim() : null) : currentOwner.gst_number,
+            panNumber !== undefined ? (panNumber ? panNumber.trim() : null) : currentOwner.pan_number,
+            country !== undefined ? (country ? country.trim() : 'India') : currentOwner.country,
+            state !== undefined ? (state ? state.trim() : null) : currentOwner.state,
+            city !== undefined ? (city ? city.trim() : null) : currentOwner.city,
+            zipCode !== undefined ? (zipCode ? zipCode.trim() : null) : currentOwner.zip_code,
+            fullAddress !== undefined ? (fullAddress ? fullAddress.trim() : null) : currentOwner.full_address,
             profileImage,
             updatedBy || req.user?.id || 'SYSTEM',
             id
         ]);
+
+        // Also sync update to users table
+        try {
+            await conn.query(
+                `UPDATE users SET 
+                    name = ?, 
+                    email = ?, 
+                    mobile = ?, 
+                    password_hash = ?,
+                    status = ?,
+                    avatar = ?
+                 WHERE id = ? OR LOWER(email) = ?`,
+                [
+                    fullName !== undefined ? fullName.trim() : currentOwner.full_name,
+                    email !== undefined ? email.toLowerCase().trim() : currentOwner.email,
+                    mobile !== undefined ? mobile.trim() : currentOwner.mobile,
+                    passwordHash,
+                    status !== undefined ? status : currentOwner.status,
+                    profileImage || null,
+                    id,
+                    currentOwner.email.toLowerCase()
+                ]
+            );
+        } catch (uErr) {
+            console.warn('Sync to users table skipped on update:', uErr.message);
+        }
 
         await conn.commit();
         conn.release();
@@ -411,7 +469,7 @@ const changeOwnerStatus = async (req, res) => {
             });
         }
 
-        const [existing] = await db.query('SELECT id FROM owners WHERE id = ?', [id]);
+        const [existing] = await db.query('SELECT id, email FROM owners WHERE id = ?', [id]);
         if (existing.length === 0) {
             return res.status(404).json({
                 success: false,
@@ -424,6 +482,16 @@ const changeOwnerStatus = async (req, res) => {
             req.user?.id || 'SYSTEM',
             id
         ]);
+
+        try {
+            await db.query('UPDATE users SET status = ? WHERE id = ? OR LOWER(email) = ?', [
+                status,
+                id,
+                existing[0].email.toLowerCase()
+            ]);
+        } catch (uErr) {
+            console.warn('Sync user status skipped:', uErr.message);
+        }
 
         return res.status(200).json({
             success: true,
@@ -448,7 +516,7 @@ const deleteOwner = async (req, res) => {
     try {
         const { id } = req.params;
 
-        const [existing] = await conn.query('SELECT id FROM owners WHERE id = ?', [id]);
+        const [existing] = await conn.query('SELECT id, email FROM owners WHERE id = ?', [id]);
         if (existing.length === 0) {
             conn.release();
             return res.status(404).json({
@@ -458,6 +526,16 @@ const deleteOwner = async (req, res) => {
         }
 
         await conn.beginTransaction();
+
+        try {
+            await conn.query('DELETE FROM users WHERE id = ? OR LOWER(email) = ?', [
+                id,
+                existing[0].email.toLowerCase()
+            ]);
+        } catch (uErr) {
+            console.warn('Delete from users table skipped:', uErr.message);
+        }
+
         await conn.query('DELETE FROM owners WHERE id = ?', [id]);
         await conn.commit();
         conn.release();

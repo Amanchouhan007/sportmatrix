@@ -368,15 +368,15 @@ export default function GlobalAnalytics() {
                     colorTheme="blue"
                 />
                 <StatCard 
-                    label="Active Branches" 
+                    label="Active Turfs" 
                     value={overview.activeBranches} 
                     change={`Suspended: ${overview.suspendedBranches}`} 
                     trend="up" 
-                    icon="🏢" 
+                    icon="🏟️" 
                     colorTheme="indigo"
                 />
                 <StatCard 
-                    label="Total Owners" 
+                    label="Total Admin" 
                     value={overview.totalOwners} 
                     change={`Customers: ${overview.totalCustomers}`} 
                     trend="up" 

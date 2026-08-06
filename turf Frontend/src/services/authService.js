@@ -1,7 +1,7 @@
 import api from './api';
 
 /**
- * Log in a user with email and password (Real Backend version)
+ * Log in a user with email and password
  */
 export const loginUser = async (email, password) => {
     try {
@@ -9,7 +9,6 @@ export const loginUser = async (email, password) => {
         return response.data;
     } catch (error) {
         const status = error.response?.status;
-        // If server returns 500 or backend DB connection fails, fallback to local dev auth
         if (!error.response || status >= 500) {
             console.warn('Backend database connection unavailable, falling back to local dev login.');
             return {
@@ -30,7 +29,7 @@ export const loginUser = async (email, password) => {
 };
 
 /**
- * Fetch current user profile (Real Backend version)
+ * Fetch current user profile
  */
 export const getProfile = async () => {
     try {
@@ -45,24 +44,28 @@ export const getProfile = async () => {
  * Update current user profile details
  */
 export const updateProfile = async (profileData) => {
-    // Return updated claims matching the updated body
-    const storedUser = localStorage.getItem('user');
-    const currentUser = storedUser ? JSON.parse(storedUser) : {};
-    const updatedUser = { ...currentUser, ...profileData };
-    localStorage.setItem('user', JSON.stringify(updatedUser));
-    return {
-        success: true,
-        data: updatedUser,
-        message: 'Profile updated successfully'
-    };
+    try {
+        const response = await api.put('/auth/profile', profileData);
+        if (response.data && response.data.data) {
+            const storedUser = localStorage.getItem('user');
+            const currentUser = storedUser ? JSON.parse(storedUser) : {};
+            const updatedUser = { ...currentUser, ...response.data.data };
+            localStorage.setItem('user', JSON.stringify(updatedUser));
+        }
+        return response.data;
+    } catch (error) {
+        throw new Error(error.response?.data?.message || 'Failed to update profile.');
+    }
 };
 
 /**
  * Change current user password
  */
-export const changePassword = async () => {
-    return {
-        success: true,
-        message: 'Password updated successfully'
-    };
+export const changePassword = async (passwords) => {
+    try {
+        const response = await api.post('/auth/change-password', passwords);
+        return response.data;
+    } catch (error) {
+        throw new Error(error.response?.data?.message || 'Failed to change password.');
+    }
 };

@@ -59,6 +59,10 @@ app.use('/api/v1/reports', reportsRouter);
 const dashboardRouter = require('./modules/dashboard/dashboard.routes');
 app.use('/api/v1/dashboard', dashboardRouter);
 
+// Settings Routes registration
+const settingsRouter = require('./modules/settings/settings.routes');
+app.use('/api/v1/settings', settingsRouter);
+
 // Branches Routes registration
 const branchesRouter = require('./modules/branches/branches.routes');
 app.use('/api/v1/branches', branchesRouter);
@@ -86,6 +90,10 @@ app.use('/api/v1/upload', uploadRouter);
 // Ads / Campaigns Routes registration
 const adsRouter = require('./modules/ads/ads.routes');
 app.use('/api/v1/ads', adsRouter);
+
+// Subscriptions Routes registration
+const subscriptionsRouter = require('./modules/subscriptions/subscriptions.routes');
+app.use('/api/v1/subscriptions', subscriptionsRouter);
 
 // Basic Root Health Check Route
 app.get('/api/v1/health', (req, res) => {

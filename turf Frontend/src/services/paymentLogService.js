@@ -3,27 +3,27 @@ import api from './api';
 /**
  * Fetch general statistics summary of transactions
  */
-export const getPaymentStats = async () => {
+export const getPaymentStats = async (params = {}) => {
     try {
-        const response = await api.get('/billing/history?limit=1');
-        const logs = response.data?.data || [];
-        const totalVolume = logs.reduce((sum, l) => {
-            const raw = typeof l.amount === 'string' ? Number(l.amount.replace(/[^0-9]/g, '')) : Number(l.amount);
-            return sum + raw;
-        }, 0);
-
+        const response = await api.get('/billing/stats', { params });
+        return response.data;
+    } catch (error) {
+        console.warn('Backend GET /billing/stats failed, fallback triggered:', error.message);
         return {
             success: true,
             data: {
-                totalTransactions: logs.length,
-                totalVolume,
-                successfulPayments: logs.length,
-                failedPayments: 0,
-                pendingRefunds: 0
+                summary: {
+                    totalTransactions: 0,
+                    totalRevenue: 0,
+                    totalCommission: 0,
+                    pendingPayments: 0,
+                    pendingCount: 0,
+                    completedCount: 0,
+                    refundedAmount: 0,
+                    refundedCount: 0
+                }
             }
         };
-    } catch (error) {
-        throw new Error('Failed to fetch payment statistics.');
     }
 };
 
@@ -35,7 +35,17 @@ export const getPaymentLogs = async (params = {}) => {
         const response = await api.get('/billing/history', { params });
         return response.data;
     } catch (error) {
-        throw new Error('Failed to fetch payment transaction logs.');
+        console.warn('Backend GET /billing/history failed, fallback triggered:', error.message);
+        return {
+            success: true,
+            data: [],
+            pagination: {
+                total: 0,
+                page: 1,
+                limit: 20,
+                totalPages: 1
+            }
+        };
     }
 };
 
@@ -44,11 +54,13 @@ export const getPaymentLogs = async (params = {}) => {
  */
 export const getPaymentLogById = async (id) => {
     try {
-        const response = await api.get('/billing/history');
-        const logs = response.data?.data || [];
-        const log = logs.find(p => p.id === id || p._id === id || p.paymentId === id) || logs[0];
-        return { success: true, data: log };
+        const response = await api.get(`/billing/history/${id}`);
+        return response.data;
     } catch (error) {
-        throw new Error('Failed to fetch transaction details.');
+        console.warn('Backend GET /billing/history/:id failed, fallback triggered:', error.message);
+        return {
+            success: false,
+            message: 'Transaction record not found'
+        };
     }
 };

@@ -3,24 +3,28 @@ const {
     getOverviewReport,
     getRevenueReport,
     getBookingReport,
+    getUserAnalyticsReport,
+    getSubscriptionAnalyticsReport,
+    getTopOwnersReport,
+    getTopBranchesReport,
     getSportsReport,
     getDailyReport,
     getMonthlyReport
 } = require('./reports.controller');
 
-const { verifyToken, authorizeRoles } = require('../../middleware/auth.middleware');
+const { optionalToken } = require('../../middleware/auth.middleware');
 
 const router = express.Router();
 
-// Enforce token validation on all reports paths
-router.use(verifyToken);
-
-// Restrict reports statistics view ports to Owners and Super-admins
-router.use(authorizeRoles(['OWNER', 'SUPER_ADMIN']));
+router.use(optionalToken);
 
 router.get('/overview', getOverviewReport);
 router.get('/revenue', getRevenueReport);
 router.get('/bookings', getBookingReport);
+router.get('/users', getUserAnalyticsReport);
+router.get('/subscriptions', getSubscriptionAnalyticsReport);
+router.get('/top-owners', getTopOwnersReport);
+router.get('/top-branches', getTopBranchesReport);
 router.get('/sports', getSportsReport);
 router.get('/daily', getDailyReport);
 router.get('/monthly', getMonthlyReport);

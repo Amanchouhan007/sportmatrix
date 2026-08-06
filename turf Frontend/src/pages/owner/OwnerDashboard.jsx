@@ -4,6 +4,8 @@ import StatCard from '../../components/ui/StatCard'
 import Badge from '../../components/ui/Badge'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 import { HiLightningBolt, HiTrendingUp, HiUsers, HiCurrencyRupee, HiCalendar, HiClock, HiLocationMarker } from 'react-icons/hi'
+import { useAuth } from '../../context/AuthContext'
+import { getOverview } from '../../services/dashboardService'
 
 const DEFAULT_PEAK_DATA = [
     { h: '6AM', v: 30 },
@@ -25,14 +27,16 @@ const DEFAULT_BOOKINGS = [
 ]
 
 export default function OwnerDashboard() {
+    const { user } = useAuth()
+
     const [stats, setStats] = useState({
-        todaysRevenue: 12400,
-        todaysBookings: 18,
-        activeMatches: 3,
-        upcomingEvents: 2,
-        totalRevenue: 3390,
-        availableSlots: 12,
-        sportsCount: 4,
+        todaysRevenue: 0,
+        todaysBookings: 0,
+        activeMatches: 0,
+        upcomingEvents: 0,
+        totalRevenue: 0,
+        availableSlots: 0,
+        sportsCount: 0,
         peakData: DEFAULT_PEAK_DATA,
         recentBookings: DEFAULT_BOOKINGS
     })
@@ -40,18 +44,19 @@ export default function OwnerDashboard() {
     useEffect(() => {
         const fetchSummary = async () => {
             try {
-                const res = await fetch('http://localhost:5000/api/v1/dashboard/summary');
-                const data = await res.json();
-                if (data.success && data.data) {
+                const ownerId = user?.id || user?._id || user?.email;
+                if (!ownerId) return;
+                const data = await getOverview({ ownerId, email: user?.email });
+                if (data && data.success && data.data) {
                     setStats(prev => ({
                         ...prev,
-                        todaysRevenue: Number(data.data.todaysRevenue) || 12400,
-                        todaysBookings: Number(data.data.todaysBookings) || 18,
-                        activeMatches: Number(data.data.activeMatches) || 3,
-                        upcomingEvents: Number(data.data.upcomingEvents) || 2,
-                        totalRevenue: Number(data.data.totalRevenue) || 3390,
-                        availableSlots: Number(data.data.availableSlots) || 12,
-                        sportsCount: Number(data.data.sportsCount) || 4,
+                        todaysRevenue: Number(data.data.todaysRevenue) || 0,
+                        todaysBookings: Number(data.data.todaysBookings) || 0,
+                        activeMatches: Number(data.data.activeMatches) || 0,
+                        upcomingEvents: Number(data.data.upcomingEvents) || 0,
+                        totalRevenue: Number(data.data.totalRevenue) || 0,
+                        availableSlots: Number(data.data.availableSlots) || 0,
+                        sportsCount: Number(data.data.sportsCount) || 0,
                         peakData: Array.isArray(data.data.peakData) ? data.data.peakData : DEFAULT_PEAK_DATA,
                         recentBookings: Array.isArray(data.data.recentBookings) && data.data.recentBookings.length > 0 ? data.data.recentBookings : DEFAULT_BOOKINGS
                     }));
@@ -61,7 +66,7 @@ export default function OwnerDashboard() {
             }
         };
         fetchSummary();
-    }, []);
+    }, [user]);
 
     return (
         <div className="space-y-8 bg-[#F4F7FC] p-6 rounded-3xl min-h-screen animate-in fade-in duration-500">
