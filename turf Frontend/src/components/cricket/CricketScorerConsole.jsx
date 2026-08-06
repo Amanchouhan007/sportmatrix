@@ -131,7 +131,14 @@ export default function CricketScorerConsole({ match, onClose }) {
         const sessionId = 'session_' + Math.random().toString(36).substring(2, 9) + '_' + Date.now().toString(36)
         
         let hostOrigin = window.location.origin
-        if (window.location.hostname === 'localhost' && localIp) {
+
+        if (window.location.hostname === 'localhost') {
+            if (!localIp) {
+                // IP not yet detected — alert user to wait a moment
+                alert('⚠️ Network IP abhi detect ho rahi hai. Ek second ruko aur dobara try karo.\n\nTip: Aap manually IP input kar sakte ho ya 2-3 seconds baad phir try karo.')
+                return
+            }
+            // Use the detected local network IP so phones can open it in Chrome browser
             hostOrigin = `${window.location.protocol}//${localIp}:${window.location.port || '5173'}`
         }
 
@@ -140,7 +147,7 @@ export default function CricketScorerConsole({ match, onClose }) {
 
         const sessionObj = {
             id: sessionId,
-            url: mobileUrl,
+            url: mobileUrl, // regular https URL for QR & clipboard
             status: 'waiting',
             deviceInfo: null,
             expiryTime: expiry,
@@ -1806,10 +1813,19 @@ export default function CricketScorerConsole({ match, onClose }) {
                                     )}
                                 </div>
 
-                                <p className="text-slate-400 text-xs font-medium">
-                                    Scan using your mobile camera <br />
-                                    <strong className="text-slate-300">OR Open Google Lens</strong>
-                                </p>
+                                {/* HOW TO SCAN — clear instruction for Redmi/MIUI users */}
+                                <div className="bg-amber-500/10 border border-amber-500/30 rounded-2xl px-3 py-2 space-y-1">
+                                    <p className="text-amber-400 text-[11px] font-black text-center">
+                                        📱 Scan karne ke liye:
+                                    </p>
+                                    <p className="text-slate-300 text-[10px] font-semibold text-center leading-relaxed">
+                                        <strong className="text-emerald-400">Google Lens</strong> use karo<br />
+                                        <span className="text-slate-400">(Redmi/MIUI Camera se Chrome nahi khulta)</span>
+                                    </p>
+                                    <p className="text-slate-500 text-[9px] text-center">
+                                        Google App → 🔍 Search bar → Camera icon → Scan
+                                    </p>
+                                </div>
                             </div>
                         )}
 

@@ -1,125 +1,352 @@
 
-import { useState } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import Card from '../../components/ui/Card'
 import Button from '../../components/ui/Button'
 import Input from '../../components/ui/Input'
 import Select from '../../components/ui/Select'
 import Badge from '../../components/ui/Badge'
 import { useToast } from '../../components/ui/Toast'
-import { HiPlus, HiTrash, HiPrinter, HiDownload, HiRefresh, HiUser, HiShoppingCart, HiTag, HiCheckCircle } from 'react-icons/hi'
+import { 
+    HiPlus, HiTrash, HiPrinter, HiDownload, HiRefresh, HiUser, 
+    HiShoppingCart, HiTag, HiCheckCircle, HiExclamationCircle, 
+    HiClock, HiCalendar, HiCurrencyRupee, HiCheck, HiShieldCheck
+} from 'react-icons/hi'
+
+// ── Master Data & Configuration ──
+const sportsList = [
+    { id: 'football', name: 'Football', icon: '⚽' },
+    { id: 'cricket', name: 'Cricket', icon: '🏏' },
+    { id: 'badminton', name: 'Badminton', icon: '🏸' },
+    { id: 'tennis', name: 'Tennis', icon: '🎾' },
+]
+
+const courtsBySport = {
+    Football: [
+        { id: 'c1', name: 'Court A (Main Turf)', status: 'Active' },
+        { id: 'c2', name: 'Court B (5v5 Arena)', status: 'Active' },
+        { id: 'c3', name: 'Court C (7v7 Pro Ground)', status: 'Maintenance' },
+    ],
+    Cricket: [
+        { id: 'c4', name: 'Box Cricket Pitch 1', status: 'Active' },
+        { id: 'c5', name: 'Box Cricket Pitch 2', status: 'Active' },
+    ],
+    Badminton: [
+        { id: 'c6', name: 'Wooden Court 1', status: 'Active' },
+        { id: 'c7', name: 'Synthetic Court 2', status: 'Active' },
+    ],
+    Tennis: [
+        { id: 'c8', name: 'Hard Court 1', status: 'Active' },
+    ]
+}
+
+const timeSlots = [
+    { id: 's1', time: '06:00 AM', status: 'Available', isPeak: false, rate: 800 },
+    { id: 's2', time: '07:00 AM', status: 'Booked', isPeak: false, rate: 800 },
+    { id: 's3', time: '08:00 AM', status: 'Available', isPeak: false, rate: 800 },
+    { id: 's4', time: '09:00 AM', status: 'Maintenance', isPeak: false, rate: 800 },
+    { id: 's5', time: '05:00 PM', status: 'Available', isPeak: true, rate: 1200 },
+    { id: 's6', time: '06:00 PM', status: 'Available', isPeak: true, rate: 1200 },
+    { id: 's7', time: '07:00 PM', status: 'Booked', isPeak: true, rate: 1200 },
+    { id: 's8', time: '08:00 PM', status: 'Available', isPeak: true, rate: 1200 },
+    { id: 's9', time: '09:00 PM', status: 'Available', isPeak: true, rate: 1000 },
+]
+
+const extraServicesList = [
+    { id: 'floodlights', label: 'Flood Lights', price: 100, icon: '💡' },
+    { id: 'equipment', label: 'Sports Equipment', price: 200, icon: '🏏' },
+    { id: 'coach', label: 'Coach', price: 500, icon: '📋' },
+    { id: 'locker', label: 'Locker', price: 50, icon: '🔒' },
+    { id: 'changingroom', label: 'Changing Room', price: 50, icon: '👕' },
+    { id: 'water', label: 'Drinking Water', price: 0, icon: '💧' },
+    { id: 'refreshments', label: 'Refreshments', price: 100, icon: '🥤' },
+    { id: 'parking', label: 'Parking', price: 0, icon: '🅿️' },
+]
+
+const mockCustomerDatabase = {
+    '9876543210': {
+        name: 'Rahul Sharma',
+        email: 'rahul.sharma@example.com',
+        type: 'Member',
+        membershipId: 'MEM-2026-88',
+        bookingsCount: 14,
+        status: 'Active Pass',
+        outstanding: 0
+    },
+    '9826012345': {
+        name: 'Vikramaditya Roy',
+        email: 'vikram.roy@corporatemail.com',
+        type: 'Corporate',
+        membershipId: 'CORP-IPL-09',
+        bookingsCount: 28,
+        status: 'Corporate VIP',
+        outstanding: 500
+    },
+    '9009988776': {
+        name: 'Aman Varma',
+        email: 'aman.varma@gmail.com',
+        type: 'Regular',
+        membershipId: 'REG-104',
+        bookingsCount: 5,
+        status: 'Verified Player',
+        outstanding: 0
+    }
+}
 
 const inventoryOptions = [
     { id: 'item1', name: 'Cold Drink (Coke/Sprite)', price: 40, icon: '🥤', category: 'Snacks & Drinks' },
     { id: 'item2', name: 'Diet Coke Can', price: 45, icon: '🥤', category: 'Snacks & Drinks' },
     { id: 'item3', name: 'Pepsi Can', price: 40, icon: '🥤', category: 'Snacks & Drinks' },
-    { id: 'item4', name: 'Mountain Dew Can', price: 40, icon: '🥤', category: 'Snacks & Drinks' },
     { id: 'item5', name: 'Energy Drink (Red Bull)', price: 110, icon: '⚡', category: 'Snacks & Drinks' },
-    { id: 'item6', name: 'Monster Energy Can', price: 110, icon: '⚡', category: 'Snacks & Drinks' },
-    { id: 'item7', name: 'Sting Energy Drink', price: 20, icon: '⚡', category: 'Snacks & Drinks' },
     { id: 'item8', name: 'Mineral Water (500ml)', price: 20, icon: '💧', category: 'Snacks & Drinks' },
-    { id: 'item9', name: 'Soda Water Bottle', price: 25, icon: '🥤', category: 'Snacks & Drinks' },
-    { id: 'item10', name: 'Gold Flake (Smoking)', price: 18, icon: '🚬', category: 'Snacks & Drinks' },
-    { id: 'item11', name: 'Marlboro Advance (Smoking)', price: 22, icon: '🚬', category: 'Snacks & Drinks' },
-    { id: 'item12', name: 'Classic Milds (Smoking)', price: 20, icon: '🚬', category: 'Snacks & Drinks' },
-    { id: 'item13', name: 'Mint / Mouth Freshener', price: 10, icon: '🍃', category: 'Snacks & Drinks' },
-    { id: 'item14', name: 'Orbit Mint Chewing Gum', price: 10, icon: '🍬', category: 'Snacks & Drinks' },
-    { id: 'item15', name: 'Doublemint Gum', price: 10, icon: '🍬', category: 'Snacks & Drinks' },
     { id: 'item16', name: 'Potato Chips (Masala)', price: 20, icon: '🥔', category: 'Snacks & Drinks' },
-    { id: 'item17', name: 'Potato Chips (Cream & Onion)', price: 20, icon: '🥔', category: 'Snacks & Drinks' },
-    { id: 'item18', name: 'Lays Chips (Tomato)', price: 20, icon: '🥔', category: 'Snacks & Drinks' },
-    { id: 'item19', name: 'Kurkure Masala Munch', price: 20, icon: '🥨', category: 'Snacks & Drinks' },
-    { id: 'item20', name: 'Bingo Mad Angles', price: 20, icon: '📐', category: 'Snacks & Drinks' },
-    { id: 'item21', name: 'Salted Peanuts (Snacks)', price: 30, icon: '🥜', category: 'Snacks & Drinks' },
     { id: 'item22', name: 'Snickers (Energy Bar)', price: 50, icon: '🍫', category: 'Snacks & Drinks' },
-    { id: 'item23', name: 'Dairy Milk Chocolate', price: 40, icon: '🍫', category: 'Snacks & Drinks' },
-    { id: 'item24', name: 'Nicotine Pouch (Velo)', price: 120, icon: '📦', category: 'Snacks & Drinks' },
-    { id: 'item25', name: 'Real Orange Juice Can', price: 30, icon: '🍹', category: 'Snacks & Drinks' },
 
     { id: 'item26', name: 'Football Rental', price: 150, icon: '⚽', category: 'Gear & Rentals' },
     { id: 'item27', name: 'Cricket Bat Rental', price: 250, icon: '🏏', category: 'Gear & Rentals' },
-    { id: 'item28', name: 'Football Racket Rental', price: 80, icon: '⚽', category: 'Gear & Rentals' },
     { id: 'item29', name: 'Jersey Rental', price: 100, icon: '👕', category: 'Gear & Rentals' },
-    { id: 'item30', name: 'Football Studs Rent', price: 100, icon: '👟', category: 'Gear & Rentals' },
-    { id: 'item31', name: 'Table Cricket Racket Rent', price: 50, icon: '🏓', category: 'Gear & Rentals' },
-    { id: 'item32', name: 'Shuttlecock Mavis 350 (1pc)', price: 60, icon: '⚽', category: 'Gear & Rentals' },
-    { id: 'item33', name: 'Shuttlecock Mavis 350 (6pcs)', price: 550, icon: '📦', category: 'Gear & Rentals' },
-    { id: 'item34', name: 'Cosco Cricket Ball (Single)', price: 40, icon: '🏏', category: 'Gear & Rentals' },
-    { id: 'item35', name: 'Cricket Leather Ball', price: 350, icon: '⚾', category: 'Gear & Rentals' },
-    { id: 'item36', name: 'Table Cricket Balls (Box of 3)', price: 60, icon: '⚪', category: 'Gear & Rentals' },
-    { id: 'item37', name: 'Synthetic Grip Tape', price: 50, icon: '🎗️', category: 'Gear & Rentals' },
-    { id: 'item38', name: 'Wrist Band (Pair)', price: 40, icon: '🎗️', category: 'Gear & Rentals' },
-    { id: 'item39', name: 'Knee Support Sleeve', price: 150, icon: '🎗️', category: 'Gear & Rentals' },
-    { id: 'item40', name: 'Sports Socks (Pair)', price: 80, icon: '🧦', category: 'Gear & Rentals' },
+    { id: 'item34', name: 'Cosco Cricket Ball', price: 40, icon: '🏏', category: 'Gear & Rentals' },
     { id: 'item41', name: 'Pain Relief Spray (Volini)', price: 120, icon: '💨', category: 'Gear & Rentals' },
 ]
 
 export default function OwnerPOS() {
     const { addToast } = useToast()
     const [cart, setCart] = useState([])
-    const [paymentMethod, setPaymentMethod] = useState('UPI')
+    const [activeTab, setActiveTab] = useState('Sports') // Sports | Gear & Rentals | Snacks & Drinks
+    const [searchQuery, setSearchQuery] = useState('')
     const [isSuccess, setIsSuccess] = useState(false)
     const [lastBill, setLastBill] = useState(null)
-    const [activeTab, setActiveTab] = useState('Sports') // Sports, Gaming, Gear & Rentals, Snacks & Drinks
-    const [searchQuery, setSearchQuery] = useState('')
 
-    // Customer Info
-    const [customer, setCustomer] = useState({ name: '', phone: '' })
-
-    // Walk-in Booking State
+    // ── Walk-In Quick Booking Form State ──
     const [booking, setBooking] = useState({
-        turf: 'Turf A',
         sport: 'Football',
+        court: 'Court A (Main Turf)',
         date: new Date().toISOString().split('T')[0],
         slot: '06:00 PM',
-        price: '900'
+        duration: 60, // 30, 60, 90, 120 mins
+        players: 10,
+        bookingType: 'Walk-In', // Walk-In | Online | Phone Booking | Corporate | Membership
+        billingRate: 1200,
+        discountType: 'None', // None | Flat | Percentage | Promo Code
+        discountValue: 0,
+        promoCode: '',
+        selectedExtras: ['floodlights'],
+        notes: ''
     })
 
-    // Walk-in Gaming State
-    const [gaming, setGaming] = useState({
-        device: 'PC-01',
-        game: 'EA FC 24',
-        duration: '60',
-        price: '150'
+    // ── Customer Profile State ──
+    const [customer, setCustomer] = useState({
+        phone: '',
+        name: '',
+        email: '',
+        type: 'Guest', // Regular | Member | Corporate | Guest
+        membershipId: '',
+        isExisting: false,
+        bookingsCount: 0,
+        status: '',
+        outstanding: 0
     })
 
-    const handleAddBooking = () => {
-        if (!booking.slot || !booking.price) {
-            addToast({ title: 'Incomplete Booking', message: 'Ensure time slot and price are filled', type: 'error' })
+    // ── Payment Settlement State ──
+    const [paymentStatus, setPaymentStatus] = useState('Paid') // Pending | Partial | Paid
+    const [paymentMethod, setPaymentMethod] = useState('UPI') // Cash | UPI | Card | Wallet | Bank Transfer | Split Payment
+    const [advanceAmount, setAdvanceAmount] = useState(0)
+
+    // ── Automations ──
+
+    // 1. Auto search customer when mobile number changes
+    const handlePhoneChange = (phoneVal) => {
+        setCustomer(prev => ({ ...prev, phone: phoneVal }))
+        const clean = phoneVal.trim()
+        if (mockCustomerDatabase[clean]) {
+            const found = mockCustomerDatabase[clean]
+            setCustomer({
+                phone: clean,
+                name: found.name,
+                email: found.email,
+                type: found.type,
+                membershipId: found.membershipId,
+                isExisting: true,
+                bookingsCount: found.bookingsCount,
+                status: found.status,
+                outstanding: found.outstanding
+            })
+            addToast({ title: 'Customer Recognized', message: `Found ${found.name} (${found.type})`, type: 'success' })
+        } else if (clean.length < 10) {
+            setCustomer(prev => ({
+                ...prev,
+                phone: phoneVal,
+                isExisting: false,
+                type: 'Guest',
+                membershipId: '',
+                bookingsCount: 0,
+                status: '',
+                outstanding: 0
+            }))
+        }
+    }
+
+    // 2. Available courts based on selected sport
+    const availableCourts = useMemo(() => {
+        return courtsBySport[booking.sport] || []
+    }, [booking.sport])
+
+    // Auto-update court when sport changes
+    const handleSportChange = (newSport) => {
+        const courts = courtsBySport[newSport] || []
+        const defaultCourt = courts[0]?.name || ''
+        setBooking(prev => ({
+            ...prev,
+            sport: newSport,
+            court: defaultCourt
+        }))
+    }
+
+    // ── Smart Validation: Check Consecutive Slot Availability for Multi-Hour Bookings ──
+    const checkSlotAvailabilityForDuration = (startSlotTime, hours, slotsArray = timeSlots) => {
+        const startIndex = slotsArray.findIndex(s => s.time === startSlotTime)
+        if (startIndex === -1) return { isValid: false, reason: 'Invalid starting slot selected' }
+
+        const neededSlotsCount = Number(hours)
+        const requiredSlots = slotsArray.slice(startIndex, startIndex + neededSlotsCount)
+
+        if (requiredSlots.length < neededSlotsCount) {
+            return { 
+                isValid: false, 
+                reason: `Only ${requiredSlots.length} consecutive slot(s) available before closing!` 
+            }
+        }
+
+        const conflictSlot = requiredSlots.find(s => s.status !== 'Available')
+        if (conflictSlot) {
+            return {
+                isValid: false,
+                reason: `Slot ${conflictSlot.time} is already ${conflictSlot.status}! Cannot book ${hours} consecutive hours.`
+            }
+        }
+
+        return { isValid: true, requiredSlots }
+    }
+
+    // Auto-update billing rate when slot changes with consecutive slot check
+    const handleSlotSelect = (slotObj) => {
+        if (slotObj.status === 'Booked' || slotObj.status === 'Maintenance') {
+            addToast({ title: 'Slot Unavailable', message: `Selected slot is ${slotObj.status}`, type: 'warning' })
+            return
+        }
+
+        const hoursNeeded = booking.duration / 60
+        const slotCheck = checkSlotAvailabilityForDuration(slotObj.time, hoursNeeded)
+        if (!slotCheck.isValid) {
+            addToast({
+                title: 'Consecutive Slots Conflict',
+                message: slotCheck.reason,
+                type: 'warning'
+            })
+            return
+        }
+
+        setBooking(prev => ({
+            ...prev,
+            slot: slotObj.time,
+            billingRate: slotObj.rate
+        }))
+    }
+
+    // Toggle extra services
+    const handleToggleExtra = (serviceId) => {
+        setBooking(prev => {
+            const exists = prev.selectedExtras.includes(serviceId)
+            const updated = exists 
+                ? prev.selectedExtras.filter(id => id !== serviceId)
+                : [...prev.selectedExtras, serviceId]
+            return { ...prev, selectedExtras: updated }
+        })
+    }
+
+    // ── Calculations ──
+
+    // Base court price calculated from billing rate and duration
+    const baseCourtPrice = useMemo(() => {
+        const rate = Number(booking.billingRate) || 0
+        const durationMins = Number(booking.duration) || 60
+        return Math.round((durationMins / 60) * rate)
+    }, [booking.billingRate, booking.duration])
+
+    // Selected Extra Services Total
+    const selectedExtrasList = useMemo(() => {
+        return extraServicesList.filter(s => booking.selectedExtras.includes(s.id))
+    }, [booking.selectedExtras])
+
+    const extrasTotal = useMemo(() => {
+        return selectedExtrasList.reduce((acc, s) => acc + s.price, 0)
+    }, [selectedExtrasList])
+
+    // Discount Calculation
+    const discountAmount = useMemo(() => {
+        const val = Number(booking.discountValue) || 0
+        if (booking.discountType === 'Flat') return val
+        if (booking.discountType === 'Percentage') return Math.round((baseCourtPrice * val) / 100)
+        if (booking.discountType === 'Promo Code') {
+            if (booking.promoCode.toUpperCase() === 'TURF20') return Math.round(baseCourtPrice * 0.20)
+            if (booking.promoCode.toUpperCase() === 'PROMO100') return 100
+            return 50 // default promo code discount
+        }
+        return 0
+    }, [booking.discountType, booking.discountValue, booking.promoCode, baseCourtPrice])
+
+    // Subtotal, Tax & Totals
+    const currentBookingSubtotal = Math.max(0, baseCourtPrice + extrasTotal - discountAmount)
+    
+    // Total including cart items
+    const inventoryCartSubtotal = cart.reduce((acc, item) => acc + (item.price * item.qty), 0)
+    const grandSubtotal = currentBookingSubtotal + inventoryCartSubtotal
+    const gstTax = Math.round(grandSubtotal * 0.18)
+    const grandTotal = grandSubtotal + gstTax
+    const remainingBalance = paymentStatus === 'Partial' ? Math.max(0, grandTotal - Number(advanceAmount)) : paymentStatus === 'Pending' ? grandTotal : 0
+
+    // Check if current selected court is under maintenance
+    const currentCourtObj = availableCourts.find(c => c.name === booking.court)
+    const isCourtMaintenance = currentCourtObj?.status === 'Maintenance'
+
+    // ── Handlers ──
+
+    const handleAddBookingToCheckout = () => {
+        if (isCourtMaintenance) {
+            addToast({ title: 'Court Under Maintenance', message: 'Cannot book a court currently under maintenance', type: 'error' })
+            return
+        }
+
+        const hoursCount = booking.duration / 60
+        const slotCheck = checkSlotAvailabilityForDuration(booking.slot, hoursCount)
+        if (!slotCheck.isValid) {
+            addToast({
+                title: 'Consecutive Slots Conflict',
+                message: slotCheck.reason,
+                type: 'error'
+            })
             return
         }
 
         const newItem = {
             id: `bk-${Date.now()}`,
-            name: `Walk-in Turf Booking (${booking.slot})`,
+            name: `${booking.sport} - ${booking.court} (${booking.slot}, ${hoursCount} ${hoursCount > 1 ? 'Hrs' : 'Hr'})`,
             category: 'Sports',
-            price: Number(booking.price),
-            qty: 1
+            price: currentBookingSubtotal,
+            qty: 1,
+            meta: {
+                sport: booking.sport,
+                court: booking.court,
+                date: booking.date,
+                slot: booking.slot,
+                duration: `${hoursCount} ${hoursCount > 1 ? 'Hours' : 'Hour'}`,
+                players: booking.players,
+                extras: selectedExtrasList.map(e => e.label).join(', '),
+                discount: discountAmount > 0 ? `₹${discountAmount}` : 'None'
+            }
         }
 
         setCart([...cart, newItem])
-        addToast({ title: 'Slot Added', message: 'Walk-in slot added to checkout sheet', type: 'success' })
-    }
-
-    const handleAddGaming = () => {
-        if (!gaming.device || !gaming.game || !gaming.duration || !gaming.price) {
-            addToast({ title: 'Incomplete Session Details', message: 'Ensure rig, game, duration and rate are specified', type: 'error' })
-            return
-        }
-
-        const deviceName = gaming.device === 'PC-01' ? 'RTX 4090 PC 1' : gaming.device === 'PC-02' ? 'RTX 4090 PC 2' : gaming.device === 'PS5-01' ? 'PlayStation 5 Console 1' : gaming.device === 'PS5-02' ? 'PlayStation 5 Console 2' : 'Meta Quest 3 VR Pod'
-        const minutes = Number(gaming.duration)
-        const finalPrice = Math.round((minutes / 60) * Number(gaming.price))
-
-        const newItem = {
-            id: `gm-${Date.now()}`,
-            name: `🎮 Gaming - ${deviceName} (${gaming.game} - ${minutes}m)`,
-            category: 'Gaming',
-            price: finalPrice,
-            qty: 1
-        }
-
-        setCart([...cart, newItem])
-        addToast({ title: 'Rig Added', message: 'Gaming session added to checkout sheet', type: 'success' })
+        addToast({ title: 'Booking Added', message: 'Turf reservation added to checkout basket', type: 'success' })
     }
 
     const handleAddItem = (item) => {
@@ -129,14 +356,14 @@ export default function OwnerPOS() {
         } else {
             setCart([...cart, { ...item, qty: 1 }])
         }
-        addToast({ title: 'Item Added', message: `${item.name} added to checkout list`, type: 'success' })
+        addToast({ title: 'Item Added', message: `${item.name} added to cart`, type: 'success' })
     }
 
-    const handleRemove = (id) => {
+    const handleRemoveCartItem = (id) => {
         setCart(cart.filter(item => item.id !== id))
     }
 
-    const handleUpdateQty = (id, delta) => {
+    const handleUpdateCartQty = (id, delta) => {
         setCart(cart.map(item => {
             if (item.id === id) {
                 const newQty = Math.max(1, item.qty + delta)
@@ -146,69 +373,81 @@ export default function OwnerPOS() {
         }))
     }
 
-    const subtotal = cart.reduce((acc, item) => acc + (item.price * item.qty), 0)
-    const gstRate = 0.18 // 18% GST
-    const tax = Math.round(subtotal * gstRate)
-    const total = subtotal + tax
+    const handleClearForm = () => {
+        setBooking({
+            sport: 'Football',
+            court: 'Court A (Main Turf)',
+            date: new Date().toISOString().split('T')[0],
+            slot: '06:00 PM',
+            duration: 60,
+            players: 10,
+            bookingType: 'Walk-In',
+            billingRate: 1200,
+            discountType: 'None',
+            discountValue: 0,
+            promoCode: '',
+            selectedExtras: [],
+            notes: ''
+        })
+        setCustomer({
+            phone: '',
+            name: '',
+            email: '',
+            type: 'Guest',
+            membershipId: '',
+            isExisting: false,
+            bookingsCount: 0,
+            status: '',
+            outstanding: 0
+        })
+        addToast({ title: 'Form Cleared', message: 'Quick booking form reset', type: 'info' })
+    }
+
+    const handleSaveDraft = () => {
+        addToast({ title: 'Draft Saved', message: `Booking draft saved for ${customer.name || 'Walk-in Guest'}`, type: 'success' })
+    }
 
     const handleCompletePayment = async () => {
-        if (cart.length === 0) {
-            addToast({ title: 'Checkout Empty', message: 'Add items or booking slots first', type: 'warning' })
-            return
+        const customerName = customer.name || 'Walk-in Customer'
+
+        const billData = {
+            id: `INV-${Math.floor(Math.random() * 90000) + 10000}`,
+            customerName,
+            customerPhone: customer.phone || 'N/A',
+            customerType: customer.type,
+            bookingSummary: {
+                sport: booking.sport,
+                court: booking.court,
+                date: booking.date,
+                slot: booking.slot,
+                duration: `${booking.duration} Mins`,
+                players: booking.players,
+                basePrice: baseCourtPrice,
+                extrasTotal,
+                discount: discountAmount,
+                subtotal: grandSubtotal,
+                tax: gstTax,
+                total: grandTotal,
+                paid: paymentStatus === 'Partial' ? Number(advanceAmount) : paymentStatus === 'Pending' ? 0 : grandTotal,
+                remaining: remainingBalance
+            },
+            cartItems: [...cart],
+            paymentStatus,
+            method: paymentMethod,
+            date: new Date().toLocaleString()
         }
 
-        const customerName = customer.name || 'Walk-in Customer';
-
-        try {
-            const res = await fetch('http://localhost:5000/api/v1/billing/pay', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    customerName,
-                    amount: total,
-                    paymentMethod
-                })
-            });
-            const result = await res.json();
-            const invNum = result.data?.invoiceNumber || `INV-${Math.floor(Math.random() * 90000) + 10000}`;
-
-            const billData = {
-                id: invNum,
-                customerName,
-                customerPhone: customer.phone || 'N/A',
-                items: [...cart],
-                subtotal,
-                tax,
-                total,
-                method: paymentMethod,
-                date: new Date().toLocaleString()
-            };
-
-            setLastBill(billData);
-            setIsSuccess(true);
-            addToast({ title: 'Billing Finalized', message: `Invoice ${invNum} generated & saved in DB for ₹${total}`, type: 'success' });
-        } catch (err) {
-            console.error('POS Checkout backend error:', err);
-            const billData = {
-                id: `INV-${Math.floor(Math.random() * 90000) + 10000}`,
-                customerName,
-                customerPhone: customer.phone || 'N/A',
-                items: [...cart],
-                subtotal,
-                tax,
-                total,
-                method: paymentMethod,
-                date: new Date().toLocaleString()
-            };
-            setLastBill(billData);
-            setIsSuccess(true);
-        }
+        setLastBill(billData)
+        setIsSuccess(true)
+        addToast({ title: 'Invoice Settled', message: `Invoice ${billData.id} generated for ₹${grandTotal}`, type: 'success' })
     }
 
     const handleNewSale = () => {
         setCart([])
-        setCustomer({ name: '', phone: '' })
+        handleClearForm()
+        setPaymentStatus('Paid')
         setPaymentMethod('UPI')
+        setAdvanceAmount(0)
         setLastBill(null)
         setIsSuccess(false)
     }
@@ -221,7 +460,7 @@ export default function OwnerPOS() {
 
     return (
         <div className="space-y-8 animate-in fade-in duration-500">
-            {/* Embedded Print stylesheet */}
+            {/* Thermal Print stylesheet */}
             <style>
                 {`
                     @media print {
@@ -240,8 +479,6 @@ export default function OwnerPOS() {
                 `}
             </style>
 
-
-
             {isSuccess ? (
                 /* Cinematic receipt confirmation card */
                 <div className="max-w-2xl mx-auto py-8 no-print space-y-6">
@@ -250,36 +487,61 @@ export default function OwnerPOS() {
                             <HiCheckCircle />
                         </div>
                         <div>
-                            <h2 className="text-2xl font-black text-surface-900 tracking-tight">Invoice Settled successfully!</h2>
+                            <h2 className="text-2xl font-black text-surface-900 tracking-tight">Invoice Settled Successfully!</h2>
                             <p className="text-surface-500 text-xs mt-1">Generated print sheet for transaction reference ID: <span className="font-extrabold text-surface-700">{lastBill.id}</span></p>
                         </div>
 
                         <div className="border-t border-dashed border-surface-200 pt-6 space-y-4">
                             <div className="grid grid-cols-2 gap-4 text-left text-xs">
                                 <div>
-                                    <span className="text-surface-400 block font-bold uppercase tracking-wider">Customer Details</span>
-                                    <span className="text-surface-900 font-extrabold block mt-0.5">{lastBill.customerName}</span>
+                                    <span className="text-surface-400 block font-bold uppercase tracking-wider">Customer Profile</span>
+                                    <span className="text-surface-900 font-extrabold block mt-0.5">{lastBill.customerName} ({lastBill.customerType})</span>
                                     <span className="text-surface-500 block font-semibold">{lastBill.customerPhone}</span>
                                 </div>
                                 <div>
-                                    <span className="text-surface-400 block font-bold uppercase tracking-wider">Checkout Meta</span>
-                                    <span className="text-surface-900 font-extrabold block mt-0.5">{lastBill.date}</span>
-                                    <span className="text-surface-500 block font-semibold">Payment mode: {lastBill.method}</span>
+                                    <span className="text-surface-400 block font-bold uppercase tracking-wider">Payment Status</span>
+                                    <span className="text-emerald-600 font-extrabold block mt-0.5">{lastBill.paymentStatus} via {lastBill.method}</span>
+                                    <span className="text-surface-500 block font-semibold">{lastBill.date}</span>
                                 </div>
                             </div>
 
                             {/* Summary list */}
                             <div className="bg-surface-50 p-4 rounded-2xl border border-surface-200 text-xs text-left space-y-2.5">
-                                {lastBill.items.map(item => (
-                                    <div key={item.id} className="flex justify-between items-center font-semibold text-surface-650">
+                                <div className="font-black text-surface-900 uppercase border-b border-surface-200 pb-2">Booking Summary</div>
+                                <div className="flex justify-between text-surface-700">
+                                    <span>{lastBill.bookingSummary.sport} - {lastBill.bookingSummary.court} ({lastBill.bookingSummary.slot})</span>
+                                    <span className="font-bold">₹{lastBill.bookingSummary.basePrice}</span>
+                                </div>
+                                {lastBill.bookingSummary.extrasTotal > 0 && (
+                                    <div className="flex justify-between text-surface-600">
+                                        <span>Extra Services</span>
+                                        <span>+₹{lastBill.bookingSummary.extrasTotal}</span>
+                                    </div>
+                                )}
+                                {lastBill.bookingSummary.discount > 0 && (
+                                    <div className="flex justify-between text-emerald-600 font-bold">
+                                        <span>Discount Applied</span>
+                                        <span>-₹{lastBill.bookingSummary.discount}</span>
+                                    </div>
+                                )}
+
+                                {lastBill.cartItems.map(item => (
+                                    <div key={item.id} className="flex justify-between items-center text-surface-650 pt-1">
                                         <span>{item.name} <span className="text-surface-400">x{item.qty}</span></span>
                                         <span className="text-surface-900 font-extrabold">₹{item.price * item.qty}</span>
                                     </div>
                                 ))}
+
                                 <div className="border-t border-surface-200 pt-2.5 mt-2.5 flex justify-between font-black text-sm text-surface-900">
-                                    <span>Grand Total Paid (incl. Tax)</span>
-                                    <span className="text-emerald-600">₹{lastBill.total}</span>
+                                    <span>Grand Total Paid (incl. 18% GST)</span>
+                                    <span className="text-emerald-600 text-base">₹{lastBill.bookingSummary.total}</span>
                                 </div>
+                                {lastBill.bookingSummary.remaining > 0 && (
+                                    <div className="flex justify-between font-bold text-xs text-rose-600 pt-1">
+                                        <span>Outstanding Remaining Balance</span>
+                                        <span>₹{lastBill.bookingSummary.remaining}</span>
+                                    </div>
+                                )}
                             </div>
                         </div>
 
@@ -296,8 +558,10 @@ export default function OwnerPOS() {
             ) : (
                 /* Primary POS Workspace splitting layout */
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 no-print">
+                    
+                    {/* LEFT PANEL (~66% / col-span-2) */}
                     <div className="lg:col-span-2 space-y-6">
-                        {/* Tab filters */}
+                        {/* Tab Category Bar */}
                         <div className="flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between bg-white p-2 rounded-2xl border border-surface-200/60 shadow-soft shrink-0">
                             <div className="flex gap-2 overflow-x-auto">
                                 {categories.map(cat => (
@@ -314,7 +578,6 @@ export default function OwnerPOS() {
                                 ))}
                             </div>
 
-                            {/* Compact Search Option */}
                             {(activeTab === 'Gear & Rentals' || activeTab === 'Snacks & Drinks') && (
                                 <div className="px-2 w-full sm:w-44 shrink-0">
                                     <input
@@ -329,44 +592,290 @@ export default function OwnerPOS() {
                         </div>
 
                         {activeTab === 'Sports' ? (
-                            /* Visual court slot assigner */
-                            <Card className="p-6">
-                                <h3 className="text-base font-black text-surface-900 tracking-tight mb-4 flex items-center gap-2">
-                                    <span>🗓️</span> Quick walk-in field reservations
-                                </h3>
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs font-semibold">
+                            /* QUICK WALK-IN BOOKING FORM CARD */
+                            <Card className="p-6 space-y-6">
+                                <div className="flex items-center justify-between border-b border-surface-100 pb-4">
+                                    <h3 className="text-base font-black text-surface-900 tracking-tight flex items-center gap-2">
+                                        <span>🗓️</span> Quick walk-in field reservations
+                                    </h3>
+                                    {isCourtMaintenance && (
+                                        <Badge variant="warning" className="animate-pulse">
+                                            ⚠️ Selected Court Under Maintenance
+                                        </Badge>
+                                    )}
+                                </div>
+
+                                {/* 1. SPORT & COURT SELECTION */}
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                    <div>
+                                        <label className="block text-xs font-bold text-surface-700 mb-1.5 uppercase tracking-wider">Sport</label>
+                                        <select
+                                            value={booking.sport}
+                                            onChange={(e) => handleSportChange(e.target.value)}
+                                            className="w-full p-2.5 text-xs font-extrabold bg-white border border-surface-200 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none text-surface-900 cursor-pointer shadow-sm"
+                                        >
+                                            {sportsList.map(s => (
+                                                <option key={s.id} value={s.name}>{s.icon} {s.name}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs font-bold text-surface-700 mb-1.5 uppercase tracking-wider">Court / Turf</label>
+                                        <select
+                                            value={booking.court}
+                                            onChange={(e) => setBooking({ ...booking, court: e.target.value })}
+                                            className="w-full p-2.5 text-xs font-extrabold bg-white border border-surface-200 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none text-surface-900 cursor-pointer shadow-sm"
+                                        >
+                                            {availableCourts.map(c => (
+                                                <option key={c.id} value={c.name} disabled={c.status === 'Maintenance'}>
+                                                    {c.name} {c.status === 'Maintenance' ? '(Under Maintenance)' : ''}
+                                                </option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                </div>
+
+                                {/* BOOKING DATE & BOOKING TYPE */}
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                     <Input
                                         label="Booking Date"
                                         type="date"
                                         value={booking.date}
                                         onChange={(e) => setBooking({ ...booking, date: e.target.value })}
                                     />
-                                    <Select
-                                        label="Assigned Time Slot"
-                                        value={booking.slot}
-                                        onChange={(e) => setBooking({ ...booking, slot: e.target.value })}
-                                        options={[
-                                            { value: '06:00 AM', label: '06:00 AM' },
-                                            { value: '07:00 AM', label: '07:00 AM' },
-                                            { value: '06:00 PM', label: '06:00 PM (Peak)' },
-                                            { value: '07:00 PM', label: '07:00 PM (Peak)' },
-                                        ]}
-                                    />
-                                    <div className="md:col-span-2">
+                                    <div>
+                                        <label className="block text-xs font-bold text-surface-700 mb-1.5 uppercase tracking-wider">Booking Type</label>
+                                        <select
+                                            value={booking.bookingType}
+                                            onChange={(e) => setBooking({ ...booking, bookingType: e.target.value })}
+                                            className="w-full p-2.5 text-xs font-extrabold bg-white border border-surface-200 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none text-surface-900 cursor-pointer shadow-sm"
+                                        >
+                                            <option value="Walk-In">🚶 Walk-In</option>
+                                            <option value="Online">🌐 Online</option>
+                                            <option value="Phone Booking">📞 Phone Booking</option>
+                                            <option value="Corporate">🏢 Corporate</option>
+                                            <option value="Membership">👑 Membership</option>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                {/* 2. SLOT SELECTION (Modern Card Grid) */}
+                                <div>
+                                    <label className="block text-xs font-bold text-surface-700 mb-2 uppercase tracking-wider flex justify-between items-center">
+                                        <span>Select Assigned Time Slot</span>
+                                        <span className="text-[10px] text-surface-400 font-semibold">Click to select slot</span>
+                                    </label>
+                                    <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2">
+                                        {timeSlots.map(slotObj => {
+                                            const isSelected = booking.slot === slotObj.time
+                                            const isBooked = slotObj.status === 'Booked'
+                                            const isMaint = slotObj.status === 'Maintenance'
+                                            
+                                            // Check consecutive slot availability for current selected duration hours
+                                            const hoursNeeded = booking.duration / 60
+                                            const slotCheck = checkSlotAvailabilityForDuration(slotObj.time, hoursNeeded)
+                                            const hasConflict = !isBooked && !isMaint && !slotCheck.isValid
+
+                                            return (
+                                                <button
+                                                    key={slotObj.id}
+                                                    type="button"
+                                                    disabled={isBooked || isMaint}
+                                                    onClick={() => handleSlotSelect(slotObj)}
+                                                    className={`p-2.5 rounded-xl border text-center transition-all cursor-pointer relative flex flex-col justify-between h-16 ${
+                                                        isSelected
+                                                            ? 'bg-emerald-600 text-white border-emerald-600 shadow-md shadow-emerald-500/20 ring-2 ring-emerald-500'
+                                                            : isBooked || isMaint
+                                                            ? 'bg-surface-100 text-surface-400 border-surface-200 cursor-not-allowed opacity-60'
+                                                            : hasConflict
+                                                            ? 'bg-amber-50/70 text-amber-900 border-amber-300 hover:bg-amber-100/70'
+                                                            : 'bg-white text-surface-800 border-surface-200 hover:border-emerald-400 hover:bg-emerald-50/50'
+                                                    }`}
+                                                >
+                                                    <div className="flex justify-between items-center">
+                                                        <span className="text-[11px] font-black leading-tight">{slotObj.time}</span>
+                                                        {hasConflict && (
+                                                            <span className="text-[9px] font-extrabold text-amber-600" title={slotCheck.reason}>⚠️</span>
+                                                        )}
+                                                    </div>
+                                                    <div className="flex justify-between items-center mt-1">
+                                                        <span className={`text-[9px] font-extrabold px-1.5 py-0.5 rounded-md ${
+                                                            isSelected 
+                                                                ? 'bg-white/20 text-white' 
+                                                                : isBooked 
+                                                                ? 'bg-red-100 text-red-600' 
+                                                                : isMaint 
+                                                                ? 'bg-amber-100 text-amber-700' 
+                                                                : hasConflict
+                                                                ? 'bg-amber-200 text-amber-800'
+                                                                : 'bg-emerald-100 text-emerald-700'
+                                                        }`}>
+                                                            {hasConflict ? 'Conflict' : slotObj.status}
+                                                        </span>
+                                                        {slotObj.isPeak && (
+                                                            <span className={`text-[8px] font-bold ${isSelected ? 'text-amber-200' : 'text-amber-600'}`}>
+                                                                🔥 Peak
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                </button>
+                                            )
+                                        })}
+                                    </div>
+                                </div>
+
+                                {/* 3. BOOKING DURATION & 4. NUMBER OF PLAYERS */}
+                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                                    <div>
+                                        <label className="block text-xs font-bold text-surface-700 mb-1.5 uppercase tracking-wider">Booking Time (Hours)</label>
+                                        <select
+                                            value={booking.duration}
+                                            onChange={(e) => setBooking({ ...booking, duration: Number(e.target.value) })}
+                                            className="w-full p-2.5 text-xs font-extrabold bg-white border border-surface-200 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none text-surface-900 cursor-pointer shadow-sm"
+                                        >
+                                            <option value={60}>⏰ 1 Hour</option>
+                                            <option value={120}>⏰ 2 Hours</option>
+                                            <option value={180}>⏰ 3 Hours</option>
+                                            <option value={240}>⏰ 4 Hours</option>
+                                            <option value={300}>⏰ 5 Hours</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <Input
+                                            label="Players"
+                                            type="number"
+                                            value={booking.players}
+                                            onChange={(e) => setBooking({ ...booking, players: e.target.value })}
+                                            placeholder="e.g. 10"
+                                        />
+                                    </div>
+                                    <div>
                                         <Input
                                             label="Billing Rate (₹/hr)"
                                             type="number"
-                                            value={booking.price}
-                                            onChange={(e) => setBooking({ ...booking, price: e.target.value })}
+                                            value={booking.billingRate}
+                                            onChange={(e) => setBooking({ ...booking, billingRate: e.target.value })}
+                                            placeholder="₹ Rate"
                                         />
                                     </div>
                                 </div>
-                                <Button onClick={handleAddBooking} className="mt-6 w-full cursor-pointer bg-emerald-600 hover:bg-emerald-700">
-                                    <HiPlus className="mr-1 w-4 h-4" /> Add booking to checkout
-                                </Button>
+
+                                {/* 7. DISCOUNT SECTION */}
+                                <div className="p-4 bg-surface-50 rounded-2xl border border-surface-200 space-y-3">
+                                    <div className="text-xs font-black text-surface-800 uppercase tracking-wider flex items-center gap-1.5">
+                                        <HiTag className="text-emerald-600" /> Apply Discount & Promo Code
+                                    </div>
+                                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                                        <div>
+                                            <label className="block text-[10px] font-bold text-surface-500 mb-1 uppercase">Discount Type</label>
+                                            <select
+                                                value={booking.discountType}
+                                                onChange={(e) => setBooking({ ...booking, discountType: e.target.value })}
+                                                className="w-full p-2 text-xs font-extrabold bg-white border border-surface-200 rounded-xl focus:ring-1 focus:ring-emerald-500 outline-none text-surface-900 cursor-pointer"
+                                            >
+                                                <option value="None">None</option>
+                                                <option value="Flat">Flat Discount (₹)</option>
+                                                <option value="Percentage">Percentage (%)</option>
+                                                <option value="Promo Code">Promo Code</option>
+                                            </select>
+                                        </div>
+
+                                        {booking.discountType === 'Promo Code' ? (
+                                            <div className="sm:col-span-2">
+                                                <Input
+                                                    label="Promo Code"
+                                                    placeholder="Enter code (e.g. TURF20)"
+                                                    value={booking.promoCode}
+                                                    onChange={(e) => setBooking({ ...booking, promoCode: e.target.value })}
+                                                />
+                                            </div>
+                                        ) : booking.discountType !== 'None' ? (
+                                            <div className="sm:col-span-2">
+                                                <Input
+                                                    label={booking.discountType === 'Flat' ? 'Discount Amount (₹)' : 'Discount Percentage (%)'}
+                                                    type="number"
+                                                    placeholder="0"
+                                                    value={booking.discountValue}
+                                                    onChange={(e) => setBooking({ ...booking, discountValue: e.target.value })}
+                                                />
+                                            </div>
+                                        ) : null}
+                                    </div>
+                                </div>
+
+                                {/* 8. EXTRA SERVICES (Multi-select Checkboxes) */}
+                                <div>
+                                    <label className="block text-xs font-bold text-surface-700 mb-2 uppercase tracking-wider">
+                                        Extra Add-on Services
+                                    </label>
+                                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                                        {extraServicesList.map(service => {
+                                            const isChecked = booking.selectedExtras.includes(service.id)
+                                            return (
+                                                <button
+                                                    key={service.id}
+                                                    type="button"
+                                                    onClick={() => handleToggleExtra(service.id)}
+                                                    className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer flex items-center justify-between ${
+                                                        isChecked
+                                                            ? 'bg-emerald-50 border-emerald-400 text-emerald-900 font-extrabold shadow-sm'
+                                                            : 'bg-white border-surface-200 text-surface-700 hover:bg-surface-50 font-bold'
+                                                    }`}
+                                                >
+                                                    <div className="flex items-center gap-1.5 text-xs truncate">
+                                                        <span>{service.icon}</span>
+                                                        <span className="truncate">{service.label}</span>
+                                                    </div>
+                                                    <span className="text-[10px] text-emerald-600 font-black ml-1">
+                                                        {service.price > 0 ? `+₹${service.price}` : 'Free'}
+                                                    </span>
+                                                </button>
+                                            )
+                                        })}
+                                    </div>
+                                </div>
+
+                                {/* 9. NOTES */}
+                                <div>
+                                    <label className="block text-xs font-bold text-surface-700 mb-1.5 uppercase tracking-wider">Booking Notes / Special Instructions</label>
+                                    <textarea
+                                        rows={2}
+                                        placeholder="e.g. VIP guest, Birthday celebration, Corporate match setup required..."
+                                        value={booking.notes}
+                                        onChange={(e) => setBooking({ ...booking, notes: e.target.value })}
+                                        className="w-full p-2.5 text-xs font-medium bg-white border border-surface-200 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none text-surface-900 shadow-sm placeholder-surface-400"
+                                    />
+                                </div>
+
+                                {/* BUTTONS BAR */}
+                                <div className="flex flex-wrap sm:flex-nowrap gap-3 pt-2">
+                                    <Button 
+                                        type="button" 
+                                        onClick={handleAddBookingToCheckout} 
+                                        className="flex-1 cursor-pointer bg-emerald-600 hover:bg-emerald-700 font-black text-xs py-3"
+                                    >
+                                        <HiPlus className="mr-1 w-4 h-4" /> Add booking to checkout
+                                    </Button>
+                                    <Button 
+                                        type="button" 
+                                        variant="outline" 
+                                        onClick={handleSaveDraft} 
+                                        className="cursor-pointer border-surface-300 font-bold text-xs"
+                                    >
+                                        Save Draft
+                                    </Button>
+                                    <Button 
+                                        type="button" 
+                                        variant="outline" 
+                                        onClick={handleClearForm} 
+                                        className="cursor-pointer text-red-600 border-red-200 hover:bg-red-50 font-bold text-xs"
+                                    >
+                                        Clear Form
+                                    </Button>
+                                </div>
                             </Card>
                         ) : (
-                            /* Interactive quick add inventory list */
+                            /* INVENTORY LIST GRID FOR GEAR / SNACKS */
                             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2.5">
                                 {(() => {
                                     const filtered = inventoryOptions.filter(
@@ -402,108 +911,222 @@ export default function OwnerPOS() {
                         )}
                     </div>
 
-                    {/* Checkout Billing Ledger Sidebar */}
+                    {/* RIGHT PANEL – CUSTOMER PROFILE & CHECKOUT BASKET */}
                     <div className="space-y-6">
-                        {/* Customer data capture */}
-                        <Card className="p-5 space-y-4">
-                            <h3 className="text-xs font-black text-surface-500 uppercase tracking-wider flex items-center gap-1.5">
-                                <HiUser /> Walk-in customer profile
-                            </h3>
-                            <div className="space-y-3">
+                        
+                        {/* CUSTOMER PROFILE CARD */}
+                        <Card className="p-5 space-y-3">
+                            <div className="flex items-center justify-between border-b border-surface-100 pb-3">
+                                <h3 className="text-xs font-black text-surface-500 uppercase tracking-wider flex items-center gap-1.5">
+                                    <HiUser className="text-emerald-600" /> Walk-in customer profile
+                                </h3>
+                                {customer.isExisting && (
+                                    <Badge variant="success" className="text-[9px]">
+                                        ✓ Verified Member
+                                    </Badge>
+                                )}
+                            </div>
+
+                            <div className="space-y-2.5">
                                 <Input
-                                    placeholder="Customer Mobile Number"
+                                    placeholder="Customer Mobile Number (e.g. 9876543210)"
                                     value={customer.phone}
-                                    onChange={(e) => setCustomer({ ...customer, phone: e.target.value })}
+                                    onChange={(e) => handlePhoneChange(e.target.value)}
                                 />
                                 <Input
                                     placeholder="Customer Name"
                                     value={customer.name}
                                     onChange={(e) => setCustomer({ ...customer, name: e.target.value })}
                                 />
+                                <Input
+                                    placeholder="Customer Email Address"
+                                    type="email"
+                                    value={customer.email}
+                                    onChange={(e) => setCustomer({ ...customer, email: e.target.value })}
+                                />
+
+                                <div className="grid grid-cols-2 gap-2">
+                                    <div>
+                                        <label className="block text-[9px] font-bold text-surface-500 mb-1 uppercase">Customer Type</label>
+                                        <select
+                                            value={customer.type}
+                                            onChange={(e) => setCustomer({ ...customer, type: e.target.value })}
+                                            className="w-full p-2 text-xs font-extrabold bg-white border border-surface-200 rounded-xl focus:ring-1 focus:ring-emerald-500 outline-none text-surface-900 cursor-pointer"
+                                        >
+                                            <option value="Regular">Regular</option>
+                                            <option value="Member">Member</option>
+                                            <option value="Corporate">Corporate</option>
+                                            <option value="Guest">Guest</option>
+                                        </select>
+                                    </div>
+                                    <Input
+                                        label="Membership ID"
+                                        placeholder="MEM-ID"
+                                        value={customer.membershipId}
+                                        onChange={(e) => setCustomer({ ...customer, membershipId: e.target.value })}
+                                    />
+                                </div>
+
+                                {customer.isExisting && (
+                                    <div className="bg-emerald-50 p-2.5 rounded-xl border border-emerald-200 text-[10px] space-y-1 font-bold text-emerald-900">
+                                        <div className="flex justify-between">
+                                            <span>Previous Bookings:</span>
+                                            <span className="font-extrabold">{customer.bookingsCount} Completed</span>
+                                        </div>
+                                        <div className="flex justify-between">
+                                            <span>Status:</span>
+                                            <span className="font-extrabold">{customer.status}</span>
+                                        </div>
+                                        {customer.outstanding > 0 && (
+                                            <div className="flex justify-between text-rose-600 font-extrabold border-t border-emerald-200 pt-1">
+                                                <span>Outstanding Dues:</span>
+                                                <span>₹{customer.outstanding}</span>
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
                             </div>
                         </Card>
 
-                        {/* Interactive shopping basket */}
-                        <Card className="p-5 flex flex-col min-h-[460px] justify-between">
+                        {/* CHECKOUT BASKET CARD */}
+                        <Card className="p-5 flex flex-col justify-between space-y-4">
                             <div>
-                                <div className="flex items-center justify-between border-b border-surface-100 pb-4 mb-4">
+                                <div className="flex items-center justify-between border-b border-surface-100 pb-3 mb-3">
                                     <h3 className="text-sm font-black text-surface-900 tracking-tight flex items-center gap-1.5">
                                         <HiShoppingCart /> checkout basket
                                     </h3>
-                                    <Badge variant="primary">{cart.length} unique lines</Badge>
+                                    <Badge variant="primary">{cart.length + (activeTab === 'Sports' ? 1 : 0)} items</Badge>
                                 </div>
 
-                                <div className="space-y-3 max-h-[220px] overflow-y-auto pr-1 scrollbar-hide">
-                                    {cart.length === 0 ? (
-                                        <div className="text-center py-12 text-surface-400 space-y-2">
-                                            <span className="text-4xl block">🛒</span>
-                                            <p className="text-xs font-semibold">Ready to bill active items...</p>
-                                        </div>
-                                    ) : (
-                                        cart.map(item => (
-                                            <div key={item.id} className="flex justify-between items-center p-3 bg-surface-50 rounded-2xl border border-surface-150 text-xs font-semibold">
-                                                <div className="space-y-0.5 flex-1 min-w-0 pr-2">
-                                                    <p className="text-surface-900 font-extrabold truncate leading-tight">{item.name}</p>
-                                                    <p className="text-[10px] text-surface-400 uppercase tracking-wider">{item.category} • ₹{item.price}</p>
+                                {/* Itemized booking summary in basket */}
+                                <div className="space-y-3 max-h-[260px] overflow-y-auto pr-1 scrollbar-hide">
+                                    {/* Active Walk-in Booking Summary Item */}
+                                    {activeTab === 'Sports' && (
+                                        <div className="p-3 bg-emerald-50/70 rounded-2xl border border-emerald-200 text-xs font-semibold space-y-1.5">
+                                            <div className="flex justify-between items-start">
+                                                <div>
+                                                    <span className="font-black text-emerald-950 text-xs block">{booking.sport} - {booking.court}</span>
+                                                    <span className="text-[10px] text-emerald-700 font-bold block">{booking.slot} ({booking.duration} Mins) • {booking.players} Players</span>
                                                 </div>
-                                                <div className="flex items-center gap-2.5">
-                                                    <div className="flex items-center border border-surface-200 rounded-xl overflow-hidden bg-white shadow-soft font-bold">
-                                                        <button onClick={() => handleUpdateQty(item.id, -1)} className="px-2.5 py-1 hover:bg-surface-50">-</button>
-                                                        <span className="px-2 text-surface-700">{item.qty}</span>
-                                                        <button onClick={() => handleUpdateQty(item.id, 1)} className="px-2.5 py-1 hover:bg-surface-50">+</button>
-                                                    </div>
-                                                    <button onClick={() => handleRemove(item.id)} className="text-red-500 hover:bg-red-50 p-1.5 rounded-xl border border-transparent hover:border-red-200">
-                                                        <HiTrash className="w-4 h-4" />
-                                                    </button>
-                                                </div>
+                                                <span className="font-black text-emerald-800 text-xs">₹{baseCourtPrice}</span>
                                             </div>
-                                        ))
+
+                                            {selectedExtrasList.length > 0 && (
+                                                <div className="text-[10px] text-surface-600 border-t border-emerald-200/60 pt-1 space-y-0.5">
+                                                    {selectedExtrasList.map(e => (
+                                                        <div key={e.id} className="flex justify-between">
+                                                            <span>+ {e.label}</span>
+                                                            <span>₹{e.price}</span>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            )}
+
+                                            {discountAmount > 0 && (
+                                                <div className="flex justify-between text-[10px] text-emerald-700 font-extrabold border-t border-emerald-200/60 pt-1">
+                                                    <span>Discount Applied ({booking.discountType})</span>
+                                                    <span>-₹{discountAmount}</span>
+                                                </div>
+                                            )}
+                                        </div>
                                     )}
+
+                                    {/* Inventory Cart Items */}
+                                    {cart.map(item => (
+                                        <div key={item.id} className="flex justify-between items-center p-3 bg-surface-50 rounded-2xl border border-surface-150 text-xs font-semibold">
+                                            <div className="space-y-0.5 flex-1 min-w-0 pr-2">
+                                                <p className="text-surface-900 font-extrabold truncate leading-tight">{item.name}</p>
+                                                <p className="text-[10px] text-surface-400 uppercase tracking-wider">{item.category} • ₹{item.price}</p>
+                                            </div>
+                                            <div className="flex items-center gap-2.5">
+                                                <div className="flex items-center border border-surface-200 rounded-xl overflow-hidden bg-white shadow-soft font-bold">
+                                                    <button onClick={() => handleUpdateCartQty(item.id, -1)} className="px-2 py-0.5 hover:bg-surface-50">-</button>
+                                                    <span className="px-2 text-surface-700">{item.qty}</span>
+                                                    <button onClick={() => handleUpdateCartQty(item.id, 1)} className="px-2 py-0.5 hover:bg-surface-50">+</button>
+                                                </div>
+                                                <button onClick={() => handleRemoveCartItem(item.id)} className="text-red-500 hover:bg-red-50 p-1 rounded-xl">
+                                                    <HiTrash className="w-3.5 h-3.5" />
+                                                </button>
+                                            </div>
+                                        </div>
+                                    ))}
                                 </div>
                             </div>
 
-                            {/* Price settlements */}
-                            <div className="border-t border-surface-100 pt-4 mt-4 space-y-4">
-                                <div className="text-xs space-y-2 font-semibold text-surface-500 border-b border-surface-100 pb-3">
+                            {/* COMPACT BOOKING & PRICE SUMMARY */}
+                            <div className="border-t border-surface-100 pt-3 space-y-3">
+                                <div className="text-xs space-y-1.5 font-semibold text-surface-600 border-b border-surface-100 pb-3">
                                     <div className="flex justify-between">
-                                        <span>Basket Subtotal</span>
-                                        <span className="text-surface-800 font-bold">₹{subtotal}</span>
+                                        <span>Subtotal</span>
+                                        <span className="text-surface-800 font-bold">₹{grandSubtotal}</span>
                                     </div>
                                     <div className="flex justify-between">
                                         <span>GST (18%)</span>
-                                        <span className="text-surface-800 font-bold">₹{tax}</span>
+                                        <span className="text-surface-800 font-bold">₹{gstTax}</span>
                                     </div>
                                     <div className="flex justify-between text-sm font-black text-surface-900 pt-1">
-                                        <span>Amount Due</span>
-                                        <span className="text-emerald-600 text-base">₹{total}</span>
+                                        <span>Grand Total</span>
+                                        <span className="text-emerald-600 text-base">₹{grandTotal}</span>
                                     </div>
                                 </div>
 
-                                {/* Settlement choices */}
-                                <div>
-                                    <span className="text-[10px] font-black text-surface-400 uppercase tracking-wider block mb-2">Checkout settlement</span>
-                                    <div className="grid grid-cols-3 gap-2">
-                                        {['Cash', 'UPI', 'Card'].map(m => (
-                                            <button
-                                                key={m}
-                                                onClick={() => setPaymentMethod(m)}
-                                                className={`py-2 rounded-xl text-xs font-black border transition-all cursor-pointer ${paymentMethod === m ? 'bg-emerald-600 border-emerald-650 text-white shadow-md shadow-emerald-500/10' : 'bg-white border-surface-200 text-surface-600 hover:border-emerald-250 hover:bg-surface-50'}`}
+                                {/* PAYMENT SETTLEMENT SECTION */}
+                                <div className="space-y-3">
+                                    <div className="grid grid-cols-2 gap-2">
+                                        <div>
+                                            <label className="block text-[9px] font-black text-surface-400 uppercase mb-1">Payment Status</label>
+                                            <select
+                                                value={paymentStatus}
+                                                onChange={(e) => setPaymentStatus(e.target.value)}
+                                                className="w-full p-2 text-xs font-extrabold bg-white border border-surface-200 rounded-xl focus:ring-1 focus:ring-emerald-500 outline-none text-surface-900 cursor-pointer"
                                             >
-                                                {m}
-                                            </button>
-                                        ))}
+                                                <option value="Paid">✅ Paid</option>
+                                                <option value="Partial">⏳ Partial</option>
+                                                <option value="Pending">❌ Pending</option>
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label className="block text-[9px] font-black text-surface-400 uppercase mb-1">Payment Method</label>
+                                            <select
+                                                value={paymentMethod}
+                                                onChange={(e) => setPaymentMethod(e.target.value)}
+                                                className="w-full p-2 text-xs font-extrabold bg-white border border-surface-200 rounded-xl focus:ring-1 focus:ring-emerald-500 outline-none text-surface-900 cursor-pointer"
+                                            >
+                                                <option value="UPI">📱 UPI</option>
+                                                <option value="Cash">💵 Cash</option>
+                                                <option value="Card">💳 Card</option>
+                                                <option value="Wallet">👛 Wallet</option>
+                                                <option value="Bank Transfer">🏦 Bank Transfer</option>
+                                                <option value="Split Payment">🔀 Split Payment</option>
+                                            </select>
+                                        </div>
                                     </div>
-                                </div>
 
-                                <Button
-                                    fullWidth
-                                    size="lg"
-                                    onClick={handleCompletePayment}
-                                    disabled={cart.length === 0}
-                                    className="bg-emerald-600 hover:bg-emerald-700 shadow-lg shadow-emerald-600/10 cursor-pointer"
-                                >
-                                    Settle invoice receipt
-                                </Button>
+                                    {paymentStatus === 'Partial' && (
+                                        <div className="p-2.5 bg-amber-50 rounded-xl border border-amber-200 space-y-2">
+                                            <Input
+                                                label="Advance Payment Amount (₹)"
+                                                type="number"
+                                                value={advanceAmount}
+                                                onChange={(e) => setAdvanceAmount(e.target.value)}
+                                                placeholder="Enter advance amount"
+                                            />
+                                            <div className="flex justify-between text-xs font-bold text-amber-900">
+                                                <span>Remaining Balance Due:</span>
+                                                <span className="font-extrabold text-rose-600">₹{remainingBalance}</span>
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    <Button
+                                        fullWidth
+                                        size="lg"
+                                        onClick={handleCompletePayment}
+                                        className="bg-emerald-600 hover:bg-emerald-700 shadow-lg shadow-emerald-600/10 cursor-pointer font-black text-xs py-3"
+                                    >
+                                        Complete Payment & Settle Invoice
+                                    </Button>
+                                </div>
                             </div>
                         </Card>
                     </div>
@@ -514,43 +1137,33 @@ export default function OwnerPOS() {
             {lastBill && (
                 <div id="printable-receipt" style={{ display: 'none' }} className="bg-white p-8 max-w-sm mx-auto text-left font-mono">
                     <div className="text-center border-b border-dashed pb-4 mb-4">
-                        <h2 className="text-base font-black uppercase">SPORTMATRIX ENTERPRISE</h2>
-                        <p className="text-[10px] text-gray-500 mt-0.5">Plot 145, Scheme No. 78, Indore (M.P.)</p>
+                        <h2 className="text-base font-black uppercase">SPORTMATRIX ENTERPRISE POS</h2>
+                        <p className="text-[10px] text-gray-500 mt-0.5">Champions Turf Arena, Indore (M.P.)</p>
                         <p className="text-[10px] text-gray-500">Contact: +91 90000 80000</p>
                     </div>
 
                     <div className="text-[10px] space-y-1 mb-4">
                         <p><strong>INVOICE ID :</strong> {lastBill.id}</p>
                         <p><strong>DATE/TIME  :</strong> {lastBill.date}</p>
-                        <p><strong>CUSTOMER   :</strong> {lastBill.customerName}</p>
+                        <p><strong>CUSTOMER   :</strong> {lastBill.customerName} ({lastBill.customerType})</p>
                         <p><strong>CONTACT    :</strong> {lastBill.customerPhone}</p>
+                        <p><strong>PAYMENT    :</strong> {lastBill.paymentStatus} ({lastBill.method})</p>
                     </div>
 
                     <div className="border-t border-b border-dashed py-3 mb-4 text-[10px]">
-                        <table className="w-full">
-                            <thead>
-                                <tr className="border-b border-dashed text-left">
-                                    <th className="pb-1 font-bold">Item Description</th>
-                                    <th className="pb-1 text-center font-bold">Qty</th>
-                                    <th className="pb-1 text-right font-bold">Price</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {lastBill.items.map(item => (
-                                    <tr key={item.id}>
-                                        <td className="py-1 truncate max-w-[120px]">{item.name}</td>
-                                        <td className="py-1 text-center">{item.qty}</td>
-                                        <td className="py-1 text-right">₹{item.price * item.qty}</td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
+                        <p className="font-bold border-b border-dashed pb-1 mb-2">RESERVATION & ITEMS</p>
+                        <p><strong>Sport/Court:</strong> {lastBill.bookingSummary.sport} - {lastBill.bookingSummary.court}</p>
+                        <p><strong>Slot/Time:</strong> {lastBill.bookingSummary.slot} ({lastBill.bookingSummary.duration})</p>
+                        <p><strong>Base Rate:</strong> ₹{lastBill.bookingSummary.basePrice}</p>
+                        {lastBill.bookingSummary.extrasTotal > 0 && <p><strong>Extras:</strong> ₹{lastBill.bookingSummary.extrasTotal}</p>}
+                        {lastBill.bookingSummary.discount > 0 && <p><strong>Discount:</strong> -₹{lastBill.bookingSummary.discount}</p>}
                     </div>
 
                     <div className="text-[10px] space-y-1 text-right border-b border-dashed pb-3 mb-3">
-                        <p>Subtotal: ₹{lastBill.subtotal}</p>
-                        <p>CGST/SGST (18%): ₹{lastBill.tax}</p>
-                        <p className="text-sm font-bold mt-1">GRAND TOTAL: ₹{lastBill.total}</p>
+                        <p>Subtotal: ₹{lastBill.bookingSummary.subtotal}</p>
+                        <p>GST (18%): ₹{lastBill.bookingSummary.tax}</p>
+                        <p className="text-sm font-bold mt-1">GRAND TOTAL: ₹{lastBill.bookingSummary.total}</p>
+                        {lastBill.bookingSummary.remaining > 0 && <p className="text-rose-600 font-bold">BALANCE REMAINING: ₹{lastBill.bookingSummary.remaining}</p>}
                     </div>
 
                     <div className="text-center text-[10px] space-y-0.5 text-gray-500 uppercase tracking-widest mt-6">
@@ -562,3 +1175,4 @@ export default function OwnerPOS() {
         </div>
     )
 }
+

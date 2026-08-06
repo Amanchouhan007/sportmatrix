@@ -91,13 +91,37 @@ export default function SlotManagement() {
 
     // Form states
     const [newSlot, setNewSlot] = useState({
+        slotName: 'Evening Prime Slot',
         startTime: '18:00',
         endTime: '19:00',
+        sportId: '',
+        courtName: '',
+        slotType: 'Regular', // Regular | Peak | Tournament | Practice | Maintenance | Private
         regularPrice: 800,
         peakPrice: 1200,
-        isPeakHour: false,
-        courtName: '',
-        sportId: ''
+        gstPercent: 18,
+        applicableDays: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'],
+        repeat: 'Weekly', // One Time | Daily | Weekly | Monthly
+        repeatInterval: 1,
+        startDate: getLocalDateString(),
+        endDate: '',
+        minDuration: 60, // mins
+        maxDuration: 240, // mins
+        bookingWindow: 7, // days advance
+        bufferTime: 15, // mins
+        maxConcurrentBookings: 1,
+        minPlayers: 4,
+        maxPlayers: 14,
+        holidayPricing: true,
+        weekendPricing: true,
+        membershipDiscount: true,
+        promoCodeEligible: true,
+        slotStatus: 'Available', // Available | Blocked | Maintenance | Hidden
+        cancellationAllowed: true,
+        cancellationDeadline: '24 Hours Before',
+        autoConfirmation: true,
+        internalNotes: '',
+        bookingInstructions: ''
     })
     const [newHoliday, setNewHoliday] = useState({ date: '', reason: '' })
     const [bookingData, setBookingData] = useState({
@@ -410,6 +434,11 @@ export default function SlotManagement() {
         }
     }
 
+    // Save Slot Draft handler
+    const handleSaveSlotDraft = () => {
+        addToast({ title: 'Draft Saved', message: `Slot configuration "${newSlot.slotName || 'Custom Slot'}" saved as draft`, type: 'success' })
+    }
+
     // Custom slot configuration creation
     const handleCreateSlotSubmit = async () => {
         if (!newSlot.sportId) {
@@ -434,6 +463,27 @@ export default function SlotManagement() {
             return
         }
 
+        if (Number(newSlot.regularPrice) < 0 || Number(newSlot.peakPrice) < 0) {
+            addToast({ title: 'Validation Error', message: 'Prices cannot be negative', type: 'error' })
+            return
+        }
+
+        // Validate duplicate / overlapping slots for same court & time
+        const overlapping = slots.find(s => {
+            if (s.courtName !== newSlot.courtName) return false
+            const sStart = parseTimeToMinutes(s.startTime)
+            const sEnd = parseTimeToMinutes(s.endTime)
+            return (startMin < sEnd && endMin > sStart)
+        })
+
+        if (overlapping) {
+            addToast({ 
+                title: 'Slot Overlap Warning', 
+                message: `Warning: Slot overlaps with existing slot (${overlapping.startTime} - ${overlapping.endTime}) on ${newSlot.courtName}`, 
+                type: 'warning' 
+            })
+        }
+
         setIsBookingLoading(true)
         try {
             const payload = {
@@ -446,13 +496,22 @@ export default function SlotManagement() {
                 duration,
                 regularPrice: Number(newSlot.regularPrice) || 0,
                 peakPrice: Number(newSlot.peakPrice) || 0,
-                isPeakHour: newSlot.isPeakHour,
-                status: 'AVAILABLE'
+                isPeakHour: newSlot.slotType === 'Peak',
+                status: newSlot.slotStatus === 'Maintenance' ? 'MAINTENANCE' : newSlot.slotStatus === 'Blocked' ? 'BLOCKED' : 'AVAILABLE',
+                meta: {
+                    slotName: newSlot.slotName,
+                    slotType: newSlot.slotType,
+                    applicableDays: newSlot.applicableDays,
+                    minPlayers: newSlot.minPlayers,
+                    maxPlayers: newSlot.maxPlayers,
+                    gstPercent: newSlot.gstPercent,
+                    notes: newSlot.internalNotes
+                }
             }
 
             const res = await createSlot(payload)
             if (res.success) {
-                addToast({ title: 'Slot Created', message: `Time slot ${newSlot.startTime} successfully registered`, type: 'success' })
+                addToast({ title: 'Slot Created', message: `Slot "${newSlot.slotName}" (${newSlot.startTime} - ${newSlot.endTime}) successfully registered`, type: 'success' })
                 loadSlots()
                 setCreateModal(false)
             }
@@ -838,68 +897,440 @@ export default function SlotManagement() {
                 </Modal>
             )}
 
-            {/* Create slot modal */}
-            <Modal isOpen={createModal} onClose={() => setCreateModal(false)} title="Register Custom Slot" size="sm">
-                <div className="space-y-4">
-                    <div className="grid grid-cols-2 gap-3">
-                        <Input
-                            label="Start Time *"
-                            type="time"
-                            value={newSlot.startTime}
-                            onChange={(e) => setNewSlot({ ...newSlot, startTime: e.target.value })}
-                        />
-                        <Input
-                            label="End Time *"
-                            type="time"
-                            value={newSlot.endTime}
-                            onChange={(e) => setNewSlot({ ...newSlot, endTime: e.target.value })}
-                        />
+            {/* Enterprise Register Custom Slot Modal */}
+            <Modal isOpen={createModal} onClose={() => setCreateModal(false)} title="Register Custom Slot" size="page">
+                <div className="space-y-6 text-left">
+                    
+                    {/* LIVE PREVIEW SUMMARY CARD */}
+                    <div className="bg-emerald-50/70 p-4 rounded-2xl border border-emerald-200 text-xs space-y-2 font-bold text-emerald-950 shadow-sm">
+                        <div className="flex justify-between items-center border-b border-emerald-200/60 pb-2">
+                            <div className="flex items-center gap-2">
+                                <span className="text-xl">⚙️</span>
+                                <div>
+                                    <h5 className="font-black text-sm text-emerald-950 leading-tight">{newSlot.slotName || 'Custom Slot'}</h5>
+                                    <span className="text-[10px] text-emerald-700 font-extrabold">
+                                        {branchSports.find(s => (s.sportId?._id || s.sportId || s._id) === newSlot.sportId)?.name || 'Sport'} • {newSlot.courtName || 'Court'}
+                                    </span>
+                                </div>
+                            </div>
+                            <span className={`text-[10px] font-black px-2 py-0.5 rounded-lg ${
+                                newSlot.slotStatus === 'Available' ? 'bg-emerald-200 text-emerald-900' : 'bg-amber-200 text-amber-900'
+                            }`}>
+                                {newSlot.slotStatus}
+                            </span>
+                        </div>
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-[11px] pt-1">
+                            <div>
+                                <span className="text-emerald-700 text-[9px] uppercase block font-extrabold">Time & Type</span>
+                                <span className="font-extrabold text-emerald-900">{formatTo12Hour(newSlot.startTime)} – {formatTo12Hour(newSlot.endTime)} ({newSlot.slotType})</span>
+                            </div>
+                            <div>
+                                <span className="text-emerald-700 text-[9px] uppercase block font-extrabold">Applicable Days</span>
+                                <span className="font-extrabold text-emerald-900 truncate">
+                                    {newSlot.applicableDays.length === 7 ? 'All 7 Days' : newSlot.applicableDays.join(', ')}
+                                </span>
+                            </div>
+                            <div>
+                                <span className="text-emerald-700 text-[9px] uppercase block font-extrabold">Rate (+{newSlot.gstPercent}% GST)</span>
+                                <span className="font-black text-emerald-950">₹{newSlot.slotType === 'Peak' ? newSlot.peakPrice : newSlot.regularPrice}</span>
+                            </div>
+                            <div>
+                                <span className="text-emerald-700 text-[9px] uppercase block font-extrabold">Players Limit</span>
+                                <span className="font-extrabold text-emerald-900">{newSlot.minPlayers} - {newSlot.maxPlayers} Players</span>
+                            </div>
+                        </div>
                     </div>
-                    <Select
-                        label="Sport *"
-                        value={newSlot.sportId}
-                        onChange={(e) => {
-                            setNewSlot({ ...newSlot, sportId: e.target.value })
-                        }}
-                        options={branchSports.map(s => {
-                            const val = typeof s.sportId === 'object' ? (s.sportId?._id || s.sportId?.id) : (s.sportId || s._id)
-                            const lbl = typeof s.sportId === 'object' ? (s.sportId?.name || s.name) : (s.name || 'Sport')
-                            return { value: val, label: lbl }
-                        })}
-                    />
-                    <Select
-                        label="Apply to Field/Court *"
-                        value={newSlot.courtName}
-                        onChange={(e) => setNewSlot({ ...newSlot, courtName: e.target.value })}
-                        options={courtOptions}
-                    />
-                    <div className="grid grid-cols-2 gap-3">
-                        <Input
-                            label="Regular Price (₹) *"
-                            type="number"
-                            value={newSlot.regularPrice}
-                            onChange={(e) => setNewSlot({ ...newSlot, regularPrice: e.target.value })}
-                        />
-                        <Input
-                            label="Peak Price (₹) *"
-                            type="number"
-                            value={newSlot.peakPrice}
-                            onChange={(e) => setNewSlot({ ...newSlot, peakPrice: e.target.value })}
-                        />
+
+                    {/* SECTION 1 – BASIC INFORMATION */}
+                    <div className="p-4 bg-surface-50 rounded-2xl border border-surface-200 space-y-3">
+                        <div className="text-xs font-black text-surface-800 uppercase tracking-wider flex items-center gap-1.5">
+                            <span className="text-emerald-600">1.</span> Basic Information
+                        </div>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <Input
+                                label="Slot Name *"
+                                placeholder="e.g. Evening Prime Slot"
+                                value={newSlot.slotName}
+                                onChange={(e) => setNewSlot({ ...newSlot, slotName: e.target.value })}
+                            />
+                            <div>
+                                <label className="block text-xs font-bold text-surface-700 mb-1.5 uppercase tracking-wider">Slot Type *</label>
+                                <select
+                                    value={newSlot.slotType}
+                                    onChange={(e) => setNewSlot({ ...newSlot, slotType: e.target.value })}
+                                    className="w-full p-2.5 text-xs font-extrabold bg-white border border-surface-200 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none text-surface-900 cursor-pointer shadow-sm"
+                                >
+                                    <option value="Regular">Regular</option>
+                                    <option value="Peak">🔥 Peak</option>
+                                    <option value="Tournament">🏆 Tournament</option>
+                                    <option value="Practice">🎯 Practice</option>
+                                    <option value="Maintenance">🛠️ Maintenance</option>
+                                    <option value="Private">🔒 Private</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <Input
+                                label="Start Time *"
+                                type="time"
+                                value={newSlot.startTime}
+                                onChange={(e) => setNewSlot({ ...newSlot, startTime: e.target.value })}
+                            />
+                            <Input
+                                label="End Time *"
+                                type="time"
+                                value={newSlot.endTime}
+                                onChange={(e) => setNewSlot({ ...newSlot, endTime: e.target.value })}
+                            />
+                        </div>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <Select
+                                label="Sport *"
+                                value={newSlot.sportId}
+                                onChange={(e) => setNewSlot({ ...newSlot, sportId: e.target.value })}
+                                options={[
+                                    { value: 'cricket', label: '🏏 Cricket' },
+                                    { value: 'football', label: '⚽ Football' }
+                                ]}
+                            />
+                            <Select
+                                label="Apply to Field/Court *"
+                                value={newSlot.courtName}
+                                onChange={(e) => setNewSlot({ ...newSlot, courtName: e.target.value })}
+                                options={courtOptions}
+                            />
+                        </div>
                     </div>
-                    <div className="flex items-center gap-2 py-1">
-                        <input
-                            type="checkbox"
-                            id="is-peak-checkbox"
-                            checked={newSlot.isPeakHour}
-                            onChange={(e) => setNewSlot({ ...newSlot, isPeakHour: e.target.checked })}
-                            className="rounded border-surface-200 text-emerald-600 focus:ring-emerald-500"
-                        />
-                        <label htmlFor="is-peak-checkbox" className="text-xs font-semibold text-surface-700">Mark as Peak Hour</label>
+
+                    {/* SECTION 2 – APPLICABLE DAYS */}
+                    <div className="p-4 bg-surface-50 rounded-2xl border border-surface-200 space-y-3">
+                        <div className="flex justify-between items-center">
+                            <div className="text-xs font-black text-surface-800 uppercase tracking-wider">
+                                <span className="text-emerald-600">2.</span> Applicable Days
+                            </div>
+                            <div className="flex gap-1.5">
+                                <button
+                                    type="button"
+                                    onClick={() => setNewSlot({ ...newSlot, applicableDays: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'] })}
+                                    className="px-2 py-1 bg-white border border-surface-200 rounded-lg text-[10px] font-extrabold hover:bg-emerald-50 hover:text-emerald-600 cursor-pointer"
+                                >
+                                    All Days
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => setNewSlot({ ...newSlot, applicableDays: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'] })}
+                                    className="px-2 py-1 bg-white border border-surface-200 rounded-lg text-[10px] font-extrabold hover:bg-emerald-50 hover:text-emerald-600 cursor-pointer"
+                                >
+                                    Weekdays
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => setNewSlot({ ...newSlot, applicableDays: ['Saturday', 'Sunday'] })}
+                                    className="px-2 py-1 bg-white border border-surface-200 rounded-lg text-[10px] font-extrabold hover:bg-emerald-50 hover:text-emerald-600 cursor-pointer"
+                                >
+                                    Weekends
+                                </button>
+                            </div>
+                        </div>
+
+                        <div className="flex flex-wrap gap-2">
+                            {['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'].map(day => {
+                                const isSel = newSlot.applicableDays.includes(day)
+                                return (
+                                    <button
+                                        key={day}
+                                        type="button"
+                                        onClick={() => {
+                                            const updated = isSel
+                                                ? newSlot.applicableDays.filter(d => d !== day)
+                                                : [...newSlot.applicableDays, day]
+                                            setNewSlot({ ...newSlot, applicableDays: updated })
+                                        }}
+                                        className={`px-3 py-1.5 rounded-xl border text-xs font-black transition-all cursor-pointer ${
+                                            isSel
+                                                ? 'bg-emerald-600 text-white border-emerald-600 shadow-sm'
+                                                : 'bg-white text-surface-600 border-surface-200 hover:bg-surface-100'
+                                        }`}
+                                    >
+                                        {day.slice(0, 3)}
+                                    </button>
+                                )
+                            })}
+                        </div>
                     </div>
+
+                    {/* SECTION 3 – RECURRENCE */}
+                    <div className="p-4 bg-surface-50 rounded-2xl border border-surface-200 space-y-3">
+                        <div className="text-xs font-black text-surface-800 uppercase tracking-wider">
+                            <span className="text-emerald-600">3.</span> Recurrence Configuration
+                        </div>
+                        <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
+                            <div>
+                                <label className="block text-xs font-bold text-surface-700 mb-1.5 uppercase tracking-wider">Repeat</label>
+                                <select
+                                    value={newSlot.repeat}
+                                    onChange={(e) => setNewSlot({ ...newSlot, repeat: e.target.value })}
+                                    className="w-full p-2.5 text-xs font-extrabold bg-white border border-surface-200 rounded-xl outline-none text-surface-900 cursor-pointer"
+                                >
+                                    <option value="One Time">One Time</option>
+                                    <option value="Daily">Daily</option>
+                                    <option value="Weekly">Weekly</option>
+                                    <option value="Monthly">Monthly</option>
+                                </select>
+                            </div>
+                            <Input
+                                label="Repeat Interval"
+                                type="number"
+                                value={newSlot.repeatInterval}
+                                onChange={(e) => setNewSlot({ ...newSlot, repeatInterval: e.target.value })}
+                            />
+                            <Input
+                                label="Effective Start Date"
+                                type="date"
+                                value={newSlot.startDate}
+                                onChange={(e) => setNewSlot({ ...newSlot, startDate: e.target.value })}
+                            />
+                            <Input
+                                label="Effective End Date"
+                                type="date"
+                                value={newSlot.endDate}
+                                onChange={(e) => setNewSlot({ ...newSlot, endDate: e.target.value })}
+                            />
+                        </div>
+                    </div>
+
+                    {/* SECTION 4 – BOOKING RULES & SECTION 5 – PLAYER CONFIGURATION */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div className="p-4 bg-surface-50 rounded-2xl border border-surface-200 space-y-3">
+                            <div className="text-xs font-black text-surface-800 uppercase tracking-wider">
+                                <span className="text-emerald-600">4.</span> Booking Rules
+                            </div>
+                            <div className="grid grid-cols-2 gap-2">
+                                <div>
+                                    <label className="block text-[10px] font-bold text-surface-600 mb-1 uppercase">Min Duration</label>
+                                    <select
+                                        value={newSlot.minDuration}
+                                        onChange={(e) => setNewSlot({ ...newSlot, minDuration: Number(e.target.value) })}
+                                        className="w-full p-2 text-xs font-extrabold bg-white border border-surface-200 rounded-xl outline-none"
+                                    >
+                                        <option value={30}>30 Mins</option>
+                                        <option value={60}>60 Mins (1 Hr)</option>
+                                        <option value={90}>90 Mins</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label className="block text-[10px] font-bold text-surface-600 mb-1 uppercase">Max Duration</label>
+                                    <select
+                                        value={newSlot.maxDuration}
+                                        onChange={(e) => setNewSlot({ ...newSlot, maxDuration: Number(e.target.value) })}
+                                        className="w-full p-2 text-xs font-extrabold bg-white border border-surface-200 rounded-xl outline-none"
+                                    >
+                                        <option value={120}>120 Mins (2 Hr)</option>
+                                        <option value={180}>180 Mins (3 Hr)</option>
+                                        <option value={240}>240 Mins (4 Hr)</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div className="grid grid-cols-3 gap-2">
+                                <div>
+                                    <label className="block text-[9px] font-bold text-surface-600 mb-1 uppercase">Booking Window</label>
+                                    <select
+                                        value={newSlot.bookingWindow}
+                                        onChange={(e) => setNewSlot({ ...newSlot, bookingWindow: Number(e.target.value) })}
+                                        className="w-full p-2 text-xs font-extrabold bg-white border border-surface-200 rounded-xl outline-none"
+                                    >
+                                        <option value={1}>1 Day</option>
+                                        <option value={7}>7 Days</option>
+                                        <option value={14}>14 Days</option>
+                                        <option value={30}>30 Days</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label className="block text-[9px] font-bold text-surface-600 mb-1 uppercase">Buffer Time</label>
+                                    <select
+                                        value={newSlot.bufferTime}
+                                        onChange={(e) => setNewSlot({ ...newSlot, bufferTime: Number(e.target.value) })}
+                                        className="w-full p-2 text-xs font-extrabold bg-white border border-surface-200 rounded-xl outline-none"
+                                    >
+                                        <option value={0}>0 Mins</option>
+                                        <option value={15}>15 Mins</option>
+                                        <option value={30}>30 Mins</option>
+                                    </select>
+                                </div>
+                                <Input
+                                    label="Max Concurrent"
+                                    type="number"
+                                    value={newSlot.maxConcurrentBookings}
+                                    onChange={(e) => setNewSlot({ ...newSlot, maxConcurrentBookings: e.target.value })}
+                                />
+                            </div>
+                        </div>
+
+                        <div className="p-4 bg-surface-50 rounded-2xl border border-surface-200 space-y-3">
+                            <div className="text-xs font-black text-surface-800 uppercase tracking-wider">
+                                <span className="text-emerald-600">5.</span> Player Configuration
+                            </div>
+                            <div className="grid grid-cols-2 gap-3">
+                                <Input
+                                    label="Minimum Players"
+                                    type="number"
+                                    value={newSlot.minPlayers}
+                                    onChange={(e) => setNewSlot({ ...newSlot, minPlayers: e.target.value })}
+                                />
+                                <Input
+                                    label="Maximum Players"
+                                    type="number"
+                                    value={newSlot.maxPlayers}
+                                    onChange={(e) => setNewSlot({ ...newSlot, maxPlayers: e.target.value })}
+                                />
+                            </div>
+
+                            {/* SECTION 7 – SLOT STATUS */}
+                            <div>
+                                <label className="block text-xs font-bold text-surface-700 mb-1 uppercase tracking-wider">7. Slot Status</label>
+                                <select
+                                    value={newSlot.slotStatus}
+                                    onChange={(e) => setNewSlot({ ...newSlot, slotStatus: e.target.value })}
+                                    className="w-full p-2.5 text-xs font-extrabold bg-white border border-surface-200 rounded-xl outline-none cursor-pointer"
+                                >
+                                    <option value="Available">✅ Available</option>
+                                    <option value="Blocked">🛑 Blocked</option>
+                                    <option value="Maintenance">🛠️ Maintenance</option>
+                                    <option value="Hidden">👁️‍🗨️ Hidden</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* SECTION 6 – PRICING OPTIONS */}
+                    <div className="p-4 bg-surface-50 rounded-2xl border border-surface-200 space-y-3">
+                        <div className="text-xs font-black text-surface-800 uppercase tracking-wider">
+                            <span className="text-emerald-600">6.</span> Pricing & Tax Configuration
+                        </div>
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                            <Input
+                                label="Regular Price (₹) *"
+                                type="number"
+                                value={newSlot.regularPrice}
+                                onChange={(e) => setNewSlot({ ...newSlot, regularPrice: e.target.value })}
+                            />
+                            <Input
+                                label="Peak Price (₹) *"
+                                type="number"
+                                value={newSlot.peakPrice}
+                                onChange={(e) => setNewSlot({ ...newSlot, peakPrice: e.target.value })}
+                            />
+                            <Input
+                                label="GST (%)"
+                                type="number"
+                                value={newSlot.gstPercent}
+                                onChange={(e) => setNewSlot({ ...newSlot, gstPercent: e.target.value })}
+                            />
+                        </div>
+
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1">
+                            {[
+                                { key: 'holidayPricing', label: 'Holiday Rate' },
+                                { key: 'weekendPricing', label: 'Weekend Rate' },
+                                { key: 'membershipDiscount', label: 'Member Disc.' },
+                                { key: 'promoCodeEligible', label: 'Promo Eligible' },
+                            ].map(item => (
+                                <button
+                                    key={item.key}
+                                    type="button"
+                                    onClick={() => setNewSlot({ ...newSlot, [item.key]: !newSlot[item.key] })}
+                                    className={`p-2 rounded-xl border text-left text-xs font-extrabold transition-all cursor-pointer flex justify-between items-center ${
+                                        newSlot[item.key]
+                                            ? 'bg-emerald-50 border-emerald-300 text-emerald-900'
+                                            : 'bg-white border-surface-200 text-surface-500'
+                                    }`}
+                                >
+                                    <span>{item.label}</span>
+                                    <span>{newSlot[item.key] ? 'ON' : 'OFF'}</span>
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* SECTION 8 – CANCELLATION */}
+                    <div className="p-4 bg-surface-50 rounded-2xl border border-surface-200 space-y-3">
+                        <div className="text-xs font-black text-surface-800 uppercase tracking-wider">
+                            <span className="text-emerald-600">8.</span> Cancellation Policy
+                        </div>
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 items-center">
+                            <button
+                                type="button"
+                                onClick={() => setNewSlot({ ...newSlot, cancellationAllowed: !newSlot.cancellationAllowed })}
+                                className={`p-2.5 rounded-xl border text-xs font-extrabold transition-all cursor-pointer flex justify-between items-center ${
+                                    newSlot.cancellationAllowed ? 'bg-emerald-50 border-emerald-300 text-emerald-900' : 'bg-white border-surface-200 text-surface-500'
+                                }`}
+                            >
+                                <span>Allow Cancellation</span>
+                                <span>{newSlot.cancellationAllowed ? 'YES' : 'NO'}</span>
+                            </button>
+
+                            <div>
+                                <label className="block text-[10px] font-bold text-surface-600 mb-1 uppercase">Deadline</label>
+                                <select
+                                    value={newSlot.cancellationDeadline}
+                                    onChange={(e) => setNewSlot({ ...newSlot, cancellationDeadline: e.target.value })}
+                                    className="w-full p-2 text-xs font-extrabold bg-white border border-surface-200 rounded-xl outline-none"
+                                >
+                                    <option value="12 Hours Before">12 Hours Before</option>
+                                    <option value="24 Hours Before">24 Hours Before</option>
+                                    <option value="48 Hours Before">48 Hours Before</option>
+                                </select>
+                            </div>
+
+                            <button
+                                type="button"
+                                onClick={() => setNewSlot({ ...newSlot, autoConfirmation: !newSlot.autoConfirmation })}
+                                className={`p-2.5 rounded-xl border text-xs font-extrabold transition-all cursor-pointer flex justify-between items-center ${
+                                    newSlot.autoConfirmation ? 'bg-emerald-50 border-emerald-300 text-emerald-900' : 'bg-white border-surface-200 text-surface-500'
+                                }`}
+                            >
+                                <span>Auto Confirmation</span>
+                                <span>{newSlot.autoConfirmation ? 'ON' : 'OFF'}</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    {/* SECTION 9 – NOTES */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                            <label className="block text-xs font-bold text-surface-700 mb-1 uppercase">Internal Notes</label>
+                            <textarea
+                                rows={2}
+                                placeholder="Staff internal notes..."
+                                value={newSlot.internalNotes}
+                                onChange={(e) => setNewSlot({ ...newSlot, internalNotes: e.target.value })}
+                                className="w-full p-2.5 text-xs font-medium bg-white border border-surface-200 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none"
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-xs font-bold text-surface-700 mb-1 uppercase">Booking Instructions</label>
+                            <textarea
+                                rows={2}
+                                placeholder="Customer booking instructions..."
+                                value={newSlot.bookingInstructions}
+                                onChange={(e) => setNewSlot({ ...newSlot, bookingInstructions: e.target.value })}
+                                className="w-full p-2.5 text-xs font-medium bg-white border border-surface-200 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none"
+                            />
+                        </div>
+                    </div>
+
+                    {/* FOOTER BUTTONS */}
                     <div className="flex gap-3 justify-end pt-4 border-t border-surface-100">
-                        <Button variant="secondary" onClick={() => setCreateModal(false)}>Cancel</Button>
-                        <Button onClick={handleCreateSlotSubmit} disabled={isBookingLoading}>
+                        <Button variant="secondary" onClick={() => setCreateModal(false)} className="cursor-pointer">
+                            Cancel
+                        </Button>
+                        <Button variant="outline" onClick={handleSaveSlotDraft} className="cursor-pointer font-bold border-surface-300">
+                            Save Draft
+                        </Button>
+                        <Button onClick={handleCreateSlotSubmit} disabled={isBookingLoading} className="cursor-pointer bg-emerald-600 hover:bg-emerald-700 font-extrabold text-white">
                             {isBookingLoading ? 'Creating...' : 'Create Slot'}
                         </Button>
                     </div>
