@@ -89,12 +89,17 @@ import TournamentSponsorsPage from './pages/tournaments/TournamentSponsorsPage'
 import TournamentReportsPage from './pages/tournaments/TournamentReportsPage'
 import TournamentSettingsPage from './pages/tournaments/TournamentSettingsPage'
 
+import MobileControllerStandalonePage from './pages/mobile/MobileControllerStandalonePage'
+
 export default function App() {
   return (
     <AuthProvider>
       <BrowserRouter>
         <ToastProvider>
           <Routes>
+            {/* Mobile Remote Controller Public Route */}
+            <Route path="/mobile-controller/:sessionId" element={<MobileControllerStandalonePage />} />
+
             {/* Auth */}
             <Route path="/login" element={<LoginPage />} />
             <Route path="/register" element={<RegisterPage />} />
