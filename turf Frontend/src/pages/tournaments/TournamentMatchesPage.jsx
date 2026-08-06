@@ -7,7 +7,7 @@ import Modal from '../../components/ui/Modal'
 import Input from '../../components/ui/Input'
 import Select from '../../components/ui/Select'
 import { useToast } from '../../components/ui/Toast'
-import { HiPlay, HiPencil, HiCheck, HiExclamation } from 'react-icons/hi'
+import { HiPlay, HiCheck, HiExclamation } from 'react-icons/hi'
 import { HiTrophy } from 'react-icons/hi2'
 import CricketScorerConsole from '../../components/cricket/CricketScorerConsole'
 
@@ -170,9 +170,6 @@ export default function TournamentMatchesPage() {
             label: 'Action',
             render: (_, r) => (
                 <div className="flex items-center gap-2">
-                    <Button size="sm" onClick={() => handleOpenScoreModal(r)}>
-                        <HiPencil className="w-3.5 h-3.5 mr-1" /> Update Score
-                    </Button>
                     <button
                         onClick={() => handleLiveScore(r)}
                         className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-red-600 hover:bg-red-700 text-white font-extrabold text-xs shadow-sm transition-all cursor-pointer whitespace-nowrap"

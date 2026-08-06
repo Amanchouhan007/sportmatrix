@@ -5,6 +5,7 @@ import Button from '../components/ui/Button'
 
 const navLinks = [
     { label: 'Home', to: '/' },
+    { label: 'Admin', to: '/admin' },
     { label: 'Turfs', to: '/turfs' },
     { label: 'Tournaments', to: '/tournaments' },
     { label: 'Membership', to: '/membership' },
@@ -66,7 +67,8 @@ export default function WebsiteLayout({ children }) {
                     </div>
 
                     {/* Auth Buttons (Desktop) */}
-                    <div className="hidden lg:flex items-center gap-3.5 shrink-0">
+                    <div className="hidden lg:flex items-center gap-3 shrink-0">
+                        <Button variant="outline" size="sm" onClick={() => navigate('/admin')} className="font-black text-[10px] tracking-widest uppercase px-4 border-indigo-500/40 text-indigo-300 hover:border-indigo-400 hover:text-white hover:bg-indigo-600/30 transition-all shadow-lg backdrop-blur-sm flex items-center gap-1">⚙️ Admin</Button>
                         <Button variant="outline" size="sm" onClick={() => navigate('/login')} className="font-black text-[10px] tracking-widest uppercase px-5 border-white/20 text-white hover:border-[#00E6A7] hover:text-[#00E6A7] hover:bg-[#00E6A7]/10 transition-all shadow-lg backdrop-blur-sm">Log In</Button>
                         <div className="relative group">
                             <div className="absolute inset-0 bg-[#00E6A7] opacity-0 blur-xl rounded-full group-hover:opacity-50 transition-opacity duration-500" />
@@ -90,7 +92,8 @@ export default function WebsiteLayout({ children }) {
                             </NavLink>
                         ))}
                         <div className="pt-5 space-y-3 border-t border-white/10 mt-3">
-                             <button className="w-full py-3 border border-white/20 text-white font-black text-[10px] tracking-widest uppercase rounded-lg hover:border-[#00E6A7] hover:text-[#00E6A7] transition-all" onClick={() => { navigate('/login'); setMobileOpen(false) }}>Log In</button>
+                            <button className="w-full py-3 bg-indigo-600 hover:bg-indigo-500 text-white font-black text-[10px] tracking-widest uppercase rounded-lg shadow-md transition-all flex items-center justify-center gap-1.5" onClick={() => { navigate('/admin'); setMobileOpen(false) }}>⚙️ Admin Dashboard</button>
+                            <button className="w-full py-3 border border-white/20 text-white font-black text-[10px] tracking-widest uppercase rounded-lg hover:border-[#00E6A7] hover:text-[#00E6A7] transition-all" onClick={() => { navigate('/login'); setMobileOpen(false) }}>Log In</button>
                             <button className="w-full py-3 bg-gradient-to-r from-[#00E6A7] to-[#00C2FF] text-slate-950 font-black text-[10px] tracking-widest uppercase rounded-lg shadow-[0_0_20px_rgba(0,230,167,0.35)] hover:from-[#00c892] hover:to-[#00b0e6] transition-all" onClick={() => { navigate('/register'); setMobileOpen(false) }}>Get Started</button>
                         </div>
                     </div>

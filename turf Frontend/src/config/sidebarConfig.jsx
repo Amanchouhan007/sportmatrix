@@ -1,6 +1,6 @@
 import {
     HiHome, HiOfficeBuilding, HiUsers, HiCreditCard, HiChartBar, HiCog, HiClipboardList,
-    HiShieldCheck, HiExclamationCircle, HiCash, HiSpeakerphone, HiCurrencyDollar, HiPlusCircle,
+    HiShieldCheck, HiExclamationCircle, HiCash, HiSpeakerphone, HiCurrencyDollar,
     HiTag, HiCheckCircle, HiStar, HiAdjustments, HiViewGrid
 } from 'react-icons/hi'
 import {
@@ -30,7 +30,6 @@ const sidebarConfig = {
             pathPrefix: '/admin/ads',
             children: [
                 { label: 'All Advertisements', icon: <HiSpeakerphone />, path: '/admin/ads' },
-                { label: 'Create Advertisement', icon: <HiPlusCircle />, path: '/admin/ads/create' },
                 { label: 'Discount Offers', icon: <HiTag />, path: '/admin/discount-offers' },
                 { label: 'Commission Management', icon: <HiCurrencyDollar />, path: '/admin/ads/commissions' },
                 { label: 'Analytics', icon: <HiChartBar />, path: '/admin/ads/analytics' },
@@ -47,7 +46,6 @@ const sidebarConfig = {
             children: [
                 { label: 'Dashboard', icon: <HiChartBar />, path: '/admin/tournaments/dashboard' },
                 { label: 'All Tournaments', icon: <HiTrophy />, path: '/admin/tournaments/all' },
-                { label: 'Categories', icon: <HiTag />, path: '/admin/tournaments/categories' },
                 { label: 'Team Registrations', icon: <HiUserGroup />, path: '/admin/tournaments/registrations' },
                 { label: 'Fixtures', icon: <HiViewGrid />, path: '/admin/tournaments/fixtures' },
                 { label: 'Matches', icon: <HiPlay />, path: '/admin/tournaments/matches' },
@@ -59,7 +57,7 @@ const sidebarConfig = {
         },
 
         { isHeader: true, label: 'Operations' },
-        { label: 'Sports', icon: <HiBolt />, path: '/admin/sports' },
+        { label: 'Turf', icon: <HiBolt />, path: '/admin/sports' },
         { label: 'Slots', icon: <HiCalendar />, path: '/admin/slots' },
         { label: 'Bookings', icon: <HiTicket />, path: '/admin/bookings' },
         { label: 'POS Billing', icon: <HiCreditCard />, path: '/admin/pos' },

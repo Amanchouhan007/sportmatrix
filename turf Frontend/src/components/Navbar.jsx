@@ -3,6 +3,7 @@ import { HiMenuAlt4, HiX } from 'react-icons/hi'
 import { useNavigate, useLocation } from 'react-router-dom'
 
 const navLinks = [
+    { label: 'ADMIN', href: '/admin', isPage: true },
     { label: 'FEATURES', href: 'features' },
     { label: 'MODULES', href: 'modules' },
     { label: 'ROLES', href: 'roles' },
@@ -90,7 +91,13 @@ export default function Navbar() {
                 </div>
 
                 {/* TACTICAL CTA: LIGHT THEME */}
-                <div className="hidden lg:flex items-center gap-6">
+                <div className="hidden lg:flex items-center gap-4">
+                    <button
+                        onClick={() => navigate('/admin')}
+                        className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-black text-[11px] tracking-[0.2em] uppercase rounded-sm transition-all transform hover:scale-105 active:scale-95 shadow-lg shadow-indigo-600/30 flex items-center gap-1.5 cursor-pointer"
+                    >
+                        <span>⚙️</span> Admin
+                    </button>
                     <button
                         onClick={() => scrollTo('cta')}
                         className="px-8 py-2.5 bg-[#16a34a] text-white font-black text-[11px] tracking-[0.2em] uppercase rounded-sm hover:bg-green-500 transition-all transform hover:scale-105 active:scale-95 shadow-xl shadow-green-600/20"

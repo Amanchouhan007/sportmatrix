@@ -10,23 +10,33 @@ export default function TournamentLowerSections() {
             {/* 3. CALENDAR & NEARBY */}
             <div className="grid lg:grid-cols-3 gap-8">
                 {/* Calendar */}
-                <div className="lg:col-span-2 bg-slate-900/40 p-6 sm:p-8 rounded-3xl border border-white/5">
-                    <div className="flex items-center gap-3 mb-6">
-                        <HiOutlineCalendar className="w-5 h-5 text-blue-500" />
-                        <h3 className="text-sm font-black uppercase text-white tracking-widest">Tournament Calendar</h3>
+                <div className="lg:col-span-2 relative overflow-hidden bg-gradient-to-br from-[#0F172A]/90 to-[#111827]/95 backdrop-blur-xl p-6 sm:p-8 rounded-[22px] border border-white/10 shadow-[0_8px_32px_0_rgba(0,0,0,0.37)]">
+                    {/* Ambient Glow */}
+                    <div className="absolute -top-20 -left-20 w-48 h-48 bg-blue-500/10 rounded-full blur-3xl pointer-events-none" />
+
+                    <div className="flex items-center gap-3 pb-4 mb-6 border-b border-white/[0.08]">
+                        <HiOutlineCalendar className="w-5 h-5 text-blue-400 drop-shadow-[0_0_8px_rgba(96,165,250,0.6)]" />
+                        <h3 className="text-sm font-bold uppercase text-white tracking-[0.15em]">Tournament Calendar</h3>
                     </div>
                     <div className="flex gap-4 overflow-x-auto pb-4 hide-scrollbar">
                         {['August', 'September', 'October'].map((month, idx) => (
-                            <div key={idx} className={`shrink-0 w-48 rounded-2xl p-4 border ${idx === 0 ? 'bg-blue-600/10 border-blue-500/30' : 'bg-slate-950/50 border-white/5'}`}>
-                                <h4 className={`text-xs font-black uppercase tracking-widest mb-4 ${idx === 0 ? 'text-blue-400' : 'text-slate-400'}`}>{month}</h4>
-                                <div className="space-y-3">
-                                    <div className="flex justify-between items-center text-[10px] font-bold">
-                                        <span className="text-slate-300">15th - Football</span>
-                                        <span className="text-amber-400">₹50K</span>
+                            <div 
+                                key={idx} 
+                                className={`shrink-0 w-48 rounded-2xl p-4 sm:p-5 border transition-all duration-200 ease-out hover:-translate-y-0.5 hover:scale-[1.01] ${
+                                    idx === 0 
+                                        ? 'bg-gradient-to-b from-blue-900/30 via-slate-900/80 to-slate-950/90 border-blue-500/50 shadow-[0_0_20px_rgba(59,130,246,0.15)] ring-1 ring-blue-500/30' 
+                                        : 'bg-slate-950/50 border-white/[0.08] hover:border-blue-500/30 hover:bg-slate-900/60 hover:shadow-[0_4px_20px_rgba(59,130,246,0.1)]'
+                                }`}
+                            >
+                                <h4 className={`text-xs font-extrabold uppercase tracking-[0.15em] mb-4 ${idx === 0 ? 'text-blue-400 drop-shadow-[0_0_8px_rgba(96,165,250,0.4)]' : 'text-slate-400'}`}>{month}</h4>
+                                <div className="divide-y divide-white/[0.07] space-y-2.5">
+                                    <div className="flex justify-between items-center text-[11px] pt-1">
+                                        <span className="text-slate-300 font-medium"><span className="text-slate-400 font-normal">15th -</span> <span className="text-white font-semibold ml-0.5">Football</span></span>
+                                        <span className="bg-gradient-to-r from-amber-300 via-amber-400 to-yellow-500 bg-clip-text text-transparent font-extrabold text-xs tracking-tight">₹50K</span>
                                     </div>
-                                    <div className="flex justify-between items-center text-[10px] font-bold">
-                                        <span className="text-slate-300">20th - Football</span>
-                                        <span className="text-amber-400">₹20K</span>
+                                    <div className="flex justify-between items-center text-[11px] pt-2.5">
+                                        <span className="text-slate-300 font-medium"><span className="text-slate-400 font-normal">20th -</span> <span className="text-white font-semibold ml-0.5">Football</span></span>
+                                        <span className="bg-gradient-to-r from-amber-300 via-amber-400 to-yellow-500 bg-clip-text text-transparent font-extrabold text-xs tracking-tight">₹20K</span>
                                     </div>
                                 </div>
                             </div>
@@ -35,13 +45,21 @@ export default function TournamentLowerSections() {
                 </div>
 
                 {/* Nearby */}
-                <div className="bg-slate-900/40 p-6 sm:p-8 rounded-3xl border border-white/5">
-                    <h3 className="text-sm font-black uppercase text-white tracking-widest mb-6">Nearby You</h3>
-                    <div className="space-y-2">
+                <div className="relative overflow-hidden bg-gradient-to-br from-[#0F172A]/90 to-[#111827]/95 backdrop-blur-xl p-6 sm:p-8 rounded-[22px] border border-white/10 shadow-[0_8px_32px_0_rgba(0,0,0,0.37)]">
+                    {/* Ambient Glow */}
+                    <div className="absolute -top-20 -right-20 w-48 h-48 bg-emerald-500/5 rounded-full blur-3xl pointer-events-none" />
+
+                    <div className="pb-4 mb-6 border-b border-white/[0.08]">
+                        <h3 className="text-sm font-bold uppercase text-white tracking-[0.15em]">Nearby You</h3>
+                    </div>
+                    <div className="space-y-2.5">
                         {['Within 5 KM', 'Within 10 KM', 'Within 25 KM'].map((range, idx) => (
-                            <div key={idx} className="flex justify-between items-center p-3 bg-slate-950/50 rounded-xl border border-white/5 cursor-pointer hover:border-white/20">
-                                <span className="text-[10px] font-bold text-slate-300 uppercase tracking-widest">{range}</span>
-                                <span className="text-[10px] font-black text-emerald-400">{3 * (idx + 1)} Found</span>
+                            <div 
+                                key={idx} 
+                                className="flex justify-between items-center px-4 py-3.5 bg-gradient-to-r from-slate-950/60 to-slate-900/50 rounded-xl border border-white/[0.08] cursor-pointer transition-all duration-200 ease-out hover:border-blue-500/40 hover:bg-slate-900/80 hover:-translate-y-0.5 hover:shadow-[0_4px_16px_rgba(0,0,0,0.4)] group"
+                            >
+                                <span className="text-[11px] font-semibold text-slate-300 uppercase tracking-[0.12em] group-hover:text-white transition-colors">{range}</span>
+                                <span className="px-2.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-[10px] font-bold text-emerald-400 shadow-[0_0_10px_rgba(16,185,129,0.15)] group-hover:bg-emerald-500/20 group-hover:border-emerald-500/30 transition-colors">{3 * (idx + 1)} Found</span>
                             </div>
                         ))}
                     </div>

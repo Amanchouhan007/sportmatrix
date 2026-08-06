@@ -10,7 +10,7 @@ import ConfirmDialog from '../../components/ui/ConfirmDialog'
 import Pagination from '../../components/ui/Pagination'
 import { useToast } from '../../components/ui/Toast'
 import {
-    FiSearch, FiPlus, FiEye, FiEdit2, FiCheckCircle,
+    FiSearch, FiEye, FiEdit2, FiCheckCircle,
     FiXCircle, FiPauseCircle, FiPlayCircle, FiTrash2, FiTag
 } from 'react-icons/fi'
 import { HiSpeakerphone } from 'react-icons/hi'
@@ -225,13 +225,6 @@ export default function AllAdvertisements() {
                         className="flex items-center gap-2 border-emerald-200 text-emerald-700 bg-emerald-50 hover:bg-emerald-100 font-extrabold"
                     >
                         <FiTag /> Discount Offers
-                    </Button>
-                    <Button
-                        variant="primary"
-                        onClick={() => navigate('/admin/ads/create')}
-                        className="flex items-center gap-2"
-                    >
-                        <FiPlus /> Create Advertisement
                     </Button>
                 </div>
             </div>
