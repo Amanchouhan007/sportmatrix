@@ -1,13 +1,11 @@
 import { useState, useEffect } from 'react'
-import Card from '../../components/ui/Card'
-import Button from '../../components/ui/Button'
-import Badge from '../../components/ui/Badge'
 import Modal from '../../components/ui/Modal'
 import Input from '../../components/ui/Input'
 import Select from '../../components/ui/Select'
 import ConfirmDialog from '../../components/ui/ConfirmDialog'
 import { useToast } from '../../components/ui/Toast'
 import { FiEdit2, FiTrash2, FiPlus, FiX } from 'react-icons/fi'
+import { HiCheckCircle, HiStar } from 'react-icons/hi'
 import { 
     createPlan, 
     getAllPlans, 
@@ -121,7 +119,6 @@ export default function SubscriptionPlans() {
         setIsModalOpen(true)
     }
 
-    // Features Array Handlers
     const handleAddFeature = () => {
         if (newFeatureText.trim() === '') return
         setFormData(prev => ({
@@ -138,9 +135,7 @@ export default function SubscriptionPlans() {
         }))
     }
 
-    // Save Form (Create or Update)
     const handleSave = async () => {
-        // Front-end validations
         if (!formData.planName.trim()) {
             addToast({ title: 'Validation Error', message: 'Plan Name is required', type: 'error' })
             return
@@ -153,12 +148,11 @@ export default function SubscriptionPlans() {
         };
 
         const parseLimit = (limitVal) => {
-            if (limitVal === '' || limitVal === undefined || limitVal === null) return -1; // Default to Unlimited
+            if (limitVal === '' || limitVal === undefined || limitVal === null) return -1;
             const parsed = Number(limitVal);
             return isNaN(parsed) ? -1 : parsed;
         };
 
-        // Prepare parsed payloads
         const payload = {
             planName: formData.planName.trim(),
             description: formData.description.trim(),
@@ -181,7 +175,6 @@ export default function SubscriptionPlans() {
             features: formData.features
         }
 
-        // Integrity check
         if (payload.monthlyPricing.price < 0 || payload.yearlyPricing.price < 0) {
             addToast({ title: 'Validation Error', message: 'Prices must be positive or zero', type: 'error' })
             return
@@ -207,7 +200,6 @@ export default function SubscriptionPlans() {
         }
     }
 
-    // Soft delete plan
     const handleDelete = async () => {
         if (!planToDelete) return
         setIsDeleting(true)
@@ -224,7 +216,6 @@ export default function SubscriptionPlans() {
         }
     }
 
-    // Toggle active status
     const handleToggleStatus = async (id, currentStatus) => {
         const nextStatus = currentStatus === 'active' ? 'inactive' : 'active'
         setStatusUpdatingId(id)
@@ -241,7 +232,6 @@ export default function SubscriptionPlans() {
         }
     }
 
-    // Toggle popularity status
     const handleTogglePopular = async (id, currentPopular) => {
         const nextPopular = !currentPopular
         setPopularUpdatingId(id)
@@ -258,140 +248,167 @@ export default function SubscriptionPlans() {
         }
     }
 
-    // Convert -1 value to "Unlimited" for card outputs
     const formatLimit = (limit) => {
         return limit === -1 ? 'Unlimited' : limit
     }
 
     return (
-        <div className="space-y-6">
-            <div className="flex items-center justify-between">
+        <div className="space-y-8 font-sans text-slate-900">
+            {/* Page Header */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div>
-                    <h1 className="text-2xl font-bold text-surface-900">Subscription Plans</h1>
-                    <p className="text-surface-500 text-sm mt-1">Manage subscription tiers and limits</p>
+                    <h1 className="text-3xl font-black text-slate-900 tracking-tight">Subscription Plans</h1>
+                    <p className="text-slate-500 text-sm font-semibold mt-1">Manage subscription tiers and limits</p>
                 </div>
-                <Button onClick={() => handleOpenModal()}>+ Create Plan</Button>
+                <button
+                    onClick={() => handleOpenModal()}
+                    className="h-11 px-6 rounded-full bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white font-black text-xs uppercase tracking-wider shadow-[0_4px_14px_rgba(34,197,94,0.35)] hover:scale-105 active:scale-95 transition-all cursor-pointer flex items-center justify-center gap-2 border border-emerald-400/40"
+                >
+                    <FiPlus className="w-4 h-4" />
+                    <span>+ Create Plan</span>
+                </button>
             </div>
 
+            {/* Plan Cards Grid (3 Cards Desktop matching Screenshot 2) */}
             {isLoading ? (
-                <div className="min-h-[300px] flex flex-col items-center justify-center gap-4">
-                    <div className="w-10 h-10 border-4 border-primary-600 border-t-transparent rounded-full animate-spin"></div>
-                    <span className="text-surface-500 text-sm font-medium">Fetching subscription plans...</span>
+                <div className="min-h-[350px] flex flex-col items-center justify-center gap-4">
+                    <div className="w-12 h-12 border-4 border-[#16A34A] border-t-transparent rounded-full animate-spin"></div>
+                    <span className="text-slate-500 text-xs font-bold uppercase tracking-wider">Fetching subscription plans...</span>
                 </div>
             ) : plans.length === 0 ? (
-                <div className="min-h-[250px] bg-white rounded-2xl border border-surface-200 flex flex-col items-center justify-center p-8">
-                    <p className="text-surface-500 text-sm font-medium">No subscription plans found.</p>
-                    <Button variant="secondary" className="mt-4" onClick={() => handleOpenModal()}>Create your first plan</Button>
+                <div className="min-h-[280px] bg-white rounded-[24px] border border-slate-200/80 shadow-2xs flex flex-col items-center justify-center p-8 text-center">
+                    <p className="text-slate-500 text-sm font-semibold mb-4">No subscription plans found.</p>
+                    <button 
+                        onClick={() => handleOpenModal()}
+                        className="h-11 px-6 rounded-full bg-gradient-to-r from-green-500 to-emerald-500 text-white font-black text-xs uppercase tracking-wider shadow-sm cursor-pointer"
+                    >
+                        Create your first plan
+                    </button>
                 </div>
             ) : (
-                <div className="grid md:grid-cols-3 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-7 items-stretch">
                     {plans.map(p => (
-                        <Card key={p._id} hover className="relative group overflow-hidden flex flex-col h-full">
+                        <div 
+                            key={p._id}
+                            className="bg-white rounded-[24px] border border-slate-200/80 shadow-[0_10px_35px_rgba(0,0,0,0.04)] hover:shadow-[0_20px_45px_rgba(0,0,0,0.08)] transition-all duration-300 p-7 flex flex-col justify-between relative overflow-hidden group"
+                        >
+                            {/* Purple Most Popular Tag (Matching Screenshot 2) */}
                             {p.isPopular && (
-                                <div className="absolute top-0 right-0 bg-accent-500 text-white text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-bl-xl shadow-sm z-10">
-                                    Most Popular
+                                <div className="absolute top-4 right-4 bg-[#7C3AED] text-white text-[9.5px] font-black uppercase tracking-widest px-3 py-1 rounded-full shadow-xs flex items-center gap-1 z-10">
+                                    <HiStar className="w-3 h-3 text-amber-300" />
+                                    <span>Most Popular</span>
                                 </div>
                             )}
 
-                            <div className="flex items-center justify-between mb-4">
-                                <h3 className="text-lg font-bold text-surface-900">{p.planName}</h3>
-                                <button 
-                                    onClick={() => handleToggleStatus(p._id, p.status)}
-                                    disabled={statusUpdatingId === p._id}
-                                    className="cursor-pointer disabled:opacity-50"
-                                >
-                                    <Badge variant={p.status === 'active' ? 'success' : 'default'} dot>
-                                        {p.status.toUpperCase()}
-                                    </Badge>
-                                </button>
-                            </div>
+                            <div>
+                                {/* Card Header: Title & Status Badge */}
+                                <div className="flex items-center justify-between mb-3">
+                                    <h3 className="text-xl font-bold text-slate-900 tracking-tight">{p.planName}</h3>
+                                    {!p.isPopular && (
+                                        <button 
+                                            onClick={() => handleToggleStatus(p._id, p.status)}
+                                            disabled={statusUpdatingId === p._id}
+                                            className="cursor-pointer disabled:opacity-50"
+                                        >
+                                            <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider inline-flex items-center gap-1 ${
+                                                p.status === 'active' ? 'bg-emerald-100/80 text-[#16A34A]' : 'bg-slate-100 text-slate-600'
+                                            }`}>
+                                                <span className={`w-1.5 h-1.5 rounded-full ${p.status === 'active' ? 'bg-[#22C55E]' : 'bg-slate-400'}`} />
+                                                {p.status.toUpperCase()}
+                                            </span>
+                                        </button>
+                                    )}
+                                </div>
 
-                            <p className="text-2xl font-bold text-primary-600 mb-1">
-                                ₹{Number(p.monthlyPricing?.price || 0).toLocaleString()}
-                                <span className="text-sm font-normal text-surface-500">/mo</span>
-                            </p>
-                            <p className="text-xs text-surface-400 mb-4">
-                                ₹{Number(p.yearlyPricing?.price || 0).toLocaleString()} / year
-                            </p>
-
-                            {p.description && (
-                                <p className="text-xs text-surface-500 mb-4 italic line-clamp-2">
-                                    {p.description}
+                                {/* Price Display */}
+                                <div className="flex items-baseline gap-1 mb-1">
+                                    <span className="text-[38px] font-black text-[#16A34A] leading-none tracking-tight">
+                                        ₹{Number(p.monthlyPricing?.price || 0).toLocaleString()}
+                                    </span>
+                                    <span className="text-xs font-bold text-slate-400">/mo</span>
+                                </div>
+                                <p className="text-[11px] text-slate-400 font-medium mb-4">
+                                    ₹{Number(p.yearlyPricing?.price || 0).toLocaleString()} / year
                                 </p>
-                            )}
 
-                            {/* Limits list */}
-                            <div className="space-y-3 text-sm border-t border-surface-100 pt-4 mt-auto">
-                                <div className="flex justify-between">
-                                    <span className="text-surface-500">Branches</span>
-                                    <span className="font-medium text-surface-900">{formatLimit(p.monthlyPricing?.branchLimit)}</span>
+                                {p.description && (
+                                    <p className="text-xs text-slate-500 font-medium mb-6 italic leading-relaxed line-clamp-2">
+                                        {p.description}
+                                    </p>
+                                )}
+
+                                {/* Limits Rows */}
+                                <div className="space-y-3.5 text-xs border-t border-slate-100 pt-4 mb-6">
+                                    <div className="flex justify-between items-center">
+                                        <span className="text-slate-400 font-semibold">Branches</span>
+                                        <span className="font-black text-slate-900">{formatLimit(p.monthlyPricing?.branchLimit)}</span>
+                                    </div>
+                                    <div className="flex justify-between items-center">
+                                        <span className="text-slate-400 font-semibold">Sports</span>
+                                        <span className="font-black text-slate-900">{formatLimit(p.monthlyPricing?.sportsLimit)}</span>
+                                    </div>
+                                    <div className="flex justify-between items-center">
+                                        <span className="text-slate-400 font-semibold">Bookings/mo</span>
+                                        <span className="font-black text-slate-900">{formatLimit(p.monthlyPricing?.bookingLimit)}</span>
+                                    </div>
+                                    <div className="flex justify-between items-center">
+                                        <span className="text-slate-400 font-semibold">Active Users</span>
+                                        <span className="font-black text-slate-900">{formatLimit(p.monthlyPricing?.activeUsersLimit)}</span>
+                                    </div>
                                 </div>
-                                <div className="flex justify-between">
-                                    <span className="text-surface-500">Sports</span>
-                                    <span className="font-medium text-surface-900">{formatLimit(p.monthlyPricing?.sportsLimit)}</span>
+
+                                {/* Popularity Tag Bar */}
+                                <div className="mb-6 pt-3 border-t border-dashed border-slate-100 flex items-center justify-between">
+                                    <span className="text-xs text-slate-400 font-medium">Popularity Tag</span>
+                                    <button
+                                        onClick={() => handleTogglePopular(p._id, p.isPopular)}
+                                        disabled={popularUpdatingId === p._id}
+                                        className={`text-xs px-3 py-1 rounded-full border transition cursor-pointer disabled:opacity-50 font-bold ${
+                                            p.isPopular ? 'bg-amber-50 border-amber-200 text-amber-600' : 'bg-white border-slate-200 text-slate-600 hover:border-slate-300'
+                                        }`}
+                                    >
+                                        {p.isPopular ? '⭐ Popular' : '☆ Mark Popular'}
+                                    </button>
                                 </div>
-                                <div className="flex justify-between">
-                                    <span className="text-surface-500">Bookings/mo</span>
-                                    <span className="font-medium text-surface-900">{formatLimit(p.monthlyPricing?.bookingLimit)}</span>
-                                </div>
-                                <div className="flex justify-between">
-                                    <span className="text-surface-500">Active Users</span>
-                                    <span className="font-medium text-surface-900">{formatLimit(p.monthlyPricing?.activeUsersLimit)}</span>
-                                </div>
+
+                                {/* Features Included List (Matching Screenshot 2 Card Pills) */}
+                                {p.features && p.features.length > 0 && (
+                                    <div className="mb-6 space-y-2.5">
+                                        <span className="text-[10px] uppercase tracking-wider text-slate-400 font-black">Features Included</span>
+                                        <div className="space-y-2">
+                                            {p.features.map((feat, i) => (
+                                                <div 
+                                                    key={i} 
+                                                    className="bg-slate-50/80 border border-slate-200/60 rounded-2xl px-4 py-3 flex items-center gap-3 text-xs font-bold text-slate-800"
+                                                >
+                                                    <HiCheckCircle className="w-4 h-4 text-[#16A34A] shrink-0" />
+                                                    <span className="leading-snug">{feat}</span>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
                             </div>
 
-                            {/* Popular toggle button on card */}
-                            <div className="mt-4 pt-3 border-t border-dashed border-surface-100 flex items-center justify-between">
-                                <span className="text-xs text-surface-400">Popularity Status</span>
+                            {/* Card Footer Action Buttons (Matching Screenshot 2) */}
+                            <div className="flex items-center gap-3 pt-4 border-t border-slate-100">
                                 <button
-                                    onClick={() => handleTogglePopular(p._id, p.isPopular)}
-                                    disabled={popularUpdatingId === p._id}
-                                    className={`text-xs px-2.5 py-1 rounded-lg border transition cursor-pointer disabled:opacity-50 ${p.isPopular ? 'bg-amber-50 border-amber-200 text-amber-600 font-bold' : 'bg-white border-surface-200 text-surface-600 hover:border-surface-300'}`}
-                                >
-                                    {p.isPopular ? '⭐ Popular' : '☆ Mark Popular'}
-                                </button>
-                            </div>
-
-                            {/* Features Preview */}
-                            {p.features && p.features.length > 0 && (
-                                <div className="mt-4">
-                                    <span className="text-[10px] uppercase tracking-widest text-surface-400 font-bold">Features Included</span>
-                                    <ul className="text-xs space-y-1.5 mt-1.5">
-                                        {p.features.slice(0, 3).map((feat, i) => (
-                                            <li key={i} className="text-surface-600 flex items-center gap-1.5">
-                                                <span className="text-primary-500 font-bold">•</span> {feat}
-                                            </li>
-                                        ))}
-                                        {p.features.length > 3 && (
-                                            <li className="text-surface-400 text-[10px] italic">+{p.features.length - 3} more features</li>
-                                        )}
-                                    </ul>
-                                </div>
-                            )}
-
-                            {/* Actions */}
-                            <div className="flex gap-2 mt-6">
-                                <Button 
-                                    variant="outline" 
-                                    size="sm" 
-                                    fullWidth
                                     onClick={() => handleOpenModal(p)}
+                                    className="flex-1 py-3 px-4 rounded-full border border-[#16A34A] bg-white text-[#16A34A] hover:bg-[#16A34A] hover:text-white font-bold text-xs transition-all text-center cursor-pointer"
                                 >
                                     Edit Settings
-                                </Button>
-                                <Button 
-                                    variant="danger" 
-                                    size="sm" 
-                                    fullWidth
+                                </button>
+                                <button
                                     onClick={() => {
                                         setPlanToDelete(p._id)
                                         setIsConfirmOpen(true)
                                     }}
+                                    className="flex-1 py-3 px-4 rounded-full bg-[#FF3B30] hover:bg-red-600 text-white font-bold text-xs transition-all text-center cursor-pointer shadow-2xs"
                                 >
                                     Delete Plan
-                                </Button>
+                                </button>
                             </div>
-                        </Card>
+                        </div>
                     ))}
                 </div>
             )}
@@ -401,18 +418,24 @@ export default function SubscriptionPlans() {
                 isOpen={isModalOpen}
                 onClose={() => setIsModalOpen(false)}
                 title={editingPlan ? "Edit Subscription Plan" : "Create New Plan"}
-                size="lg"
+                size="enterprise"
             >
-                <div className="space-y-6 pt-2">
-                    {/* SECTION 1: Basic Information */}
-                    <div className="space-y-4">
-                        <h4 className="text-sm font-bold text-surface-800 uppercase tracking-widest border-b border-surface-100 pb-1">
-                            Section 1: Basic Information
-                        </h4>
+                <div className="space-y-6 pt-2 max-h-[75vh] overflow-y-auto pr-1" style={{ scrollbarWidth: 'thin' }}>
+                    {/* Section 1: Basic Information */}
+                    <div className="bg-slate-50/80 border border-slate-200/80 rounded-2xl p-5 space-y-4">
+                        <div className="flex items-center gap-2.5 pb-3 border-b border-slate-200/70">
+                            <div className="w-7 h-7 rounded-lg bg-emerald-50 text-[#16A34A] flex items-center justify-center font-bold text-xs">
+                                1
+                            </div>
+                            <h4 className="text-xs font-black text-slate-900 uppercase tracking-widest">
+                                Section 1: Basic Information
+                            </h4>
+                        </div>
+
                         <div className="grid md:grid-cols-2 gap-4">
                             <Input 
                                 label="Plan Name" 
-                                placeholder="e.g. Basic, Pro, Enterprise" 
+                                placeholder="e.g. Starter Plan, Professional Plan, Enterprise Arena" 
                                 value={formData.planName}
                                 onChange={e => setFormData({ ...formData, planName: e.target.value })}
                                 disabled={isSaving}
@@ -430,6 +453,7 @@ export default function SubscriptionPlans() {
                                 disabled={isSaving}
                             />
                         </div>
+
                         <Input 
                             label="Description" 
                             placeholder="Provide a brief plan description..." 
@@ -437,32 +461,38 @@ export default function SubscriptionPlans() {
                             onChange={e => setFormData({ ...formData, description: e.target.value })}
                             disabled={isSaving}
                         />
-                        {/* Switch for isPopular */}
-                        <div className="flex items-center gap-3 bg-surface-50 p-3 rounded-xl border border-surface-200">
+
+                        <div className="flex items-center gap-3 bg-white p-3.5 rounded-xl border border-slate-200/80 shadow-2xs">
                             <button
                                 type="button"
                                 role="switch"
                                 disabled={isSaving}
                                 aria-checked={formData.isPopular}
                                 onClick={() => setFormData(prev => ({ ...prev, isPopular: !prev.isPopular }))}
-                                className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${formData.isPopular ? 'bg-primary-600' : 'bg-surface-200'}`}
+                                className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${formData.isPopular ? 'bg-[#16A34A]' : 'bg-slate-200'}`}
                             >
                                 <span
                                     className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${formData.isPopular ? 'translate-x-5' : 'translate-x-0'}`}
                                 />
                             </button>
                             <div>
-                                <span className="block text-sm font-semibold text-surface-900">Mark As Popular Plan</span>
-                                <span className="block text-xs text-surface-500">Highlights this card on the client pricing view</span>
+                                <span className="block text-xs font-bold text-slate-900">Mark As Popular Plan</span>
+                                <span className="block text-[11px] text-slate-500 font-medium">Highlights this card on client pricing pages</span>
                             </div>
                         </div>
                     </div>
 
-                    {/* SECTION 2: Monthly Pricing */}
-                    <div className="space-y-4">
-                        <h4 className="text-sm font-bold text-surface-800 uppercase tracking-widest border-b border-surface-100 pb-1">
-                            Section 2: Monthly Pricing
-                        </h4>
+                    {/* Section 2: Monthly Pricing */}
+                    <div className="bg-slate-50/80 border border-slate-200/80 rounded-2xl p-5 space-y-4">
+                        <div className="flex items-center gap-2.5 pb-3 border-b border-slate-200/70">
+                            <div className="w-7 h-7 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center font-bold text-xs">
+                                2
+                            </div>
+                            <h4 className="text-xs font-black text-slate-900 uppercase tracking-widest">
+                                Section 2: Monthly Pricing & Tier Limits
+                            </h4>
+                        </div>
+
                         <div className="grid md:grid-cols-2 gap-4">
                             <Input 
                                 label="Monthly Price (₹)" 
@@ -476,7 +506,7 @@ export default function SubscriptionPlans() {
                                 disabled={isSaving}
                             />
                             <Input 
-                                label="Branch Limit" 
+                                label="Branch Limit (-1 for Unlimited)" 
                                 type="number"
                                 placeholder="-1 for Unlimited" 
                                 value={formData.monthlyPricing.branchLimit}
@@ -524,11 +554,17 @@ export default function SubscriptionPlans() {
                         </div>
                     </div>
 
-                    {/* SECTION 3: Yearly Pricing */}
-                    <div className="space-y-4">
-                        <h4 className="text-sm font-bold text-surface-800 uppercase tracking-widest border-b border-surface-100 pb-1">
-                            Section 3: Yearly Pricing
-                        </h4>
+                    {/* Section 3: Yearly Pricing */}
+                    <div className="bg-slate-50/80 border border-slate-200/80 rounded-2xl p-5 space-y-4">
+                        <div className="flex items-center gap-2.5 pb-3 border-b border-slate-200/70">
+                            <div className="w-7 h-7 rounded-lg bg-purple-50 text-purple-600 flex items-center justify-center font-bold text-xs">
+                                3
+                            </div>
+                            <h4 className="text-xs font-black text-slate-900 uppercase tracking-widest">
+                                Section 3: Yearly Pricing & Tier Limits
+                            </h4>
+                        </div>
+
                         <div className="grid md:grid-cols-2 gap-4">
                             <Input 
                                 label="Yearly Price (₹)" 
@@ -542,7 +578,7 @@ export default function SubscriptionPlans() {
                                 disabled={isSaving}
                             />
                             <Input 
-                                label="Branch Limit" 
+                                label="Branch Limit (-1 for Unlimited)" 
                                 type="number"
                                 placeholder="-1 for Unlimited" 
                                 value={formData.yearlyPricing.branchLimit}
@@ -590,40 +626,50 @@ export default function SubscriptionPlans() {
                         </div>
                     </div>
 
-                    {/* SECTION 4: Features */}
-                    <div className="space-y-4">
-                        <h4 className="text-sm font-bold text-surface-800 uppercase tracking-widest border-b border-surface-100 pb-1">
-                            Section 4: Features List
-                        </h4>
+                    {/* Section 4: Features List */}
+                    <div className="bg-slate-50/80 border border-slate-200/80 rounded-2xl p-5 space-y-4">
+                        <div className="flex items-center gap-2.5 pb-3 border-b border-slate-200/70">
+                            <div className="w-7 h-7 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center font-bold text-xs">
+                                4
+                            </div>
+                            <h4 className="text-xs font-black text-slate-900 uppercase tracking-widest">
+                                Section 4: Features List
+                            </h4>
+                        </div>
+
                         <div className="flex gap-2">
                             <Input 
-                                placeholder="e.g. POS Billing, Wallet System" 
+                                placeholder="e.g. Online Slot Booking, POS Integration, Revenue Analytics" 
                                 value={newFeatureText}
                                 onChange={e => setNewFeatureText(e.target.value)}
                                 className="flex-1"
                                 disabled={isSaving}
                                 onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); handleAddFeature(); } }}
                             />
-                            <Button 
-                                variant="secondary" 
+                            <button 
+                                type="button" 
                                 onClick={handleAddFeature}
                                 disabled={isSaving}
-                                className="self-end"
+                                className="h-11 px-5 bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 font-extrabold text-xs rounded-xl cursor-pointer self-end flex items-center gap-1.5 shadow-2xs shrink-0"
                             >
-                                <FiPlus className="w-4 h-4 mr-1" /> Add
-                            </Button>
+                                <FiPlus className="w-4 h-4 text-[#16A34A]" /> Add Feature
+                            </button>
                         </div>
-                        <div className="grid grid-cols-2 gap-2 mt-2">
+
+                        <div className="grid sm:grid-cols-2 gap-2 mt-2">
                             {formData.features.map((feat, idx) => (
                                 <div 
                                     key={idx} 
-                                    className="flex justify-between items-center bg-surface-50 border border-surface-200 px-3.5 py-2 rounded-xl text-xs text-surface-700"
+                                    className="flex justify-between items-center bg-white border border-slate-200/80 px-3.5 py-2.5 rounded-xl text-xs font-bold text-slate-800 shadow-2xs"
                                 >
-                                    <span>{feat}</span>
+                                    <span className="flex items-center gap-2">
+                                        <HiCheckCircle className="w-4 h-4 text-[#16A34A] shrink-0" />
+                                        <span>{feat}</span>
+                                    </span>
                                     <button 
                                         type="button" 
                                         onClick={() => handleRemoveFeature(idx)}
-                                        className="text-danger-500 hover:text-danger-700 transition cursor-pointer"
+                                        className="text-slate-400 hover:text-red-600 transition cursor-pointer p-1 rounded-lg hover:bg-red-50"
                                         disabled={isSaving}
                                     >
                                         <FiX className="w-4 h-4" />
@@ -633,11 +679,31 @@ export default function SubscriptionPlans() {
                         </div>
                     </div>
 
-                    <div className="flex justify-end gap-3 border-t border-surface-100 pt-4 mt-6">
-                        <Button variant="secondary" onClick={() => setIsModalOpen(false)} disabled={isSaving}>Cancel</Button>
-                        <Button onClick={handleSave} disabled={isSaving}>
-                            {isSaving ? "Saving..." : (editingPlan ? "Update Plan" : "Create Plan")}
-                        </Button>
+                    {/* Modal Footer Actions */}
+                    <div className="flex items-center justify-end gap-3 border-t border-slate-100 pt-4 mt-6">
+                        <button 
+                            type="button" 
+                            onClick={() => setIsModalOpen(false)} 
+                            disabled={isSaving}
+                            className="h-11 px-6 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-xs font-bold text-slate-700 transition-all cursor-pointer"
+                        >
+                            Cancel
+                        </button>
+                        <button 
+                            type="button"
+                            onClick={handleSave} 
+                            disabled={isSaving}
+                            className="h-11 px-7 rounded-xl bg-[#16A34A] hover:bg-emerald-700 text-white font-extrabold text-xs shadow-md shadow-emerald-600/20 hover:-translate-y-0.5 active:translate-y-0 transition-all cursor-pointer flex items-center justify-center gap-2 disabled:opacity-50 min-w-[140px]"
+                        >
+                            {isSaving ? (
+                                <>
+                                    <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                                    <span>Saving...</span>
+                                </>
+                            ) : (
+                                <span>{editingPlan ? "Update Plan" : "Create Plan"}</span>
+                            )}
+                        </button>
                     </div>
                 </div>
             </Modal>

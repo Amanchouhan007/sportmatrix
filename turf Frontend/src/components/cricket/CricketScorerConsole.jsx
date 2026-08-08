@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { createPortal } from 'react-dom'
+import { Peer } from 'peerjs'
 import {
     FiPlay, FiPause, FiRotateCcw, FiUserCheck, FiUsers, FiAward,
     FiTrendingUp, FiActivity, FiX, FiCheck, FiCheckCircle, FiCornerUpLeft, FiClock,
@@ -131,15 +132,9 @@ export default function CricketScorerConsole({ match, onClose }) {
         const sessionId = 'session_' + Math.random().toString(36).substring(2, 9) + '_' + Date.now().toString(36)
         
         let hostOrigin = window.location.origin
-
         if (window.location.hostname === 'localhost') {
-            if (!localIp) {
-                // IP not yet detected — alert user to wait a moment
-                alert('⚠️ Network IP abhi detect ho rahi hai. Ek second ruko aur dobara try karo.\n\nTip: Aap manually IP input kar sakte ho ya 2-3 seconds baad phir try karo.')
-                return
-            }
-            // Use the detected local network IP so phones can open it in Chrome browser
-            hostOrigin = `${window.location.protocol}//${localIp}:${window.location.port || '5173'}`
+            const targetIp = localIp || window.location.hostname
+            hostOrigin = `${window.location.protocol}//${targetIp}:${window.location.port || '5173'}`
         }
 
         const mobileUrl = `${hostOrigin}/mobile-controller/${sessionId}`
@@ -368,44 +363,99 @@ export default function CricketScorerConsole({ match, onClose }) {
     const handleUndoRef = useRef(handleUndo)
     handleUndoRef.current = handleUndo
 
-    // Effect for real-time mobile connection listener (BroadcastChannel)
+    // Effect for real-time mobile connection listener (PeerJS P2P + BroadcastChannel)
     useEffect(() => {
         if (!ctrlSession.id) return
+
+        let peer
+        const peerId = 'sm_sess_' + ctrlSession.id.replace(/[^a-zA-Z0-9]/g, '')
+
+        const handleIncomingData = (data) => {
+            if (!data) return
+            if (data.type === 'MOBILE_CONNECTED') {
+                const devInfo = data.deviceInfo && typeof data.deviceInfo === 'object' ? data.deviceInfo : {}
+                setCtrlSession(prev => ({
+                    ...prev,
+                    status: 'connected',
+                    deviceInfo: devInfo
+                }))
+                addToast({ message: '✓ Mobile Controller Connected Successfully!', type: 'success' })
+            } else if (data.type === 'MOBILE_DISCONNECT') {
+                setCtrlSession(prev => ({ ...prev, status: 'disconnected' }))
+                addToast({ message: 'Mobile device disconnected', type: 'info' })
+            } else if (data.type === 'MOBILE_SCORE_ACTION') {
+                // Mobile user clicked a scoring button! Synchronize match state immediately!
+                if (data.actionType === 'RUN') {
+                    recordBallRef.current?.({ type: 'run', runs: data.payload?.runs || 0, label: String(data.payload?.runs || 0), isLegal: true })
+                } else if (data.actionType === 'EXTRA') {
+                    recordBallRef.current?.({ 
+                        type: data.payload?.extraType || 'extra', 
+                        runs: data.payload?.runs || 1, 
+                        label: data.payload?.label || 'E', 
+                        isLegal: data.payload?.isLegal ?? false 
+                    })
+                } else if (data.actionType === 'WICKET') {
+                    recordBallRef.current?.({ type: 'wicket', runs: 0, label: 'W', isLegal: true })
+                } else if (data.actionType === 'SWAP_STRIKE') {
+                    handleSwapStrikeRef.current?.()
+                } else if (data.actionType === 'UNDO') {
+                    handleUndoRef.current?.()
+                }
+            }
+        }
+
+        try {
+            peer = new Peer(peerId)
+            peer.on('connection', (conn) => {
+                conn.on('data', (data) => {
+                    handleIncomingData(data)
+                })
+            })
+        } catch (err) {
+            console.log('PeerJS server error:', err)
+        }
 
         const channelName = 'mobile_ctrl_channel_' + ctrlSession.id
         let bc
         try {
             bc = new BroadcastChannel(channelName)
             bc.onmessage = (e) => {
-                if (!e || !e.data) return
-                const data = e.data
-                if (data.type === 'MOBILE_CONNECTED') {
-                    const devInfo = data.deviceInfo && typeof data.deviceInfo === 'object' ? data.deviceInfo : {}
-                    setCtrlSession(prev => ({
-                        ...prev,
-                        status: 'connected',
-                        deviceInfo: devInfo
-                    }))
-                    addToast({ message: '✓ Mobile Controller Connected Successfully!', type: 'success' })
-                } else if (data.type === 'MOBILE_DISCONNECT') {
-                    setCtrlSession(prev => ({ ...prev, status: 'disconnected' }))
-                    addToast({ message: 'Mobile device disconnected', type: 'info' })
-                } else if (data.type === 'MOBILE_SCORE_ACTION') {
-                    // Mobile user clicked a scoring button! Synchronize match state immediately!
-                    if (data.actionType === 'RUN') {
-                        recordBallRef.current?.({ type: 'run', runs: data.payload?.runs || 0, label: String(data.payload?.runs || 0), isLegal: true })
-                    } else if (data.actionType === 'SWAP_STRIKE') {
-                        handleSwapStrikeRef.current?.()
-                    } else if (data.actionType === 'UNDO') {
-                        handleUndoRef.current?.()
-                    }
-                }
+                if (e && e.data) handleIncomingData(e.data)
             }
         } catch (err) {
             console.log('BroadcastChannel fallback', err)
         }
 
+        // HTTP API Polling Fallback (Guaranteed to work over 4G/5G, WhatsApp links & any network)
+        let lastSeenTime = 0
+        const pollInterval = setInterval(async () => {
+            try {
+                const apiBase = window.location.hostname === 'localhost' ? 'http://localhost:5000' : window.location.origin
+                const res = await fetch(`${apiBase}/api/v1/mobile-sync/poll/${ctrlSession.id}?since=${lastSeenTime}`)
+                if (res.ok) {
+                    const data = await res.json()
+                    if (data.status === 'connected') {
+                        setCtrlSession(prev => ({
+                            ...prev,
+                            status: 'connected',
+                            deviceInfo: data.deviceInfo || prev.deviceInfo
+                        }))
+                    }
+                    if (Array.isArray(data.events) && data.events.length > 0) {
+                        data.events.forEach(evt => {
+                            if (evt.timestamp > lastSeenTime) {
+                                lastSeenTime = evt.timestamp
+                                handleIncomingData(evt)
+                            }
+                        })
+                    }
+                }
+            } catch (err) {}
+        }, 500)
+
         return () => {
+            clearInterval(pollInterval)
+            if (peer) peer.destroy()
             if (bc) bc.close()
         }
     }, [ctrlSession.id, addToast])
@@ -1798,9 +1848,10 @@ export default function CricketScorerConsole({ match, onClose }) {
                         {/* LARGE REAL SCANNABLE QR CODE CONTAINER */}
                         {ctrlSession.status !== 'expired' && (
                             <div className="space-y-2">
-                                <div className="bg-white p-3 rounded-3xl mx-auto w-56 h-56 flex items-center justify-center shadow-2xl relative group overflow-hidden border-4 border-slate-800">
+                                {/* Larger QR with low error correction = less dense = easier to scan */}
+                                <div className="bg-white p-4 rounded-3xl mx-auto w-72 h-72 flex items-center justify-center shadow-2xl relative group overflow-hidden border-4 border-slate-800">
                                     <img
-                                        src={`https://api.qrserver.com/v1/create-qr-code/?size=250x250&margin=10&data=${encodeURIComponent(ctrlSession.url)}`}
+                                        src={`https://api.qrserver.com/v1/create-qr-code/?size=500x500&margin=20&ecc=L&data=${encodeURIComponent(ctrlSession.url)}`}
                                         alt="Mobile Controller Pairing QR Code"
                                         className="w-full h-full object-contain"
                                     />

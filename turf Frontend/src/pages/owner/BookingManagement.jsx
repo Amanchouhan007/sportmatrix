@@ -206,54 +206,6 @@ export default function BookingManagement() {
                 </div>
             </div>
 
-            {/* Visual filtering tabs & Search Bar */}
-            <div className="flex flex-wrap items-center justify-between gap-4 bg-white p-4 rounded-3xl border border-surface-200/60 shadow-soft">
-                <div className="flex gap-1.5 overflow-x-auto shrink-0 pb-1 md:pb-0">
-                    {['All', 'Confirmed', 'Pending', 'Cancelled'].map((tab) => (
-                        <button
-                            key={tab}
-                            onClick={() => setFilterStatus(tab)}
-                            className={`px-4 py-2 text-xs font-black rounded-2xl border transition-all cursor-pointer ${filterStatus === tab ? 'bg-emerald-600 border-emerald-600 text-white shadow-md shadow-emerald-500/10' : 'bg-white border-surface-200 text-surface-650 hover:bg-surface-50'}`}
-                        >
-                            {tab} Bookings
-                        </button>
-                    ))}
-                </div>
-
-                {/* Filter Controls */}
-                <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
-                    <div className="flex items-center gap-2 bg-surface-50 border border-surface-200 rounded-2xl px-3 py-2 w-full md:w-60 shadow-inner">
-                        <HiSearch className="w-4 h-4 text-surface-400" />
-                        <input
-                            placeholder="Search name or ID..."
-                            value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
-                            className="bg-transparent outline-none text-xs text-surface-700 w-full placeholder:text-surface-400 font-semibold"
-                        />
-                    </div>
-
-                    <input
-                        type="date"
-                        value={filterDate}
-                        onChange={(e) => setFilterDate(e.target.value)}
-                        className="px-3 py-2 bg-surface-50 border border-surface-200 rounded-2xl text-xs font-semibold outline-none focus:border-emerald-500 shadow-soft"
-                    />
-
-                    {(searchQuery || filterDate || filterStatus !== 'All') && (
-                        <button
-                            onClick={() => { setSearchQuery(''); setFilterDate(''); setFilterStatus('All'); }}
-                            className="text-xs font-bold text-red-500 hover:text-red-650 cursor-pointer"
-                        >
-                            Clear
-                        </button>
-                    )}
-                </div>
-            </div>
-
-            {/* ══════════════════════════════════════════════════════
-               NEW FEATURE: BOOKING CALENDAR MODULE
-            ══════════════════════════════════════════════════════ */}
-
             {/* Quick Summary Cards (4 Compact Stat Cards) */}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                 <Card className="p-4 border border-surface-200/80 shadow-soft bg-white hover:border-emerald-200 transition-colors">
@@ -309,222 +261,51 @@ export default function BookingManagement() {
                 </Card>
             </div>
 
-            {/* Main Calendar Header & Views Container Card */}
-            <Card className="p-6 rounded-[24px] border border-surface-200/80 shadow-soft bg-white space-y-6">
-                {/* Header Controls Bar */}
-                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-surface-150 pb-5">
-                    {/* Left Side Info */}
-                    <div>
-                        <h2 className="text-xl font-bold text-surface-900 tracking-tight flex items-center gap-2">
-                            Booking Calendar
-                        </h2>
-                        <p className="text-xs text-surface-500 font-medium mt-1">
-                            Visualize slot occupancy, payments, and booking activity across daily, weekly, and monthly schedules.
-                        </p>
-                    </div>
-
-                    {/* Right Side Navigation & View Switcher */}
-                    <div className="flex flex-wrap items-center gap-3">
-                        <button 
-                            onClick={() => addToast({ title: 'Calendar Sync', message: 'Navigated to current date', type: 'info' })}
-                            className="px-3.5 py-1.5 text-xs font-bold bg-surface-100 hover:bg-surface-200 text-surface-700 rounded-xl transition-colors cursor-pointer"
+            {/* Visual filtering tabs & Search Bar */}
+            <div className="flex flex-wrap items-center justify-between gap-4 bg-white p-4 rounded-3xl border border-surface-200/60 shadow-soft">
+                <div className="flex gap-1.5 overflow-x-auto shrink-0 pb-1 md:pb-0">
+                    {['All', 'Confirmed', 'Pending', 'Cancelled'].map((tab) => (
+                        <button
+                            key={tab}
+                            onClick={() => setFilterStatus(tab)}
+                            className={`px-4 py-2 text-xs font-black rounded-2xl border transition-all cursor-pointer ${filterStatus === tab ? 'bg-emerald-600 border-emerald-600 text-white shadow-md shadow-emerald-500/10' : 'bg-white border-surface-200 text-surface-650 hover:bg-surface-50'}`}
                         >
-                            Today
+                            {tab} Bookings
                         </button>
-                        
-                        <div className="flex items-center bg-surface-100 p-1 rounded-xl">
-                            <button 
-                                onClick={() => addToast({ title: 'Previous Range', message: 'Loaded previous schedule', type: 'info' })}
-                                className="p-1 text-surface-600 hover:text-surface-900 cursor-pointer"
-                            >
-                                <HiChevronLeft className="w-4 h-4" />
-                            </button>
-                            <span className="text-xs font-bold text-surface-800 px-2 min-w-[90px] text-center">{calendarDate}</span>
-                            <button 
-                                onClick={() => addToast({ title: 'Next Range', message: 'Loaded next schedule', type: 'info' })}
-                                className="p-1 text-surface-600 hover:text-surface-900 cursor-pointer"
-                            >
-                                <HiChevronRight className="w-4 h-4" />
-                            </button>
-                        </div>
-
-                        {/* View Switcher Segmented Pills */}
-                        <div className="flex bg-surface-100 p-1 rounded-xl border border-surface-200/60">
-                            {['Day', 'Week', 'Month'].map(view => (
-                                <button
-                                    key={view}
-                                    onClick={() => setCalendarView(view)}
-                                    className={`px-4 py-1.5 text-xs font-semibold rounded-lg transition-all cursor-pointer ${
-                                        calendarView === view 
-                                            ? 'bg-[#10B981] text-white shadow-sm font-bold' 
-                                            : 'bg-white text-[#374151] border border-gray-300 hover:bg-surface-50'
-                                    }`}
-                                >
-                                    {view}
-                                </button>
-                            ))}
-                        </div>
-                    </div>
+                    ))}
                 </div>
 
-                {/* ── WEEKLY CALENDAR VIEW ── */}
-                {calendarView === 'Week' && (
-                    <div className="overflow-x-auto">
-                        <div className="min-w-[800px]">
-                            {/* Grid Header Days Row */}
-                            <div className="grid grid-cols-8 border-b border-surface-200 pb-3 text-center text-xs font-bold text-surface-500">
-                                <div className="text-left pl-3 text-surface-400 uppercase tracking-wider">Time</div>
-                                {weekDays.map(d => (
-                                    <div key={d.day} className={`p-2 rounded-xl ${d.day === 'Mon' ? 'bg-emerald-50 text-emerald-700 font-extrabold' : ''}`}>
-                                        <div>{d.day}</div>
-                                        <div className="text-sm font-black text-surface-900 mt-0.5">{d.dateNum}</div>
-                                    </div>
-                                ))}
-                            </div>
-
-                            {/* Scheduler Time Slots Grid */}
-                            <div className="divide-y divide-surface-100">
-                                {timeSlots.map(time => (
-                                    <div key={time} className="grid grid-cols-8 min-h-[75px] items-stretch">
-                                        <div className="py-3 text-[11px] font-bold text-surface-400 pr-2 flex items-start pt-3">
-                                            {time}
-                                        </div>
-
-                                        {weekDays.map(d => {
-                                            const matches = bookings.filter(b => b.time === time && (b.dayOfWeek === d.day || b.date === d.fullDate))
-                                            return (
-                                                <div key={d.day} className="p-1 border-l border-surface-100/80 min-h-[75px] relative hover:bg-surface-50/50 transition-colors">
-                                                    {matches.map(b => (
-                                                        <div
-                                                            key={b.id}
-                                                            onClick={() => handleOpenSlideOver(b)}
-                                                            className={`p-2 rounded-xl text-[10px] font-semibold cursor-pointer shadow-soft transition-all hover:scale-[1.02] mb-1 ${getEventBadgeStyle(b)}`}
-                                                        >
-                                                            <div className="font-extrabold uppercase tracking-tight flex items-center justify-between">
-                                                                <span>{b.sport}</span>
-                                                                <span>{b.amount}</span>
-                                                            </div>
-                                                            <div className="font-bold truncate mt-0.5">{b.customer}</div>
-                                                            <div className="text-[9px] opacity-80 mt-0.5">{b.slotRange || b.time}</div>
-                                                        </div>
-                                                    ))}
-                                                </div>
-                                            )
-                                        })}
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
+                {/* Filter Controls */}
+                <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
+                    <div className="flex items-center gap-2 bg-surface-50 border border-surface-200 rounded-2xl px-3 py-2 w-full md:w-60 shadow-inner">
+                        <HiSearch className="w-4 h-4 text-surface-400" />
+                        <input
+                            placeholder="Search name or ID..."
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            className="bg-transparent outline-none text-xs text-surface-700 w-full placeholder:text-surface-400 font-semibold"
+                        />
                     </div>
-                )}
 
-                {/* ── MONTHLY CALENDAR VIEW ── */}
-                {calendarView === 'Month' && (
-                    <div className="space-y-4">
-                        <div className="flex items-center justify-between px-2">
-                            <h3 className="text-lg font-extrabold text-surface-900">March 2026</h3>
-                            <span className="text-xs font-bold text-emerald-600 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-200">248 Total Bookings</span>
-                        </div>
+                    <input
+                        type="date"
+                        value={filterDate}
+                        onChange={(e) => setFilterDate(e.target.value)}
+                        className="px-3 py-2 bg-surface-50 border border-surface-200 rounded-2xl text-xs font-semibold outline-none focus:border-emerald-500 shadow-soft"
+                    />
 
-                        <div className="grid grid-cols-7 gap-2 text-center text-xs font-bold text-surface-500 border-b border-surface-200 pb-2">
-                            {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map(d => (
-                                <div key={d} className="uppercase tracking-wider py-1">{d}</div>
-                            ))}
-                        </div>
+                    {(searchQuery || filterDate || filterStatus !== 'All') && (
+                        <button
+                            onClick={() => { setSearchQuery(''); setFilterDate(''); setFilterStatus('All'); }}
+                            className="text-xs font-bold text-red-500 hover:text-red-650 cursor-pointer"
+                        >
+                            Clear
+                        </button>
+                    )}
+                </div>
+            </div>
 
-                        {/* Month 35-cell grid */}
-                        <div className="grid grid-cols-7 gap-2">
-                            {Array.from({ length: 31 }, (_, i) => {
-                                const dayNum = i + 1
-                                const isToday = dayNum === 16
-                                const bookingsCount = (dayNum % 3 === 0) ? 8 : (dayNum % 2 === 0 ? 5 : 3)
-                                const revenueSum = bookingsCount * 700
 
-                                return (
-                                    <div
-                                        key={dayNum}
-                                        onClick={() => addToast({ title: `Date: ${dayNum} March`, message: `${bookingsCount} Bookings • ₹${revenueSum.toLocaleString()}`, type: 'info' })}
-                                        className={`p-3 rounded-2xl border transition-all cursor-pointer min-h-[95px] flex flex-col justify-between ${
-                                            isToday 
-                                                ? 'border-2 border-emerald-500 bg-emerald-50/60 shadow-md' 
-                                                : 'border-surface-200/80 bg-white hover:border-emerald-300 hover:shadow-soft'
-                                        }`}
-                                    >
-                                        <div className="flex items-center justify-between">
-                                            <span className={`text-xs font-extrabold ${isToday ? 'text-emerald-700 bg-emerald-200/70 px-1.5 py-0.5 rounded-lg' : 'text-surface-800'}`}>
-                                                {dayNum}
-                                            </span>
-                                            {isToday && <span className="text-[9px] font-black text-emerald-600 uppercase">Today</span>}
-                                        </div>
-
-                                        <div className="space-y-0.5 my-1">
-                                            <div className="text-[11px] font-black text-surface-900">{bookingsCount} Bookings</div>
-                                            <div className="text-[10px] font-bold text-emerald-600">₹{revenueSum.toLocaleString()}</div>
-                                        </div>
-
-                                        <div className="flex items-center gap-1.5 text-[9px] font-semibold text-surface-500">
-                                            <span className="flex items-center gap-0.5"><span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block" /> Cricket</span>
-                                            <span className="flex items-center gap-0.5"><span className="w-1.5 h-1.5 rounded-full bg-blue-500 inline-block" /> Football</span>
-                                        </div>
-                                    </div>
-                                )
-                            })}
-                        </div>
-                    </div>
-                )}
-
-                {/* ── DAILY AGENDA TIMELINE VIEW ── */}
-                {calendarView === 'Day' && (
-                    <div className="space-y-4">
-                        <div className="flex items-center justify-between px-2">
-                            <h3 className="text-base font-extrabold text-surface-900">Agenda for Monday, 16 March 2026</h3>
-                            <span className="text-xs font-bold text-surface-500">12 Scheduled Sessions</span>
-                        </div>
-
-                        <div className="space-y-3">
-                            {[
-                                { time: '10:00 AM', title: 'Cricket • Court A', customer: 'Rahul Kumar', type: 'Online', amount: '₹800', status: 'Confirmed' },
-                                { time: '11:30 AM', title: 'Football • Turf 2', customer: 'Priya Sharma', type: 'Online', amount: '₹900', status: 'Confirmed' },
-                                { time: '02:00 PM', title: 'Football • Court 1', customer: 'Arjun Mehta', type: 'Walk-in', amount: '₹400', status: 'Pending' },
-                                { time: '04:30 PM', title: 'Cricket • Court B', customer: 'Sneha Reddy', type: 'Online', amount: '₹1,200', status: 'Cancelled' },
-                                { time: '06:00 PM', title: 'Cricket • Court 3', customer: 'Vikram Singh', type: 'Walk-in', amount: '₹700', status: 'Confirmed' }
-                            ].map((item, idx) => (
-                                <div 
-                                    key={idx}
-                                    onClick={() => handleOpenSlideOver({
-                                        id: `BK-00${idx + 1}`,
-                                        customer: item.customer,
-                                        sport: item.title.split(' • ')[0],
-                                        court: item.title.split(' • ')[1],
-                                        time: item.time,
-                                        amount: item.amount,
-                                        type: item.type,
-                                        status: item.status,
-                                        date: '2026-03-16'
-                                    })}
-                                    className="p-4 rounded-2xl border border-surface-200/80 bg-white hover:border-emerald-300 transition-all cursor-pointer shadow-soft flex flex-col md:flex-row md:items-center justify-between gap-3"
-                                >
-                                    <div className="flex items-center gap-4">
-                                        <div className="w-20 text-xs font-black text-emerald-600 bg-emerald-50 py-2 px-3 rounded-xl text-center border border-emerald-100">
-                                            {item.time}
-                                        </div>
-                                        <div>
-                                            <h4 className="text-sm font-bold text-surface-900">{item.title}</h4>
-                                            <p className="text-xs text-surface-500 font-semibold mt-0.5">{item.customer} • {item.type} Payment</p>
-                                        </div>
-                                    </div>
-                                    <div className="flex items-center gap-3 justify-between md:justify-end">
-                                        <span className="text-sm font-extrabold text-surface-900">{item.amount}</span>
-                                        <Badge variant={item.status === 'Confirmed' ? 'success' : item.status === 'Pending' ? 'warning' : 'danger'} dot>
-                                            {item.status}
-                                        </Badge>
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-                )}
-            </Card>
 
             {/* Bookings Table */}
             <Card className="p-6">

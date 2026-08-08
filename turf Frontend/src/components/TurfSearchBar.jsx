@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
-import { IoRefreshOutline, IoLocationOutline, IoCalendarOutline, IoTimeOutline, IoTrophyOutline, IoPeopleOutline, IoSearch } from 'react-icons/io5'
+import { IoRefreshOutline, IoLocationOutline, IoCalendarOutline, IoTimeOutline, IoTrophyOutline, IoPeopleOutline, IoSearch, IoFootball } from 'react-icons/io5'
+import { GiCricketBat } from 'react-icons/gi'
 
 /* ── Location Data ── */
 const locationSuggestions = [
@@ -19,8 +20,8 @@ const allLocations = locationSuggestions.flatMap(loc => [
 
 /* ── Sports Data ── */
 const sportsOptions = [
-    { name: 'Football', icon: '⚽' },
-    { name: 'Cricket', icon: '🏏' },
+    { name: 'Football', icon: IoFootball },
+    { name: 'Cricket', icon: GiCricketBat },
 ]
 
 /* ── Time Slots ── */
@@ -160,24 +161,31 @@ export default function TurfSearchBar({ onSearch, values, onChange, onClear }) {
     const selectedSportObj = sportsOptions.find(s => s.name === sport)
 
     return (
-        <div className="w-full max-w-[1060px] mx-auto relative z-40 select-none">
-            <div className="relative bg-[#0b1120]/95 backdrop-blur-xl border border-white/10 shadow-2xl rounded-[32px] lg:rounded-full p-[3px] flex flex-col lg:flex-row items-stretch justify-between lg:h-[66px] gap-2 lg:gap-0">
+        <div className="w-full max-w-[880px] mx-auto relative z-40 select-none">
+            <div 
+                style={{
+                    background: 'rgba(255, 255, 255, 0.95)',
+                    border: '1px solid rgba(95, 210, 120, 0.12)',
+                    boxShadow: '0 20px 45px rgba(20, 80, 20, 0.08)'
+                }}
+                className="relative rounded-[16px] lg:rounded-full p-1 flex flex-col lg:flex-row items-stretch justify-between lg:h-[60px] gap-1.5 lg:gap-0 transition-all duration-300 hover:border-[#16A34A]/40 focus-within:border-[#16A34A]"
+            >
                 
                 {/* 1. CITY */}
-                <div ref={locRef} className="flex-1 min-w-0 relative group/sec border-b border-white/10 lg:border-b-0 lg:border-r lg:border-white/10">
+                <div ref={locRef} className="flex-1 min-w-0 relative group/sec border-b border-[#E5E7EB] lg:border-b-0 lg:border-r lg:border-[#E5E7EB]">
                     <div
-                        className="transition-all duration-300 cursor-pointer h-full px-5 py-3 flex items-center justify-between hover:bg-white/5 rounded-2xl lg:rounded-full lg:rounded-r-none"
+                        className="transition-all duration-300 cursor-pointer h-full px-4 py-1.5 flex items-center justify-between hover:bg-slate-50 rounded-[12px] lg:rounded-full lg:rounded-r-none"
                         onClick={() => { setLocOpen(true); setTimeout(() => locInputRef.current?.focus(), 50) }}
                     >
-                        <div className="flex gap-4 items-center">
-                            <IoLocationOutline className="text-[#19E68C] w-6 h-6 shrink-0" />
+                        <div className="flex gap-3 items-center">
+                            <IoLocationOutline className="text-[#16A34A] w-5 h-5 shrink-0" />
                             <div className="flex flex-col">
-                                <span className="text-[13px] font-bold text-white tracking-wide">City</span>
+                                <span className="text-[11px] font-black text-[#111827] tracking-wide uppercase">City</span>
                                 {locOpen ? (
                                     <input
                                         ref={locInputRef}
                                         type="text"
-                                        className="text-[12px] text-white bg-transparent outline-none w-[120px] placeholder:text-slate-500 font-medium p-0 m-0 border-none h-4"
+                                        className="text-[11px] text-[#111827] bg-transparent outline-none w-[110px] placeholder:text-[#6B7280] font-semibold p-0 m-0 border-none h-4"
                                         placeholder="Select City"
                                         value={locInput}
                                         onChange={(e) => { setLocInput(e.target.value); setLocOpen(true); setLocHighlight(-1); emit('location', e.target.value, false) }}
@@ -185,7 +193,7 @@ export default function TurfSearchBar({ onSearch, values, onChange, onClear }) {
                                         onKeyDown={handleLocKeyDown}
                                     />
                                 ) : (
-                                    <span className="text-[12px] font-medium text-slate-400 truncate max-w-[120px]">
+                                    <span className="text-[11px] font-semibold text-[#6B7280] truncate max-w-[110px]">
                                         {location || 'Select City'}
                                     </span>
                                 )}
@@ -193,18 +201,24 @@ export default function TurfSearchBar({ onSearch, values, onChange, onClear }) {
                         </div>
                     </div>
                     {locOpen && (
-                        <div className="absolute top-full left-0 w-full md:w-[250px] bg-slate-900 border border-white/10 text-white rounded-2xl mt-4 overflow-hidden shadow-2xl z-[9999]">
+                        <div className="absolute top-full left-0 w-full md:w-[230px] bg-white border border-[#E5E7EB] text-[#111827] rounded-[16px] mt-2 overflow-hidden shadow-[0_15px_35px_rgba(0,0,0,0.12)] z-[9999]">
                             {filteredLocations.length === 0 ? (
-                                <div className="p-3 text-center text-slate-500 text-xs">No locations found</div>
+                                <div className="p-3 text-center text-[#6B7280] text-xs font-semibold">No locations found</div>
                             ) : (
                                 filteredLocations.map((loc, i) => (
                                     <div
                                         key={loc}
-                                        className={`flex items-center gap-2.5 px-4 py-3 cursor-pointer transition-all ${i === locHighlight ? 'bg-[#19E68C]/20 text-[#19E68C]' : 'hover:bg-white/5'}`}
+                                        className={`flex items-center gap-2.5 px-4 py-2.5 cursor-pointer transition-all font-bold text-xs ${
+                                            location && loc.toLowerCase().startsWith(location.toLowerCase())
+                                                ? 'bg-[#C8FF2E] text-[#111827]'
+                                                : i === locHighlight
+                                                ? 'bg-[#F7F9FC] text-[#111827]'
+                                                : 'text-[#4B5563] hover:bg-[#F7F9FC] hover:text-[#111827]'
+                                        }`}
                                         onClick={() => selectLocation(loc)}
                                         onMouseEnter={() => setLocHighlight(i)}
                                     >
-                                        <span className="text-xs">{loc}</span>
+                                        <span>{loc}</span>
                                     </div>
                                 ))
                             )}
@@ -213,56 +227,93 @@ export default function TurfSearchBar({ onSearch, values, onChange, onClear }) {
                 </div>
                 
                 {/* 2. SPORT */}
-                <div ref={sportRef} className="flex-1 min-w-0 relative group/sec border-b border-white/10 lg:border-b-0 lg:border-r lg:border-white/10">
+                <div ref={sportRef} className="flex-1 min-w-0 relative group/sec border-b border-[#E5E7EB] lg:border-b-0 lg:border-r lg:border-[#E5E7EB]">
                     <div
-                        className="transition-all duration-300 cursor-pointer h-full px-5 py-3 flex items-center justify-between hover:bg-white/5 rounded-2xl lg:rounded-none"
+                        className="transition-all duration-300 cursor-pointer h-full px-4 py-1.5 flex items-center justify-between hover:bg-slate-50 rounded-[12px] lg:rounded-none"
                         onClick={() => setSportOpen(!sportOpen)}
                     >
-                        <div className="flex gap-4 items-center">
-                            <IoTrophyOutline className="text-[#19E68C] w-6 h-6 shrink-0" />
+                        <div className="flex gap-3 items-center">
+                            <IoTrophyOutline className="text-[#16A34A] w-5 h-5 shrink-0" />
                             <div className="flex flex-col">
-                                <span className="text-[13px] font-bold text-white tracking-wide">Sport</span>
-                                <span className="text-[12px] font-medium text-slate-400 truncate max-w-[120px]">
+                                <span className="text-[11px] font-black text-[#111827] tracking-wide uppercase">Sport</span>
+                                <span className="text-[11px] font-semibold text-[#6B7280] truncate max-w-[110px]">
                                     {selectedSportObj ? selectedSportObj.name : 'Select Sport'}
                                 </span>
                             </div>
                         </div>
                     </div>
                     {sportOpen && (
-                        <div className="absolute top-full left-0 w-full md:w-[200px] bg-slate-900 border border-white/10 text-white rounded-2xl mt-4 overflow-hidden shadow-2xl z-[9999]">
-                            {sportsOptions.map(s => (
-                                <div key={s.name} className="flex items-center gap-2 px-4 py-3 cursor-pointer hover:bg-white/5 text-xs" onClick={() => selectSport(s.name)}>
-                                    <span className="text-sm">{s.icon}</span> <span className="font-medium">{s.name}</span>
-                                </div>
-                            ))}
+                        <div className="absolute top-full left-0 w-full md:w-[210px] bg-white border border-[#E5E7EB] text-[#111827] p-3 rounded-[20px] mt-2 shadow-[0_20px_40px_rgba(0,0,0,0.1)] z-[9999]">
+                            <span className="text-[10px] font-black uppercase tracking-wider text-[#6B7280] block mb-2 px-1">Select Sport</span>
+                            <div className="flex flex-col gap-1">
+                                {sportsOptions.map(s => {
+                                    const IconComponent = s.icon
+                                    const isSelected = s.name === sport
+                                    return (
+                                        <div
+                                            key={s.name}
+                                            className={`flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl cursor-pointer transition-all text-xs font-bold ${
+                                                isSelected
+                                                    ? 'bg-[#C8FF2E] text-[#111827] border border-[#B5F000] shadow-[0_4px_12px_rgba(200,255,46,0.35)]'
+                                                    : 'text-[#4B5563] bg-white hover:bg-[#C8FF2E] hover:text-[#111827] border border-transparent hover:border-[#B5F000]'
+                                            }`}
+                                            onClick={() => selectSport(s.name)}
+                                        >
+                                            {typeof IconComponent === 'function' ? (
+                                                <IconComponent className="w-4 h-4 shrink-0 text-[#16A34A]" />
+                                            ) : (
+                                                <span className="text-sm">{s.icon}</span>
+                                            )}
+                                            <span>{s.name}</span>
+                                        </div>
+                                    )
+                                })}
+                            </div>
                         </div>
                     )}
                 </div>
 
                 {/* 3. DATE */}
-                <div ref={dateRef} className="flex-1 min-w-0 relative group/sec border-b border-white/10 lg:border-b-0 lg:border-r lg:border-white/10">
+                <div ref={dateRef} className="flex-1 min-w-0 relative group/sec border-b border-[#E5E7EB] lg:border-b-0 lg:border-r lg:border-[#E5E7EB]">
                     <div
-                        className="transition-all duration-300 cursor-pointer h-full px-5 py-3 flex items-center justify-between hover:bg-white/5 rounded-2xl lg:rounded-none"
+                        className="transition-all duration-300 cursor-pointer h-full px-4 py-1.5 flex items-center justify-between hover:bg-slate-50 rounded-[12px] lg:rounded-none"
                         onClick={() => setDateOpen(!dateOpen)}
                     >
-                        <div className="flex gap-4 items-center">
-                            <IoCalendarOutline className="text-[#19E68C] w-6 h-6 shrink-0" />
+                        <div className="flex gap-3 items-center">
+                            <IoCalendarOutline className="text-[#16A34A] w-5 h-5 shrink-0" />
                             <div className="flex flex-col">
-                                <span className="text-[13px] font-bold text-white tracking-wide">Date</span>
-                                <span className="text-[12px] font-medium text-slate-400 truncate max-w-[120px]">
+                                <span className="text-[11px] font-black text-[#111827] tracking-wide uppercase">Date</span>
+                                <span className="text-[11px] font-semibold text-[#6B7280] truncate max-w-[110px]">
                                     {date ? formatDate(date) : 'Select Date'}
                                 </span>
                             </div>
                         </div>
                     </div>
                     {dateOpen && (
-                        <div className="absolute top-full left-0 md:left-1/2 md:-translate-x-1/2 w-[280px] bg-slate-900 border border-white/10 p-4 rounded-2xl mt-4 shadow-2xl z-[9999]">
-                            <div className="flex gap-2 mb-3 flex-wrap">
+                        <div className="absolute top-full left-0 md:left-1/2 md:-translate-x-1/2 w-[285px] bg-white border border-[#E5E7EB] p-4 rounded-[20px] mt-2 shadow-[0_20px_40px_rgba(0,0,0,0.1)] z-[9999]">
+                            <span className="text-[10px] font-black uppercase tracking-wider text-[#6B7280] block mb-2">Select Date</span>
+                            <div className="flex gap-1.5 mb-3 flex-wrap">
                                 {[{ l: 'Today', v: getDateString(0) }, { l: 'Tomorrow', v: getDateString(1) }, { l: 'Weekend', v: getWeekendDate() }].map(opt => (
-                                    <button key={opt.l} className="px-3 py-1.5 bg-white/5 hover:bg-white/10 rounded-lg text-[11px] font-bold text-white transition-colors" onClick={() => selectDate(opt.v)}>{opt.l}</button>
+                                    <button
+                                        key={opt.l}
+                                        className={`px-3 py-1.5 rounded-full text-[11px] font-bold transition-all border shadow-sm ${
+                                            date === opt.v
+                                                ? 'bg-[#C8FF2E] text-[#111827] border-[#B5F000] shadow-[0_4px_12px_rgba(200,255,46,0.35)]'
+                                                : 'bg-white hover:bg-[#C8FF2E] text-[#111827] border-[#E5E7EB] hover:border-[#B5F000]'
+                                        }`}
+                                        onClick={() => selectDate(opt.v)}
+                                    >
+                                        {opt.l}
+                                    </button>
                                 ))}
                             </div>
-                            <input type="date" className="w-full bg-slate-800 border border-white/10 rounded-xl px-3 py-2 text-sm text-white outline-none [color-scheme:dark]" value={date} min={todayStr} onChange={(e) => selectDate(e.target.value)} />
+                            <input
+                                type="date"
+                                className="w-full bg-white border border-[#E5E7EB] hover:border-[#C8FF2E] focus:border-[#C8FF2E] rounded-full px-3.5 py-2 text-xs text-[#111827] outline-none font-bold shadow-sm transition-all cursor-pointer"
+                                value={date}
+                                min={todayStr}
+                                onChange={(e) => selectDate(e.target.value)}
+                            />
                         </div>
                     )}
                 </div>
@@ -270,25 +321,35 @@ export default function TurfSearchBar({ onSearch, values, onChange, onClear }) {
                 {/* 4. TIME */}
                 <div ref={timeRef} className="flex-1 min-w-0 relative group/sec">
                     <div
-                        className="transition-all duration-300 cursor-pointer h-full px-5 py-3 flex items-center justify-between hover:bg-white/5 rounded-2xl lg:rounded-full lg:rounded-l-none"
+                        className="transition-all duration-300 cursor-pointer h-full px-4 py-1.5 flex items-center justify-between hover:bg-slate-50 rounded-[12px] lg:rounded-full lg:rounded-l-none"
                         onClick={() => setTimeOpen(!timeOpen)}
                     >
-                        <div className="flex gap-4 items-center">
-                            <IoTimeOutline className="text-[#19E68C] w-6 h-6 shrink-0" />
+                        <div className="flex gap-3 items-center">
+                            <IoTimeOutline className="text-[#16A34A] w-5 h-5 shrink-0" />
                             <div className="flex flex-col">
-                                <span className="text-[13px] font-bold text-white tracking-wide">Time</span>
-                                <span className="text-[12px] font-medium text-slate-400 truncate max-w-[120px]">
+                                <span className="text-[11px] font-black text-[#111827] tracking-wide uppercase">Time</span>
+                                <span className="text-[11px] font-semibold text-[#6B7280] truncate max-w-[110px]">
                                     {selectedTime ? selectedTime.label : 'Any Time'}
                                 </span>
                             </div>
                         </div>
                     </div>
                     {timeOpen && (
-                        <div className="absolute top-full right-0 w-[240px] bg-slate-900 border border-white/10 p-3 rounded-2xl mt-4 shadow-2xl z-[9999]">
+                        <div className="absolute top-full right-0 w-[260px] bg-white border border-[#E5E7EB] p-4 rounded-[20px] mt-2 shadow-[0_20px_40px_rgba(0,0,0,0.1)] z-[9999]">
+                            <span className="text-[10px] font-black uppercase tracking-wider text-[#6B7280] block mb-2">Select Time Slot</span>
                             <div className="grid grid-cols-2 gap-2">
                                 {timeSlots.map(t => (
-                                    <button key={t.value} className="flex flex-col items-center p-2 bg-white/5 hover:bg-white/10 rounded-xl text-white transition-colors" onClick={() => selectTime(t.value)}>
+                                    <button
+                                        key={t.value}
+                                        className={`flex flex-col items-center justify-center p-2.5 rounded-xl transition-all border shadow-sm ${
+                                            time === t.value
+                                                ? 'bg-[#C8FF2E] text-[#111827] border-[#B5F000] shadow-[0_4px_12px_rgba(200,255,46,0.35)]'
+                                                : 'bg-white hover:bg-[#C8FF2E] text-[#111827] border-[#E5E7EB] hover:border-[#B5F000]'
+                                        }`}
+                                        onClick={() => selectTime(t.value)}
+                                    >
                                         <span className="text-[11px] font-bold">{t.label}</span>
+                                        <span className="text-[9px] text-[#6B7280] font-semibold mt-0.5">{t.range}</span>
                                     </button>
                                 ))}
                             </div>
@@ -297,12 +358,12 @@ export default function TurfSearchBar({ onSearch, values, onChange, onClear }) {
                 </div>
 
                 {/* SEARCH BUTTON */}
-                <div className="flex items-center shrink-0 justify-center h-full pl-2 pr-1 py-1 mt-2 lg:mt-0">
+                <div className="flex items-center shrink-0 justify-center h-full pl-1.5 pr-0.5 py-0.5 mt-1 lg:mt-0">
                     <button
                         onClick={() => onSearch?.({ location, sport, date, time, players })}
-                        className="w-full lg:w-auto h-full px-6 py-3 bg-[#19E68C] hover:bg-[#15c577] text-[#020617] font-black rounded-full transition-all shadow-[0_0_15px_rgba(25,230,140,0.2)] hover:shadow-[0_0_25px_rgba(25,230,140,0.6)] flex items-center justify-center cursor-pointer min-h-[52px] lg:min-h-full"
+                        className="w-full lg:w-auto h-full px-6 py-2 bg-[#C8FF2E] hover:bg-[#B5F000] text-[#111827] font-black rounded-full transition-all shadow-[0_6px_18px_rgba(200,255,46,0.35)] hover:shadow-[0_8px_22px_rgba(200,255,46,0.5)] hover:scale-[1.04] active:scale-95 flex items-center justify-center cursor-pointer min-h-[44px] lg:min-h-full border border-[#B5F000]"
                     >
-                        <IoSearch className="w-6 h-6" />
+                        <span className="text-[12px] font-black uppercase tracking-wider">SEARCH</span>
                     </button>
                 </div>
             </div>

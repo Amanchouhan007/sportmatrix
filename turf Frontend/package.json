@@ -7,11 +7,17 @@
     "dev": "vite",
     "build": "vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "cap:sync": "vite build && npx cap sync",
+    "cap:open": "npx cap open android"
   },
   "dependencies": {
+    "@capacitor/android": "^8.5.0",
+    "@capacitor/cli": "^7.6.8",
+    "@capacitor/core": "^8.5.0",
     "@react-google-maps/api": "^2.20.8",
     "axios": "^1.13.6",
+    "peerjs": "^1.5.5",
     "prop-types": "^15.8.1",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",

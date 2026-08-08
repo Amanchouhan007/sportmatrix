@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom'
 import Card from '../../components/ui/Card'
 import Button from '../../components/ui/Button'
 import Input from '../../components/ui/Input'
-import Select from '../../components/ui/Select'
 import { useToast } from '../../components/ui/Toast'
 import {
     getDiscountOffers,
@@ -14,8 +13,34 @@ import {
 import {
     FiPlus, FiSearch, FiRefreshCw, FiDownload, FiEdit2, FiTrash2,
     FiEye, FiCopy, FiCheckCircle, FiXCircle, FiTag, FiClock, FiCheck,
-    FiFilter, FiLayers, FiDollarSign, FiUsers, FiTrendingUp, FiActivity, FiArrowRight
+    FiFilter, FiLayers, FiDollarSign, FiUsers, FiTrendingUp, FiActivity, FiArrowRight,
+    FiChevronDown
 } from 'react-icons/fi'
+
+const TURF_OPTIONS = [
+    { value: 'ALL', label: 'All Turfs' },
+    { value: 'turf-1', label: 'Champions Turf Arena' },
+    { value: 'turf-2', label: 'SkyLine Football Turf' },
+    { value: 'turf-3', label: 'Velocity Sports Hub' }
+]
+
+const TYPE_OPTIONS = [
+    { value: 'ALL', label: 'All Discount Types' },
+    { value: 'Percentage', label: 'Percentage (%)' },
+    { value: 'Flat Amount', label: 'Flat Amount (₹)' },
+    { value: 'Buy One Get One', label: 'Buy One Get One' },
+    { value: 'Free Slot', label: 'Free Slot' },
+    { value: 'Cashback', label: 'Cashback' }
+]
+
+const STATUS_OPTIONS = [
+    { value: 'ALL', label: 'All Statuses' },
+    { value: 'Active', label: 'Active' },
+    { value: 'Scheduled', label: 'Scheduled' },
+    { value: 'Expired', label: 'Expired' },
+    { value: 'Draft', label: 'Draft' },
+    { value: 'Inactive', label: 'Inactive' }
+]
 
 export default function DiscountOffersList() {
     const navigate = useNavigate()
@@ -29,6 +54,7 @@ export default function DiscountOffersList() {
     const [typeFilter, setTypeFilter] = useState('ALL')
     const [statusFilter, setStatusFilter] = useState('ALL')
     const [page, setPage] = useState(1)
+    const [openDropdown, setOpenDropdown] = useState(null)
     const [pagination, setPagination] = useState({ total: 0, page: 1, limit: 10, totalPages: 1 })
 
     // Modals state
@@ -230,80 +256,167 @@ export default function DiscountOffersList() {
                 </div>
             </div>
 
-            {/* Filter Controls Bar */}
-            <div className="bg-white p-5 rounded-3xl border border-surface-200/80 shadow-[0_10px_30px_rgba(0,0,0,0.04)] space-y-4">
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
-                    <div className="relative col-span-1 sm:col-span-2">
-                        <FiSearch className="absolute left-4 top-3.5 text-surface-400 text-sm" />
-                        <input
-                            type="text"
-                            value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
-                            placeholder="Search by title, promo code, turf or owner..."
-                            className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-surface-200 bg-surface-50/50 text-xs font-bold outline-none focus:border-emerald-500 focus:bg-white transition-all"
-                        />
-                    </div>
-
-                    <Select
-                        value={turfFilter}
-                        onChange={(e) => setTurfFilter(e.target.value)}
-                        className="text-xs"
-                    >
-                        <option value="ALL">All Turfs</option>
-                        <option value="turf-1">Champions Turf Arena</option>
-                        <option value="turf-2">SkyLine Football Turf</option>
-                        <option value="turf-3">Velocity Sports Hub</option>
-                    </Select>
-
-                    <Select
-                        value={typeFilter}
-                        onChange={(e) => setTypeFilter(e.target.value)}
-                        className="text-xs"
-                    >
-                        <option value="ALL">All Discount Types</option>
-                        <option value="Percentage">Percentage (%)</option>
-                        <option value="Flat Amount">Flat Amount (₹)</option>
-                        <option value="Buy One Get One">Buy One Get One</option>
-                        <option value="Free Slot">Free Slot</option>
-                        <option value="Cashback">Cashback</option>
-                    </Select>
-
-                    <Select
-                        value={statusFilter}
-                        onChange={(e) => setStatusFilter(e.target.value)}
-                        className="text-xs"
-                    >
-                        <option value="ALL">All Statuses</option>
-                        <option value="Active">Active</option>
-                        <option value="Scheduled">Scheduled</option>
-                        <option value="Expired">Expired</option>
-                        <option value="Draft">Draft</option>
-                        <option value="Inactive">Inactive</option>
-                    </Select>
-                </div>
-
-                <div className="flex items-center justify-between border-t border-surface-150 pt-3 text-xs font-bold text-surface-500">
-                    <div className="flex items-center gap-2">
-                        <button
-                            onClick={fetchData}
-                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-surface-100 hover:bg-surface-200 text-surface-700 transition-colors"
-                        >
-                            <FiRefreshCw className={loading ? 'animate-spin' : ''} /> Refresh
-                        </button>
-                        <button
-                            onClick={handleExportCSV}
-                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-50 text-emerald-700 hover:bg-emerald-100 transition-colors"
-                        >
-                            <FiDownload /> Export CSV
-                        </button>
-                    </div>
-
-                    <span>Showing {offers.length} discount offers</span>
-                </div>
-            </div>
-
-            {/* Discounts Data Table */}
+            {/* Merged Filter Controls & Data Table into 1 Single Card */}
             <div className="bg-white rounded-3xl border border-surface-200/80 shadow-[0_10px_30px_rgba(0,0,0,0.04)] overflow-hidden">
+                {/* Filter Controls Header */}
+                <div className="p-5 border-b border-surface-100 space-y-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+                        <div className="relative col-span-1 sm:col-span-2">
+                            <FiSearch className="absolute left-4 top-3.5 text-surface-400 text-sm" />
+                            <input
+                                type="text"
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                                placeholder="Search by title, promo code, turf or owner..."
+                                className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-surface-200 bg-surface-50/50 text-xs font-bold outline-none focus:border-emerald-500 focus:bg-white transition-all"
+                            />
+                        </div>
+
+                        {/* Turf Filter Dropdown */}
+                        <div className="relative">
+                            <button
+                                type="button"
+                                onClick={() => setOpenDropdown(openDropdown === 'turf' ? null : 'turf')}
+                                className="w-full h-10 px-3.5 rounded-xl border border-surface-200 bg-surface-50/50 hover:bg-white text-xs font-bold text-surface-800 outline-none focus:border-emerald-500 transition-all cursor-pointer flex items-center justify-between"
+                            >
+                                <span className="truncate">{TURF_OPTIONS.find(o => o.value === turfFilter)?.label || 'All Turfs'}</span>
+                                <FiChevronDown className={`w-3.5 h-3.5 text-surface-400 shrink-0 transition-transform duration-200 ${openDropdown === 'turf' ? 'rotate-180 text-emerald-600' : ''}`} />
+                            </button>
+
+                            {openDropdown === 'turf' && (
+                                <>
+                                    <div className="fixed inset-0 z-40" onClick={() => setOpenDropdown(null)} />
+                                    <div className="absolute top-full left-0 right-0 mt-1.5 z-50 bg-white/95 backdrop-blur-md rounded-2xl border border-surface-200/90 shadow-[0_15px_35px_rgba(0,0,0,0.1)] p-1.5 space-y-0.5 animate-in fade-in slide-in-from-top-2 duration-150">
+                                        {TURF_OPTIONS.map(opt => {
+                                            const isSelected = turfFilter === opt.value
+                                            return (
+                                                <button
+                                                    key={opt.value}
+                                                    type="button"
+                                                    onClick={() => {
+                                                        setTurfFilter(opt.value)
+                                                        setOpenDropdown(null)
+                                                    }}
+                                                    className={`w-full text-left px-3 py-2 rounded-xl text-xs font-bold transition-all flex items-center justify-between cursor-pointer ${
+                                                        isSelected
+                                                            ? 'bg-emerald-50 text-emerald-700 border border-emerald-200/60 shadow-2xs'
+                                                            : 'text-surface-700 hover:bg-emerald-50/60 hover:text-emerald-700'
+                                                    }`}
+                                                >
+                                                    <span className="truncate">{opt.label}</span>
+                                                    {isSelected && <FiCheck className="w-3.5 h-3.5 text-emerald-600 shrink-0" />}
+                                                </button>
+                                            )
+                                        })}
+                                    </div>
+                                </>
+                            )}
+                        </div>
+
+                        {/* Discount Type Filter Dropdown */}
+                        <div className="relative">
+                            <button
+                                type="button"
+                                onClick={() => setOpenDropdown(openDropdown === 'type' ? null : 'type')}
+                                className="w-full h-10 px-3.5 rounded-xl border border-surface-200 bg-surface-50/50 hover:bg-white text-xs font-bold text-surface-800 outline-none focus:border-emerald-500 transition-all cursor-pointer flex items-center justify-between"
+                            >
+                                <span className="truncate">{TYPE_OPTIONS.find(o => o.value === typeFilter)?.label || 'All Discount Types'}</span>
+                                <FiChevronDown className={`w-3.5 h-3.5 text-surface-400 shrink-0 transition-transform duration-200 ${openDropdown === 'type' ? 'rotate-180 text-emerald-600' : ''}`} />
+                            </button>
+
+                            {openDropdown === 'type' && (
+                                <>
+                                    <div className="fixed inset-0 z-40" onClick={() => setOpenDropdown(null)} />
+                                    <div className="absolute top-full left-0 right-0 mt-1.5 z-50 bg-white/95 backdrop-blur-md rounded-2xl border border-surface-200/90 shadow-[0_15px_35px_rgba(0,0,0,0.1)] p-1.5 space-y-0.5 animate-in fade-in slide-in-from-top-2 duration-150">
+                                        {TYPE_OPTIONS.map(opt => {
+                                            const isSelected = typeFilter === opt.value
+                                            return (
+                                                <button
+                                                    key={opt.value}
+                                                    type="button"
+                                                    onClick={() => {
+                                                        setTypeFilter(opt.value)
+                                                        setOpenDropdown(null)
+                                                    }}
+                                                    className={`w-full text-left px-3 py-2 rounded-xl text-xs font-bold transition-all flex items-center justify-between cursor-pointer ${
+                                                        isSelected
+                                                            ? 'bg-emerald-50 text-emerald-700 border border-emerald-200/60 shadow-2xs'
+                                                            : 'text-surface-700 hover:bg-emerald-50/60 hover:text-emerald-700'
+                                                    }`}
+                                                >
+                                                    <span className="truncate">{opt.label}</span>
+                                                    {isSelected && <FiCheck className="w-3.5 h-3.5 text-emerald-600 shrink-0" />}
+                                                </button>
+                                            )
+                                        })}
+                                    </div>
+                                </>
+                            )}
+                        </div>
+
+                        {/* Status Filter Dropdown */}
+                        <div className="relative">
+                            <button
+                                type="button"
+                                onClick={() => setOpenDropdown(openDropdown === 'status' ? null : 'status')}
+                                className="w-full h-10 px-3.5 rounded-xl border border-surface-200 bg-surface-50/50 hover:bg-white text-xs font-bold text-surface-800 outline-none focus:border-emerald-500 transition-all cursor-pointer flex items-center justify-between"
+                            >
+                                <span className="truncate">{STATUS_OPTIONS.find(o => o.value === statusFilter)?.label || 'All Statuses'}</span>
+                                <FiChevronDown className={`w-3.5 h-3.5 text-surface-400 shrink-0 transition-transform duration-200 ${openDropdown === 'status' ? 'rotate-180 text-emerald-600' : ''}`} />
+                            </button>
+
+                            {openDropdown === 'status' && (
+                                <>
+                                    <div className="fixed inset-0 z-40" onClick={() => setOpenDropdown(null)} />
+                                    <div className="absolute top-full left-0 right-0 mt-1.5 z-50 bg-white/95 backdrop-blur-md rounded-2xl border border-surface-200/90 shadow-[0_15px_35px_rgba(0,0,0,0.1)] p-1.5 space-y-0.5 animate-in fade-in slide-in-from-top-2 duration-150">
+                                        {STATUS_OPTIONS.map(opt => {
+                                            const isSelected = statusFilter === opt.value
+                                            return (
+                                                <button
+                                                    key={opt.value}
+                                                    type="button"
+                                                    onClick={() => {
+                                                        setStatusFilter(opt.value)
+                                                        setOpenDropdown(null)
+                                                    }}
+                                                    className={`w-full text-left px-3 py-2 rounded-xl text-xs font-bold transition-all flex items-center justify-between cursor-pointer ${
+                                                        isSelected
+                                                            ? 'bg-emerald-50 text-emerald-700 border border-emerald-200/60 shadow-2xs'
+                                                            : 'text-surface-700 hover:bg-emerald-50/60 hover:text-emerald-700'
+                                                    }`}
+                                                >
+                                                    <span className="truncate">{opt.label}</span>
+                                                    {isSelected && <FiCheck className="w-3.5 h-3.5 text-emerald-600 shrink-0" />}
+                                                </button>
+                                            )
+                                        })}
+                                    </div>
+                                </>
+                            )}
+                        </div>
+                    </div>
+
+                    <div className="flex items-center justify-between border-t border-surface-150 pt-3 text-xs font-bold text-surface-500">
+                        <div className="flex items-center gap-2">
+                            <button
+                                onClick={fetchData}
+                                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-surface-100 hover:bg-surface-200 text-surface-700 transition-colors cursor-pointer"
+                            >
+                                <FiRefreshCw className={loading ? 'animate-spin' : ''} /> Refresh
+                            </button>
+                            <button
+                                onClick={handleExportCSV}
+                                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-50 text-emerald-700 hover:bg-emerald-100 transition-colors cursor-pointer"
+                            >
+                                <FiDownload /> Export CSV
+                            </button>
+                        </div>
+
+                        <span>Showing {offers.length} discount offers</span>
+                    </div>
+                </div>
+
+                {/* Discounts Data Table */}
                 {loading ? (
                     <div className="p-12 text-center text-surface-400 font-bold text-sm">
                         <FiRefreshCw className="animate-spin text-3xl mx-auto mb-3 text-emerald-600" />

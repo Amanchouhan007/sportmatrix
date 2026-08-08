@@ -10,19 +10,19 @@ import {
 
 const sidebarConfig = {
     superadmin: [
+        { isHeader: true, label: 'DASHBOARD' },
         { label: 'Dashboard', icon: <HiHome />, path: '/super-admin' },
+        { isHeader: true, label: 'MANAGEMENT' },
         { label: 'Owners', icon: <HiUsers />, path: '/super-admin/owners' },
         { label: 'Subscriptions', icon: <HiCreditCard />, path: '/super-admin/subscriptions' },
-
-        { isHeader: true, label: 'System Logs' },
+        { isHeader: true, label: 'REPORTS' },
         { label: 'Analytics Logs', icon: <HiChartBar />, path: '/super-admin/analytics' },
         { label: 'Payment Logs', icon: <HiClipboardList />, path: '/super-admin/payments' },
+        { isHeader: true, label: 'SETTINGS' },
         { label: 'Settings', icon: <HiCog />, path: '/super-admin/settings' },
     ],
     owner: [
         { label: 'Dashboard', icon: <HiHome />, path: '/admin' },
-
-        { isHeader: true, label: 'Marketing & Ads' },
         {
             isCollapsible: true,
             label: 'Advertising Management',
@@ -36,8 +36,6 @@ const sidebarConfig = {
                 { label: 'Payments', icon: <HiCreditCard />, path: '/admin/ads/payments' },
             ]
         },
-
-        { isHeader: true, label: 'Tournaments' },
         {
             isCollapsible: true,
             label: 'Tournament Management',
@@ -55,10 +53,8 @@ const sidebarConfig = {
                 { label: 'Settings', icon: <HiAdjustments />, path: '/admin/tournaments/settings' },
             ]
         },
-
-        { isHeader: true, label: 'Operations' },
         { label: 'Turf', icon: <HiBolt />, path: '/admin/sports' },
-        { label: 'Slots', icon: <HiCalendar />, path: '/admin/slots' },
+        { label: 'Turf Calendar', icon: <HiCalendar />, path: '/admin/calendar' },
         { label: 'Bookings', icon: <HiTicket />, path: '/admin/bookings' },
         { label: 'POS Billing', icon: <HiCreditCard />, path: '/admin/pos' },
         { label: 'Billing History', icon: <HiClipboardList />, path: '/admin/billing-history' },
@@ -71,8 +67,6 @@ const sidebarConfig = {
     ],
     staff: [
         { label: 'Dashboard', icon: <HiHome />, path: '/staff' },
-
-        { isHeader: true, label: 'Marketing' },
         {
             isCollapsible: true,
             label: 'Advertising Management',
@@ -83,8 +77,6 @@ const sidebarConfig = {
                 { label: 'Advertisement Analytics', icon: <HiChartBar />, path: '/staff/ads/analytics' },
             ]
         },
-
-        { isHeader: true, label: 'Tournaments' },
         {
             isCollapsible: true,
             label: 'Tournament Management',
@@ -98,8 +90,6 @@ const sidebarConfig = {
                 { label: 'Matches', icon: <HiPlay />, path: '/staff/tournaments/matches' },
             ]
         },
-
-        { isHeader: true, label: 'Staff Operations' },
         { label: 'Bookings', icon: <HiTicket />, path: '/staff/bookings' },
         { label: 'Refunds', icon: <HiCash />, path: '/staff/refunds' },
         { label: 'Maintenance', icon: <HiWrench />, path: '/staff/maintenance' },

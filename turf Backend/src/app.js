@@ -95,6 +95,10 @@ app.use('/api/v1/ads', adsRouter);
 const subscriptionsRouter = require('./modules/subscriptions/subscriptions.routes');
 app.use('/api/v1/subscriptions', subscriptionsRouter);
 
+// Mobile Realtime Sync Routes registration
+const mobileSyncRouter = require('./modules/mobile/mobileSync.routes');
+app.use('/api/v1/mobile-sync', mobileSyncRouter);
+
 // Basic Root Health Check Route
 app.get('/api/v1/health', (req, res) => {
     res.status(200).json({

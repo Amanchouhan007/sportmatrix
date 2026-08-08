@@ -3,23 +3,44 @@ import api from './api';
 /**
  * Log in a user with email and password
  */
-export const loginUser = async (email, password) => {
+export const loginUser = async (email, password, selectedRole) => {
     try {
-        const response = await api.post('/auth/login', { email, password });
+        const response = await api.post('/auth/login', { email, password, role: selectedRole });
         return response.data;
     } catch (error) {
         const status = error.response?.status;
         if (!error.response || status >= 500) {
             console.warn('Backend database connection unavailable, falling back to local dev login.');
+            
+            const roleMap = {
+                superadmin: 'SUPER_ADMIN',
+                owner: 'OWNER',
+                staff: 'STAFF',
+                customer: 'CUSTOMER'
+            };
+            
+            let userRole = 'CUSTOMER';
+            if (selectedRole && roleMap[selectedRole.toLowerCase()]) {
+                userRole = roleMap[selectedRole.toLowerCase()];
+            } else if (email.includes('superadmin') || email.includes('super')) {
+                userRole = 'SUPER_ADMIN';
+            } else if (email.includes('owner') || email.includes('admin')) {
+                userRole = 'OWNER';
+            } else if (email.includes('staff')) {
+                userRole = 'STAFF';
+            } else if (email.includes('customer')) {
+                userRole = 'CUSTOMER';
+            }
+
             return {
                 success: true,
                 message: 'Login successful (Dev Mode)',
                 token: 'mock_jwt_token_' + Date.now(),
                 user: {
-                    id: 'usr_dev_1',
+                    id: 'usr_dev_' + Date.now(),
                     name: email.split('@')[0].toUpperCase(),
                     email: email,
-                    role: 'SUPER_ADMIN'
+                    role: userRole
                 }
             };
         }

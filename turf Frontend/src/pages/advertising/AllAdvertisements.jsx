@@ -229,46 +229,47 @@ export default function AllAdvertisements() {
                 </div>
             </div>
 
-            {/* Filter & Search Bar */}
-            <Card variant="glass" className="p-4">
-                <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
-                    <div className="col-span-1 sm:col-span-2">
-                        <Input
-                            placeholder="Search by Ad ID, Turf or Owner Name..."
-                            value={search}
-                            onChange={(e) => { setSearch(e.target.value); setCurrentPage(1); }}
-                        />
+            {/* Merged Filter Toolbar & Data Table into 1 Card */}
+            <div className="bg-white/90 backdrop-blur-md border border-surface-200/80 rounded-3xl overflow-hidden shadow-soft">
+                {/* Filter & Search Bar Header */}
+                <div className="p-4.5 border-b border-surface-100 bg-surface-50/50">
+                    <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
+                        <div className="col-span-1 sm:col-span-2">
+                            <Input
+                                placeholder="Search by Ad ID, Turf or Owner Name..."
+                                value={search}
+                                onChange={(e) => { setSearch(e.target.value); setCurrentPage(1); }}
+                            />
+                        </div>
+
+                        <Select
+                            value={statusFilter}
+                            onChange={(e) => { setStatusFilter(e.target.value); setCurrentPage(1); }}
+                        >
+                            <option value="ALL">All Statuses</option>
+                            <option value="Pending">Pending</option>
+                            <option value="Approved">Approved</option>
+                            <option value="Active">Active</option>
+                            <option value="Booking Generated">Booking Generated</option>
+                            <option value="Commission Pending">Commission Pending</option>
+                            <option value="Paid">Paid</option>
+                            <option value="Rejected">Rejected</option>
+                            <option value="Expired">Expired</option>
+                        </Select>
+
+                        <Select
+                            value={typeFilter}
+                            onChange={(e) => { setTypeFilter(e.target.value); setCurrentPage(1); }}
+                        >
+                            <option value="ALL">All Ad Types</option>
+                            <option value="Guaranteed Booking">Guaranteed Booking</option>
+                            <option value="Discount Offer">Discount Offer</option>
+                            <option value="Impression Ad">Impression Ad</option>
+                        </Select>
                     </div>
-
-                    <Select
-                        value={statusFilter}
-                        onChange={(e) => { setStatusFilter(e.target.value); setCurrentPage(1); }}
-                    >
-                        <option value="ALL">All Statuses</option>
-                        <option value="Pending">Pending</option>
-                        <option value="Approved">Approved</option>
-                        <option value="Active">Active</option>
-                        <option value="Booking Generated">Booking Generated</option>
-                        <option value="Commission Pending">Commission Pending</option>
-                        <option value="Paid">Paid</option>
-                        <option value="Rejected">Rejected</option>
-                        <option value="Expired">Expired</option>
-                    </Select>
-
-                    <Select
-                        value={typeFilter}
-                        onChange={(e) => { setTypeFilter(e.target.value); setCurrentPage(1); }}
-                    >
-                        <option value="ALL">All Ad Types</option>
-                        <option value="Guaranteed Booking">Guaranteed Booking</option>
-                        <option value="Discount Offer">Discount Offer</option>
-                        <option value="Impression Ad">Impression Ad</option>
-                    </Select>
                 </div>
-            </Card>
 
-            {/* Data Table */}
-            <div className="bg-white/80 backdrop-blur-md border border-surface-200/60 rounded-3xl overflow-hidden shadow-soft">
+                {/* Data Table */}
                 <div className="overflow-x-auto">
                     <table className="w-full text-left text-sm text-surface-700">
                         <thead className="bg-surface-50/80 text-xs font-bold uppercase tracking-wider text-surface-500 border-b border-surface-200/60">

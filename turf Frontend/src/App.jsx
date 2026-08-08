@@ -38,6 +38,7 @@ import OwnerDashboard from './pages/owner/OwnerDashboard'
 import SportsManagement from './pages/owner/SportsManagement'
 import SlotManagement from './pages/owner/SlotManagement'
 import BookingManagement from './pages/owner/BookingManagement'
+import TurfCalendarPage from './pages/owner/TurfCalendarPage'
 import TeamsPlayers from './pages/owner/TeamsPlayers';
 import WalletPage from './pages/owner/WalletPage'
 import ReportsPage from './pages/owner/ReportsPage'
@@ -144,11 +145,12 @@ export default function App() {
               <Route path="discount-offers" element={<DiscountOffersList />} />
               <Route path="discount-offers/create" element={<CreateDiscountOffer />} />
               <Route path="sports" element={<SportsManagement />} />
-              <Route path="slots" element={<SlotManagement />} />
+              <Route path="calendar" element={<TurfCalendarPage />} />
+              <Route path="slots" element={<TurfCalendarPage />} />
               <Route path="bookings" element={<BookingManagement />} />
               <Route path="pos" element={<OwnerPOS />} />
               <Route path="billing-history" element={<BillingHistory />} />
-              
+
               {/* Tournament Management System Sub-Routes */}
               <Route path="tournaments" element={<TournamentAllPage role="owner" />} />
               <Route path="tournaments/dashboard" element={<TournamentDashboard role="owner" />} />
@@ -180,7 +182,7 @@ export default function App() {
               <Route path="ads/create" element={<CreateAdvertisement />} />
               <Route path="ads/analytics" element={<OwnerAdAnalytics />} />
               <Route path="bookings" element={<StaffBookings />} />
-              
+
               {/* Staff Tournament Management Sub-Routes */}
               <Route path="tournaments" element={<TournamentAllPage role="staff" />} />
               <Route path="tournaments/dashboard" element={<TournamentDashboard role="staff" />} />

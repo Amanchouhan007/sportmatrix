@@ -33,7 +33,7 @@ export const AuthProvider = ({ children }) => {
      * @param {string} selectedRole - UI selected role ('superadmin', 'owner', 'staff', 'customer')
      */
     const login = async (email, password, selectedRole) => {
-        const data = await loginUser(email, password);
+        const data = await loginUser(email, password, selectedRole);
         
         if (data && data.success) {
             const roleMapping = {
@@ -43,7 +43,8 @@ export const AuthProvider = ({ children }) => {
                 customer: 'CUSTOMER'
             };
 
-            const activeRole = data.user?.role || expectedRole;
+            const mappedRole = selectedRole ? roleMapping[selectedRole.toLowerCase()] : null;
+            const activeRole = data.user?.role || mappedRole || 'CUSTOMER';
             const userObj = { ...data.user, role: activeRole };
 
             // Save details to localStorage

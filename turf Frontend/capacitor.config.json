@@ -1,0 +1,19 @@
+{
+  "appId": "com.sportmatrix.app",
+  "appName": "SportMatrix",
+  "webDir": "dist",
+  "server": {
+    "androidScheme": "https",
+    "allowNavigation": [
+      "aesthetic-beignet-beb7da.netlify.app",
+      "*.netlify.app"
+    ]
+  },
+  "plugins": {
+    "SplashScreen": {
+      "launchShowDuration": 2000,
+      "backgroundColor": "#0f172a",
+      "showSpinner": false
+    }
+  }
+}

@@ -1,13 +1,11 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import Card from '../../components/ui/Card'
 import Badge from '../../components/ui/Badge'
-import Button from '../../components/ui/Button'
 import Modal from '../../components/ui/Modal'
-import StatCard from '../../components/ui/StatCard'
 import Pagination from '../../components/ui/Pagination'
 import { useToast } from '../../components/ui/Toast'
 import { getPaymentLogs, getPaymentLogById, getPaymentStats } from '../../services/paymentLogService'
-import { FiEye, FiSearch, FiFilter, FiX, FiRefreshCw } from 'react-icons/fi'
+import { FiEye, FiSearch, FiFilter, FiX, FiRefreshCw, FiChevronDown, FiCheck } from 'react-icons/fi'
 import { HiCash, HiCreditCard, HiChartBar, HiClock, HiReceiptRefund } from 'react-icons/hi'
 
 // ── Status badge helper ──────────────────────────────────────────────────────
@@ -36,6 +34,36 @@ const DATE_PRESETS = [
     { label: '7 Days',   days: 7 },
     { label: '30 Days',  days: 30 },
     { label: '90 Days',  days: 90 },
+]
+
+const STATUS_OPTIONS = [
+    { value: '', label: 'All Status' },
+    { value: 'COMPLETED', label: 'Completed' },
+    { value: 'PENDING', label: 'Pending' },
+    { value: 'HELD', label: 'Held' },
+    { value: 'FAILED', label: 'Failed' },
+    { value: 'REFUNDED', label: 'Refunded' }
+]
+
+const TYPE_OPTIONS = [
+    { value: '', label: 'All Types' },
+    { value: 'BOOKING', label: 'Booking' },
+    { value: 'TOURNAMENT', label: 'Tournament' },
+    { value: 'GAMING_ZONE', label: 'Gaming Zone' },
+    { value: 'HIRE', label: 'Hire' },
+    { value: 'WALLET_RECHARGE', label: 'Wallet Recharge' },
+    { value: 'SUBSCRIPTION', label: 'Subscription' },
+    { value: 'REFUND', label: 'Refund' }
+]
+
+const METHOD_OPTIONS = [
+    { value: '', label: 'All Methods' },
+    { value: 'CASH', label: 'Cash' },
+    { value: 'CARD', label: 'Card' },
+    { value: 'UPI', label: 'UPI' },
+    { value: 'BANK_TRANSFER', label: 'Bank Transfer' },
+    { value: 'WALLET', label: 'Wallet' },
+    { value: 'ONLINE', label: 'Online' }
 ]
 
 const toISODate = (date) => date.toISOString().slice(0, 10)
@@ -85,6 +113,7 @@ export default function PaymentLogs() {
     const [endDate,       setEndDate]       = useState('')
     const [activeDatePreset, setActiveDatePreset] = useState('')
     const [currentPage,   setCurrentPage]   = useState(1)
+    const [openDropdown,  setOpenDropdown]  = useState(null)
 
     // ── Build query params ──────────────────────────────────────────────────
     const buildParams = useCallback((page = 1) => {
@@ -213,259 +242,355 @@ export default function PaymentLogs() {
             value: isStatsLoading ? '—' : (stats?.summary?.totalTransactions ?? 0).toLocaleString(),
             change: `${stats?.summary?.completedCount ?? 0} completed`,
             trend: 'up', icon: <HiChartBar />,
-            cardBg: 'bg-blue-50/70 border-blue-200/80',
-            iconBg: 'bg-blue-500 text-white',
-            accent: 'bg-blue-500'
+            cardBg: 'bg-white/82 backdrop-blur-[18px] border-t-2 border-blue-500',
+            iconBg: 'bg-blue-500 text-white'
         },
         {
             label: 'Total Revenue',
             value: isStatsLoading ? '—' : fmtINR(stats?.summary?.totalRevenue),
             change: `Net platform earnings`,
             trend: 'up', icon: <HiCash />,
-            cardBg: 'bg-emerald-50/70 border-emerald-200/80',
-            iconBg: 'bg-emerald-500 text-white',
-            accent: 'bg-emerald-500'
+            cardBg: 'bg-white/82 backdrop-blur-[18px] border-t-2 border-[#16A34A]',
+            iconBg: 'bg-[#16A34A] text-white'
         },
         {
             label: 'Total Commission',
             value: isStatsLoading ? '—' : fmtINR(stats?.summary?.totalCommission),
             change: 'Platform commission earned',
             trend: 'up', icon: <HiCreditCard />,
-            cardBg: 'bg-purple-50/70 border-purple-200/80',
-            iconBg: 'bg-purple-500 text-white',
-            accent: 'bg-purple-500'
+            cardBg: 'bg-white/82 backdrop-blur-[18px] border-t-2 border-purple-500',
+            iconBg: 'bg-purple-500 text-white'
         },
         {
             label: 'Pending Payments',
             value: isStatsLoading ? '—' : fmtINR(stats?.summary?.pendingPayments),
             change: `${stats?.summary?.pendingCount ?? 0} pending`,
             trend: 'down', icon: <HiClock />,
-            cardBg: 'bg-amber-50/70 border-amber-200/80',
-            iconBg: 'bg-amber-500 text-white',
-            accent: 'bg-amber-500'
+            cardBg: 'bg-white/82 backdrop-blur-[18px] border-t-2 border-amber-500',
+            iconBg: 'bg-amber-500 text-white'
         },
         {
             label: 'Refunded Amount',
             value: isStatsLoading ? '—' : fmtINR(stats?.summary?.refundedAmount),
             change: `${stats?.summary?.refundedCount ?? 0} refunds`,
             trend: 'down', icon: <HiReceiptRefund />,
-            cardBg: 'bg-rose-50/70 border-rose-200/80',
-            iconBg: 'bg-rose-500 text-white',
-            accent: 'bg-rose-500'
+            cardBg: 'bg-white/82 backdrop-blur-[18px] border-t-2 border-rose-500',
+            iconBg: 'bg-rose-500 text-white'
         },
     ]
 
-    // ── Page loading skeleton ───────────────────────────────────────────────
     if (isPageLoading) {
         return (
             <div className="min-h-[60vh] flex flex-col items-center justify-center gap-4">
-                <div className="w-10 h-10 border-4 border-primary-600 border-t-transparent rounded-full animate-spin" />
-                <span className="text-surface-500 text-sm font-medium">Loading payment logs...</span>
+                <div className="w-12 h-12 border-4 border-[#22C55E] border-t-transparent rounded-full animate-spin" />
+                <span className="text-slate-500 text-xs font-bold uppercase tracking-wider">Loading payment logs...</span>
             </div>
         )
     }
 
     return (
-        <div className="space-y-6 bg-[#F8FAFC] min-h-screen p-6 rounded-3xl animate-in fade-in duration-500">
-            {/* Page Header with Light Gradient Background */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-gradient-to-r from-blue-50/70 via-indigo-50/50 to-purple-50/70 p-6 rounded-3xl border border-indigo-100/60 shadow-soft">
+        <div 
+            style={{
+                background: 'linear-gradient(135deg, #ffffff 0%, #f7fffb 45%, #eefcf4 100%)'
+            }}
+            className="min-h-screen -m-6 md:-m-8 p-6 md:p-8 font-sans text-slate-900 relative selection:bg-[#22C55E]/30 overflow-x-hidden space-y-8"
+        >
+            {/* Extremely soft blurred emerald radial glow (<5% opacity) */}
+            <div className="fixed top-0 left-1/3 w-[600px] h-[600px] bg-[#10B981]/4 rounded-full blur-[160px] pointer-events-none -z-10" />
+            <div className="fixed bottom-0 right-1/4 w-[700px] h-[700px] bg-[#22C55E]/4 rounded-full blur-[180px] pointer-events-none -z-10" />
+
+            {/* Page Header (Compact Glassmorphism) */}
+            <div 
+                style={{
+                    backdropFilter: 'blur(18px)',
+                    WebkitBackdropFilter: 'blur(18px)',
+                    border: '1px solid rgba(255, 255, 255, 0.6)'
+                }}
+                className="rounded-2xl shadow-[0_20px_45px_rgba(0,0,0,0.04)] p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3"
+            >
                 <div>
-                    <h1 className="text-2xl font-black text-surface-900 tracking-tight">Payment Logs</h1>
-                    <p className="text-surface-500 text-sm mt-0.5 font-medium">Platform earnings and escrow logs</p>
+                    <h1 className="text-2xl font-black text-slate-900 tracking-tight leading-none">Payment Logs</h1>
+                    <p className="text-xs sm:text-sm text-slate-500 font-medium mt-1">Platform earnings and escrow logs</p>
                 </div>
                 <button
                     onClick={() => { fetchLogs(currentPage); fetchStats() }}
-                    className="flex items-center gap-2 text-xs font-bold text-surface-700 hover:text-primary-600 transition-colors px-4 py-2.5 rounded-2xl bg-white hover:bg-surface-50 border border-surface-200/80 shadow-soft cursor-pointer"
+                    className="h-9 px-4 rounded-xl bg-white hover:bg-slate-50 text-slate-700 font-bold text-xs border border-slate-200 shadow-2xs hover:-translate-y-0.5 transition-all cursor-pointer flex items-center gap-2 self-start sm:self-auto"
                 >
-                    <FiRefreshCw className={`w-3.5 h-3.5 ${isTableLoading ? 'animate-spin' : ''}`} />
-                    Refresh
+                    <FiRefreshCw className={`w-3.5 h-3.5 text-[#16A34A] ${isTableLoading ? 'animate-spin' : ''}`} />
+                    <span>Refresh Data</span>
                 </button>
             </div>
 
-            {/* Stats Cards with Soft Background Colors */}
-            <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
+            {/* 5 KPI Stat Cards (125px Height, 24px Radius) */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-5">
                 {summaryCards.map((card) => (
-                    <div key={card.label} className={`rounded-2xl border p-5 relative overflow-hidden shadow-soft transition-all hover:-translate-y-0.5 ${card.cardBg}`}>
-                        <div className={`absolute top-0 left-0 h-1 w-full ${card.accent}`}></div>
-                        <div className="flex items-start justify-between">
-                            <div className="space-y-1">
-                                <p className="text-xs font-bold text-surface-500 uppercase tracking-wider">{card.label}</p>
-                                <p className="text-2xl font-black text-surface-900 tracking-tight">{card.value}</p>
-                                {card.change && (
-                                    <p className={`text-xs font-bold flex items-center gap-1 ${card.trend === 'up' ? 'text-emerald-600' : 'text-rose-600'}`}>
-                                        {card.trend === 'up' ? '↑' : '↓'} {card.change}
-                                    </p>
-                                )}
+                    <div 
+                        key={card.label} 
+                        style={{
+                            border: '1px solid rgba(255, 255, 255, 0.7)'
+                        }}
+                        className={`rounded-[24px] shadow-[0_18px_45px_rgba(15,23,42,0.08)] hover:shadow-[0_25px_50px_rgba(34,197,94,0.12)] p-5 h-[125px] flex flex-col justify-between hover:-translate-y-1.5 hover:scale-[1.02] transition-all duration-300 ${card.cardBg}`}
+                    >
+                        <div className="flex items-center justify-between">
+                            <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">{card.label}</span>
+                            <div className={`w-9 h-9 rounded-2xl flex items-center justify-center text-base shadow-2xs ${card.iconBg}`}>
+                                {card.icon}
                             </div>
-                            {card.icon && <div className={`w-11 h-11 rounded-2xl flex items-center justify-center text-lg shadow-soft ${card.iconBg}`}>{card.icon}</div>}
+                        </div>
+                        <div className="flex items-baseline justify-between">
+                            <span className="text-[32px] font-black text-slate-900 leading-none tracking-tight">
+                                {card.value}
+                            </span>
+                            {card.change && (
+                                <span className={`text-[10px] font-extrabold ${card.trend === 'up' ? 'text-[#16A34A]' : 'text-rose-600'}`}>
+                                    {card.change}
+                                </span>
+                            )}
                         </div>
                     </div>
                 ))}
             </div>
 
-            {/* Search & Filters Area with Mint / Soft Green Background */}
-            <Card className="bg-emerald-50/40 border border-emerald-200/60 shadow-soft p-5 rounded-3xl space-y-4">
-                {/* Row 1: Search + dropdowns */}
-                <div className="flex flex-wrap gap-3 items-end">
-                    {/* Search */}
-                    <div className="relative flex-1 min-w-[200px]">
-                        <FiSearch className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-surface-400" />
+            {/* Filter & Table Unified Container (24px Glass Card) */}
+            <div className="bg-white/90 backdrop-blur-md rounded-[24px] border border-white/80 shadow-[0_15px_40px_rgba(0,0,0,0.04)] overflow-hidden p-6 space-y-5">
+                {/* Search & Select Controls */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                    {/* Search Input (54px Height) */}
+                    <div className="relative col-span-1 sm:col-span-2 lg:col-span-1">
+                        <FiSearch className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                         <input
                             type="text"
-                            placeholder="Search by Payment ID, Transaction ID, User name..."
+                            placeholder="Search Payment ID, TXN ID..."
                             value={search}
                             onChange={e => setSearch(e.target.value)}
-                            className="w-full pl-10 pr-4 py-2.5 border border-surface-200/80 rounded-xl text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 bg-white transition-all shadow-soft"
+                            className="w-full h-[54px] pl-11 pr-10 rounded-2xl border border-slate-200 bg-[#FAFBFC] focus:bg-white text-slate-900 text-xs font-semibold outline-none focus:border-[#16A34A] focus:ring-2 focus:ring-[#16A34A]/20 transition-all placeholder:text-slate-400"
                         />
                         {search && (
-                            <button onClick={() => setSearch('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-surface-400 hover:text-surface-600 cursor-pointer">
-                                <FiX className="w-3.5 h-3.5" />
+                            <button onClick={() => setSearch('')} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700 cursor-pointer">
+                                <FiX className="w-4 h-4" />
                             </button>
                         )}
                     </div>
 
-                    {/* Status filter */}
-                    <select
-                        value={filterStatus}
-                        onChange={e => setFilterStatus(e.target.value)}
-                        className="px-3.5 py-2.5 border border-surface-200/80 rounded-xl text-sm font-medium text-surface-700 outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 bg-white cursor-pointer shadow-soft"
-                    >
-                        <option value="">All Status</option>
-                        <option value="COMPLETED">Completed</option>
-                        <option value="PENDING">Pending</option>
-                        <option value="HELD">Held</option>
-                        <option value="FAILED">Failed</option>
-                        <option value="REFUNDED">Refunded</option>
-                    </select>
-
-                    {/* Type filter */}
-                    <select
-                        value={filterType}
-                        onChange={e => setFilterType(e.target.value)}
-                        className="px-3.5 py-2.5 border border-surface-200/80 rounded-xl text-sm font-medium text-surface-700 outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 bg-white cursor-pointer shadow-soft"
-                    >
-                        <option value="">All Types</option>
-                        <option value="BOOKING">Booking</option>
-                        <option value="TOURNAMENT">Tournament</option>
-                        <option value="GAMING_ZONE">Gaming Zone</option>
-                        <option value="HIRE">Hire</option>
-                        <option value="WALLET_RECHARGE">Wallet Recharge</option>
-                        <option value="SUBSCRIPTION">Subscription</option>
-                        <option value="REFUND">Refund</option>
-                    </select>
-
-                    {/* Payment Method filter */}
-                    <select
-                        value={filterMethod}
-                        onChange={e => setFilterMethod(e.target.value)}
-                        className="px-3.5 py-2.5 border border-surface-200/80 rounded-xl text-sm font-medium text-surface-700 outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 bg-white cursor-pointer shadow-soft"
-                    >
-                        <option value="">All Methods</option>
-                        <option value="CASH">Cash</option>
-                        <option value="CARD">Card</option>
-                        <option value="UPI">UPI</option>
-                        <option value="BANK_TRANSFER">Bank Transfer</option>
-                        <option value="WALLET">Wallet</option>
-                        <option value="ONLINE">Online</option>
-                    </select>
-
-                    {/* Clear filters */}
-                    {hasActiveFilters && (
+                    {/* Status Dropdown */}
+                    <div className="relative">
                         <button
-                            onClick={handleClearFilters}
-                            className="flex items-center gap-1.5 text-xs font-bold text-danger-500 hover:text-danger-700 px-3 py-2.5 rounded-xl border border-danger-200 hover:bg-danger-50 transition-all cursor-pointer bg-white shadow-soft"
+                            type="button"
+                            onClick={() => setOpenDropdown(openDropdown === 'status' ? null : 'status')}
+                            className="w-full h-[54px] rounded-2xl border border-slate-200 bg-[#FAFBFC] hover:bg-white px-4 text-xs font-bold text-slate-800 outline-none focus:border-[#16A34A] focus:ring-2 focus:ring-[#16A34A]/20 transition-all cursor-pointer flex items-center justify-between"
                         >
-                            <FiX className="w-3.5 h-3.5" /> Clear All
+                            <span>{STATUS_OPTIONS.find(o => o.value === filterStatus)?.label || 'All Status'}</span>
+                            <FiChevronDown className={`w-4 h-4 text-slate-400 transition-transform duration-200 ${openDropdown === 'status' ? 'rotate-180 text-emerald-600' : ''}`} />
                         </button>
-                    )}
+
+                        {openDropdown === 'status' && (
+                            <>
+                                <div className="fixed inset-0 z-40" onClick={() => setOpenDropdown(null)} />
+                                <div className="absolute top-full left-0 right-0 mt-2 z-50 bg-white/95 backdrop-blur-md rounded-2xl border border-slate-200/90 shadow-[0_15px_35px_rgba(0,0,0,0.1)] p-1.5 space-y-0.5 animate-in fade-in slide-in-from-top-2 duration-150">
+                                    {STATUS_OPTIONS.map(opt => {
+                                        const isSelected = filterStatus === opt.value
+                                        return (
+                                            <button
+                                                key={opt.value}
+                                                type="button"
+                                                onClick={() => {
+                                                    setFilterStatus(opt.value)
+                                                    setOpenDropdown(null)
+                                                }}
+                                                className={`w-full text-left px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center justify-between cursor-pointer ${
+                                                    isSelected
+                                                        ? 'bg-emerald-50 text-[#16A34A] border border-emerald-200/60 shadow-2xs'
+                                                        : 'text-slate-700 hover:bg-emerald-50/60 hover:text-emerald-700'
+                                                }`}
+                                            >
+                                                <span>{opt.label}</span>
+                                                {isSelected && <FiCheck className="w-3.5 h-3.5 text-[#16A34A]" />}
+                                            </button>
+                                        )
+                                    })}
+                                </div>
+                            </>
+                        )}
+                    </div>
+
+                    {/* Type Dropdown */}
+                    <div className="relative">
+                        <button
+                            type="button"
+                            onClick={() => setOpenDropdown(openDropdown === 'type' ? null : 'type')}
+                            className="w-full h-[54px] rounded-2xl border border-slate-200 bg-[#FAFBFC] hover:bg-white px-4 text-xs font-bold text-slate-800 outline-none focus:border-[#16A34A] focus:ring-2 focus:ring-[#16A34A]/20 transition-all cursor-pointer flex items-center justify-between"
+                        >
+                            <span>{TYPE_OPTIONS.find(o => o.value === filterType)?.label || 'All Types'}</span>
+                            <FiChevronDown className={`w-4 h-4 text-slate-400 transition-transform duration-200 ${openDropdown === 'type' ? 'rotate-180 text-emerald-600' : ''}`} />
+                        </button>
+
+                        {openDropdown === 'type' && (
+                            <>
+                                <div className="fixed inset-0 z-40" onClick={() => setOpenDropdown(null)} />
+                                <div className="absolute top-full left-0 right-0 mt-2 z-50 bg-white/95 backdrop-blur-md rounded-2xl border border-slate-200/90 shadow-[0_15px_35px_rgba(0,0,0,0.1)] p-1.5 space-y-0.5 animate-in fade-in slide-in-from-top-2 duration-150">
+                                    {TYPE_OPTIONS.map(opt => {
+                                        const isSelected = filterType === opt.value
+                                        return (
+                                            <button
+                                                key={opt.value}
+                                                type="button"
+                                                onClick={() => {
+                                                    setFilterType(opt.value)
+                                                    setOpenDropdown(null)
+                                                }}
+                                                className={`w-full text-left px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center justify-between cursor-pointer ${
+                                                    isSelected
+                                                        ? 'bg-emerald-50 text-[#16A34A] border border-emerald-200/60 shadow-2xs'
+                                                        : 'text-slate-700 hover:bg-emerald-50/60 hover:text-emerald-700'
+                                                }`}
+                                            >
+                                                <span>{opt.label}</span>
+                                                {isSelected && <FiCheck className="w-3.5 h-3.5 text-[#16A34A]" />}
+                                            </button>
+                                        )
+                                    })}
+                                </div>
+                            </>
+                        )}
+                    </div>
+
+                    {/* Method Dropdown */}
+                    <div className="relative">
+                        <button
+                            type="button"
+                            onClick={() => setOpenDropdown(openDropdown === 'method' ? null : 'method')}
+                            className="w-full h-[54px] rounded-2xl border border-slate-200 bg-[#FAFBFC] hover:bg-white px-4 text-xs font-bold text-slate-800 outline-none focus:border-[#16A34A] focus:ring-2 focus:ring-[#16A34A]/20 transition-all cursor-pointer flex items-center justify-between"
+                        >
+                            <span>{METHOD_OPTIONS.find(o => o.value === filterMethod)?.label || 'All Methods'}</span>
+                            <FiChevronDown className={`w-4 h-4 text-slate-400 transition-transform duration-200 ${openDropdown === 'method' ? 'rotate-180 text-emerald-600' : ''}`} />
+                        </button>
+
+                        {openDropdown === 'method' && (
+                            <>
+                                <div className="fixed inset-0 z-40" onClick={() => setOpenDropdown(null)} />
+                                <div className="absolute top-full left-0 right-0 mt-2 z-50 bg-white/95 backdrop-blur-md rounded-2xl border border-slate-200/90 shadow-[0_15px_35px_rgba(0,0,0,0.1)] p-1.5 space-y-0.5 animate-in fade-in slide-in-from-top-2 duration-150 max-h-60 overflow-y-auto" style={{ scrollbarWidth: 'thin' }}>
+                                    {METHOD_OPTIONS.map(opt => {
+                                        const isSelected = filterMethod === opt.value
+                                        return (
+                                            <button
+                                                key={opt.value}
+                                                type="button"
+                                                onClick={() => {
+                                                    setFilterMethod(opt.value)
+                                                    setOpenDropdown(null)
+                                                }}
+                                                className={`w-full text-left px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center justify-between cursor-pointer ${
+                                                    isSelected
+                                                        ? 'bg-emerald-50 text-[#16A34A] border border-emerald-200/60 shadow-2xs'
+                                                        : 'text-slate-700 hover:bg-emerald-50/60 hover:text-emerald-700'
+                                                }`}
+                                            >
+                                                <span>{opt.label}</span>
+                                                {isSelected && <FiCheck className="w-3.5 h-3.5 text-[#16A34A]" />}
+                                            </button>
+                                        )
+                                    })}
+                                </div>
+                            </>
+                        )}
+                    </div>
                 </div>
 
-                {/* Row 2: Date range */}
-                <div className="flex flex-wrap gap-2 items-center">
-                    <span className="text-xs font-bold text-surface-500 uppercase tracking-wide">DATE RANGE:</span>
-                    {DATE_PRESETS.map(preset => (
-                        <button
-                            key={preset.label}
-                            onClick={() => handleDatePreset(preset)}
-                            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer border ${
-                                activeDatePreset === preset.label
-                                    ? 'bg-emerald-600 text-white border-emerald-600 shadow-soft'
-                                    : 'bg-white text-surface-600 border-surface-200 hover:border-emerald-300 hover:text-emerald-600'
-                            }`}
-                        >
-                            {preset.label}
-                        </button>
-                    ))}
-                    <span className="text-xs text-surface-500 font-medium">or custom:</span>
-                    <input
-                        type="date"
-                        value={startDate}
-                        onChange={e => { setStartDate(e.target.value); setActiveDatePreset('') }}
-                        className="px-3 py-1.5 border border-surface-200 rounded-lg text-xs outline-none focus:border-emerald-500 bg-white cursor-pointer"
-                    />
-                    <span className="text-xs text-surface-400">to</span>
-                    <input
-                        type="date"
-                        value={endDate}
-                        onChange={e => { setEndDate(e.target.value); setActiveDatePreset('') }}
-                        className="px-3 py-1.5 border border-surface-200 rounded-lg text-xs outline-none focus:border-emerald-500 bg-white cursor-pointer"
-                    />
-                </div>
-            </Card>
+                {/* Date Presets & Custom Inputs */}
+                <div className="flex flex-wrap items-center justify-between gap-4 pt-2 border-t border-slate-100">
+                    <div className="flex flex-wrap items-center gap-2">
+                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest mr-1">Date Presets:</span>
+                        {DATE_PRESETS.map(preset => (
+                            <button
+                                key={preset.label}
+                                onClick={() => handleDatePreset(preset)}
+                                className={`px-4 py-2 rounded-full text-xs font-extrabold transition-all cursor-pointer border ${
+                                    activeDatePreset === preset.label
+                                        ? 'bg-gradient-to-r from-green-500 to-emerald-500 text-white border-transparent shadow-xs'
+                                        : 'bg-slate-100/80 border-slate-200/80 text-slate-600 hover:bg-slate-200/70'
+                                }`}
+                            >
+                                {preset.label}
+                            </button>
+                        ))}
+                    </div>
 
-            {/* Table Section with Dark Header & Alternate Rows */}
-            <Card className="border border-surface-200/80 shadow-soft rounded-3xl overflow-hidden p-0 bg-white">
-                {/* Table header row with total count */}
-                <div className="flex items-center justify-between px-6 py-4 border-b border-surface-200 bg-surface-50/50">
+                    <div className="flex flex-wrap items-center gap-2">
+                        <span className="text-xs font-semibold text-slate-400">Custom:</span>
+                        <input
+                            type="date"
+                            value={startDate}
+                            onChange={e => { setStartDate(e.target.value); setActiveDatePreset('') }}
+                            className="px-3.5 py-1.5 border border-slate-200 rounded-xl text-xs font-semibold bg-white text-slate-800 outline-none focus:border-[#16A34A]"
+                        />
+                        <span className="text-xs font-semibold text-slate-400">to</span>
+                        <input
+                            type="date"
+                            value={endDate}
+                            onChange={e => { setEndDate(e.target.value); setActiveDatePreset('') }}
+                            className="px-3.5 py-1.5 border border-slate-200 rounded-xl text-xs font-semibold bg-white text-slate-800 outline-none focus:border-[#16A34A]"
+                        />
+                        {hasActiveFilters && (
+                            <button
+                                onClick={handleClearFilters}
+                                className="flex items-center gap-1 text-xs font-bold text-red-500 hover:text-red-700 px-3 py-1.5 rounded-xl border border-red-200 hover:bg-red-50 transition-all cursor-pointer ml-2"
+                            >
+                                <FiX className="w-3.5 h-3.5" /> Clear All
+                            </button>
+                        )}
+                    </div>
+                </div>
+
+                {/* Table Header Counter Strip */}
+                <div className="flex items-center justify-between pt-4 pb-2 border-t border-b border-slate-100">
                     <div className="flex items-center gap-2">
-                        <FiFilter className="w-4 h-4 text-emerald-600" />
-                        <span className="text-xs font-black text-surface-700 uppercase tracking-wider">
-                            {pagination.total.toLocaleString()} Transactions
+                        <FiFilter className="w-4 h-4 text-[#16A34A]" />
+                        <span className="text-xs font-black text-slate-900 uppercase tracking-wider">
+                            {pagination.total.toLocaleString()} Payment Transactions
                         </span>
                     </div>
                     {isTableLoading && (
-                        <div className="flex items-center gap-2 text-xs text-surface-400 font-medium">
-                            <div className="w-4 h-4 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin" />
-                            Loading...
+                        <div className="flex items-center gap-2 text-xs text-slate-400 font-semibold">
+                            <div className="w-4 h-4 border-2 border-[#16A34A] border-t-transparent rounded-full animate-spin" />
+                            <span>Updating records...</span>
                         </div>
                     )}
                 </div>
 
+                {/* Table Body Container */}
                 <div className="overflow-x-auto">
                     <table className="w-full text-left border-collapse">
                         <thead>
-                            <tr className="bg-[#2D3748] text-white">
-                                <th className="px-5 py-3.5 text-xs font-bold uppercase tracking-wider text-white">Payment ID</th>
-                                <th className="px-5 py-3.5 text-xs font-bold uppercase tracking-wider text-white">User</th>
-                                <th className="px-5 py-3.5 text-xs font-bold uppercase tracking-wider text-white">Type</th>
-                                <th className="text-right px-5 py-3.5 text-xs font-bold uppercase tracking-wider text-white">Amount</th>
-                                <th className="text-right px-5 py-3.5 text-xs font-bold uppercase tracking-wider text-white">Commission</th>
-                                <th className="px-5 py-3.5 text-xs font-bold uppercase tracking-wider text-white">Notice</th>
-                                <th className="px-5 py-3.5 text-xs font-bold uppercase tracking-wider text-white">Status</th>
-                                <th className="px-5 py-3.5 text-xs font-bold uppercase tracking-wider text-white">Date</th>
-                                {/* <th className="text-center px-5 py-3.5 text-xs font-bold uppercase tracking-wider text-white">Action</th> */}
+                            <tr className="bg-[#0F172A] text-white text-xs font-black uppercase tracking-wider h-[58px]">
+                                <th className="px-5 py-4 rounded-l-2xl">Payment ID</th>
+                                <th className="px-5 py-4">User</th>
+                                <th className="px-5 py-4">Type</th>
+                                <th className="text-right px-5 py-4">Amount</th>
+                                <th className="text-right px-5 py-4">Commission</th>
+                                <th className="px-5 py-4">Method</th>
+                                <th className="px-5 py-4">Status</th>
+                                <th className="px-5 py-4 rounded-r-2xl">Date</th>
                             </tr>
                         </thead>
-                        <tbody className="divide-y divide-surface-100">
+                        <tbody className="divide-y divide-slate-100/80">
                             {isTableLoading && logs.length === 0 ? (
-                                /* Table skeleton while loading */
                                 Array.from({ length: 6 }).map((_, i) => (
-                                    <tr key={i} className="animate-pulse">
-                                        {Array.from({ length: 9 }).map((__, j) => (
+                                    <tr key={i} className="animate-pulse h-[68px]">
+                                        {Array.from({ length: 8 }).map((__, j) => (
                                             <td key={j} className="px-5 py-4">
-                                                <div className="h-4 bg-surface-100 rounded-lg w-full" />
+                                                <div className="h-4 bg-slate-100 rounded-lg w-full" />
                                             </td>
                                         ))}
                                     </tr>
                                 ))
                             ) : logs.length === 0 ? (
                                 <tr>
-                                    <td colSpan={9} className="text-center py-16 text-surface-400 text-sm font-medium">
+                                    <td colSpan={8} className="text-center py-16 text-slate-400 text-sm font-medium">
                                         <div className="flex flex-col items-center gap-2">
                                             <HiCreditCard className="w-10 h-10 opacity-20" />
                                             <span>No payment logs found{hasActiveFilters ? ' matching your filters' : ''}.</span>
                                             {hasActiveFilters && (
-                                                <button onClick={handleClearFilters} className="text-primary-500 text-xs font-bold hover:text-primary-700 underline cursor-pointer">
+                                                <button onClick={handleClearFilters} className="text-[#16A34A] text-xs font-bold hover:underline cursor-pointer">
                                                     Clear filters
                                                 </button>
                                             )}
@@ -476,61 +601,48 @@ export default function PaymentLogs() {
                                 logs.map((log) => (
                                     <tr
                                         key={log._id}
-                                        className={`even:bg-slate-50/70 odd:bg-white hover:bg-blue-50/40 transition-colors duration-150 ${isTableLoading ? 'opacity-50' : ''}`}
+                                        className="h-[68px] even:bg-slate-50/60 odd:bg-white hover:bg-emerald-50/40 transition-all duration-200 border-b border-slate-100/80"
                                     >
-                                        {/* Payment ID */}
                                         <td className="px-5 py-4">
-                                            <span className="text-xs font-bold text-primary-600 font-mono">
+                                            <span className="text-xs font-black text-[#16A34A] font-mono">
                                                 {log.paymentId || '—'}
                                             </span>
                                         </td>
-
-                                        {/* User */}
                                         <td className="px-5 py-4">
                                             <div>
-                                                <div className="text-sm font-semibold text-surface-800 truncate max-w-[140px]">
+                                                <div className="text-xs font-bold text-slate-900 truncate max-w-[140px]">
                                                     {log.userId?.fullName || '—'}
                                                 </div>
                                                 {log.userId?.mobile && (
-                                                    <div className="text-[10px] text-surface-400 font-medium">
+                                                    <div className="text-[10px] text-slate-400 font-semibold">
                                                         {log.userId.mobile}
                                                     </div>
                                                 )}
                                             </div>
                                         </td>
-
-                                        {/* Type */}
                                         <td className="px-5 py-4">
-                                            <Badge variant="primary">
+                                            <span className="px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-slate-100 text-slate-700 border border-slate-200">
                                                 {TYPE_LABEL[log.type] || log.type}
-                                            </Badge>
+                                            </span>
                                         </td>
-
-                                        {/* Amount */}
                                         <td className="px-5 py-4 text-right">
-                                            <span className={`text-sm font-bold ${log.type === 'REFUND' ? 'text-danger-500' : 'text-surface-900'}`}>
+                                            <span className={`text-xs font-black ${log.type === 'REFUND' ? 'text-red-500' : 'text-slate-900'}`}>
                                                 {log.type === 'REFUND' ? '-' : ''}{fmtINR(log.amount)}
                                             </span>
                                         </td>
-
-                                        {/* Commission */}
                                         <td className="px-5 py-4 text-right">
-                                            <div className="text-sm font-semibold text-surface-700">
+                                            <div className="text-xs font-bold text-slate-800">
                                                 {fmtINR(log.commissionAmount)}
                                             </div>
                                             {log.commissionRate > 0 && (
-                                                <div className="text-[10px] text-surface-400 font-medium">{log.commissionRate}%</div>
+                                                <div className="text-[10px] text-slate-400 font-semibold">{log.commissionRate}%</div>
                                             )}
                                         </td>
-
-                                        {/* Payment Method */}
                                         <td className="px-5 py-4">
-                                            <span className="text-sm text-surface-700 font-medium">
+                                            <span className="text-xs text-slate-700 font-semibold">
                                                 {log.paymentMethod || '—'}
                                             </span>
                                         </td>
-
-                                        {/* Status */}
                                         <td className="px-5 py-4">
                                             <Badge
                                                 variant={STATUS_VARIANT[log.status] || 'default'}
@@ -541,24 +653,11 @@ export default function PaymentLogs() {
                                                     : '—'}
                                             </Badge>
                                         </td>
-
-                                        {/* Date */}
                                         <td className="px-5 py-4">
-                                            <span className="text-sm text-surface-600 whitespace-nowrap">
+                                            <span className="text-xs font-semibold text-slate-500 whitespace-nowrap">
                                                 {fmtDate(log.paymentDate || log.createdAt || log.date)}
                                             </span>
                                         </td>
-
-                                        {/* Action */}
-                                        {/* <td className="px-5 py-4 text-center">
-                                            <button
-                                                onClick={() => handleViewDetail(log._id)}
-                                                className="p-2 rounded-lg hover:bg-primary-50 text-surface-400 hover:text-primary-600 transition-colors cursor-pointer"
-                                                title="View Details"
-                                            >
-                                                <FiEye className="w-4 h-4" />
-                                            </button>
-                                        </td> */}
                                     </tr>
                                 ))
                             )}
@@ -568,7 +667,7 @@ export default function PaymentLogs() {
 
                 {/* Pagination */}
                 {pagination.totalPages > 1 && (
-                    <div className="border-t border-surface-100 px-5">
+                    <div className="border-t border-slate-100 pt-4">
                         <Pagination
                             currentPage={pagination.page}
                             totalPages={pagination.totalPages}
@@ -576,29 +675,28 @@ export default function PaymentLogs() {
                         />
                     </div>
                 )}
-            </Card>
+            </div>
 
             {/* Detail Modal */}
             <Modal
                 isOpen={isModalOpen}
                 onClose={() => { setIsModalOpen(false); setDetailLog(null) }}
                 title="Payment Log Details"
-                size="xl"
+                size="enterprise"
             >
                 {isDetailLoading ? (
                     <div className="flex flex-col items-center justify-center py-16 gap-4">
-                        <div className="w-8 h-8 border-4 border-primary-600 border-t-transparent rounded-full animate-spin" />
-                        <span className="text-surface-500 text-sm font-medium">Loading transaction details...</span>
+                        <div className="w-8 h-8 border-4 border-[#16A34A] border-t-transparent rounded-full animate-spin" />
+                        <span className="text-slate-500 text-xs font-bold uppercase tracking-wider">Loading transaction details...</span>
                     </div>
                 ) : detailLog ? (
                     <div className="space-y-6 pb-2">
-                        {/* Status + Payment ID header */}
-                        <div className="flex items-center justify-between p-4 bg-surface-50 rounded-2xl border border-surface-100">
+                        <div className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl border border-slate-200">
                             <div>
-                                <p className="text-[10px] font-bold text-surface-400 uppercase tracking-widest mb-1">Payment ID</p>
-                                <p className="text-sm font-bold text-primary-600 font-mono">{detailLog.paymentId}</p>
+                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Payment ID</p>
+                                <p className="text-sm font-black text-[#16A34A] font-mono">{detailLog.paymentId}</p>
                                 {detailLog.transactionId && (
-                                    <p className="text-[10px] text-surface-400 font-medium mt-0.5">TXN: {detailLog.transactionId}</p>
+                                    <p className="text-[10px] text-slate-400 font-semibold mt-0.5">TXN: {detailLog.transactionId}</p>
                                 )}
                             </div>
                             <Badge variant={STATUS_VARIANT[detailLog.status] || 'default'} dot>
@@ -609,9 +707,8 @@ export default function PaymentLogs() {
                         </div>
 
                         <div className="grid md:grid-cols-2 gap-5">
-                            {/* Transaction Info */}
                             <div className="space-y-3">
-                                <h4 className="text-xs font-bold text-surface-500 uppercase tracking-widest border-b border-surface-100 pb-2">
+                                <h4 className="text-xs font-black text-slate-800 uppercase tracking-widest border-b border-slate-200 pb-2">
                                     Transaction Info
                                 </h4>
                                 <DetailRow label="Type"           value={<Badge variant="primary">{TYPE_LABEL[detailLog.type] || detailLog.type}</Badge>} />
@@ -622,23 +719,21 @@ export default function PaymentLogs() {
                                 )}
                             </div>
 
-                            {/* Payment Breakdown */}
                             <div className="space-y-3">
-                                <h4 className="text-xs font-bold text-surface-500 uppercase tracking-widest border-b border-surface-100 pb-2">
+                                <h4 className="text-xs font-black text-slate-800 uppercase tracking-widest border-b border-slate-200 pb-2">
                                     Payment Breakdown
                                 </h4>
-                                <DetailRow label="Gross Amount"      value={<span className="font-bold text-surface-900">{fmtINR(detailLog.amount)}</span>} />
+                                <DetailRow label="Gross Amount"      value={<span className="font-bold text-slate-900">{fmtINR(detailLog.amount)}</span>} />
                                 <DetailRow label="Commission Rate"   value={`${detailLog.commissionRate || 0}%`} />
-                                <DetailRow label="Commission Amount" value={<span className="text-danger-500 font-semibold">{fmtINR(detailLog.commissionAmount)}</span>} />
-                                <DetailRow label="Owner Payout"      value={<span className="text-primary-600 font-bold">{fmtINR(detailLog.ownerAmount)}</span>} />
+                                <DetailRow label="Commission Amount" value={<span className="text-red-500 font-semibold">{fmtINR(detailLog.commissionAmount)}</span>} />
+                                <DetailRow label="Owner Payout"      value={<span className="text-[#16A34A] font-bold">{fmtINR(detailLog.ownerAmount)}</span>} />
                             </div>
                         </div>
 
                         <div className="grid md:grid-cols-2 gap-5">
-                            {/* User Info */}
                             {detailLog.userId && (
                                 <div className="space-y-3">
-                                    <h4 className="text-xs font-bold text-surface-500 uppercase tracking-widest border-b border-surface-100 pb-2">
+                                    <h4 className="text-xs font-black text-slate-800 uppercase tracking-widest border-b border-slate-200 pb-2">
                                         User Info
                                     </h4>
                                     <DetailRow label="Name"   value={detailLog.userId.fullName  || '—'} />
@@ -648,10 +743,9 @@ export default function PaymentLogs() {
                                 </div>
                             )}
 
-                            {/* Owner Info */}
                             {detailLog.ownerId && (
                                 <div className="space-y-3">
-                                    <h4 className="text-xs font-bold text-surface-500 uppercase tracking-widest border-b border-surface-100 pb-2">
+                                    <h4 className="text-xs font-black text-slate-800 uppercase tracking-widest border-b border-slate-200 pb-2">
                                         Owner Info
                                     </h4>
                                     <DetailRow label="Name"          value={detailLog.ownerId.fullName     || '—'} />
@@ -662,10 +756,9 @@ export default function PaymentLogs() {
                             )}
                         </div>
 
-                        {/* Branch Info */}
                         {detailLog.branchId && (
                             <div className="space-y-3">
-                                <h4 className="text-xs font-bold text-surface-500 uppercase tracking-widest border-b border-surface-100 pb-2">
+                                <h4 className="text-xs font-black text-slate-800 uppercase tracking-widest border-b border-slate-200 pb-2">
                                     Branch Info
                                 </h4>
                                 <div className="grid md:grid-cols-2 gap-3">
@@ -677,10 +770,9 @@ export default function PaymentLogs() {
                             </div>
                         )}
 
-                        {/* Booking Info */}
                         {detailLog.bookingId && (
                             <div className="space-y-3">
-                                <h4 className="text-xs font-bold text-surface-500 uppercase tracking-widest border-b border-surface-100 pb-2">
+                                <h4 className="text-xs font-black text-slate-800 uppercase tracking-widest border-b border-slate-200 pb-2">
                                     Booking Info
                                 </h4>
                                 <div className="grid md:grid-cols-2 gap-3">
@@ -698,12 +790,11 @@ export default function PaymentLogs() {
     )
 }
 
-// ── Detail modal row helper ──────────────────────────────────────────────────
 function DetailRow({ label, value }) {
     return (
-        <div className="flex items-start justify-between gap-2 py-1.5 border-b border-surface-50">
-            <span className="text-xs font-semibold text-surface-500 shrink-0 min-w-[110px]">{label}</span>
-            <span className="text-xs font-medium text-surface-800 text-right">{value}</span>
+        <div className="flex items-start justify-between gap-2 py-1.5 border-b border-slate-100">
+            <span className="text-xs font-semibold text-slate-500 shrink-0 min-w-[110px]">{label}</span>
+            <span className="text-xs font-semibold text-slate-800 text-right">{value}</span>
         </div>
     )
 }

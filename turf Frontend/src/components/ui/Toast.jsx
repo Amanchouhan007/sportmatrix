@@ -3,7 +3,10 @@ import { HiCheckCircle, HiExclamationCircle, HiInformationCircle, HiX } from 're
 
 const ToastContext = createContext()
 
-export function useToast() { return useContext(ToastContext) }
+export function useToast() { 
+    const context = useContext(ToastContext)
+    return context || { addToast: (msg) => console.log('Toast:', msg) }
+}
 
 const icons = {
     success: <HiCheckCircle className="w-5 h-5 text-emerald-500" />,

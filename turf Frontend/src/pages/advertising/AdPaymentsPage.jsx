@@ -103,29 +103,30 @@ export default function AdPaymentsPage() {
                 </div>
             </div>
 
-            {/* Filter Bar */}
-            <Card variant="glass" className="p-4">
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                    <div className="col-span-2">
-                        <Input
-                            placeholder="Search by Invoice, Ad, Owner or Turf..."
-                            value={search}
-                            onChange={(e) => { setSearch(e.target.value); setCurrentPage(1); }}
-                        />
+            {/* Merged Filter Bar & Table into 1 Single Card */}
+            <div className="bg-white/90 backdrop-blur-md border border-surface-200/80 rounded-3xl overflow-hidden shadow-soft">
+                {/* Filter Bar Header */}
+                <div className="p-4.5 border-b border-surface-100 bg-surface-50/50">
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                        <div className="col-span-2">
+                            <Input
+                                placeholder="Search by Invoice, Ad, Owner or Turf..."
+                                value={search}
+                                onChange={(e) => { setSearch(e.target.value); setCurrentPage(1); }}
+                            />
+                        </div>
+                        <Select
+                            value={statusFilter}
+                            onChange={(e) => { setStatusFilter(e.target.value); setCurrentPage(1); }}
+                        >
+                            <option value="ALL">All Statuses</option>
+                            <option value="Paid">Paid</option>
+                            <option value="Pending">Pending</option>
+                        </Select>
                     </div>
-                    <Select
-                        value={statusFilter}
-                        onChange={(e) => { setStatusFilter(e.target.value); setCurrentPage(1); }}
-                    >
-                        <option value="ALL">All Statuses</option>
-                        <option value="Paid">Paid</option>
-                        <option value="Pending">Pending</option>
-                    </Select>
                 </div>
-            </Card>
 
-            {/* Table */}
-            <div className="bg-white/80 backdrop-blur-md border border-surface-200/60 rounded-3xl overflow-hidden shadow-soft">
+                {/* Table */}
                 <div className="overflow-x-auto">
                     <table className="w-full text-left text-sm text-surface-700">
                         <thead className="bg-surface-50/80 text-xs font-bold uppercase tracking-wider text-surface-500 border-b border-surface-200/60">

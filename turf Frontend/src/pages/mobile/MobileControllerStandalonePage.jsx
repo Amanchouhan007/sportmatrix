@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
+import { Peer } from 'peerjs'
 import { 
     FiRotateCcw, FiSmartphone, FiShield, FiAlertTriangle, FiCheckCircle, 
     FiWifi, FiXCircle, FiRefreshCw, FiZap, FiRadio
@@ -125,7 +126,42 @@ export default function MobileControllerStandalonePage() {
         }
     }, [sessionId])
 
-    // BroadcastChannel for Real-Time Sync
+    const peerRef = useRef(null)
+    const connRef = useRef(null)
+
+    // PeerJS Connection setup for cross-device real-time sync (WhatsApp / Netlify / 4G / Wi-Fi)
+    useEffect(() => {
+        if (!sessionId) return
+        const peerId = 'sm_sess_' + sessionId.replace(/[^a-zA-Z0-9]/g, '')
+        let peer
+
+        try {
+            peer = new Peer()
+            peerRef.current = peer
+
+            peer.on('open', () => {
+                const conn = peer.connect(peerId)
+                connRef.current = conn
+
+                conn.on('open', () => {
+                    const devInfo = {
+                        platform: /Android/i.test(navigator.userAgent) ? 'Android Mobile' : /iPhone|iPad/i.test(navigator.userAgent) ? 'iPhone Safari' : 'Mobile Device',
+                        browser: navigator.appName || 'Mobile Browser',
+                        time: new Date().toLocaleTimeString()
+                    }
+                    conn.send({ type: 'MOBILE_CONNECTED', deviceInfo: devInfo })
+                })
+            })
+        } catch (e) {
+            console.log('PeerJS connect error:', e)
+        }
+
+        return () => {
+            if (peer) peer.destroy()
+        }
+    }, [sessionId])
+
+    // BroadcastChannel for Real-Time Sync (Same machine tabs fallback)
     useEffect(() => {
         if (!sessionId) return
         const channelName = 'mobile_ctrl_channel_' + sessionId
@@ -152,7 +188,22 @@ export default function MobileControllerStandalonePage() {
         }
     }, [sessionId])
 
+    const pushSyncEvent = async (type, actionType = null, payload = {}, deviceInfo = null) => {
+        try {
+            const apiBase = window.location.hostname === 'localhost' ? 'http://localhost:5000' : window.location.origin
+            await fetch(`${apiBase}/api/v1/mobile-sync/push`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ sessionId, type, actionType, payload, deviceInfo })
+            })
+        } catch (e) {}
+    }
+
     const notifyDesktopConnection = (deviceInfo) => {
+        pushSyncEvent('MOBILE_CONNECTED', null, {}, deviceInfo)
+        if (connRef.current && connRef.current.open) {
+            connRef.current.send({ type: 'MOBILE_CONNECTED', deviceInfo })
+        }
         try {
             const bc = new BroadcastChannel('mobile_ctrl_channel_' + sessionId)
             bc.postMessage({ type: 'MOBILE_CONNECTED', deviceInfo })
@@ -185,7 +236,15 @@ export default function MobileControllerStandalonePage() {
             }))
         }
 
-        // Notify Desktop Console via BroadcastChannel
+        // 1. Send via HTTP API Realtime Sync (100% reliable across 4G/5G, WhatsApp link, Netlify)
+        pushSyncEvent('MOBILE_SCORE_ACTION', actionType, payload)
+
+        // 2. Send to Desktop via PeerJS DataConnection (Cross-Device P2P fallback)
+        if (connRef.current && connRef.current.open) {
+            connRef.current.send({ type: 'MOBILE_SCORE_ACTION', actionType, payload })
+        }
+
+        // 3. Notify Desktop Console via BroadcastChannel (Same-Machine tabs fallback)
         try {
             const bc = new BroadcastChannel('mobile_ctrl_channel_' + sessionId)
             bc.postMessage({ type: 'MOBILE_SCORE_ACTION', actionType, payload })

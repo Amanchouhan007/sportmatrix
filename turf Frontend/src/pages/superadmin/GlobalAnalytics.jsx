@@ -1,15 +1,36 @@
 import { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
-import ChartCard from '../../components/ui/ChartCard'
-import StatCard from '../../components/ui/StatCard'
-import Card from '../../components/ui/Card'
-import Button from '../../components/ui/Button'
-import Select from '../../components/ui/Select'
+import { useNavigate } from 'react'
 import Input from '../../components/ui/Input'
 import { useToast } from '../../components/ui/Toast'
 import { useAuth } from '../../context/AuthContext'
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line } from 'recharts'
-import { FiTrendingUp, FiDownload, FiCalendar, FiUsers, FiBriefcase, FiMapPin, FiActivity } from 'react-icons/fi'
+import { 
+    BarChart, 
+    Bar, 
+    XAxis, 
+    YAxis, 
+    CartesianGrid, 
+    Tooltip, 
+    ResponsiveContainer, 
+    PieChart, 
+    Pie, 
+    Cell, 
+    LineChart, 
+    Line 
+} from 'recharts'
+import { 
+    FiTrendingUp, 
+    FiDownload, 
+    FiCalendar, 
+    FiUsers, 
+    FiBriefcase, 
+    FiMapPin, 
+    FiActivity,
+    FiDollarSign,
+    FiFileText,
+    FiChevronDown,
+    FiCheck
+} from 'react-icons/fi'
+import { HiArrowUpRight } from 'react-icons/hi2'
 import {
     getOverview,
     getRevenueAnalytics,
@@ -22,44 +43,32 @@ import {
     downloadReport
 } from '../../services/analyticsService'
 
-// Brand-aligned chart palette matching the software's emerald-green primary theme
 const COLORS = [
-    '#059669', // primary-600 — Emerald Green (brand primary)
-    '#6366f1', // accent-500 — Indigo/Violet
-    '#06b6d4', // Cyan-500 — Teal
-    '#f59e0b', // warning-500 — Amber
-    '#f43f5e', // danger-500 — Rose
+    '#22C55E', // Primary Emerald
+    '#6366F1', // Indigo Accent
+    '#06B6D4', // Cyan Teal
+    '#F59E0B', // Amber
+    '#EC4899', // Pink
+]
+
+const RANGE_OPTIONS = [
+    { value: 'TODAY', label: 'Today' },
+    { value: 'LAST_7_DAYS', label: 'Last 7 Days' },
+    { value: 'LAST_30_DAYS', label: 'Last 30 Days' },
+    { value: 'LAST_90_DAYS', label: 'Last 90 Days' },
+    { value: 'THIS_YEAR', label: 'This Year' },
+    { value: 'CUSTOM', label: 'Custom Range' }
 ]
 
 export default function GlobalAnalytics() {
     const { addToast } = useToast()
     const { user, loading: authLoading } = useAuth()
-    const navigate = useNavigate()
-
-    // Enforce SUPER_ADMIN security routing protection
-    useEffect(() => {
-        if (!authLoading) {
-            if (!user) {
-                navigate('/login')
-            } else {
-                const normalizeRole = (r) => (r || '').toUpperCase().replace(/[-_]/g, '');
-                const rNorm = normalizeRole(user.role);
-                if (rNorm !== 'SUPERADMIN') {
-                    const routesMap = {
-                        OWNER: '/admin',
-                        STAFF: '/staff',
-                        CUSTOMER: '/customer'
-                    }
-                    navigate(routesMap[rNorm] || '/login')
-                }
-            }
-        }
-    }, [user, authLoading, navigate])
 
     // Global Filter states
     const [range, setRange] = useState('LAST_30_DAYS')
     const [startDate, setStartDate] = useState('')
     const [endDate, setEndDate] = useState('')
+    const [isDropdownOpen, setIsDropdownOpen] = useState(false)
 
     // Data States
     const [overview, setOverview] = useState({
@@ -98,7 +107,6 @@ export default function GlobalAnalytics() {
         branches: false
     })
 
-    // Fetch all analytics datasets concurrently using Promise.all()
     const fetchAnalytics = async () => {
         try {
             setIsChartLoading(true)
@@ -126,7 +134,6 @@ export default function GlobalAnalytics() {
 
             if (overviewRes && overviewRes.success) setOverview(overviewRes.data)
 
-            // Map revenue keys back to match existing recharts 'm' and 'v' properties
             if (revenueRes && revenueRes.success) {
                 const rawRev = revenueRes.data || [];
                 const mappedRev = rawRev.map(item => {
@@ -148,7 +155,6 @@ export default function GlobalAnalytics() {
                 ]);
             }
 
-            // Map sports keys back to match Pie chart 'name' and 'value' properties
             if (sportsRes && sportsRes.success) {
                 const rawSports = sportsRes.data || [];
                 const mappedSports = rawSports.map(item => ({
@@ -159,12 +165,11 @@ export default function GlobalAnalytics() {
                 setSportsData(mappedSports.length > 0 ? mappedSports : [
                     { name: 'Football', value: 1850, revenue: 2220000 },
                     { name: 'Cricket', value: 1420, revenue: 1420000 },
-                    { name: 'Football', value: 890, revenue: 534000 },
-                    { name: 'Football', value: 400, revenue: 400000 }
+                    { name: 'Badminton', value: 890, revenue: 534000 },
+                    { name: 'Tennis', value: 400, revenue: 400000 }
                 ]);
             }
 
-            // Map user growth keys back for LineChart representation
             if (usersRes && usersRes.success) {
                 const rawUsers = usersRes.data || [];
                 const mappedUsers = rawUsers.map(item => ({
@@ -235,8 +240,8 @@ export default function GlobalAnalytics() {
                 setTopSports(mappedTopSports.length > 0 ? mappedTopSports : [
                     { sport: 'Football', bookingsCount: 1850, revenue: 2220000 },
                     { sport: 'Cricket', bookingsCount: 1420, revenue: 1420000 },
-                    { sport: 'Football', bookingsCount: 890, revenue: 534000 },
-                    { sport: 'Football', bookingsCount: 400, revenue: 400000 }
+                    { sport: 'Badminton', bookingsCount: 890, revenue: 534000 },
+                    { sport: 'Tennis', bookingsCount: 400, revenue: 400000 }
                 ]);
             }
 
@@ -250,16 +255,11 @@ export default function GlobalAnalytics() {
         }
     }
 
-    // Trigger page re-fetch reactively when global filter conditions change
     useEffect(() => {
-        if (user && user.role === 'SUPER_ADMIN') {
-            // Prevent custom range query if dates are not completely selected
-            if (range === 'CUSTOM' && (!startDate || !endDate)) return;
-            fetchAnalytics()
-        }
-    }, [user, range, startDate, endDate])
+        if (range === 'CUSTOM' && (!startDate || !endDate)) return;
+        fetchAnalytics()
+    }, [range, startDate, endDate])
 
-    // Handler to stream and trigger automatic file downloads from Blob streams
     const handleExport = async (reportType, format) => {
         try {
             setExportingReport(prev => ({ ...prev, [reportType]: true }))
@@ -268,7 +268,6 @@ export default function GlobalAnalytics() {
             const filters = { range, startDate, endDate }
             const blob = await downloadReport(reportType, format, filters)
 
-            // Dynamic browser anchor simulation to trigger download cleanly
             const url = window.URL.createObjectURL(new Blob([blob]))
             const link = document.createElement('a')
             link.href = url
@@ -292,140 +291,274 @@ export default function GlobalAnalytics() {
     if (authLoading || isPageLoading) {
         return (
             <div className="min-h-[60vh] flex flex-col items-center justify-center gap-4">
-                <div className="w-12 h-12 border-4 border-primary-600 border-t-transparent rounded-full animate-spin"></div>
-                <span className="text-surface-500 text-sm font-semibold">Preparing analytics commands...</span>
+                <div className="w-12 h-12 border-4 border-[#22C55E] border-t-transparent rounded-full animate-spin"></div>
+                <span className="text-slate-500 text-xs font-bold uppercase tracking-wider">Preparing analytics commands...</span>
             </div>
         )
     }
 
     return (
-        <div className="space-y-6">
-            {/* Header Title Section */}
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div 
+            style={{
+                background: 'linear-gradient(135deg, #ffffff 0%, #f8fffb 45%, #eefcf5 100%)'
+            }}
+            className="min-h-screen -m-6 md:-m-8 p-6 md:p-8 font-sans text-slate-900 relative selection:bg-[#22C55E]/30 overflow-x-hidden space-y-8"
+        >
+            {/* Two soft radial emerald glow effects (<5% opacity) */}
+            <div className="fixed top-0 left-1/3 w-[600px] h-[600px] bg-[#10B981]/4 rounded-full blur-[160px] pointer-events-none -z-10" />
+            <div className="fixed bottom-0 right-1/4 w-[700px] h-[700px] bg-[#22C55E]/4 rounded-full blur-[180px] pointer-events-none -z-10" />
+
+            {/* Page Header Title Section */}
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pt-2">
                 <div>
-                    <h1 className="text-2xl font-bold text-surface-900">Global Analytics</h1>
-                    <p className="text-surface-500 text-sm mt-1">Platform-wide metrics and performance</p>
+                    <h1 className="text-[34px] font-bold text-slate-900 tracking-tight leading-tight">Global Analytics</h1>
+                    <p className="text-base text-slate-500 font-medium mt-1">Platform-wide metrics and performance</p>
                 </div>
 
-                {/* Filters Row */}
-                <div className="flex flex-wrap items-center gap-3 bg-white p-3 rounded-2xl border border-surface-200 shadow-soft">
-                    <Select
-                        value={range}
-                        onChange={e => {
-                            setRange(e.target.value)
-                            if (e.target.value !== 'CUSTOM') {
-                                setStartDate('')
-                                setEndDate('')
-                            }
-                        }}
-                        options={[
-                            { value: 'TODAY', label: 'Today' },
-                            { value: 'LAST_7_DAYS', label: 'Last 7 Days' },
-                            { value: 'LAST_30_DAYS', label: 'Last 30 Days' },
-                            { value: 'LAST_90_DAYS', label: 'Last 90 Days' },
-                            { value: 'THIS_YEAR', label: 'This Year' },
-                            { value: 'CUSTOM', label: 'Custom Range' }
-                        ]}
-                        className="w-44"
-                    />
+                {/* Date Filter Component */}
+                <div className="flex flex-wrap items-center gap-2">
+                    <div className="relative inline-block">
+                        <button
+                            type="button"
+                            onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                            className="h-11 px-3.5 bg-white hover:bg-slate-50/90 rounded-xl border border-slate-200/90 shadow-2xs hover:border-slate-300 transition-all cursor-pointer flex items-center gap-2 font-extrabold text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
+                        >
+                            <FiCalendar className="w-4 h-4 text-emerald-600" />
+                            <span>{RANGE_OPTIONS.find(o => o.value === range)?.label || 'Select Range'}</span>
+                            <FiChevronDown className={`w-4 h-4 text-slate-400 transition-transform duration-200 ${isDropdownOpen ? 'rotate-180 text-emerald-600' : ''}`} />
+                        </button>
+
+                        {/* Custom Styled Dropdown Suggestions Menu */}
+                        {isDropdownOpen && (
+                            <>
+                                {/* Backdrop to close dropdown when clicking outside */}
+                                <div 
+                                    className="fixed inset-0 z-40" 
+                                    onClick={() => setIsDropdownOpen(false)} 
+                                />
+
+                                <div className="absolute top-full left-0 mt-2 z-50 w-48 bg-white/95 backdrop-blur-md rounded-2xl border border-slate-200/90 shadow-[0_15px_35px_rgba(0,0,0,0.1)] p-1.5 space-y-0.5 animate-in fade-in slide-in-from-top-2 duration-150">
+                                    {RANGE_OPTIONS.map(opt => {
+                                        const isSelected = range === opt.value
+                                        return (
+                                            <button
+                                                key={opt.value}
+                                                type="button"
+                                                onClick={() => {
+                                                    setRange(opt.value)
+                                                    if (opt.value !== 'CUSTOM') {
+                                                        setStartDate('')
+                                                        setEndDate('')
+                                                    }
+                                                    setIsDropdownOpen(false)
+                                                }}
+                                                className={`w-full text-left px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center justify-between cursor-pointer ${
+                                                    isSelected
+                                                        ? 'bg-emerald-50 text-[#16A34A] border border-emerald-200/60 shadow-2xs'
+                                                        : 'text-slate-700 hover:bg-emerald-50/60 hover:text-emerald-700'
+                                                }`}
+                                            >
+                                                <span>{opt.label}</span>
+                                                {isSelected && <FiCheck className="w-3.5 h-3.5 text-[#16A34A]" />}
+                                            </button>
+                                        )
+                                    })}
+                                </div>
+                            </>
+                        )}
+                    </div>
 
                     {range === 'CUSTOM' && (
-                        <div className="flex items-center gap-2 animate-fade-in">
-                            <Input
+                        <div className="flex items-center gap-2 bg-white h-11 px-3 rounded-xl border border-slate-200/90 shadow-2xs animate-fade-in">
+                            <input
                                 type="date"
                                 value={startDate}
                                 onChange={e => setStartDate(e.target.value)}
-                                className="w-36 py-1 text-xs"
+                                className="py-1 px-2 text-xs font-bold text-slate-800 border border-slate-200 rounded-lg outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 bg-slate-50"
                             />
-                            <span className="text-surface-400 text-xs font-semibold">to</span>
-                            <Input
+                            <span className="text-slate-400 text-xs font-bold">to</span>
+                            <input
                                 type="date"
                                 value={endDate}
                                 onChange={e => setEndDate(e.target.value)}
-                                className="w-36 py-1 text-xs"
+                                className="py-1 px-2 text-xs font-bold text-slate-800 border border-slate-200 rounded-lg outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 bg-slate-50"
                             />
                         </div>
                     )}
                 </div>
             </div>
 
-            {/* Summary Metrics Cards Grid */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                <StatCard 
-                    label="Total Revenue" 
-                    value={`₹${Number(overview.totalRevenue).toLocaleString('en-IN')}`} 
-                    change={`${overview.revenueGrowthPercentage >= 0 ? '+' : ''}${overview.revenueGrowthPercentage}%`} 
-                    trend={overview.revenueGrowthPercentage >= 0 ? 'up' : 'down'} 
-                    icon="💰" 
-                    colorTheme="emerald"
-                />
-                <StatCard 
-                    label="Active Bookings" 
-                    value={Number(overview.totalBookings).toLocaleString()} 
-                    change="Platform Active" 
-                    trend="up" 
-                    icon="📅" 
-                    colorTheme="blue"
-                />
-                <StatCard 
-                    label="Active Turfs" 
-                    value={overview.activeBranches} 
-                    change={`Suspended: ${overview.suspendedBranches}`} 
-                    trend="up" 
-                    icon="🏟️" 
-                    colorTheme="indigo"
-                />
-                <StatCard 
-                    label="Total Admin" 
-                    value={overview.totalOwners} 
-                    change={`Customers: ${overview.totalCustomers}`} 
-                    trend="up" 
-                    icon="👤" 
-                    colorTheme="purple"
-                />
+            {/* 4 Glassmorphism KPI Stat Cards */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                {/* KPI Card 1 */}
+                <div 
+                    style={{
+                        background: 'rgba(255, 255, 255, 0.82)',
+                        backdropFilter: 'blur(18px)',
+                        WebkitBackdropFilter: 'blur(18px)',
+                        border: '1px solid rgba(255, 255, 255, 0.7)'
+                    }}
+                    className="rounded-[24px] shadow-[0_18px_45px_rgba(15,23,42,0.08)] hover:shadow-[0_25px_50px_rgba(34,197,94,0.12)] border-t-2 border-[#16A34A] p-6 h-[120px] flex flex-col justify-between hover:-translate-y-1.5 hover:scale-[1.02] transition-all duration-300 group"
+                >
+                    <div className="flex items-center justify-between">
+                        <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Total Revenue</span>
+                        <div className="w-9 h-9 rounded-2xl bg-emerald-50 text-[#16A34A] flex items-center justify-center text-base shadow-2xs group-hover:bg-[#16A34A] group-hover:text-white transition-all">
+                            💰
+                        </div>
+                    </div>
+                    <div className="flex items-baseline justify-between">
+                        <span className="text-[36px] font-black text-slate-900 leading-none tracking-tight">
+                            ₹{Number(overview.totalRevenue).toLocaleString('en-IN')}
+                        </span>
+                        <span className="text-xs font-extrabold text-[#16A34A] bg-emerald-50 px-2.5 py-0.5 rounded-full flex items-center gap-0.5">
+                            {overview.revenueGrowthPercentage >= 0 ? '+' : ''}{overview.revenueGrowthPercentage}%
+                            <HiArrowUpRight className="w-3.5 h-3.5" />
+                        </span>
+                    </div>
+                </div>
+
+                {/* KPI Card 2 */}
+                <div 
+                    style={{
+                        background: 'rgba(255, 255, 255, 0.82)',
+                        backdropFilter: 'blur(18px)',
+                        WebkitBackdropFilter: 'blur(18px)',
+                        border: '1px solid rgba(255, 255, 255, 0.7)'
+                    }}
+                    className="rounded-[24px] shadow-[0_18px_45px_rgba(15,23,42,0.08)] hover:shadow-[0_25px_50px_rgba(99,102,241,0.12)] border-t-2 border-indigo-500 p-6 h-[120px] flex flex-col justify-between hover:-translate-y-1.5 hover:scale-[1.02] transition-all duration-300 group"
+                >
+                    <div className="flex items-center justify-between">
+                        <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Active Bookings</span>
+                        <div className="w-9 h-9 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center text-base shadow-2xs group-hover:bg-indigo-600 group-hover:text-white transition-all">
+                            📅
+                        </div>
+                    </div>
+                    <div className="flex items-baseline justify-between">
+                        <span className="text-[36px] font-black text-slate-900 leading-none tracking-tight">
+                            {Number(overview.totalBookings).toLocaleString()}
+                        </span>
+                        <span className="text-xs font-extrabold text-indigo-600 bg-indigo-50 px-2.5 py-0.5 rounded-full">
+                            Platform Active
+                        </span>
+                    </div>
+                </div>
+
+                {/* KPI Card 3 */}
+                <div 
+                    style={{
+                        background: 'rgba(255, 255, 255, 0.82)',
+                        backdropFilter: 'blur(18px)',
+                        WebkitBackdropFilter: 'blur(18px)',
+                        border: '1px solid rgba(255, 255, 255, 0.7)'
+                    }}
+                    className="rounded-[24px] shadow-[0_18px_45px_rgba(15,23,42,0.08)] hover:shadow-[0_25px_50px_rgba(6,182,212,0.12)] border-t-2 border-cyan-500 p-6 h-[120px] flex flex-col justify-between hover:-translate-y-1.5 hover:scale-[1.02] transition-all duration-300 group"
+                >
+                    <div className="flex items-center justify-between">
+                        <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Active Turfs</span>
+                        <div className="w-9 h-9 rounded-2xl bg-cyan-50 text-cyan-600 flex items-center justify-center text-base shadow-2xs group-hover:bg-cyan-600 group-hover:text-white transition-all">
+                            🏟️
+                        </div>
+                    </div>
+                    <div className="flex items-baseline justify-between">
+                        <span className="text-[36px] font-black text-slate-900 leading-none tracking-tight">
+                            {overview.activeBranches}
+                        </span>
+                        <span className="text-xs font-bold text-slate-400">
+                            Suspended: {overview.suspendedBranches}
+                        </span>
+                    </div>
+                </div>
+
+                {/* KPI Card 4 */}
+                <div 
+                    style={{
+                        background: 'rgba(255, 255, 255, 0.82)',
+                        backdropFilter: 'blur(18px)',
+                        WebkitBackdropFilter: 'blur(18px)',
+                        border: '1px solid rgba(255, 255, 255, 0.7)'
+                    }}
+                    className="rounded-[24px] shadow-[0_18px_45px_rgba(15,23,42,0.08)] hover:shadow-[0_25px_50px_rgba(245,158,11,0.12)] border-t-2 border-amber-500 p-6 h-[120px] flex flex-col justify-between hover:-translate-y-1.5 hover:scale-[1.02] transition-all duration-300 group"
+                >
+                    <div className="flex items-center justify-between">
+                        <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Total Admin</span>
+                        <div className="w-9 h-9 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center text-base shadow-2xs group-hover:bg-amber-600 group-hover:text-white transition-all">
+                            👤
+                        </div>
+                    </div>
+                    <div className="flex items-baseline justify-between">
+                        <span className="text-[36px] font-black text-slate-900 leading-none tracking-tight">
+                            {overview.totalOwners}
+                        </span>
+                        <span className="text-xs font-bold text-slate-400">
+                            Customers: {overview.totalCustomers}
+                        </span>
+                    </div>
+                </div>
             </div>
 
-            {/* Charts Loading Wrapper */}
+            {/* Charts Section Container */}
             {isChartLoading ? (
-                <Card className="min-h-[400px] flex flex-col items-center justify-center gap-4 py-24">
-                    <div className="w-10 h-10 border-4 border-primary-600 border-t-transparent rounded-full animate-spin"></div>
-                    <span className="text-surface-500 text-sm font-semibold">Calculating pipeline aggregates...</span>
-                </Card>
+                <div className="bg-white/85 backdrop-blur-md rounded-[24px] border border-white/80 shadow-[0_15px_40px_rgba(0,0,0,0.04)] min-h-[400px] flex flex-col items-center justify-center gap-4 py-24">
+                    <div className="w-12 h-12 border-4 border-[#22C55E] border-t-transparent rounded-full animate-spin"></div>
+                    <span className="text-slate-500 text-xs font-bold uppercase tracking-wider">Calculating pipeline aggregates...</span>
+                </div>
             ) : (
                 <>
-                    {/* Charts Rows */}
+                    {/* Charts Row 1: Revenue Bar Chart & Sports Donut */}
                     <div className="grid lg:grid-cols-2 gap-6">
-                        {/* Revenue Bar Chart */}
-                        <ChartCard title="Revenue by Month" subtitle="In thousands (₹)">
-                            <ResponsiveContainer width="100%" height={260}>
-                                {revenueData.length === 0 ? (
-                                    <div className="h-full flex items-center justify-center text-surface-400 text-sm font-medium">
-                                        No billing revenue records in selected date range.
-                                    </div>
-                                ) : (
-                                    <BarChart data={revenueData}>
-                                        <CartesianGrid strokeDasharray="3 3" stroke="rgba(16,185,129,0.12)" />
-                                        <XAxis dataKey="m" tick={{ fontSize: 12, fill: '#9098ad' }} />
-                                        <YAxis tick={{ fontSize: 12, fill: '#9098ad' }} tickFormatter={v => `₹${v}K`} />
-                                        <Tooltip
-                                            formatter={v => [`₹${v * 1000}`, 'Revenue']}
-                                            contentStyle={{ borderRadius: '12px', border: '1px solid #d1fae5', background: '#f0fdf8', fontSize: 12, fontWeight: 700 }}
-                                            itemStyle={{ color: '#059669' }}
-                                            labelStyle={{ color: '#047857', fontWeight: 800 }}
-                                        />
-                                        <Bar dataKey="v" fill="#059669" radius={[6, 6, 0, 0]} />
-                                    </BarChart>
-                                )}
-                            </ResponsiveContainer>
-                        </ChartCard>
+                        {/* Revenue Bar Chart Card */}
+                        <div className="bg-white/90 backdrop-blur-md rounded-[24px] border border-white/80 shadow-[0_15px_40px_rgba(0,0,0,0.04)] p-7 space-y-6">
+                            <div className="flex items-center justify-between border-b border-slate-100 pb-4">
+                                <div>
+                                    <h3 className="text-lg font-bold text-slate-900">Revenue by Month</h3>
+                                    <p className="text-xs font-semibold text-slate-500 mt-0.5">In thousands (₹)</p>
+                                </div>
+                            </div>
+                            <div className="h-[280px]">
+                                <ResponsiveContainer width="100%" height="100%">
+                                    {revenueData.length === 0 ? (
+                                        <div className="h-full flex items-center justify-center text-slate-400 text-xs font-semibold">
+                                            No billing revenue records in selected date range.
+                                        </div>
+                                    ) : (
+                                        <BarChart data={revenueData}>
+                                            <CartesianGrid strokeDasharray="3 3" stroke="rgba(34,197,94,0.08)" vertical={false} />
+                                            <XAxis dataKey="m" tick={{ fontSize: 11, fill: '#64748B', fontWeight: 600 }} axisLine={false} tickLine={false} />
+                                            <YAxis tick={{ fontSize: 11, fill: '#64748B', fontWeight: 600 }} tickFormatter={v => `₹${v}K`} axisLine={false} tickLine={false} />
+                                            <Tooltip
+                                                formatter={v => [`₹${(v * 1000).toLocaleString()}`, 'Revenue']}
+                                                contentStyle={{ 
+                                                    borderRadius: '16px', 
+                                                    border: 'none', 
+                                                    background: '#0F172A', 
+                                                    color: '#FFFFFF',
+                                                    fontSize: 12, 
+                                                    fontWeight: 700,
+                                                    boxShadow: '0 20px 40px rgba(0,0,0,0.25)' 
+                                                }}
+                                                itemStyle={{ color: '#22C55E' }}
+                                                labelStyle={{ color: '#94A3B8', fontWeight: 800 }}
+                                            />
+                                            <Bar dataKey="v" fill="#22C55E" radius={[8, 8, 0, 0]} />
+                                        </BarChart>
+                                    )}
+                                </ResponsiveContainer>
+                            </div>
+                        </div>
 
-                        {/* Sports Donut Chart */}
-                        <ChartCard title="Sport Popularity" subtitle="Booking distribution per sport">
-                            <div className="flex flex-col md:flex-row items-center justify-between gap-4 h-[260px]">
+                        {/* Sports Donut Chart Card */}
+                        <div className="bg-white/90 backdrop-blur-md rounded-[24px] border border-white/80 shadow-[0_15px_40px_rgba(0,0,0,0.04)] p-7 space-y-6">
+                            <div className="flex items-center justify-between border-b border-slate-100 pb-4">
+                                <div>
+                                    <h3 className="text-lg font-bold text-slate-900">Sport Popularity</h3>
+                                    <p className="text-xs font-semibold text-slate-500 mt-0.5">Booking distribution per sport</p>
+                                </div>
+                            </div>
+                            <div className="flex flex-col md:flex-row items-center justify-between gap-6 h-[280px]">
                                 <div className="w-full md:w-3/5 h-full">
                                     <ResponsiveContainer width="100%" height="100%">
                                         {sportsData.length === 0 ? (
-                                            <div className="h-full flex items-center justify-center text-surface-400 text-sm font-medium">
+                                            <div className="h-full flex items-center justify-center text-slate-400 text-xs font-semibold">
                                                 No sports bookings found.
                                             </div>
                                         ) : (
@@ -434,254 +567,277 @@ export default function GlobalAnalytics() {
                                                     data={sportsData} 
                                                     cx="50%" 
                                                     cy="50%" 
-                                                    innerRadius={55} 
-                                                    outerRadius={90} 
-                                                    paddingAngle={4} 
+                                                    innerRadius={60} 
+                                                    outerRadius={95} 
+                                                    paddingAngle={5} 
                                                     dataKey="value"
                                                 >
                                                     {sportsData.map((_, i) => (
-                                                        <Cell key={i} fill={COLORS[i % COLORS.length]} />
+                                                        <Cell key={i} fill={COLORS[i % COLORS.length]} cornerRadius={4} />
                                                     ))}
                                                 </Pie>
-                                                <Tooltip formatter={v => [`${v} Bookings`]} />
+                                                <Tooltip 
+                                                    formatter={v => [`${v} Bookings`]} 
+                                                    contentStyle={{ 
+                                                        borderRadius: '16px', 
+                                                        border: 'none', 
+                                                        background: '#0F172A', 
+                                                        color: '#FFFFFF',
+                                                        fontSize: 12, 
+                                                        fontWeight: 700 
+                                                    }}
+                                                />
                                             </PieChart>
                                         )}
                                     </ResponsiveContainer>
                                 </div>
-                                <div className="flex flex-col gap-2.5 w-full md:w-2/5 justify-center pl-2">
+                                <div className="flex flex-col gap-3 w-full md:w-2/5 justify-center">
                                     {sportsData.map((s, i) => (
-                                        <div key={s.name} className="flex flex-col justify-start">
-                                            <div className="flex items-center gap-2 text-xs font-semibold text-surface-700">
+                                        <div key={s.name} className="flex flex-col justify-start bg-slate-50/70 p-2.5 rounded-xl border border-slate-100">
+                                            <div className="flex items-center gap-2 text-xs font-bold text-slate-800">
                                                 <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: COLORS[i % COLORS.length] }} />
-                                                <span className="truncate max-w-[120px]">{s.name}</span>
-                                                <span className="ml-auto text-surface-500 font-bold">{s.value} bookings</span>
+                                                <span className="truncate">{s.name}</span>
+                                                <span className="ml-auto font-black text-slate-900">{s.value}</span>
                                             </div>
-                                            <span className="text-[10px] text-surface-400 font-medium pl-4.5">
+                                            <span className="text-[10px] text-slate-400 font-semibold pl-4.5 mt-0.5">
                                                 Revenue: ₹{Number(s.revenue || 0).toLocaleString()}
                                             </span>
                                         </div>
                                     ))}
                                 </div>
                             </div>
-                        </ChartCard>
+                        </div>
                     </div>
 
-                    {/* User Growth Line Chart */}
+                    {/* Charts Row 2: User Growth Line & Top Sports Rankings */}
                     <div className="grid lg:grid-cols-3 gap-6">
-                        <div className="lg:col-span-2">
-                            <ChartCard title="User growth" subtitle="Registrations over time">
-                                <ResponsiveContainer width="100%" height={280}>
+                        {/* User Growth Line Chart */}
+                        <div className="lg:col-span-2 bg-white/90 backdrop-blur-md rounded-[24px] border border-white/80 shadow-[0_15px_40px_rgba(0,0,0,0.04)] p-7 space-y-6">
+                            <div className="flex items-center justify-between border-b border-slate-100 pb-4">
+                                <div>
+                                    <h3 className="text-lg font-bold text-slate-900">User Growth</h3>
+                                    <p className="text-xs font-semibold text-slate-500 mt-0.5">Registrations over time</p>
+                                </div>
+                            </div>
+                            <div className="h-[280px]">
+                                <ResponsiveContainer width="100%" height="100%">
                                     {userGrowthData.length === 0 ? (
-                                        <div className="h-full flex items-center justify-center text-surface-400 text-sm font-medium">
+                                        <div className="h-full flex items-center justify-center text-slate-400 text-xs font-semibold">
                                             No user growth data in selected range.
                                         </div>
                                     ) : (
                                         <LineChart data={userGrowthData}>
-                                            <CartesianGrid strokeDasharray="3 3" stroke="rgba(16,185,129,0.12)" />
-                                            <XAxis dataKey="m" tick={{ fontSize: 11, fill: '#9098ad' }} />
-                                            <YAxis tick={{ fontSize: 11, fill: '#9098ad' }} />
+                                            <CartesianGrid strokeDasharray="3 3" stroke="rgba(34,197,94,0.08)" vertical={false} />
+                                            <XAxis dataKey="m" tick={{ fontSize: 11, fill: '#64748B', fontWeight: 600 }} axisLine={false} tickLine={false} />
+                                            <YAxis tick={{ fontSize: 11, fill: '#64748B', fontWeight: 600 }} axisLine={false} tickLine={false} />
                                             <Tooltip
-                                                contentStyle={{ borderRadius: '12px', border: '1px solid #d1fae5', background: '#f0fdf8', fontSize: 12, fontWeight: 700 }}
-                                                labelStyle={{ color: '#047857', fontWeight: 800 }}
+                                                contentStyle={{ 
+                                                    borderRadius: '16px', 
+                                                    border: 'none', 
+                                                    background: '#0F172A', 
+                                                    color: '#FFFFFF',
+                                                    fontSize: 12, 
+                                                    fontWeight: 700 
+                                                }}
                                             />
-                                            <Line type="monotone" name="Owners" dataKey="Owners" stroke="#059669" strokeWidth={2.5} dot={{ r: 4, fill: '#059669' }} activeDot={{ r: 6, fill: '#059669' }} />
-                                            <Line type="monotone" name="Staff" dataKey="Staff" stroke="#f59e0b" strokeWidth={2} dot={{ r: 3, fill: '#f59e0b' }} activeDot={{ r: 5, fill: '#f59e0b' }} />
-                                            <Line type="monotone" name="Customers" dataKey="Customers" stroke="#6366f1" strokeWidth={2.5} dot={{ r: 4, fill: '#6366f1' }} activeDot={{ r: 6, fill: '#6366f1' }} />
+                                            <Line type="monotone" name="Owners" dataKey="Owners" stroke="#22C55E" strokeWidth={3} dot={{ r: 4, fill: '#22C55E' }} activeDot={{ r: 6 }} />
+                                            <Line type="monotone" name="Staff" dataKey="Staff" stroke="#F59E0B" strokeWidth={2.5} dot={{ r: 3, fill: '#F59E0B' }} activeDot={{ r: 5 }} />
+                                            <Line type="monotone" name="Customers" dataKey="Customers" stroke="#6366F1" strokeWidth={3} dot={{ r: 4, fill: '#6366F1' }} activeDot={{ r: 6 }} />
                                         </LineChart>
                                     )}
                                 </ResponsiveContainer>
-                            </ChartCard>
+                            </div>
                         </div>
 
-                        {/* Top lists rankings grid */}
-                        <div className="lg:col-span-1 flex flex-col gap-6">
-                            <Card className="border border-surface-200/80 shadow-soft h-[360px] flex flex-col p-5 bg-white/40 backdrop-blur-sm">
-                                <div className="flex items-center justify-between border-b border-surface-150 pb-3 mb-3">
-                                    <h3 className="text-sm font-bold text-surface-800 flex items-center gap-1.5 uppercase tracking-wider">
-                                        <FiActivity className="w-4 h-4 text-primary-500" />
+                        {/* Top Sports Rankings Card */}
+                        <div className="lg:col-span-1 bg-white/90 backdrop-blur-md rounded-[24px] border border-white/80 shadow-[0_15px_40px_rgba(0,0,0,0.04)] p-6 flex flex-col justify-between">
+                            <div>
+                                <div className="flex items-center justify-between border-b border-slate-100 pb-4 mb-4">
+                                    <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider flex items-center gap-2">
+                                        <FiActivity className="w-4 h-4 text-[#16A34A]" />
                                         Top Sports by Bookings
                                     </h3>
                                 </div>
-                                <div className="flex-1 overflow-y-auto space-y-3.5 pr-1 font-sans">
+                                <div className="space-y-3">
                                     {topSports.slice(0, 4).map((s, idx) => (
-                                        <div key={s.sport} className="flex items-center justify-between p-3 rounded-xl border border-surface-100 hover:border-primary-100 bg-white/60 hover:bg-primary-50/20 transition-all duration-150">
+                                        <div key={s.sport} className="min-h-[60px] p-3.5 rounded-[22px] border border-slate-100 bg-white/90 hover:bg-emerald-50/40 hover:border-emerald-200 transition-all duration-200 flex items-center justify-between">
                                             <div className="flex items-center gap-3">
-                                                <span className="w-6 h-6 rounded-lg bg-primary-50 flex items-center justify-center text-primary-600 font-bold text-xs">
+                                                <span className="w-7 h-7 rounded-full bg-gradient-to-tr from-green-500 to-emerald-400 text-white text-xs font-black flex items-center justify-center shadow-xs">
                                                     #{idx + 1}
                                                 </span>
                                                 <div>
-                                                    <div className="text-xs font-bold text-surface-800">{s.sport}</div>
-                                                    <div className="text-[10px] text-surface-400 font-medium">₹{Number(s.revenue || 0).toLocaleString()} Revenue</div>
+                                                    <div className="text-xs font-bold text-slate-900">{s.sport}</div>
+                                                    <div className="text-[10px] text-slate-400 font-semibold">₹{Number(s.revenue || 0).toLocaleString()} Revenue</div>
                                                 </div>
                                             </div>
-                                            <span className="text-xs font-bold text-primary-600 bg-primary-100/50 px-2.5 py-1 rounded-lg">
+                                            <span className="text-xs font-black text-[#16A34A] bg-emerald-100/70 px-3 py-1 rounded-full">
                                                 {s.bookingsCount} bookings
                                             </span>
                                         </div>
                                     ))}
                                     {topSports.length === 0 && (
-                                        <div className="h-full flex items-center justify-center text-surface-400 text-xs font-semibold py-12">
-                                            No sports statistics found.
-                                        </div>
+                                        <div className="text-center text-slate-400 py-12 text-xs font-semibold">No sports statistics found.</div>
                                     )}
                                 </div>
-                            </Card>
+                            </div>
                         </div>
                     </div>
 
-                    {/* Subscription plan tables and Top performance metrics row */}
-                    <div className="grid lg:grid-cols-3 gap-6 font-sans">
-                        {/* Subscription stats */}
-                        <Card className="border border-surface-200/80 shadow-soft p-5 bg-white/40 backdrop-blur-sm lg:col-span-1">
-                            <h3 className="text-sm font-bold text-surface-800 border-b border-surface-150 pb-3 mb-4 flex items-center gap-1.5 uppercase tracking-wider">
-                                <FiBriefcase className="w-4 h-4 text-primary-500" />
+                    {/* Rankings Row 3: Subscriptions, Top Branches, Top Owners */}
+                    <div className="grid lg:grid-cols-3 gap-6">
+                        {/* Subscription Plans Analytics */}
+                        <div className="bg-white/90 backdrop-blur-md rounded-[22px] border border-white/80 shadow-[0_15px_40px_rgba(0,0,0,0.04)] p-5">
+                            <h3 className="text-sm font-bold text-slate-900 border-b border-slate-100 pb-3 mb-4 flex items-center gap-2 uppercase tracking-wider">
+                                <FiBriefcase className="w-4 h-4 text-[#16A34A]" />
                                 Subscription Plans Analytics
                             </h3>
-                            <div className="space-y-4">
+                            <div className="space-y-3.5">
                                 {subscriptionData.map(plan => (
-                                    <div key={plan.planName} className="p-4 rounded-2xl border border-surface-150 bg-white hover:border-primary-200 transition-colors">
+                                    <div key={plan.planName} className="p-4 rounded-2xl border border-slate-150 bg-white/90 hover:border-emerald-200 transition-all duration-200">
                                         <div className="flex items-center justify-between mb-1">
-                                            <span className="text-xs font-bold text-surface-800">{plan.planName} Plan</span>
-                                            <span className="text-xs font-extrabold text-emerald-600">₹{Number(plan.revenue).toLocaleString()}/mo</span>
+                                            <span className="text-xs font-bold text-slate-900">{plan.planName} Plan</span>
+                                            <span className="text-xs font-black text-[#16A34A]">₹{Number(plan.revenue).toLocaleString()}/mo</span>
                                         </div>
-                                        <div className="flex items-center justify-between text-[11px] text-surface-400 font-medium">
+                                        <div className="flex items-center justify-between text-[11px] text-slate-400 font-semibold">
                                             <span>Active Subscriptions</span>
-                                            <span className="font-bold text-surface-700">{plan.totalUsers} branches</span>
+                                            <span className="font-bold text-slate-700">{plan.totalUsers} branches</span>
                                         </div>
                                     </div>
                                 ))}
                             </div>
-                        </Card>
+                        </div>
 
-                        {/* Top branches */}
-                        <Card className="border border-surface-200/80 shadow-soft p-5 bg-white/40 backdrop-blur-sm lg:col-span-1">
-                            <h3 className="text-sm font-bold text-surface-800 border-b border-surface-150 pb-3 mb-4 flex items-center gap-1.5 uppercase tracking-wider">
-                                <FiBriefcase className="w-4 h-4 text-emerald-500" />
+                        {/* Top Branches */}
+                        <div className="bg-white/90 backdrop-blur-md rounded-[22px] border border-white/80 shadow-[0_15px_40px_rgba(0,0,0,0.04)] p-5">
+                            <h3 className="text-sm font-bold text-slate-900 border-b border-slate-100 pb-3 mb-4 flex items-center gap-2 uppercase tracking-wider">
+                                <FiMapPin className="w-4 h-4 text-emerald-600" />
                                 Top Branches by Bookings
                             </h3>
-                            <div className="space-y-3.5 max-h-[300px] overflow-y-auto pr-1">
+                            <div className="space-y-3 max-h-[300px] overflow-y-auto pr-1">
                                 {topBranches.map((b, i) => (
-                                    <div key={b._id} className="flex items-center justify-between p-3.5 rounded-xl border border-surface-150 bg-white">
+                                    <div key={b._id} className="min-h-[60px] p-3.5 rounded-[22px] border border-slate-100 bg-white/90 hover:bg-emerald-50/40 hover:border-emerald-200 transition-all duration-200 flex items-center justify-between">
                                         <div className="flex items-center gap-3">
-                                            <span className="w-6 h-6 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold text-xs">
+                                            <span className="w-7 h-7 rounded-full bg-gradient-to-tr from-green-500 to-emerald-400 text-white text-xs font-black flex items-center justify-center shadow-xs">
                                                 #{i + 1}
                                             </span>
                                             <div>
-                                                <div className="text-xs font-bold text-surface-800 truncate max-w-[140px]">{b.branchName}</div>
-                                                <div className="text-[10px] text-surface-400 font-semibold">{b.city} • {b.ownerName || 'N/A'}</div>
+                                                <div className="text-xs font-bold text-slate-900 truncate max-w-[130px]">{b.branchName}</div>
+                                                <div className="text-[10px] text-slate-400 font-semibold">{b.city} • {b.ownerName || 'N/A'}</div>
                                             </div>
                                         </div>
                                         <div className="text-right">
-                                            <div className="text-xs font-bold text-surface-900">{b.bookingsCount} Bookings</div>
-                                            <div className="text-[10px] text-emerald-600 font-bold mt-0.5">₹{Number(b.revenue || 0).toLocaleString()}</div>
+                                            <div className="text-xs font-bold text-slate-900">{b.bookingsCount} Bookings</div>
+                                            <div className="text-[10px] text-[#16A34A] font-bold mt-0.5">₹{Number(b.revenue || 0).toLocaleString()}</div>
                                         </div>
                                     </div>
                                 ))}
                                 {topBranches.length === 0 && (
-                                    <div className="text-center text-surface-400 py-12 text-xs font-semibold">No branches matching data.</div>
+                                    <div className="text-center text-slate-400 py-12 text-xs font-semibold">No branches matching data.</div>
                                 )}
                             </div>
-                        </Card>
+                        </div>
 
                         {/* Top Owners */}
-                        <Card className="border border-surface-200/80 shadow-soft p-5 bg-white/40 backdrop-blur-sm lg:col-span-1">
-                            <h3 className="text-sm font-bold text-surface-800 border-b border-surface-150 pb-3 mb-4 flex items-center gap-1.5 uppercase tracking-wider">
-                                <FiUsers className="w-4 h-4 text-indigo-500" />
+                        <div className="bg-white/90 backdrop-blur-md rounded-[22px] border border-white/80 shadow-[0_15px_40px_rgba(0,0,0,0.04)] p-5">
+                            <h3 className="text-sm font-bold text-slate-900 border-b border-slate-100 pb-3 mb-4 flex items-center gap-2 uppercase tracking-wider">
+                                <FiUsers className="w-4 h-4 text-indigo-600" />
                                 Top Owners by Revenue
                             </h3>
-                            <div className="space-y-3.5 max-h-[300px] overflow-y-auto pr-1">
+                            <div className="space-y-3 max-h-[300px] overflow-y-auto pr-1">
                                 {topOwners.map((o, i) => (
-                                    <div key={o._id} className="flex items-center justify-between p-3.5 rounded-xl border border-surface-150 bg-white">
+                                    <div key={o._id} className="min-h-[60px] p-3.5 rounded-[22px] border border-slate-100 bg-white/90 hover:bg-indigo-50/40 hover:border-indigo-200 transition-all duration-200 flex items-center justify-between">
                                         <div className="flex items-center gap-3">
-                                            <span className="w-6 h-6 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center font-bold text-xs">
+                                            <span className="w-7 h-7 rounded-full bg-gradient-to-tr from-indigo-500 to-purple-500 text-white text-xs font-black flex items-center justify-center shadow-xs">
                                                 #{i + 1}
                                             </span>
                                             <div>
-                                                <div className="text-xs font-bold text-surface-800 truncate max-w-[140px]">{o.fullName}</div>
-                                                <div className="text-[10px] text-surface-400 font-semibold">{o.branchesCount} active branches</div>
+                                                <div className="text-xs font-bold text-slate-900 truncate max-w-[130px]">{o.fullName}</div>
+                                                <div className="text-[10px] text-slate-400 font-semibold">{o.branchesCount} active branches</div>
                                             </div>
                                         </div>
                                         <div className="text-right">
-                                            <div className="text-xs font-extrabold text-surface-900">₹{Number(o.revenue || 0).toLocaleString()}</div>
-                                            <div className="text-[10px] text-surface-400 font-medium mt-0.5">Revenue Earned</div>
+                                            <div className="text-xs font-black text-slate-900">₹{Number(o.revenue || 0).toLocaleString()}</div>
+                                            <div className="text-[10px] text-slate-400 font-medium mt-0.5">Revenue Earned</div>
                                         </div>
                                     </div>
                                 ))}
                                 {topOwners.length === 0 && (
-                                    <div className="text-center text-surface-400 py-12 text-xs font-semibold">No owners matching data.</div>
+                                    <div className="text-center text-slate-400 py-12 text-xs font-semibold">No owners matching data.</div>
                                 )}
                             </div>
-                        </Card>
+                        </div>
                     </div>
 
-                    {/* Report Export downloads grid section */}
-                    <Card className="border border-surface-200/80 shadow-soft p-6 bg-white/40 backdrop-blur-sm font-sans">
-                        <div className="border-b border-surface-150 pb-3.5 mb-5 flex items-center justify-between">
+                    {/* Report Export Downloads Section */}
+                    <div className="bg-white/90 backdrop-blur-md rounded-[24px] border border-white/80 shadow-[0_15px_40px_rgba(0,0,0,0.04)] p-6 space-y-5">
+                        <div className="border-b border-slate-100 pb-4 flex items-center justify-between">
                             <div>
-                                <h3 className="text-sm font-bold text-surface-800 uppercase tracking-wider">Export PDF & Data Reports</h3>
-                                <p className="text-[11px] text-surface-400 font-semibold mt-0.5">Download styled summaries dynamically with selected date filters</p>
+                                <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider">Export PDF & Data Reports</h3>
+                                <p className="text-xs text-slate-400 font-semibold mt-0.5">Download styled summaries dynamically with selected date filters</p>
                             </div>
-                            <FiDownload className="w-5 h-5 text-primary-500 shrink-0" />
+                            <div className="w-9 h-9 rounded-2xl bg-emerald-50 text-[#16A34A] flex items-center justify-center">
+                                <FiDownload className="w-5 h-5" />
+                            </div>
                         </div>
                         
-                        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-5">
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
                             {/* Revenue Exports */}
-                            <div className="p-4.5 rounded-2xl border border-surface-150 bg-white flex flex-col justify-between h-44 shadow-sm hover:border-primary-100 transition-colors">
+                            <div className="p-5 rounded-2xl border border-slate-200/80 bg-white flex flex-col justify-between h-44 shadow-2xs hover:border-[#16A34A]/50 transition-all duration-200">
                                 <div>
-                                    <span className="text-[10px] font-bold text-primary-600 uppercase tracking-widest">Financials</span>
-                                    <h4 className="text-xs font-bold text-surface-800 mt-1">Revenue Performance</h4>
-                                    <p className="text-[10px] text-surface-400 font-semibold mt-1">Payments billing streams and transaction listings</p>
+                                    <span className="text-[10px] font-black text-[#16A34A] uppercase tracking-widest">Financials</span>
+                                    <h4 className="text-xs font-bold text-slate-900 mt-1">Revenue Performance</h4>
+                                    <p className="text-[10px] text-slate-400 font-semibold mt-1">Payments billing streams and transaction listings</p>
                                 </div>
-                                <div className="flex gap-1.5 mt-4">
-                                    <Button size="xs" variant="secondary" onClick={() => handleExport('revenue', 'pdf')} disabled={exportingReport.revenue}>PDF</Button>
-                                    <Button size="xs" variant="secondary" onClick={() => handleExport('revenue', 'excel')} disabled={exportingReport.revenue}>Excel</Button>
-                                    <Button size="xs" variant="secondary" onClick={() => handleExport('revenue', 'csv')} disabled={exportingReport.revenue}>CSV</Button>
+                                <div className="flex gap-2 mt-4">
+                                    <button onClick={() => handleExport('revenue', 'pdf')} disabled={exportingReport.revenue} className="flex-1 py-1.5 rounded-xl border border-slate-200 text-[10px] font-extrabold text-slate-700 hover:bg-[#16A34A] hover:text-white hover:border-[#16A34A] transition-all cursor-pointer">PDF</button>
+                                    <button onClick={() => handleExport('revenue', 'excel')} disabled={exportingReport.revenue} className="flex-1 py-1.5 rounded-xl border border-slate-200 text-[10px] font-extrabold text-slate-700 hover:bg-[#16A34A] hover:text-white hover:border-[#16A34A] transition-all cursor-pointer">Excel</button>
+                                    <button onClick={() => handleExport('revenue', 'csv')} disabled={exportingReport.revenue} className="flex-1 py-1.5 rounded-xl border border-slate-200 text-[10px] font-extrabold text-slate-700 hover:bg-[#16A34A] hover:text-white hover:border-[#16A34A] transition-all cursor-pointer">CSV</button>
                                 </div>
                             </div>
 
                             {/* Bookings Exports */}
-                            <div className="p-4.5 rounded-2xl border border-surface-150 bg-white flex flex-col justify-between h-44 shadow-sm hover:border-primary-100 transition-colors">
+                            <div className="p-5 rounded-2xl border border-slate-200/80 bg-white flex flex-col justify-between h-44 shadow-2xs hover:border-[#16A34A]/50 transition-all duration-200">
                                 <div>
-                                    <span className="text-[10px] font-bold text-emerald-600 uppercase tracking-widest">Scheduling</span>
-                                    <h4 className="text-xs font-bold text-surface-800 mt-1">Bookings Registry</h4>
-                                    <p className="text-[10px] text-surface-400 font-semibold mt-1">Time slots, court schedules and user statuses</p>
+                                    <span className="text-[10px] font-black text-emerald-600 uppercase tracking-widest">Scheduling</span>
+                                    <h4 className="text-xs font-bold text-slate-900 mt-1">Bookings Registry</h4>
+                                    <p className="text-[10px] text-slate-400 font-semibold mt-1">Time slots, court schedules and user statuses</p>
                                 </div>
-                                <div className="flex gap-1.5 mt-4">
-                                    <Button size="xs" variant="secondary" onClick={() => handleExport('bookings', 'pdf')} disabled={exportingReport.bookings}>PDF</Button>
-                                    <Button size="xs" variant="secondary" onClick={() => handleExport('bookings', 'excel')} disabled={exportingReport.bookings}>Excel</Button>
-                                    <Button size="xs" variant="secondary" onClick={() => handleExport('bookings', 'csv')} disabled={exportingReport.bookings}>CSV</Button>
+                                <div className="flex gap-2 mt-4">
+                                    <button onClick={() => handleExport('bookings', 'pdf')} disabled={exportingReport.bookings} className="flex-1 py-1.5 rounded-xl border border-slate-200 text-[10px] font-extrabold text-slate-700 hover:bg-[#16A34A] hover:text-white hover:border-[#16A34A] transition-all cursor-pointer">PDF</button>
+                                    <button onClick={() => handleExport('bookings', 'excel')} disabled={exportingReport.bookings} className="flex-1 py-1.5 rounded-xl border border-slate-200 text-[10px] font-extrabold text-slate-700 hover:bg-[#16A34A] hover:text-white hover:border-[#16A34A] transition-all cursor-pointer">Excel</button>
+                                    <button onClick={() => handleExport('bookings', 'csv')} disabled={exportingReport.bookings} className="flex-1 py-1.5 rounded-xl border border-slate-200 text-[10px] font-extrabold text-slate-700 hover:bg-[#16A34A] hover:text-white hover:border-[#16A34A] transition-all cursor-pointer">CSV</button>
                                 </div>
                             </div>
 
                             {/* Owners Exports */}
-                            <div className="p-4.5 rounded-2xl border border-surface-150 bg-white flex flex-col justify-between h-44 shadow-sm hover:border-primary-100 transition-colors">
+                            <div className="p-5 rounded-2xl border border-slate-200/80 bg-white flex flex-col justify-between h-44 shadow-2xs hover:border-[#16A34A]/50 transition-all duration-200">
                                 <div>
-                                    <span className="text-[10px] font-bold text-indigo-600 uppercase tracking-widest">Partners</span>
-                                    <h4 className="text-xs font-bold text-surface-800 mt-1">Owners Registry</h4>
-                                    <p className="text-[10px] text-surface-400 font-semibold mt-1">Active turf owners list with branch counters</p>
+                                    <span className="text-[10px] font-black text-indigo-600 uppercase tracking-widest">Partners</span>
+                                    <h4 className="text-xs font-bold text-slate-900 mt-1">Owners Registry</h4>
+                                    <p className="text-[10px] text-slate-400 font-semibold mt-1">Active turf owners list with branch counters</p>
                                 </div>
-                                <div className="flex gap-1.5 mt-4">
-                                    <Button size="xs" variant="secondary" onClick={() => handleExport('owners', 'pdf')} disabled={exportingReport.owners}>PDF</Button>
-                                    <Button size="xs" variant="secondary" onClick={() => handleExport('owners', 'excel')} disabled={exportingReport.owners}>Excel</Button>
-                                    <Button size="xs" variant="secondary" onClick={() => handleExport('owners', 'csv')} disabled={exportingReport.owners}>CSV</Button>
+                                <div className="flex gap-2 mt-4">
+                                    <button onClick={() => handleExport('owners', 'pdf')} disabled={exportingReport.owners} className="flex-1 py-1.5 rounded-xl border border-slate-200 text-[10px] font-extrabold text-slate-700 hover:bg-[#16A34A] hover:text-white hover:border-[#16A34A] transition-all cursor-pointer">PDF</button>
+                                    <button onClick={() => handleExport('owners', 'excel')} disabled={exportingReport.owners} className="flex-1 py-1.5 rounded-xl border border-slate-200 text-[10px] font-extrabold text-slate-700 hover:bg-[#16A34A] hover:text-white hover:border-[#16A34A] transition-all cursor-pointer">Excel</button>
+                                    <button onClick={() => handleExport('owners', 'csv')} disabled={exportingReport.owners} className="flex-1 py-1.5 rounded-xl border border-slate-200 text-[10px] font-extrabold text-slate-700 hover:bg-[#16A34A] hover:text-white hover:border-[#16A34A] transition-all cursor-pointer">CSV</button>
                                 </div>
                             </div>
 
                             {/* Branches Exports */}
-                            <div className="p-4.5 rounded-2xl border border-surface-150 bg-white flex flex-col justify-between h-44 shadow-sm hover:border-primary-100 transition-colors">
+                            <div className="p-5 rounded-2xl border border-slate-200/80 bg-white flex flex-col justify-between h-44 shadow-2xs hover:border-[#16A34A]/50 transition-all duration-200">
                                 <div>
-                                    <span className="text-[10px] font-bold text-warning-600 uppercase tracking-widest">Facilities</span>
-                                    <h4 className="text-xs font-bold text-surface-800 mt-1">Branches Performance</h4>
-                                    <p className="text-[10px] text-surface-400 font-semibold mt-1">Branch revenues, metrics, and plan listings</p>
+                                    <span className="text-[10px] font-black text-amber-600 uppercase tracking-widest">Facilities</span>
+                                    <h4 className="text-xs font-bold text-slate-900 mt-1">Branches Performance</h4>
+                                    <p className="text-[10px] text-slate-400 font-semibold mt-1">Branch revenues, metrics, and plan listings</p>
                                 </div>
-                                <div className="flex gap-1.5 mt-4">
-                                    <Button size="xs" variant="secondary" onClick={() => handleExport('branches', 'pdf')} disabled={exportingReport.branches}>PDF</Button>
-                                    <Button size="xs" variant="secondary" onClick={() => handleExport('branches', 'excel')} disabled={exportingReport.branches}>Excel</Button>
-                                    <Button size="xs" variant="secondary" onClick={() => handleExport('branches', 'csv')} disabled={exportingReport.branches}>CSV</Button>
+                                <div className="flex gap-2 mt-4">
+                                    <button onClick={() => handleExport('branches', 'pdf')} disabled={exportingReport.branches} className="flex-1 py-1.5 rounded-xl border border-slate-200 text-[10px] font-extrabold text-slate-700 hover:bg-[#16A34A] hover:text-white hover:border-[#16A34A] transition-all cursor-pointer">PDF</button>
+                                    <button onClick={() => handleExport('branches', 'excel')} disabled={exportingReport.branches} className="flex-1 py-1.5 rounded-xl border border-slate-200 text-[10px] font-extrabold text-slate-700 hover:bg-[#16A34A] hover:text-white hover:border-[#16A34A] transition-all cursor-pointer">Excel</button>
+                                    <button onClick={() => handleExport('branches', 'csv')} disabled={exportingReport.branches} className="flex-1 py-1.5 rounded-xl border border-slate-200 text-[10px] font-extrabold text-slate-700 hover:bg-[#16A34A] hover:text-white hover:border-[#16A34A] transition-all cursor-pointer">CSV</button>
                                 </div>
                             </div>
                         </div>
-                    </Card>
+                    </div>
                 </>
             )}
         </div>

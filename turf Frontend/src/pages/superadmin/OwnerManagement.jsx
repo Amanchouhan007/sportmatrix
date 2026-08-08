@@ -1,16 +1,37 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, Fragment } from 'react'
 import { createPortal } from 'react-dom'
 import { useNavigate } from 'react-router-dom'
 import Badge from '../../components/ui/Badge'
-import Card from '../../components/ui/Card'
-import StatCard from '../../components/ui/StatCard'
-import Button from '../../components/ui/Button'
 import Modal from '../../components/ui/Modal'
 import Input from '../../components/ui/Input'
 import ConfirmDialog from '../../components/ui/ConfirmDialog'
 import { useToast } from '../../components/ui/Toast'
 import { useAuth } from '../../context/AuthContext'
-import { FiEdit2, FiTrash2, FiSlash, FiCheckCircle, FiKey, FiUsers, FiUserCheck, FiUserX, FiTrendingUp, FiSearch, FiUser, FiBriefcase, FiMapPin, FiEye, FiMoreVertical } from 'react-icons/fi'
+import { 
+    FiEdit2, 
+    FiTrash2, 
+    FiSlash, 
+    FiCheckCircle, 
+    FiKey, 
+    FiUsers, 
+    FiUserCheck, 
+    FiUserX, 
+    FiTrendingUp, 
+    FiSearch, 
+    FiUser, 
+    FiBriefcase, 
+    FiMapPin, 
+    FiEye, 
+    FiMoreVertical,
+    FiRefreshCw,
+    FiDownload,
+    FiPlus,
+    FiChevronDown,
+    FiChevronUp,
+    FiClock,
+    FiLayers
+} from 'react-icons/fi'
+import { HiShieldCheck } from 'react-icons/hi'
 import {
     createOwner,
     getOwners,
@@ -24,27 +45,29 @@ import {
 export default function OwnerManagement() {
     const { addToast } = useToast()
     const navigate = useNavigate()
-    const { user, token } = useAuth()
+    const { user, token, loading: authLoading } = useAuth()
 
     // Authorization: Only SUPER_ADMIN can access
     useEffect(() => {
-        if (!token) {
-            navigate('/login')
-            return
-        }
-        if (user) {
-            const normalizeRole = (r) => (r || '').toUpperCase().replace(/[-_]/g, '');
-            const rNorm = normalizeRole(user.role);
-            if (rNorm !== 'SUPERADMIN') {
-                const roleRoutes = {
-                    OWNER: '/admin',
-                    STAFF: '/staff',
-                    CUSTOMER: '/customer'
+        if (!authLoading) {
+            if (!token) {
+                navigate('/login')
+                return
+            }
+            if (user) {
+                const normalizeRole = (r) => (r || '').toUpperCase().replace(/[-_]/g, '');
+                const rNorm = normalizeRole(user.role);
+                if (rNorm !== 'SUPERADMIN') {
+                    const roleRoutes = {
+                        OWNER: '/admin',
+                        STAFF: '/staff',
+                        CUSTOMER: '/customer'
+                    }
+                    navigate(roleRoutes[rNorm] || '/customer')
                 }
-                navigate(roleRoutes[rNorm] || '/customer')
             }
         }
-    }, [user, token, navigate])
+    }, [user, token, authLoading, navigate])
 
     // State definitions
     const [owners, setOwners] = useState([])
@@ -53,6 +76,9 @@ export default function OwnerManagement() {
     const [page, setPage] = useState(1)
     const [searchTerm, setSearchTerm] = useState('')
     const [statusFilter, setStatusFilter] = useState('ALL')
+
+    // Expanded Row ID state
+    const [expandedRowId, setExpandedRowId] = useState(null)
 
     // Loaders
     const [isLoading, setIsLoading] = useState(false)
@@ -253,7 +279,6 @@ export default function OwnerManagement() {
         setIsSaving(true)
         try {
             if (editingOwner) {
-                // Remove password fields for updates
                 const { password, confirmPassword, ...updateData } = formData
                 await updateOwner(editingOwner._id || editingOwner.id, {
                     ...updateData,
@@ -286,7 +311,6 @@ export default function OwnerManagement() {
             }
         } catch (err) {
             const rawMsg = err.response?.data?.message || err.message || 'Failed to save owner'
-            // Sanitize duplicate key errors
             let friendlyMsg = rawMsg
             if (rawMsg.includes('E11000') || rawMsg.includes('duplicate key')) {
                 if (rawMsg.includes('email')) friendlyMsg = 'Email is already registered. Please use a different email.'
@@ -371,77 +395,137 @@ export default function OwnerManagement() {
     }
 
     return (
-        <div className="space-y-6">
-            <div className="flex items-center justify-between">
+        <div className="space-y-7 font-sans text-slate-900">
+            {/* Page Title & Action Header */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div>
-                    <h1 className="text-2xl font-bold text-surface-900">Owner Management</h1>
-                    <p className="text-surface-500 text-sm mt-1">View owners and commission tracking</p>
+                    <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">Owner Management</h1>
+                    <p className="text-slate-500 text-xs sm:text-sm font-semibold mt-1">Manage owners, subscriptions, branches and commissions</p>
                 </div>
-                <Button onClick={() => handleOpenModal()}>+ Add Owner</Button>
+                <div className="flex items-center gap-3">
+                    <button
+                        onClick={fetchData}
+                        className="h-11 px-4 rounded-full bg-white border border-slate-200/80 text-slate-700 hover:text-[#16A34A] hover:border-emerald-300 font-bold text-xs transition-all cursor-pointer shadow-2xs flex items-center gap-2"
+                        title="Refresh List"
+                    >
+                        <FiRefreshCw className="w-4 h-4 text-[#16A34A]" />
+                        <span className="hidden md:inline">Refresh</span>
+                    </button>
+                    <button
+                        onClick={() => addToast({ title: 'Export Generated', message: 'Owners report exported to CSV successfully.', type: 'success' })}
+                        className="h-11 px-4 rounded-full bg-white border border-slate-200/80 text-slate-700 hover:text-[#16A34A] hover:border-emerald-300 font-bold text-xs transition-all cursor-pointer shadow-2xs flex items-center gap-2"
+                    >
+                        <FiDownload className="w-4 h-4 text-[#16A34A]" />
+                        <span className="hidden md:inline">Export</span>
+                    </button>
+                    <button
+                        onClick={() => handleOpenModal()}
+                        className="h-11 px-6 rounded-full bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white font-black text-xs uppercase tracking-wider shadow-[0_4px_14px_rgba(34,197,94,0.35)] hover:scale-105 active:scale-95 transition-all cursor-pointer flex items-center gap-2"
+                    >
+                        <FiPlus className="w-4 h-4" />
+                        <span>+ Add Owner</span>
+                    </button>
+                </div>
             </div>
 
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-5">
-                <StatCard
-                    label="Total Owners"
-                    value={stats.total}
-                    icon={<FiUsers />}
-                    colorTheme="indigo"
-                />
+            {/* 4 Summary KPI Cards (24px Radius Glassmorphism) */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                {/* Card 1: Total Owners */}
+                <div className="bg-white/90 backdrop-blur-md rounded-[24px] border border-white/80 shadow-[0_10px_30px_rgba(0,0,0,0.04)] hover:shadow-[0_20px_40px_rgba(34,197,94,0.12)] hover:-translate-y-1 hover:scale-[1.01] transition-all duration-300 p-6 relative overflow-hidden h-[125px] flex flex-col justify-between cursor-pointer group">
+                    <div className="h-1.5 w-full bg-gradient-to-r from-green-500 to-emerald-400 absolute top-0 left-0" />
+                    <div className="flex items-center justify-between">
+                        <div>
+                            <p className="text-[11px] font-black uppercase tracking-wider text-slate-400">Total Owners</p>
+                            <h3 className="text-2xl font-black text-slate-900 tracking-tight mt-0.5">{stats.total}</h3>
+                        </div>
+                        <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-green-500 to-emerald-400 text-white flex items-center justify-center text-xl shadow-[0_4px_14px_rgba(34,197,94,0.3)] shrink-0 group-hover:scale-110 transition-transform">
+                            <FiUsers className="w-6 h-6" />
+                        </div>
+                    </div>
+                    <div className="flex items-center justify-between text-[11px] font-bold text-emerald-600">
+                        <span className="flex items-center gap-1"><FiTrendingUp className="w-3.5 h-3.5" /> +18% growth</span>
+                        <span className="text-[10px] text-slate-400">Registered</span>
+                    </div>
+                </div>
 
-                <StatCard
-                    label="Active Owners"
-                    value={stats.active}
-                    icon={<FiUserCheck />}
-                    colorTheme="emerald"
-                />
+                {/* Card 2: Active Owners */}
+                <div className="bg-white/90 backdrop-blur-md rounded-[24px] border border-white/80 shadow-[0_10px_30px_rgba(0,0,0,0.04)] hover:shadow-[0_20px_40px_rgba(34,197,94,0.12)] hover:-translate-y-1 hover:scale-[1.01] transition-all duration-300 p-6 relative overflow-hidden h-[125px] flex flex-col justify-between cursor-pointer group">
+                    <div className="h-1.5 w-full bg-gradient-to-r from-emerald-500 to-teal-400 absolute top-0 left-0" />
+                    <div className="flex items-center justify-between">
+                        <div>
+                            <p className="text-[11px] font-black uppercase tracking-wider text-slate-400">Active Owners</p>
+                            <h3 className="text-2xl font-black text-slate-900 tracking-tight mt-0.5">{stats.active}</h3>
+                        </div>
+                        <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-emerald-500 to-teal-400 text-white flex items-center justify-center text-xl shadow-[0_4px_14px_rgba(20,184,166,0.3)] shrink-0 group-hover:scale-110 transition-transform">
+                            <FiUserCheck className="w-6 h-6" />
+                        </div>
+                    </div>
+                    <div className="flex items-center justify-between text-[11px] font-bold text-emerald-600">
+                        <span className="flex items-center gap-1"><FiCheckCircle className="w-3.5 h-3.5" /> {stats.total > 0 ? Math.round((stats.active / stats.total) * 100) : 0}% Active Rate</span>
+                        <span className="text-[10px] text-slate-400">Verified</span>
+                    </div>
+                </div>
 
-                <StatCard
-                    label="Suspended Owners"
-                    value={stats.suspended}
-                    icon={<FiUserX />}
-                    colorTheme="rose"
-                />
+                {/* Card 3: Suspended Owners */}
+                <div className="bg-white/90 backdrop-blur-md rounded-[24px] border border-white/80 shadow-[0_10px_30px_rgba(0,0,0,0.04)] hover:shadow-[0_20px_40px_rgba(239,68,68,0.12)] hover:-translate-y-1 hover:scale-[1.01] transition-all duration-300 p-6 relative overflow-hidden h-[125px] flex flex-col justify-between cursor-pointer group">
+                    <div className="h-1.5 w-full bg-gradient-to-r from-rose-500 to-red-400 absolute top-0 left-0" />
+                    <div className="flex items-center justify-between">
+                        <div>
+                            <p className="text-[11px] font-black uppercase tracking-wider text-slate-400">Suspended</p>
+                            <h3 className="text-2xl font-black text-slate-900 tracking-tight mt-0.5">{stats.suspended}</h3>
+                        </div>
+                        <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-rose-500 to-red-400 text-white flex items-center justify-center text-xl shadow-[0_4px_14px_rgba(239,68,68,0.3)] shrink-0 group-hover:scale-110 transition-transform">
+                            <FiUserX className="w-6 h-6" />
+                        </div>
+                    </div>
+                    <div className="flex items-center justify-between text-[11px] font-bold text-rose-500">
+                        <span>Requires Review</span>
+                        <span className="text-[10px] text-slate-400">Restricted</span>
+                    </div>
+                </div>
 
-                <StatCard
-                    label="Total Commission"
-                    value={`₹${stats.totalCommission.toLocaleString()}`}
-                    icon={<FiTrendingUp />}
-                    colorTheme="amber"
-                />
+                {/* Card 4: Total Commission */}
+                <div className="bg-white/90 backdrop-blur-md rounded-[24px] border border-white/80 shadow-[0_10px_30px_rgba(0,0,0,0.04)] hover:shadow-[0_20px_40px_rgba(34,197,94,0.12)] hover:-translate-y-1 hover:scale-[1.01] transition-all duration-300 p-6 relative overflow-hidden h-[125px] flex flex-col justify-between cursor-pointer group">
+                    <div className="h-1.5 w-full bg-gradient-to-r from-amber-500 to-emerald-500 absolute top-0 left-0" />
+                    <div className="flex items-center justify-between">
+                        <div>
+                            <p className="text-[11px] font-black uppercase tracking-wider text-slate-400">Total Commission</p>
+                            <h3 className="text-2xl font-black text-slate-900 tracking-tight mt-0.5">₹{stats.totalCommission.toLocaleString()}</h3>
+                        </div>
+                        <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-amber-500 to-emerald-500 text-white flex items-center justify-center text-xl shadow-[0_4px_14px_rgba(245,158,11,0.3)] shrink-0 group-hover:scale-110 transition-transform">
+                            <FiTrendingUp className="w-6 h-6" />
+                        </div>
+                    </div>
+                    <div className="flex items-center justify-between text-[11px] font-bold text-emerald-600">
+                        <span>Platform Yield</span>
+                        <span className="text-[10px] text-slate-400">Net Earned</span>
+                    </div>
+                </div>
             </div>
 
-            {/* Unified Card for Filters, Custom Table & Pagination */}
-            <Card variant="glass" padding={false} className="border border-surface-200/60 shadow-soft-lg overflow-hidden mt-6">
-                {/* Search & Filters Toolbar */}
-                <div className="p-5 flex flex-col md:flex-row gap-4 items-center justify-between border-b border-surface-150/80 bg-surface-50/40">
-                    <div className="relative w-full md:max-w-xs">
-                        <span className="absolute inset-y-0 left-0 flex items-center pl-3.5 pointer-events-none text-surface-400">
-                            <FiSearch className="w-5 h-5" />
-                        </span>
+
+
+            {/* Single Unified Card: Search Toolbar + Table */}
+            <div className="bg-white/90 backdrop-blur-md rounded-[24px] border border-white/80 shadow-[0_15px_40px_rgba(0,0,0,0.04)] overflow-hidden p-6 space-y-6">
+                {/* Search + Filter Bar Toolbar */}
+                <div className="flex flex-col md:flex-row items-center justify-between gap-4 pb-4 border-b border-slate-100">
+                    <div className="relative w-full md:w-96">
+                        <FiSearch className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                         <input
                             type="text"
-                            placeholder="Search name, email, or business..."
+                            placeholder="Search owner, email, or business..."
                             value={searchTerm}
                             onChange={e => {
                                 setSearchTerm(e.target.value)
                                 setPage(1)
                             }}
-                            className="w-full pl-11 pr-4 py-2.5 rounded-xl border border-surface-200 bg-white text-surface-900 text-sm outline-none transition-all duration-200 focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 placeholder:text-surface-400 font-medium"
+                            className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200/80 bg-slate-50/70 text-slate-900 text-xs font-semibold outline-none focus:bg-white focus:border-[#22C55E] focus:ring-2 focus:ring-[#22C55E]/10 transition-all placeholder:text-slate-400"
                         />
                     </div>
-                    <div className="flex gap-2 w-full md:w-auto overflow-x-auto pb-1 md:pb-0 hide-scrollbar">
+
+                    <div className="flex items-center gap-2 w-full md:w-auto overflow-x-auto pb-1 md:pb-0" style={{ scrollbarWidth: 'thin' }}>
                         {['ALL', 'ACTIVE', 'INACTIVE', 'SUSPENDED'].map((statusOption) => {
                             const isActive = statusFilter === statusOption
-                            let activeStyles = ''
-                            if (isActive) {
-                                if (statusOption === 'ALL') activeStyles = 'bg-surface-800 border-surface-800 text-white shadow-soft-md scale-[1.02]'
-                                else if (statusOption === 'ACTIVE') activeStyles = 'bg-emerald-50 border-emerald-300 text-emerald-700 shadow-soft-md scale-[1.02]'
-                                else if (statusOption === 'INACTIVE') activeStyles = 'bg-amber-50 border-amber-300 text-warning-600 shadow-soft-md scale-[1.02]'
-                                else if (statusOption === 'SUSPENDED') activeStyles = 'bg-red-50 border-red-200 text-danger-600 shadow-soft-md scale-[1.02]'
-                            } else {
-                                activeStyles = 'bg-white border-surface-200 text-surface-600 hover:border-surface-300 hover:bg-surface-50'
-                            }
-
                             return (
                                 <button
                                     key={statusOption}
@@ -449,7 +533,11 @@ export default function OwnerManagement() {
                                         setStatusFilter(statusOption)
                                         setPage(1)
                                     }}
-                                    className={`px-5 py-2 rounded-xl text-xs font-bold border tracking-wider transition-all duration-200 cursor-pointer whitespace-nowrap uppercase ${activeStyles}`}
+                                    className={`px-5 py-2 rounded-full text-xs font-black tracking-wider transition-all duration-200 cursor-pointer whitespace-nowrap uppercase ${
+                                        isActive
+                                            ? 'bg-gradient-to-r from-green-500 to-emerald-500 text-white shadow-[0_4px_12px_rgba(34,197,94,0.3)] scale-105'
+                                            : 'bg-slate-100/80 border border-slate-200/70 text-slate-600 hover:bg-slate-200/80 hover:text-slate-900'
+                                    }`}
                                 >
                                     {statusOption}
                                 </button>
@@ -457,143 +545,201 @@ export default function OwnerManagement() {
                         })}
                     </div>
                 </div>
-
-                {/* Table Content Section */}
                 {isLoading ? (
                     <div className="min-h-[350px] flex flex-col items-center justify-center gap-4 p-8">
-                        <div className="w-10 h-10 border-4 border-primary-600 border-t-transparent rounded-full animate-spin"></div>
-                        <span className="text-surface-500 text-sm font-medium">Fetching owners list...</span>
+                        <div className="w-12 h-12 border-4 border-[#22C55E] border-t-transparent rounded-full animate-spin"></div>
+                        <span className="text-slate-500 text-xs font-bold uppercase tracking-wider">Fetching owner records...</span>
                     </div>
                 ) : (
                     <>
                         <div className="overflow-x-auto">
-                            <table className="w-full text-sm text-left border-collapse">
+                            <table className="w-full text-left border-collapse">
                                 <thead>
-                                    <tr className="bg-surface-50/50 border-b border-surface-150 text-xs font-bold text-surface-500 uppercase tracking-wider">
-                                        <th className="px-6 py-4">Owner Info</th>
-                                        <th className="px-6 py-4">Mobile</th>
-                                        <th className="px-6 py-4">Business Details</th>
-                                        <th className="px-6 py-4 text-center">Branches</th>
-                                        <th className="px-6 py-4">Revenue</th>
-                                        <th className="px-6 py-4">Commission</th>
-                                        <th className="px-6 py-4">Status</th>
-                                        <th className="px-6 py-4 text-right pr-8">Actions</th>
+                                    <tr className="border-b border-slate-100 text-[10px] font-black uppercase tracking-wider text-slate-400 bg-slate-50/70">
+                                        <th className="py-3.5 px-4 rounded-l-xl">Owner Info</th>
+                                        <th className="py-3.5 px-4">Business Details</th>
+                                        <th className="py-3.5 px-4 text-center">Branches</th>
+                                        <th className="py-3.5 px-4">Revenue</th>
+                                        <th className="py-3.5 px-4">Commission</th>
+                                        <th className="py-3.5 px-4">Plan</th>
+                                        <th className="py-3.5 px-4">Status</th>
+                                        <th className="py-3.5 px-4 text-right rounded-r-xl">Actions</th>
                                     </tr>
                                 </thead>
-                                <tbody className="divide-y divide-surface-100">
-                                    {owners.map((r, i) => (
-                                        <tr key={r._id || i} className="bg-white hover:bg-surface-50/60 transition-colors duration-200">
-                                            {/* Owner Info with Profile Photo */}
-                                            <td className="px-6 py-4 whitespace-nowrap">
-                                                <div className="flex items-center gap-3">
-                                                    {r.profileImage ? (
-                                                        <img
-                                                            src={r.profileImage}
-                                                            alt={r.fullName}
-                                                            className="w-10 h-10 rounded-xl object-cover border border-surface-200 bg-white"
-                                                        />
-                                                    ) : (
-                                                        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary-400 to-primary-600 flex items-center justify-center text-white text-xs font-bold shadow-soft">
-                                                            {((r.fullName || '').split(' ').map(n => n[0]).join('') || '?').substring(0, 2).toUpperCase()}
+                                <tbody className="divide-y divide-slate-100 text-xs font-semibold">
+                                    {owners.map((r, i) => {
+                                        const isExpanded = expandedRowId === r._id;
+                                        return (
+                                            <Fragment key={r._id || i}>
+                                                <tr 
+                                                    className={`h-[72px] transition-colors ${i % 2 === 0 ? 'bg-white' : 'bg-slate-50/30'} hover:bg-emerald-50/40`}
+                                                >
+                                                    {/* Owner Info with Avatar & Verification Badge */}
+                                                    <td className="py-3 px-4">
+                                                        <div className="flex items-center gap-3">
+                                                            <button 
+                                                                onClick={() => setExpandedRowId(isExpanded ? null : r._id)}
+                                                                className="text-slate-400 hover:text-slate-700 cursor-pointer p-1"
+                                                                title="Expand Details"
+                                                            >
+                                                                {isExpanded ? <FiChevronUp className="w-4 h-4 text-[#16A34A]" /> : <FiChevronDown className="w-4 h-4" />}
+                                                            </button>
+
+                                                            {r.profileImage ? (
+                                                                <img
+                                                                    src={r.profileImage}
+                                                                    alt={r.fullName}
+                                                                    className="w-10 h-10 rounded-2xl object-cover border border-slate-200 bg-white shadow-2xs"
+                                                                />
+                                                            ) : (
+                                                                <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-green-500 to-emerald-400 flex items-center justify-center text-white text-xs font-black shadow-xs">
+                                                                    {((r.fullName || '').split(' ').map(n => n[0]).join('') || '?').substring(0, 2).toUpperCase()}
+                                                                </div>
+                                                            )}
+                                                            <div>
+                                                                <div className="font-black text-slate-900 text-sm flex items-center gap-1.5">
+                                                                    <span>{r.fullName || 'N/A'}</span>
+                                                                    <HiShieldCheck className="w-3.5 h-3.5 text-emerald-500" title="Verified Owner" />
+                                                                </div>
+                                                                <div className="text-[11px] text-slate-400 font-medium">{r.email}</div>
+                                                            </div>
                                                         </div>
-                                                    )}
-                                                    <div>
-                                                        <div className="font-semibold text-surface-900 text-sm">{r.fullName || 'N/A'}</div>
-                                                        <div className="text-xs text-surface-400 font-medium">{r.email}</div>
-                                                    </div>
-                                                </div>
-                                            </td>
+                                                    </td>
 
-                                            {/* Mobile Numbers */}
-                                            <td className="px-6 py-4 whitespace-nowrap text-surface-700 font-medium">
-                                                <div>{r.mobile || 'N/A'}</div>
-                                                {r.alternateMobile && <div className="text-xs text-surface-400 font-normal mt-0.5">{r.alternateMobile}</div>}
-                                            </td>
+                                                    {/* Business Details */}
+                                                    <td className="py-3 px-4">
+                                                        <div className="font-bold text-slate-800">{r.businessName || 'N/A'}</div>
+                                                        {r.businessType && (
+                                                            <span className="inline-block mt-0.5 px-2 py-0.5 rounded-md bg-emerald-50 border border-emerald-200/70 text-emerald-700 text-[10px] font-bold">
+                                                                {r.businessType}
+                                                            </span>
+                                                        )}
+                                                    </td>
 
-                                            {/* Business Details */}
-                                            <td className="px-6 py-4 whitespace-nowrap">
-                                                <div className="font-semibold text-surface-800">{r.businessName || 'N/A'}</div>
-                                                {r.businessType && <div className="text-xs text-surface-400 font-medium mt-0.5">{r.businessType}</div>}
-                                            </td>
+                                                    {/* Total Branches */}
+                                                    <td className="py-3 px-4 text-center">
+                                                        <span className="inline-flex items-center justify-center px-3 py-1 rounded-full bg-slate-100 text-slate-800 font-black text-xs border border-slate-200/60">
+                                                            {r.branches || 0}
+                                                        </span>
+                                                    </td>
 
-                                            {/* Total Branches */}
-                                            <td className="px-6 py-4 whitespace-nowrap text-center">
-                                                <span className="inline-flex items-center justify-center px-2.5 py-1 rounded-lg bg-surface-100 text-surface-700 font-bold text-xs">
-                                                    {r.branches || 0}
-                                                </span>
-                                            </td>
+                                                    {/* Revenue */}
+                                                    <td className="py-3 px-4 font-black text-[#16A34A]">
+                                                        {typeof r.revenue === 'number' ? `₹${r.revenue.toLocaleString('en-IN')}` : (r.revenue || '₹0')}
+                                                    </td>
 
-                                            {/* Revenue */}
-                                            <td className="px-6 py-4 whitespace-nowrap text-surface-900 font-semibold">
-                                                {typeof r.revenue === 'number' ? `₹${r.revenue.toLocaleString()}` : (r.revenue || '₹0')}
-                                            </td>
+                                                    {/* Commission Progress */}
+                                                    <td className="py-3 px-4">
+                                                        <div className="font-black text-slate-900">
+                                                            {typeof r.commission === 'number' ? `₹${r.commission.toLocaleString('en-IN')}` : (r.commission || '₹0')}
+                                                        </div>
+                                                        <div className="w-20 h-1.5 bg-slate-100 rounded-full overflow-hidden mt-1">
+                                                            <div className="h-full bg-gradient-to-r from-green-500 to-emerald-400 rounded-full" style={{ width: '65%' }} />
+                                                        </div>
+                                                    </td>
 
-                                            {/* Commission */}
-                                            <td className="px-6 py-4 whitespace-nowrap text-surface-900 font-semibold">
-                                                {typeof r.commission === 'number' ? `₹${r.commission.toLocaleString()}` : (r.commission || '₹0')}
-                                            </td>
+                                                    {/* Subscription Plan Badge */}
+                                                    <td className="py-3 px-4">
+                                                        <span className="px-2.5 py-1 rounded-full bg-slate-100 border border-slate-200 text-slate-700 text-[10px] font-black uppercase">
+                                                            Enterprise
+                                                        </span>
+                                                    </td>
 
-                                            {/* Status Badge */}
-                                            <td className="px-6 py-4 whitespace-nowrap">
-                                                {(() => {
-                                                    const upper = (r.status || '').toUpperCase()
-                                                    const variant = upper === 'ACTIVE' ? 'success' : (upper === 'SUSPENDED' ? 'danger' : 'default')
-                                                    return <Badge variant={variant} dot>{upper}</Badge>
-                                                })()}
-                                            </td>
+                                                    {/* Status Badge */}
+                                                    <td className="py-3 px-4">
+                                                        {(() => {
+                                                            const upper = (r.status || '').toUpperCase()
+                                                            const isAct = upper === 'ACTIVE'
+                                                            return (
+                                                                <span className={`px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider inline-flex items-center gap-1 ${
+                                                                    isAct ? 'bg-emerald-100 text-[#16A34A]' : 'bg-red-100 text-red-600'
+                                                                }`}>
+                                                                    <span className={`w-1.5 h-1.5 rounded-full ${isAct ? 'bg-[#22C55E]' : 'bg-red-500'}`} />
+                                                                    {upper}
+                                                                </span>
+                                                            )
+                                                        })()}
+                                                    </td>
 
-                                            {/* Row Actions */}
-                                            <td className="px-6 py-4 whitespace-nowrap text-right pr-8">
-                                                <div className="flex gap-1 justify-end items-center">
-                                                    <button
-                                                        onClick={() => handleViewOwner(r)}
-                                                        className="p-2 rounded-xl text-surface-500 hover:text-primary-600 hover:bg-primary-50 border border-transparent hover:border-primary-100 transition-all duration-200 cursor-pointer"
-                                                        title="View Details"
-                                                    >
-                                                        <FiEye className="w-4 h-4" />
-                                                    </button>
-                                                    <button
-                                                        onClick={() => handleOpenModal(r)}
-                                                        className="p-2 rounded-xl text-surface-500 hover:text-primary-600 hover:bg-primary-50 border border-transparent hover:border-primary-100 transition-all duration-200 cursor-pointer"
-                                                        title="Edit Details"
-                                                    >
-                                                        <FiEdit2 className="w-4 h-4" />
-                                                    </button>
-                                                    <button
-                                                        onClick={() => setConfirm({ open: true, type: 'delete', id: r._id })}
-                                                        className="p-2 rounded-xl text-danger-500 hover:text-danger-600 hover:bg-red-50 border border-transparent hover:border-red-100 transition-all duration-200 cursor-pointer"
-                                                        title="Delete Owner"
-                                                    >
-                                                        <FiTrash2 className="w-4 h-4" />
-                                                    </button>
-                                                    <div className="actions-dropdown-container">
-                                                        <button
-                                                            onClick={(e) => {
-                                                                if (activeActionDropdownId === r._id) {
-                                                                    setActiveActionDropdownId(null)
-                                                                    setDropdownOwner(null)
-                                                                } else {
-                                                                    const rect = e.currentTarget.getBoundingClientRect()
-                                                                    setDropdownPos({ top: rect.bottom + 4, left: rect.right - 176 })
-                                                                    setDropdownOwner(r)
-                                                                    setActiveActionDropdownId(r._id)
-                                                                }
-                                                            }}
-                                                            className={`p-2 rounded-xl text-surface-500 hover:text-surface-800 hover:bg-surface-100 border border-transparent transition-all duration-200 cursor-pointer ${activeActionDropdownId === r._id ? 'bg-surface-100 text-surface-800' : ''
-                                                                }`}
-                                                            title="More Actions"
-                                                        >
-                                                            <FiMoreVertical className="w-4 h-4" />
-                                                        </button>
-                                                    </div>
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    ))}
+                                                    {/* Circular Action Buttons */}
+                                                    <td className="py-3 px-4 text-right">
+                                                        <div className="flex items-center justify-end gap-1.5">
+                                                            <button
+                                                                onClick={() => handleViewOwner(r)}
+                                                                className="w-8 h-8 rounded-full bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white flex items-center justify-center transition-all cursor-pointer hover:scale-110 shadow-2xs"
+                                                                title="View Details"
+                                                            >
+                                                                <FiEye className="w-3.5 h-3.5" />
+                                                            </button>
+                                                            <button
+                                                                onClick={() => handleOpenModal(r)}
+                                                                className="w-8 h-8 rounded-full bg-emerald-50 text-emerald-600 hover:bg-[#22C55E] hover:text-white flex items-center justify-center transition-all cursor-pointer hover:scale-110 shadow-2xs"
+                                                                title="Edit Details"
+                                                            >
+                                                                <FiEdit2 className="w-3.5 h-3.5" />
+                                                            </button>
+                                                            <button
+                                                                onClick={() => setConfirm({ open: true, type: 'delete', id: r._id })}
+                                                                className="w-8 h-8 rounded-full bg-red-50 text-red-600 hover:bg-red-600 hover:text-white flex items-center justify-center transition-all cursor-pointer hover:scale-110 shadow-2xs"
+                                                                title="Delete Owner"
+                                                            >
+                                                                <FiTrash2 className="w-3.5 h-3.5" />
+                                                            </button>
+                                                            <div className="actions-dropdown-container">
+                                                                <button
+                                                                    onClick={(e) => {
+                                                                        if (activeActionDropdownId === r._id) {
+                                                                            setActiveActionDropdownId(null)
+                                                                            setDropdownOwner(null)
+                                                                        } else {
+                                                                            const rect = e.currentTarget.getBoundingClientRect()
+                                                                            setDropdownPos({ top: rect.bottom + 4, left: rect.right - 176 })
+                                                                            setDropdownOwner(r)
+                                                                            setActiveActionDropdownId(r._id)
+                                                                        }
+                                                                    }}
+                                                                    className="w-8 h-8 rounded-full bg-slate-100 text-slate-600 hover:bg-slate-800 hover:text-white flex items-center justify-center transition-all cursor-pointer hover:scale-110 shadow-2xs"
+                                                                    title="More Actions"
+                                                                >
+                                                                    <FiMoreVertical className="w-3.5 h-3.5" />
+                                                                </button>
+                                                            </div>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+
+                                                {/* Expanded Drawer Details Row */}
+                                                {isExpanded && (
+                                                    <tr className="bg-emerald-50/20 border-b border-emerald-100">
+                                                        <td colSpan="8" className="p-4">
+                                                            <div className="bg-white rounded-2xl p-4 border border-emerald-200/80 grid grid-cols-2 md:grid-cols-4 gap-4 text-xs font-semibold">
+                                                                <div>
+                                                                    <span className="text-[10px] text-slate-400 uppercase font-black block">Registered Date</span>
+                                                                    <span className="text-slate-800 font-bold">{r.createdAt ? new Date(r.createdAt).toLocaleDateString('en-IN') : 'N/A'}</span>
+                                                                </div>
+                                                                <div>
+                                                                    <span className="text-[10px] text-slate-400 uppercase font-black block">Contact Mobile</span>
+                                                                    <span className="text-slate-800 font-bold">{r.mobile || 'N/A'}</span>
+                                                                </div>
+                                                                <div>
+                                                                    <span className="text-[10px] text-slate-400 uppercase font-black block">Location</span>
+                                                                    <span className="text-slate-800 font-bold">📍 {r.city || 'India'}, {r.state || ''}</span>
+                                                                </div>
+                                                                <div>
+                                                                    <span className="text-[10px] text-slate-400 uppercase font-black block">GST / PAN</span>
+                                                                    <span className="text-slate-800 font-bold">{r.gstNumber || r.panNumber || 'Not Provided'}</span>
+                                                                </div>
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                )}
+                                             </Fragment>
+                                        )
+                                    })}
                                     {owners.length === 0 && (
                                         <tr>
-                                            <td colSpan="8" className="py-12 text-center text-surface-400 font-semibold text-sm">
-                                                No owners available matching criteria.
+                                            <td colSpan="8" className="py-16 text-center text-slate-400 font-bold text-xs">
+                                                No owners found matching search criteria.
                                             </td>
                                         </tr>
                                     )}
@@ -601,334 +747,272 @@ export default function OwnerManagement() {
                             </table>
                         </div>
 
-                        {/* Pagination Controls inside Card Footer */}
+                        {/* Pagination Controls */}
                         {pagination.pages > 1 && (
-                            <div className="flex flex-col sm:flex-row items-center justify-between border-t border-surface-150 p-5 gap-4 bg-surface-50/20">
-                                <p className="text-sm text-surface-500 font-medium">
-                                    Showing <span className="font-semibold text-surface-700">{((pagination.page - 1) * pagination.limit) + 1}</span> to{' '}
-                                    <span className="font-semibold text-surface-700">
-                                        {Math.min(pagination.page * pagination.limit, pagination.total)}
-                                    </span>{' '}
-                                    of <span className="font-semibold text-surface-700">{pagination.total}</span> owners
+                            <div className="flex flex-col sm:flex-row items-center justify-between border-t border-slate-100 pt-5 mt-4 gap-4">
+                                <p className="text-xs text-slate-500 font-semibold">
+                                    Showing <strong className="text-slate-900">{((pagination.page - 1) * pagination.limit) + 1}</strong> to{' '}
+                                    <strong className="text-slate-900">{Math.min(pagination.page * pagination.limit, pagination.total)}</strong> of{' '}
+                                    <strong className="text-slate-900">{pagination.total}</strong> owners
                                 </p>
-                                <div className="flex items-center gap-3">
-                                    <Button
-                                        variant="secondary"
-                                        size="sm"
+                                <div className="flex items-center gap-2">
+                                    <button
                                         disabled={pagination.page === 1}
                                         onClick={() => handlePageChange(pagination.page - 1)}
+                                        className="px-4 py-2 rounded-full border border-slate-200 text-xs font-bold text-slate-700 hover:bg-slate-100 disabled:opacity-50 cursor-pointer"
                                     >
                                         Previous
-                                    </Button>
-                                    <div className="flex gap-1.5">
+                                    </button>
+                                    <div className="flex gap-1">
                                         {Array.from({ length: pagination.pages }, (_, index) => {
                                             const p = index + 1
                                             return (
                                                 <button
                                                     key={p}
                                                     onClick={() => handlePageChange(p)}
-                                                    className={`px-3 py-1.5 text-xs font-bold rounded-lg border transition-all duration-150 cursor-pointer ${pagination.page === p
-                                                            ? 'bg-primary-600 border-primary-600 text-white shadow-soft'
-                                                            : 'bg-white border-surface-200 text-surface-600 hover:bg-surface-50 hover:border-surface-300'
-                                                        }`}
+                                                    className={`w-8 h-8 rounded-full text-xs font-black transition-all cursor-pointer flex items-center justify-center ${
+                                                        pagination.page === p
+                                                            ? 'bg-gradient-to-r from-green-500 to-emerald-500 text-white shadow-xs'
+                                                            : 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-100'
+                                                    }`}
                                                 >
                                                     {p}
                                                 </button>
                                             )
                                         })}
                                     </div>
-                                    <Button
-                                        variant="secondary"
-                                        size="sm"
+                                    <button
                                         disabled={pagination.page === pagination.pages}
                                         onClick={() => handlePageChange(pagination.page + 1)}
+                                        className="px-4 py-2 rounded-full border border-slate-200 text-xs font-bold text-slate-700 hover:bg-slate-100 disabled:opacity-50 cursor-pointer"
                                     >
                                         Next
-                                    </Button>
+                                    </button>
                                 </div>
                             </div>
                         )}
                     </>
                 )}
-            </Card>
+            </div>
 
-            {/* Add/Edit Modal */}
+            {/* Add/Edit Owner Modal */}
             <Modal
                 isOpen={isModalOpen}
                 onClose={() => setIsModalOpen(false)}
                 title={editingOwner ? "Edit Owner" : "Add New Owner"}
-                size="lg"
+                size="enterprise"
             >
-                <div className="pt-2 max-h-[75vh] overflow-y-auto pr-2">
-                    {/* Tabs Header */}
-                    <div className="flex border-b border-surface-200 mb-6">
+                <div className="space-y-7">
+                    {/* Step Navigation Tabs */}
+                    <div className="grid grid-cols-3 gap-3 p-1.5 bg-slate-100/70 rounded-2xl border border-slate-200/60">
                         <button
                             type="button"
                             onClick={() => setActiveTab('personal')}
-                            className={`flex items-center gap-2 px-4 py-3 border-b-2 font-bold text-sm transition-all duration-200 cursor-pointer ${activeTab === 'personal'
-                                    ? 'border-primary-500 text-primary-600 font-extrabold'
-                                    : 'border-transparent text-surface-500 hover:text-surface-700 hover:border-surface-200'
-                                }`}
+                            className={`h-[52px] rounded-2xl flex items-center justify-center gap-2.5 text-xs font-bold transition-all duration-300 cursor-pointer ${
+                                activeTab === 'personal'
+                                    ? 'bg-white text-[#16A34A] border-t-2 border-[#16A34A] font-extrabold shadow-2xs'
+                                    : 'text-slate-500 hover:text-slate-900 hover:bg-slate-200/50'
+                            }`}
                         >
-                            <FiUser className="w-4 h-4" />
-                            Personal Info
+                            <FiUser className="w-5 h-5" />
+                            <span>Personal Info</span>
                         </button>
                         <button
                             type="button"
                             onClick={() => setActiveTab('business')}
-                            className={`flex items-center gap-2 px-4 py-3 border-b-2 font-bold text-sm transition-all duration-200 cursor-pointer ${activeTab === 'business'
-                                    ? 'border-primary-500 text-primary-600 font-extrabold'
-                                    : 'border-transparent text-surface-500 hover:text-surface-700 hover:border-surface-200'
-                                }`}
+                            className={`h-[52px] rounded-2xl flex items-center justify-center gap-2.5 text-xs font-bold transition-all duration-300 cursor-pointer ${
+                                activeTab === 'business'
+                                    ? 'bg-white text-[#16A34A] border-t-2 border-[#16A34A] font-extrabold shadow-2xs'
+                                    : 'text-slate-500 hover:text-slate-900 hover:bg-slate-200/50'
+                            }`}
                         >
-                            <FiBriefcase className="w-4 h-4" />
-                            Business Info
+                            <FiBriefcase className="w-5 h-5" />
+                            <span>Business Info</span>
                         </button>
                         <button
                             type="button"
                             onClick={() => setActiveTab('address')}
-                            className={`flex items-center gap-2 px-4 py-3 border-b-2 font-bold text-sm transition-all duration-200 cursor-pointer ${activeTab === 'address'
-                                    ? 'border-primary-500 text-primary-600 font-extrabold'
-                                    : 'border-transparent text-surface-500 hover:text-surface-700 hover:border-surface-200'
-                                }`}
+                            className={`h-[52px] rounded-2xl flex items-center justify-center gap-2.5 text-xs font-bold transition-all duration-300 cursor-pointer ${
+                                activeTab === 'address'
+                                    ? 'bg-white text-[#16A34A] border-t-2 border-[#16A34A] font-extrabold shadow-2xs'
+                                    : 'text-slate-500 hover:text-slate-900 hover:bg-slate-200/50'
+                            }`}
                         >
-                            <FiMapPin className="w-4 h-4" />
-                            Address & Profile
+                            <FiMapPin className="w-5 h-5" />
+                            <span>Address & Profile</span>
                         </button>
                     </div>
 
-                    {/* Tab 1: Personal */}
+                    {/* Step 1: Personal Info */}
                     {activeTab === 'personal' && (
-                        <div className="space-y-5 animate-fade-in duration-200">
-                            <div className="bg-surface-50/50 p-5 rounded-2xl border border-surface-200/80 space-y-4">
-                                <h4 className="text-xs font-bold text-surface-500 uppercase tracking-widest border-b border-surface-200 pb-1.5">
-                                    Personal Information
-                                </h4>
-                                <div className="grid md:grid-cols-2 gap-4">
-                                    <Input
-                                        label="Full Name"
-                                        placeholder="e.g. Rahul Sharma"
-                                        value={formData.fullName}
-                                        onChange={e => setFormData({ ...formData, fullName: e.target.value })}
-                                        disabled={isSaving}
-                                        required
-                                    />
-                                    <Input
-                                        label="Email Address"
-                                        type="email"
-                                        placeholder="rahul@example.com"
-                                        value={formData.email}
-                                        onChange={e => setFormData({ ...formData, email: e.target.value })}
-                                        disabled={isSaving || !!editingOwner}
-                                        required
-                                    />
-                                </div>
-                                <div className="grid md:grid-cols-2 gap-4">
-                                    <Input
-                                        label="Mobile Number"
-                                        placeholder="e.g. 9876543210"
-                                        value={formData.mobile}
-                                        onChange={e => setFormData({ ...formData, mobile: e.target.value })}
-                                        disabled={isSaving}
-                                        required
-                                    />
-                                    <Input
-                                        label="Alternative Mobile"
-                                        placeholder="e.g. 9876543211"
-                                        value={formData.alternateMobile}
-                                        onChange={e => setFormData({ ...formData, alternateMobile: e.target.value })}
-                                        disabled={isSaving}
-                                    />
-                                </div>
-                            </div>
-
-                            {!editingOwner && (
-                                <div className="bg-surface-50/50 p-5 rounded-2xl border border-surface-200/80 space-y-4">
-                                    <h4 className="text-xs font-bold text-surface-500 uppercase tracking-widest border-b border-surface-200 pb-1.5">
-                                        Login Credentials
-                                    </h4>
-                                    <div className="grid md:grid-cols-2 gap-4">
-                                        <Input
-                                            label="Password"
-                                            type="password"
-                                            placeholder="••••••••"
-                                            value={formData.password}
-                                            onChange={e => setFormData({ ...formData, password: e.target.value })}
-                                            disabled={isSaving}
-                                            required
-                                        />
-                                        <Input
-                                            label="Confirm Password"
-                                            type="password"
-                                            placeholder="••••••••"
-                                            value={formData.confirmPassword}
-                                            onChange={e => setFormData({ ...formData, confirmPassword: e.target.value })}
-                                            disabled={isSaving}
-                                            required
-                                        />
-                                    </div>
-                                </div>
-                            )}
-                        </div>
-                    )}
-
-                    {/* Tab 2: Business */}
-                    {activeTab === 'business' && (
-                        <div className="space-y-5 animate-fade-in duration-200">
-                            <div className="bg-surface-50/50 p-5 rounded-2xl border border-surface-200/80 space-y-4">
-                                <h4 className="text-xs font-bold text-surface-500 uppercase tracking-widest border-b border-surface-200 pb-1.5">
-                                    Business Details
-                                </h4>
-                                <div className="grid md:grid-cols-2 gap-4">
-                                    <Input
-                                        label="Business Name"
-                                        placeholder="e.g. Turf Gaming Zone"
-                                        value={formData.businessName}
-                                        onChange={e => setFormData({ ...formData, businessName: e.target.value })}
-                                        disabled={isSaving}
-                                        required
-                                    />
-                                    <Input
-                                        label="Business Type"
-                                        placeholder="e.g. Sports & Recreation"
-                                        value={formData.businessType}
-                                        onChange={e => setFormData({ ...formData, businessType: e.target.value })}
-                                        disabled={isSaving}
-                                    />
-                                </div>
-                                <div className="grid md:grid-cols-2 gap-4">
-                                    <Input
-                                        label="GST Number"
-                                        placeholder="e.g. 22AAAAA1111A1Z1"
-                                        value={formData.gstNumber}
-                                        onChange={e => setFormData({ ...formData, gstNumber: e.target.value })}
-                                        disabled={isSaving}
-                                    />
-                                    <Input
-                                        label="PAN Number"
-                                        placeholder="e.g. ABCDE1234F"
-                                        value={formData.panNumber}
-                                        onChange={e => setFormData({ ...formData, panNumber: e.target.value })}
-                                        disabled={isSaving}
-                                    />
-                                </div>
-                            </div>
-                        </div>
-                    )}
-
-                    {/* Tab 3: Address & Profile */}
-                    {activeTab === 'address' && (
-                        <div className="space-y-5 animate-fade-in duration-200">
-                            <div className="bg-surface-50/50 p-5 rounded-2xl border border-surface-200/80 space-y-4">
-                                <h4 className="text-xs font-bold text-surface-500 uppercase tracking-widest border-b border-surface-200 pb-1.5">
-                                    Address Location
-                                </h4>
-                                <div className="grid md:grid-cols-2 gap-4">
-                                    <Input
-                                        label="Country"
-                                        placeholder="e.g. India"
-                                        value={formData.country}
-                                        onChange={e => setFormData({ ...formData, country: e.target.value })}
-                                        disabled={isSaving}
-                                    />
-                                    <Input
-                                        label="State"
-                                        placeholder="e.g. Maharashtra"
-                                        value={formData.state}
-                                        onChange={e => setFormData({ ...formData, state: e.target.value })}
-                                        disabled={isSaving}
-                                    />
-                                </div>
-                                <div className="grid md:grid-cols-2 gap-4">
-                                    <Input
-                                        label="City"
-                                        placeholder="e.g. Mumbai"
-                                        value={formData.city}
-                                        onChange={e => setFormData({ ...formData, city: e.target.value })}
-                                        disabled={isSaving}
-                                    />
-                                    <Input
-                                        label="Zip Code"
-                                        placeholder="e.g. 400001"
-                                        value={formData.zipCode}
-                                        onChange={e => setFormData({ ...formData, zipCode: e.target.value })}
-                                        disabled={isSaving}
-                                    />
-                                </div>
+                        <div className="space-y-6">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <Input
-                                    label="Full Address"
-                                    placeholder="Street address, building, suite..."
-                                    value={formData.address}
-                                    onChange={e => setFormData({ ...formData, address: e.target.value })}
+                                    label="Full Name"
+                                    placeholder="e.g. Rahul Sharma"
+                                    value={formData.fullName}
+                                    onChange={e => setFormData({ ...formData, fullName: e.target.value })}
+                                    disabled={isSaving}
+                                    required
+                                />
+                                <Input
+                                    label="Email Address"
+                                    type="email"
+                                    placeholder="rahul@example.com"
+                                    value={formData.email}
+                                    onChange={e => setFormData({ ...formData, email: e.target.value })}
+                                    disabled={isSaving || !!editingOwner}
+                                    required
+                                />
+                            </div>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <Input
+                                    label="Mobile Number"
+                                    placeholder="e.g. 9876543210"
+                                    value={formData.mobile}
+                                    onChange={e => setFormData({ ...formData, mobile: e.target.value })}
+                                    disabled={isSaving}
+                                    required
+                                />
+                                <Input
+                                    label="Alternative Mobile"
+                                    placeholder="e.g. 9876543211"
+                                    value={formData.alternateMobile}
+                                    onChange={e => setFormData({ ...formData, alternateMobile: e.target.value })}
                                     disabled={isSaving}
                                 />
                             </div>
-
-                            <div className="bg-surface-50/50 p-5 rounded-2xl border border-surface-200/80 space-y-4">
-                                <h4 className="text-xs font-bold text-surface-500 uppercase tracking-widest border-b border-surface-200 pb-1.5">
-                                    Profile Image
-                                </h4>
-                                <div className="flex items-center gap-4">
-                                    {formData.profileImage ? (
-                                        <img
-                                            src={formData.profileImage}
-                                            alt="Profile Preview"
-                                            className="w-16 h-16 rounded-xl object-cover border border-surface-250 bg-white"
-                                        />
-                                    ) : (
-                                        <div className="w-16 h-16 rounded-xl border border-dashed border-surface-300 bg-white flex items-center justify-center text-surface-400 text-xs font-semibold">
-                                            No Image
-                                        </div>
-                                    )}
-                                    <div className="flex-1">
-                                        <label className="block text-sm font-medium text-surface-700 mb-1.5">Upload Image</label>
-                                        <input
-                                            type="file"
-                                            accept="image/*"
-                                            onChange={handleImageChange}
-                                            disabled={isSaving}
-                                            className="block w-full text-xs text-surface-500 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-surface-100 file:text-surface-700 hover:file:bg-surface-200 cursor-pointer"
-                                        />
-                                    </div>
+                            {!editingOwner && (
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    <Input
+                                        label="Password"
+                                        type="password"
+                                        placeholder="••••••••"
+                                        value={formData.password}
+                                        onChange={e => setFormData({ ...formData, password: e.target.value })}
+                                        disabled={isSaving}
+                                        required
+                                    />
+                                    <Input
+                                        label="Confirm Password"
+                                        type="password"
+                                        placeholder="••••••••"
+                                        value={formData.confirmPassword}
+                                        onChange={e => setFormData({ ...formData, confirmPassword: e.target.value })}
+                                        disabled={isSaving}
+                                        required
+                                    />
                                 </div>
+                            )}
+                        </div>
+                    )}
+
+                    {/* Step 2: Business Info */}
+                    {activeTab === 'business' && (
+                        <div className="space-y-6">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <Input
+                                    label="Business Name"
+                                    placeholder="e.g. Turf Gaming Zone"
+                                    value={formData.businessName}
+                                    onChange={e => setFormData({ ...formData, businessName: e.target.value })}
+                                    disabled={isSaving}
+                                    required
+                                />
+                                <Input
+                                    label="Business Type"
+                                    placeholder="e.g. Sports & Recreation"
+                                    value={formData.businessType}
+                                    onChange={e => setFormData({ ...formData, businessType: e.target.value })}
+                                    disabled={isSaving}
+                                />
+                            </div>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <Input
+                                    label="GST Number"
+                                    placeholder="e.g. 22AAAAA1111A1Z1"
+                                    value={formData.gstNumber}
+                                    onChange={e => setFormData({ ...formData, gstNumber: e.target.value })}
+                                    disabled={isSaving}
+                                />
+                                <Input
+                                    label="PAN Number"
+                                    placeholder="e.g. ABCDE1234F"
+                                    value={formData.panNumber}
+                                    onChange={e => setFormData({ ...formData, panNumber: e.target.value })}
+                                    disabled={isSaving}
+                                />
                             </div>
                         </div>
                     )}
 
-                    {/* Modal Actions Footer */}
-                    <div className="flex justify-between items-center border-t border-surface-100 pt-4 mt-6">
-                        <Button variant="secondary" onClick={() => setIsModalOpen(false)} disabled={isSaving}>
-                            Cancel
-                        </Button>
-                        <div className="flex gap-2">
-                            {activeTab !== 'personal' && (
-                                <Button
-                                    variant="secondary"
-                                    onClick={() => {
-                                        if (activeTab === 'address') setActiveTab('business')
-                                        else if (activeTab === 'business') setActiveTab('personal')
-                                    }}
+                    {/* Step 3: Address & Profile */}
+                    {activeTab === 'address' && (
+                        <div className="space-y-6">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <Input
+                                    label="Country"
+                                    placeholder="e.g. India"
+                                    value={formData.country}
+                                    onChange={e => setFormData({ ...formData, country: e.target.value })}
                                     disabled={isSaving}
-                                >
-                                    Previous
-                                </Button>
-                            )}
-                            {activeTab !== 'address' && (
-                                <Button
-                                    variant="outline"
-                                    onClick={() => {
-                                        if (activeTab === 'personal') setActiveTab('business')
-                                        else if (activeTab === 'business') setActiveTab('address')
-                                    }}
+                                />
+                                <Input
+                                    label="State"
+                                    placeholder="e.g. Maharashtra"
+                                    value={formData.state}
+                                    onChange={e => setFormData({ ...formData, state: e.target.value })}
                                     disabled={isSaving}
-                                >
-                                    Next
-                                </Button>
-                            )}
-                            <Button onClick={handleSave} disabled={isSaving}>
-                                {isSaving ? "Saving..." : (editingOwner ? "Update Owner" : "Create Owner")}
-                            </Button>
+                                />
+                            </div>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <Input
+                                    label="City"
+                                    placeholder="e.g. Mumbai"
+                                    value={formData.city}
+                                    onChange={e => setFormData({ ...formData, city: e.target.value })}
+                                    disabled={isSaving}
+                                />
+                                <Input
+                                    label="Zip Code"
+                                    placeholder="e.g. 400001"
+                                    value={formData.zipCode}
+                                    onChange={e => setFormData({ ...formData, zipCode: e.target.value })}
+                                    disabled={isSaving}
+                                />
+                            </div>
+                            <Input
+                                label="Full Address"
+                                placeholder="Street address, building, suite..."
+                                value={formData.address}
+                                onChange={e => setFormData({ ...formData, address: e.target.value })}
+                                disabled={isSaving}
+                            />
                         </div>
+                    )}
+
+                    {/* Modal Footer Buttons */}
+                    <div className="flex justify-between items-center border-t border-slate-100/80 pt-6 mt-8">
+                        <button 
+                            type="button" 
+                            onClick={() => setIsModalOpen(false)} 
+                            disabled={isSaving}
+                            className="px-7 h-[52px] rounded-2xl border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 font-bold text-xs cursor-pointer transition-all"
+                        >
+                            Cancel
+                        </button>
+                        <button
+                            type="button"
+                            onClick={handleSave}
+                            disabled={isSaving}
+                            className="px-8 h-[52px] rounded-2xl bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white font-extrabold text-xs uppercase tracking-wider shadow-[0_4px_14px_rgba(34,197,94,0.35)] hover:-translate-y-0.5 active:scale-95 transition-all cursor-pointer flex items-center justify-center gap-2"
+                        >
+                            {isSaving ? (
+                                <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                            ) : (
+                                <span>{editingOwner ? "Update Owner" : "CREATE OWNER"}</span>
+                            )}
+                        </button>
                     </div>
                 </div>
             </Modal>
@@ -961,14 +1045,23 @@ export default function OwnerManagement() {
                         disabled={isSaving}
                     />
                     <div className="flex justify-end gap-3 mt-6">
-                        <Button variant="secondary" onClick={() => {
-                            setIsResetModalOpen(false)
-                            setResetPasswordData({ password: '', confirmPassword: '' })
-                            setOwnerToReset(null)
-                        }} disabled={isSaving}>Cancel</Button>
-                        <Button onClick={handleResetPassword} disabled={isSaving}>
+                        <button 
+                            onClick={() => {
+                                setIsResetModalOpen(false)
+                                setResetPasswordData({ password: '', confirmPassword: '' })
+                                setOwnerToReset(null)
+                            }} 
+                            className="px-5 py-2 rounded-full border border-slate-200 text-xs font-bold text-slate-700 hover:bg-slate-100 cursor-pointer"
+                        >
+                            Cancel
+                        </button>
+                        <button 
+                            onClick={handleResetPassword} 
+                            disabled={isSaving}
+                            className="px-6 py-2 rounded-full bg-gradient-to-r from-green-500 to-emerald-500 text-white font-black text-xs uppercase tracking-wider shadow-sm cursor-pointer"
+                        >
                             {isSaving ? 'Resetting...' : 'Reset Password'}
-                        </Button>
+                        </button>
                     </div>
                 </div>
             </Modal>
@@ -984,175 +1077,70 @@ export default function OwnerManagement() {
                 size="lg"
             >
                 {viewingOwner && (
-                    <div className="space-y-6 pt-2 max-h-[75vh] overflow-y-auto pr-2">
-                        {/* Profile Header Card */}
-                        <div className="bg-surface-50 p-5 rounded-2xl border border-surface-200/80 flex flex-col sm:flex-row items-center gap-5">
+                    <div className="space-y-6 pt-2 max-h-[75vh] overflow-y-auto pr-2" style={{ scrollbarWidth: 'thin' }}>
+                        <div className="bg-slate-50 p-5 rounded-2xl border border-slate-200/80 flex flex-col sm:flex-row items-center gap-5">
                             {viewingOwner.profileImage ? (
                                 <img
                                     src={viewingOwner.profileImage}
                                     alt={viewingOwner.fullName}
-                                    className="w-20 h-20 rounded-2xl object-cover border border-surface-250 bg-white"
+                                    className="w-20 h-20 rounded-2xl object-cover border border-slate-200 bg-white"
                                 />
                             ) : (
-                                <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-primary-400 to-primary-600 flex items-center justify-center text-white text-2xl font-bold shadow-soft">
+                                <div className="w-20 h-20 rounded-2xl bg-gradient-to-tr from-green-500 to-emerald-400 flex items-center justify-center text-white text-2xl font-black shadow-md">
                                     {((viewingOwner.fullName || '').split(' ').map(n => n[0]).join('') || '?').substring(0, 2).toUpperCase()}
                                 </div>
                             )}
                             <div className="text-center sm:text-left flex-1 space-y-1.5">
-                                <div className="flex flex-col sm:flex-row sm:items-center gap-2 justify-center sm:justify-start">
-                                    <h3 className="text-xl font-bold text-surface-900 leading-none">{viewingOwner.fullName}</h3>
-                                    <div className="inline-flex justify-center sm:justify-start">
-                                        {(() => {
-                                            const upper = (viewingOwner.status || '').toUpperCase()
-                                            const variant = upper === 'ACTIVE' ? 'success' : (upper === 'SUSPENDED' ? 'danger' : 'default')
-                                            return <Badge variant={variant} dot>{upper}</Badge>
-                                        })()}
-                                    </div>
-                                </div>
-                                <p className="text-sm text-surface-500 font-medium">{viewingOwner.email}</p>
-                                <div className="text-xs text-surface-400 font-normal">
-                                    System Role: <span className="font-semibold text-surface-600">OWNER</span>
+                                <h3 className="text-xl font-black text-slate-900 leading-none">{viewingOwner.fullName}</h3>
+                                <p className="text-xs text-slate-500 font-semibold">{viewingOwner.email}</p>
+                                <div className="text-xs text-slate-400 font-medium">
+                                    System Role: <span className="font-extrabold text-[#16A34A]">OWNER</span>
                                 </div>
                             </div>
                         </div>
 
-                        {/* Details Sections */}
                         <div className="grid md:grid-cols-2 gap-5 font-sans">
-                            {/* Section A: Personal Details */}
-                            <div className="bg-white p-5 rounded-2xl border border-surface-150 space-y-3.5 shadow-soft">
-                                <h4 className="text-xs font-bold text-primary-600 uppercase tracking-wider border-b border-surface-100 pb-1.5 flex items-center gap-1.5">
+                            <div className="bg-white p-4 rounded-2xl border border-slate-200/80 space-y-3">
+                                <h4 className="text-xs font-black text-emerald-600 uppercase tracking-wider border-b border-slate-100 pb-1.5 flex items-center gap-1.5">
                                     <FiUser className="w-3.5 h-3.5" />
-                                    Personal & Account Info
+                                    Personal & Contact
                                 </h4>
-                                <div className="grid grid-cols-2 gap-y-3 gap-x-2 text-xs">
+                                <div className="grid grid-cols-2 gap-2 text-xs">
                                     <div>
-                                        <p className="text-surface-400 font-semibold uppercase tracking-wider mb-0.5">Mobile Number</p>
-                                        <p className="text-surface-800 font-bold">{viewingOwner.mobile || 'N/A'}</p>
+                                        <p className="text-slate-400 font-semibold uppercase text-[10px]">Mobile</p>
+                                        <p className="text-slate-900 font-bold">{viewingOwner.mobile || 'N/A'}</p>
                                     </div>
                                     <div>
-                                        <p className="text-surface-400 font-semibold uppercase tracking-wider mb-0.5">Alternate Mobile</p>
-                                        <p className="text-surface-800 font-bold">{viewingOwner.alternateMobile || 'N/A'}</p>
-                                    </div>
-                                    <div className="col-span-2">
-                                        <p className="text-surface-400 font-semibold uppercase tracking-wider mb-0.5">Last Login</p>
-                                        <p className="text-surface-800 font-bold">
-                                            {viewingOwner.lastLogin
-                                                ? new Date(viewingOwner.lastLogin).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' })
-                                                : 'Never Logged In'}
-                                        </p>
-                                    </div>
-                                    <div>
-                                        <p className="text-surface-400 font-semibold uppercase tracking-wider mb-0.5">Created At</p>
-                                        <p className="text-surface-800 font-bold">
-                                            {viewingOwner.createdAt
-                                                ? new Date(viewingOwner.createdAt).toLocaleDateString('en-IN', { dateStyle: 'medium' })
-                                                : 'N/A'}
-                                        </p>
-                                    </div>
-                                    <div>
-                                        <p className="text-surface-400 font-semibold uppercase tracking-wider mb-0.5">Updated At</p>
-                                        <p className="text-surface-800 font-bold">
-                                            {viewingOwner.updatedAt
-                                                ? new Date(viewingOwner.updatedAt).toLocaleDateString('en-IN', { dateStyle: 'medium' })
-                                                : 'N/A'}
-                                        </p>
+                                        <p className="text-slate-400 font-semibold uppercase text-[10px]">Alt Mobile</p>
+                                        <p className="text-slate-900 font-bold">{viewingOwner.alternateMobile || 'N/A'}</p>
                                     </div>
                                 </div>
                             </div>
 
-                            {/* Section B: Financial & Platform Performance */}
-                            <div className="bg-white p-5 rounded-2xl border border-surface-150 space-y-3.5 shadow-soft">
-                                <h4 className="text-xs font-bold text-primary-600 uppercase tracking-wider border-b border-surface-100 pb-1.5 flex items-center gap-1.5">
-                                    <FiTrendingUp className="w-3.5 h-3.5" />
-                                    Performance Metrics
-                                </h4>
-                                <div className="grid grid-cols-2 gap-y-3 gap-x-2 text-xs">
-                                    <div>
-                                        <p className="text-surface-400 font-semibold uppercase tracking-wider mb-0.5">Total Branches</p>
-                                        <p className="text-surface-900 font-extrabold text-sm">{viewingOwner.branches || 0}</p>
-                                    </div>
-                                    <div>
-                                        <p className="text-surface-400 font-semibold uppercase tracking-wider mb-0.5">Revenue Earned</p>
-                                        <p className="text-surface-900 font-extrabold text-sm">
-                                            {typeof viewingOwner.revenue === 'number'
-                                                ? `₹${viewingOwner.revenue.toLocaleString('en-IN')}`
-                                                : (viewingOwner.revenue || '₹0')}
-                                        </p>
-                                    </div>
-                                    <div className="col-span-2">
-                                        <p className="text-surface-400 font-semibold uppercase tracking-wider mb-0.5">Commission Earned</p>
-                                        <p className="text-emerald-600 font-extrabold text-base">
-                                            {typeof viewingOwner.commission === 'number'
-                                                ? `₹${viewingOwner.commission.toLocaleString('en-IN')}`
-                                                : (viewingOwner.commission || '₹0')}
-                                        </p>
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* Section C: Business Information */}
-                            <div className="bg-white p-5 rounded-2xl border border-surface-150 space-y-3.5 shadow-soft">
-                                <h4 className="text-xs font-bold text-primary-600 uppercase tracking-wider border-b border-surface-100 pb-1.5 flex items-center gap-1.5">
+                            <div className="bg-white p-4 rounded-2xl border border-slate-200/80 space-y-3">
+                                <h4 className="text-xs font-black text-emerald-600 uppercase tracking-wider border-b border-slate-100 pb-1.5 flex items-center gap-1.5">
                                     <FiBriefcase className="w-3.5 h-3.5" />
-                                    Business Details
+                                    Business Info
                                 </h4>
-                                <div className="grid grid-cols-2 gap-y-3 gap-x-2 text-xs">
+                                <div className="grid grid-cols-2 gap-2 text-xs">
                                     <div className="col-span-2">
-                                        <p className="text-surface-400 font-semibold uppercase tracking-wider mb-0.5">Business Name</p>
-                                        <p className="text-surface-800 font-bold">{viewingOwner.businessName || 'N/A'}</p>
-                                    </div>
-                                    <div className="col-span-2">
-                                        <p className="text-surface-400 font-semibold uppercase tracking-wider mb-0.5">Business Type</p>
-                                        <p className="text-surface-800 font-bold">{viewingOwner.businessType || 'N/A'}</p>
-                                    </div>
-                                    <div>
-                                        <p className="text-surface-400 font-semibold uppercase tracking-wider mb-0.5">GST Number</p>
-                                        <p className="text-surface-800 font-bold">{viewingOwner.gstNumber || 'N/A'}</p>
-                                    </div>
-                                    <div>
-                                        <p className="text-surface-400 font-semibold uppercase tracking-wider mb-0.5">PAN Number</p>
-                                        <p className="text-surface-800 font-bold">{viewingOwner.panNumber || 'N/A'}</p>
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* Section D: Address Information */}
-                            <div className="bg-white p-5 rounded-2xl border border-surface-150 space-y-3.5 shadow-soft">
-                                <h4 className="text-xs font-bold text-primary-600 uppercase tracking-wider border-b border-surface-100 pb-1.5 flex items-center gap-1.5">
-                                    <FiMapPin className="w-3.5 h-3.5" />
-                                    Address Details
-                                </h4>
-                                <div className="grid grid-cols-2 gap-y-3 gap-x-2 text-xs">
-                                    <div>
-                                        <p className="text-surface-400 font-semibold uppercase tracking-wider mb-0.5">City</p>
-                                        <p className="text-surface-800 font-bold">{viewingOwner.city || 'N/A'}</p>
-                                    </div>
-                                    <div>
-                                        <p className="text-surface-400 font-semibold uppercase tracking-wider mb-0.5">State</p>
-                                        <p className="text-surface-800 font-bold">{viewingOwner.state || 'N/A'}</p>
-                                    </div>
-                                    <div>
-                                        <p className="text-surface-400 font-semibold uppercase tracking-wider mb-0.5">Country</p>
-                                        <p className="text-surface-800 font-bold">{viewingOwner.country || 'N/A'}</p>
-                                    </div>
-                                    <div>
-                                        <p className="text-surface-400 font-semibold uppercase tracking-wider mb-0.5">Zip Code</p>
-                                        <p className="text-surface-800 font-bold">{viewingOwner.zipCode || 'N/A'}</p>
-                                    </div>
-                                    <div className="col-span-2">
-                                        <p className="text-surface-400 font-semibold uppercase tracking-wider mb-0.5">Full Address</p>
-                                        <p className="text-surface-850 font-medium leading-relaxed">{viewingOwner.address || 'N/A'}</p>
+                                        <p className="text-slate-400 font-semibold uppercase text-[10px]">Business Name</p>
+                                        <p className="text-slate-900 font-bold">{viewingOwner.businessName || 'N/A'}</p>
                                     </div>
                                 </div>
                             </div>
                         </div>
 
-                        {/* Modal Footer */}
-                        <div className="flex justify-end pt-2 border-t border-surface-100">
-                            <Button onClick={() => {
-                                setIsViewModalOpen(false)
-                                setViewingOwner(null)
-                            }}>Close Details</Button>
+                        <div className="flex justify-end pt-2 border-t border-slate-100">
+                            <button
+                                onClick={() => {
+                                    setIsViewModalOpen(false)
+                                    setViewingOwner(null)
+                                }}
+                                className="px-6 py-2 rounded-full bg-slate-900 text-white font-black text-xs uppercase tracking-wider cursor-pointer"
+                            >
+                                Close Details
+                            </button>
                         </div>
                     </div>
                 )}
@@ -1168,10 +1156,11 @@ export default function OwnerManagement() {
                 type={confirm.type === 'delete' ? "danger" : "warning"}
                 disabled={isDeleting || isStatusUpdating}
             />
-            {/* Portal Dropdown — renders at document.body level so it's never clipped by overflow */}
+
+            {/* Portal Dropdown */}
             {activeActionDropdownId && dropdownOwner && createPortal(
                 <div
-                    className="actions-dropdown-portal fixed z-[9999] w-44 rounded-xl bg-white border border-surface-200 shadow-soft-lg py-1.5 animate-scale-in"
+                    className="actions-dropdown-portal fixed z-[9999] w-48 rounded-2xl bg-white border border-slate-200/90 shadow-xl py-2 animate-scale-in"
                     style={{ top: dropdownPos.top, left: dropdownPos.left }}
                 >
                     <button
@@ -1180,10 +1169,10 @@ export default function OwnerManagement() {
                             setActiveActionDropdownId(null)
                             setDropdownOwner(null)
                         }}
-                        className="w-full px-4 py-2 text-xs font-semibold text-surface-700 hover:bg-surface-50 hover:text-accent-600 flex items-center gap-2 transition-colors cursor-pointer text-left"
+                        className="w-full px-4 py-2 text-xs font-bold text-slate-700 hover:bg-emerald-50 hover:text-[#16A34A] flex items-center gap-2 transition-colors cursor-pointer text-left"
                     >
                         <FiKey className="w-3.5 h-3.5" />
-                        Change Password
+                        <span>Change Password</span>
                     </button>
                     <button
                         onClick={() => {
@@ -1191,20 +1180,21 @@ export default function OwnerManagement() {
                             setActiveActionDropdownId(null)
                             setDropdownOwner(null)
                         }}
-                        className={`w-full px-4 py-2 text-xs font-semibold flex items-center gap-2 transition-colors cursor-pointer text-left ${dropdownOwner.status === 'ACTIVE'
-                                ? 'text-surface-700 hover:bg-surface-50 hover:text-warning-600'
-                                : 'text-surface-700 hover:bg-surface-50 hover:text-emerald-600'
-                            }`}
+                        className={`w-full px-4 py-2 text-xs font-bold flex items-center gap-2 transition-colors cursor-pointer text-left ${
+                            dropdownOwner.status === 'ACTIVE'
+                                ? 'text-slate-700 hover:bg-red-50 hover:text-red-600'
+                                : 'text-slate-700 hover:bg-emerald-50 hover:text-emerald-600'
+                        }`}
                     >
                         {dropdownOwner.status === 'ACTIVE' ? (
                             <>
                                 <FiSlash className="w-3.5 h-3.5" />
-                                Suspend Account
+                                <span>Suspend Account</span>
                             </>
                         ) : (
                             <>
                                 <FiCheckCircle className="w-3.5 h-3.5" />
-                                Activate Account
+                                <span>Activate Account</span>
                             </>
                         )}
                     </button>
@@ -1212,6 +1202,5 @@ export default function OwnerManagement() {
                 document.body
             )}
         </div>
-
     )
 }

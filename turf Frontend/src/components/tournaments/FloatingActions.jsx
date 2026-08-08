@@ -8,44 +8,44 @@ export default function FloatingActions() {
 
     return (
         <>
-            {/* Sticky Bottom Bar (Mobile/Tablet usually, or persistent) */}
-            <div className="fixed bottom-0 left-0 right-0 z-40 md:hidden bg-slate-950/90 backdrop-blur-xl border-t border-white/10 px-4 py-3 flex items-center justify-between">
-                <div className="text-white font-black uppercase text-[10px] tracking-widest">
-                    128 <span className="text-slate-500">Found</span>
+            {/* Sticky Bottom Bar (Mobile/Tablet) */}
+            <div className="fixed bottom-0 left-0 right-0 z-40 md:hidden bg-white/95 backdrop-blur-xl border-t border-[#E5E7EB] px-4 py-3 flex items-center justify-between shadow-lg">
+                <div className="text-[#111827] font-black uppercase text-[10px] tracking-wider">
+                    128 <span className="text-[#6B7280]">Found</span>
                 </div>
                 <div className="flex gap-2">
-                    <button className="px-3 py-1.5 bg-slate-900 border border-white/10 rounded-lg text-[9px] font-bold text-white uppercase tracking-widest">Sort</button>
-                    <button className="px-3 py-1.5 bg-slate-900 border border-white/10 rounded-lg text-[9px] font-bold text-white uppercase tracking-widest">Map</button>
-                    <button className="px-3 py-1.5 bg-emerald-500 text-slate-950 rounded-lg text-[9px] font-bold uppercase tracking-widest">Filter</button>
+                    <button className="px-3 py-1.5 bg-[#F7F9FC] border border-[#E5E7EB] rounded-xl text-[10px] font-black text-[#111827] uppercase tracking-wider">Sort</button>
+                    <button className="px-3 py-1.5 bg-[#F7F9FC] border border-[#E5E7EB] rounded-xl text-[10px] font-black text-[#111827] uppercase tracking-wider">Map</button>
+                    <button className="px-3.5 py-1.5 bg-[#C8FF2E] border border-[#B5F000] text-[#111827] rounded-xl text-[10px] font-black uppercase tracking-wider shadow-sm">Filter</button>
                 </div>
             </div>
 
             {/* Floating Quick Actions (Desktop) */}
             <div className="fixed bottom-8 right-8 z-50 hidden md:flex flex-col gap-3">
                 <button 
-                    className="w-12 h-12 bg-blue-600 hover:bg-blue-500 text-white rounded-full flex items-center justify-center shadow-[0_5px_20px_rgba(37,99,235,0.4)] transition-all group relative"
+                    className="w-12 h-12 bg-white hover:bg-[#C8FF2E] text-[#111827] rounded-full flex items-center justify-center shadow-[0_4px_20px_rgba(0,0,0,0.08)] border border-[#E5E7EB] transition-all group relative cursor-pointer active:scale-95"
                 >
-                    <HiOutlineChat className="w-5 h-5" />
-                    <span className="absolute right-14 bg-slate-900 text-white text-[10px] font-bold px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none uppercase tracking-widest border border-white/10 whitespace-nowrap">
+                    <HiOutlineChat className="w-5 h-5 text-[#16A34A]" />
+                    <span className="absolute right-14 bg-[#111827] text-white text-[10px] font-black px-2.5 py-1 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none uppercase tracking-wider whitespace-nowrap shadow-md">
                         Support Chat
                     </span>
                 </button>
                 
                 <button 
-                    className="w-12 h-12 bg-amber-500 hover:bg-amber-400 text-slate-950 rounded-full flex items-center justify-center shadow-[0_5px_20px_rgba(245,158,11,0.4)] transition-all group relative"
+                    className="w-12 h-12 bg-[#C8FF2E] hover:bg-[#B5F000] text-[#111827] rounded-full flex items-center justify-center shadow-[0_4px_20px_rgba(200,255,46,0.4)] border border-[#B5F000] transition-all group relative cursor-pointer active:scale-95"
                 >
-                    <HiOutlineUpload className="w-5 h-5" />
-                    <span className="absolute right-14 bg-slate-900 text-white text-[10px] font-bold px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none uppercase tracking-widest border border-white/10 whitespace-nowrap">
+                    <HiOutlineUpload className="w-5 h-5 text-[#111827]" />
+                    <span className="absolute right-14 bg-[#111827] text-white text-[10px] font-black px-2.5 py-1 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none uppercase tracking-wider whitespace-nowrap shadow-md">
                         Host Tournament
                     </span>
                 </button>
 
                 <button 
                     onClick={scrollToTop}
-                    className="w-12 h-12 bg-slate-800 hover:bg-slate-700 text-white rounded-full flex items-center justify-center shadow-lg border border-white/10 transition-all group relative"
+                    className="w-12 h-12 bg-white hover:bg-[#F7F9FC] text-[#111827] rounded-full flex items-center justify-center shadow-[0_4px_20px_rgba(0,0,0,0.08)] border border-[#E5E7EB] transition-all group relative cursor-pointer active:scale-95"
                 >
-                    <HiOutlineArrowUp className="w-5 h-5" />
-                    <span className="absolute right-14 bg-slate-900 text-white text-[10px] font-bold px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none uppercase tracking-widest border border-white/10 whitespace-nowrap">
+                    <HiOutlineArrowUp className="w-5 h-5 text-[#111827]" />
+                    <span className="absolute right-14 bg-[#111827] text-white text-[10px] font-black px-2.5 py-1 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none uppercase tracking-wider whitespace-nowrap shadow-md">
                         Back to Top
                     </span>
                 </button>

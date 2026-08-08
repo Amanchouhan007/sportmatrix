@@ -3,7 +3,6 @@ import { HiMenuAlt4, HiX } from 'react-icons/hi'
 import { useNavigate, useLocation } from 'react-router-dom'
 
 const navLinks = [
-    { label: 'ADMIN', href: '/admin', isPage: true },
     { label: 'FEATURES', href: 'features' },
     { label: 'MODULES', href: 'modules' },
     { label: 'ROLES', href: 'roles' },
@@ -54,10 +53,10 @@ export default function Navbar() {
     }
 
     return (
-        <nav className={`fixed top-0 left-0 right-0 z-[100] transition-all duration-500 ${scrolled ? 'bg-black/40 backdrop-blur-xl border-b border-white/10 py-0 shadow-sm' : 'bg-[rgba(0,0,0,0.35)] backdrop-blur-[6px] py-[11.5px]'}`}>
+        <nav className={`fixed top-0 left-0 right-0 z-[100] transition-all duration-500 ${scrolled ? 'bg-white/95 backdrop-blur-xl border-b border-[#E5E7EB] py-2 shadow-sm' : 'bg-white/85 backdrop-blur-md border-b border-[#E5E7EB] py-3'}`}>
             <div className="max-w-7xl mx-auto px-6 flex items-center justify-between">
                 {/* LOGO: FRESH SPORTS BRANDING */}
-                <div className="flex items-center gap-4 group cursor-pointer" onClick={() => {
+                <div className="flex items-center gap-3 group cursor-pointer" onClick={() => {
                     if (location.pathname !== '/') {
                         navigate('/')
                     } else {
@@ -65,12 +64,11 @@ export default function Navbar() {
                     }
                 }}>
                     <div className="relative">
-                        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#16a34a] to-green-600 flex items-center justify-center font-black text-white text-sm shadow-lg shadow-green-500/30">SM</div>
-                        <div className="absolute inset-0 border border-white/10 -rotate-3 group-hover:scale-110 transition-transform rounded-sm" />
+                        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#16A34A] to-emerald-600 flex items-center justify-center font-black text-white text-sm shadow-md shadow-emerald-500/20">SM</div>
                     </div>
                     <div className="flex flex-col">
-                        <span className="text-xl font-black text-white tracking-[-0.05em] leading-none uppercase italic drop-shadow-md">SportMatrix<span className="text-[#16a34a] text-2xl font-black">.</span></span>
-                        <span className="text-[8px] font-black text-slate-300 tracking-[0.4em] uppercase -mt-0.5 drop-shadow-sm">ELITE_COMMAND</span>
+                        <span className="text-xl font-black text-[#111827] tracking-[-0.05em] leading-none uppercase italic">SportMatrix<span className="text-[#16A34A] text-2xl font-black">.</span></span>
+                        <span className="text-[8px] font-black text-[#6B7280] tracking-[0.4em] uppercase -mt-0.5">ELITE_COMMAND</span>
                     </div>
                 </div>
 
@@ -80,27 +78,27 @@ export default function Navbar() {
                         <button
                             key={link.href}
                             onClick={() => handleNavClick(link)}
-                            className={`text-[10px] font-black tracking-[0.3em] transition-all duration-300 cursor-pointer relative group uppercase drop-shadow-sm ${
-                                link.isPage ? 'text-[#16a34a] hover:text-green-400 font-extrabold' : 'text-slate-200 hover:text-white'
+                            className={`text-[10.5px] font-extrabold tracking-[0.25em] transition-all duration-300 cursor-pointer relative group uppercase ${
+                                link.isPage ? 'text-[#16A34A] font-black' : 'text-[#111827] hover:text-[#16A34A]'
                             }`}
                         >
                             {link.label}
-                            <span className={`absolute -bottom-1 left-0 w-0 h-px bg-[#16a34a] transition-all duration-300 group-hover:w-full ${link.isPage ? 'w-full bg-[#16a34a]' : ''}`} />
+                            <span className={`absolute -bottom-1 left-0 w-0 h-[2px] bg-[#C8FF2E] transition-all duration-300 group-hover:w-full ${link.isPage ? 'w-full bg-[#C8FF2E]' : ''}`} />
                         </button>
                     ))}
                 </div>
 
-                {/* TACTICAL CTA: LIGHT THEME */}
-                <div className="hidden lg:flex items-center gap-4">
+                {/* TACTICAL CTA: LIGHT VOLT THEME */}
+                <div className="hidden lg:flex items-center gap-3">
                     <button
                         onClick={() => navigate('/admin')}
-                        className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-black text-[11px] tracking-[0.2em] uppercase rounded-sm transition-all transform hover:scale-105 active:scale-95 shadow-lg shadow-indigo-600/30 flex items-center gap-1.5 cursor-pointer"
+                        className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-[#111827] font-black text-[10.5px] tracking-[0.2em] uppercase rounded-[14px] border border-[#E5E7EB] transition-all transform hover:scale-105 active:scale-95 flex items-center gap-1.5 cursor-pointer shadow-sm"
                     >
                         <span>⚙️</span> Admin
                     </button>
                     <button
                         onClick={() => scrollTo('cta')}
-                        className="px-8 py-2.5 bg-[#16a34a] text-white font-black text-[11px] tracking-[0.2em] uppercase rounded-sm hover:bg-green-500 transition-all transform hover:scale-105 active:scale-95 shadow-xl shadow-green-600/20"
+                        className="px-6 py-2.5 bg-[#C8FF2E] hover:bg-[#B5F000] text-[#111827] font-black text-[10.5px] tracking-[0.2em] uppercase rounded-[14px] transition-all transform hover:scale-105 active:scale-95 shadow-[0_10px_25px_rgba(200,255,46,0.35)] cursor-pointer"
                     >
                         INITIATE_PRO_OPS
                     </button>
@@ -109,7 +107,7 @@ export default function Navbar() {
                 {/* MOBILE TRIGGER */}
                 <button
                     onClick={() => setMobileOpen(!mobileOpen)}
-                    className="lg:hidden text-white cursor-pointer p-2 hover:bg-white/10 rounded-full transition-colors"
+                    className="lg:hidden text-[#111827] cursor-pointer p-2 hover:bg-slate-100 rounded-full transition-colors"
                     aria-label="Toggle menu"
                 >
                     {mobileOpen ? <HiX className="w-8 h-8" /> : <HiMenuAlt4 className="w-8 h-8" />}

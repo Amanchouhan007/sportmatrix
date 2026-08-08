@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">SportMatrix</string>
+    <string name="title_activity_main">SportMatrix</string>
+    <string name="package_name">com.sportmatrix.app</string>
+    <string name="custom_url_scheme">com.sportmatrix.app</string>
+</resources>

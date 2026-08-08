@@ -36,7 +36,7 @@ export default function TournamentCardPremium({ tournament }) {
     return (
         <div 
             onClick={() => navigate(`/tournaments/${t.id}`)}
-            className="group flex flex-col bg-slate-900 border border-white/10 rounded-2xl overflow-hidden cursor-pointer transition-all duration-300 hover:border-emerald-500/50 hover:shadow-[0_10px_40px_rgba(16,185,129,0.15)] hover:-translate-y-1 relative"
+            className="group flex flex-col bg-white border border-[#E5E7EB] rounded-2xl overflow-hidden cursor-pointer transition-all duration-300 hover:border-[#C8FF2E] hover:shadow-[0_15px_35px_rgba(0,0,0,0.06)] hover:-translate-y-1 relative"
         >
             {/* Top Image Section */}
             <div className="h-44 relative overflow-hidden shrink-0">
@@ -45,25 +45,25 @@ export default function TournamentCardPremium({ tournament }) {
                     alt={t.title} 
                     className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
                 />
-                <div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-transparent to-black/20" />
+                <div className="absolute inset-0 bg-gradient-to-t from-[#111827]/80 via-transparent to-black/20" />
                 
                 {/* Badges Overlay */}
                 <div className="absolute top-3 left-3 flex flex-wrap gap-2">
                     {t.isTrending && (
-                        <div className="bg-orange-500/90 backdrop-blur-md px-2 py-1 rounded text-[8px] font-black uppercase tracking-widest text-white shadow-lg border border-white/20 flex items-center gap-1">
+                        <div className="bg-orange-500 backdrop-blur-md px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-wider text-white shadow-sm flex items-center gap-1">
                             <span>🔥</span> Trending
                         </div>
                     )}
                     {t.isVerified && (
-                        <div className="bg-blue-500/90 backdrop-blur-md px-2 py-1 rounded text-[8px] font-black uppercase tracking-widest text-white shadow-lg border border-white/20 flex items-center gap-1">
-                            <HiOutlineBadgeCheck className="w-3 h-3" /> Verified
+                        <div className="bg-blue-600 backdrop-blur-md px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-wider text-white shadow-sm flex items-center gap-1">
+                            <HiOutlineBadgeCheck className="w-3.5 h-3.5" /> Verified
                         </div>
                     )}
                 </div>
 
                 <div className="absolute top-3 right-3">
-                    <div className="bg-slate-900/80 backdrop-blur-md px-2 py-1 rounded text-[9px] font-black uppercase tracking-widest text-emerald-400 border border-emerald-500/30 flex items-center gap-1">
-                        <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                    <div className="bg-[#C8FF2E] border border-[#B5F000] px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-wider text-[#111827] shadow-sm flex items-center gap-1.5">
+                        <div className="w-1.5 h-1.5 rounded-full bg-[#16A34A] animate-pulse" />
                         {t.status}
                     </div>
                 </div>
@@ -71,91 +71,91 @@ export default function TournamentCardPremium({ tournament }) {
 
             {/* Content Section */}
             <div className="p-4 flex flex-col flex-1 relative z-10">
-                <h3 className="text-lg font-black text-white italic tracking-tighter uppercase leading-tight mb-2 group-hover:text-emerald-400 transition-colors line-clamp-1">
+                <h3 className="text-base font-black text-[#111827] tracking-tight uppercase leading-tight mb-3 group-hover:text-[#16A34A] transition-colors line-clamp-1">
                     {t.title}
                 </h3>
                 
                 {/* Meta Grid */}
                 <div className="grid grid-cols-2 gap-y-2.5 gap-x-2 mb-4">
-                    <div className="flex items-center gap-1.5 text-slate-300">
-                        <HiStar className="w-3.5 h-3.5 text-amber-400 shrink-0" />
-                        <span className="text-[10px] font-bold">{t.rating} <span className="text-slate-500 font-normal">(42 Reviews)</span></span>
+                    <div className="flex items-center gap-1.5 text-[#111827]">
+                        <HiStar className="w-3.5 h-3.5 text-amber-500 shrink-0" />
+                        <span className="text-[11px] font-bold">{t.rating} <span className="text-[#6B7280] font-medium">(42)</span></span>
                     </div>
-                    <div className="flex items-center gap-1.5 text-slate-300">
-                        <HiUserGroup className="w-3.5 h-3.5 text-blue-400 shrink-0" />
-                        <span className="text-[10px] font-bold">{t.registeredTeams}/{t.maxTeams} Teams</span>
+                    <div className="flex items-center gap-1.5 text-[#111827]">
+                        <HiUserGroup className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+                        <span className="text-[11px] font-bold">{t.registeredTeams}/{t.maxTeams} Teams</span>
                     </div>
-                    <div className="flex items-center gap-1.5 text-slate-300">
-                        <HiLocationMarker className="w-3.5 h-3.5 text-rose-400 shrink-0" />
-                        <span className="text-[10px] font-bold truncate pr-2">{t.location}</span>
+                    <div className="flex items-center gap-1.5 text-[#111827]">
+                        <HiLocationMarker className="w-3.5 h-3.5 text-rose-500 shrink-0" />
+                        <span className="text-[11px] font-bold truncate pr-2">{t.location}</span>
                     </div>
-                    <div className="flex items-center gap-1.5 text-slate-300">
-                        <HiCalendar className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-                        <span className="text-[10px] font-bold">{t.date}</span>
+                    <div className="flex items-center gap-1.5 text-[#111827]">
+                        <HiCalendar className="w-3.5 h-3.5 text-[#16A34A] shrink-0" />
+                        <span className="text-[11px] font-bold">{t.date}</span>
                     </div>
-                    <div className="flex items-center gap-1.5 text-slate-300">
-                        <HiClock className="w-3.5 h-3.5 text-purple-400 shrink-0" />
-                        <span className="text-[10px] font-bold">{t.time}</span>
+                    <div className="flex items-center gap-1.5 text-[#111827]">
+                        <HiClock className="w-3.5 h-3.5 text-purple-600 shrink-0" />
+                        <span className="text-[11px] font-bold">{t.time}</span>
                     </div>
-                    <div className="flex items-center gap-1.5 text-slate-300">
-                        <span className="text-[10px] font-bold bg-slate-800 text-slate-300 px-1.5 py-0.5 rounded border border-slate-700">🎯 {t.level}</span>
+                    <div className="flex items-center gap-1.5 text-[#111827]">
+                        <span className="text-[10px] font-black bg-[#F7F9FC] text-[#111827] px-2 py-0.5 rounded-md border border-[#E5E7EB]">🎯 {t.level}</span>
                     </div>
                 </div>
 
                 {/* Progress Bar */}
-                <div className="mb-4 bg-slate-950 p-2.5 rounded-lg border border-white/5">
+                <div className="mb-4 bg-[#F7F9FC] p-3 rounded-xl border border-[#E5E7EB]">
                     <div className="flex justify-between items-end mb-1.5">
-                        <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">{t.registeredTeams} Registered</span>
-                        <span className="text-[10px] font-black text-emerald-400">{fillPercentage}% Filled</span>
+                        <span className="text-[10px] font-bold text-[#6B7280] uppercase tracking-wider">{t.registeredTeams} Registered</span>
+                        <span className="text-[10px] font-black text-[#16A34A]">{fillPercentage}% Filled</span>
                     </div>
-                    <div className="w-full h-1.5 bg-slate-800 rounded-full overflow-hidden">
+                    <div className="w-full h-2 bg-[#E5E7EB] rounded-full overflow-hidden">
                         <div 
-                            className="h-full bg-gradient-to-r from-emerald-500 to-teal-400 rounded-full"
+                            className="h-full bg-[#C8FF2E] rounded-full shadow-[0_0_10px_rgba(200,255,46,0.6)]"
                             style={{ width: `${fillPercentage}%` }}
                         />
                     </div>
-                    <div className="mt-2 text-[9px] font-bold text-amber-500 uppercase tracking-widest flex items-center gap-1">
+                    <div className="mt-2 text-[10px] font-bold text-amber-600 uppercase tracking-wider flex items-center gap-1">
                         <span>⏳</span> Registration Ends in {t.daysLeft} Days
                     </div>
                 </div>
 
                 {/* Prizes & Fee */}
-                <div className="flex justify-between items-center mb-4 pb-4 border-b border-white/5">
+                <div className="flex justify-between items-center mb-4 pb-3 border-b border-[#E5E7EB]">
                     <div>
-                        <div className="text-[8px] font-bold text-slate-500 uppercase tracking-widest mb-0.5">Prize Pool</div>
-                        <div className="text-sm font-black text-amber-400 flex items-center gap-1">
+                        <div className="text-[9px] font-bold text-[#6B7280] uppercase tracking-wider mb-0.5">Prize Pool</div>
+                        <div className="text-sm font-black text-[#111827] flex items-center gap-1">
                             🏆 {t.prize}
                         </div>
                     </div>
                     <div className="text-right">
-                        <div className="text-[8px] font-bold text-slate-500 uppercase tracking-widest mb-0.5">Entry Fee</div>
-                        <div className="text-sm font-black text-white">💰 ₹{t.entryFee}</div>
+                        <div className="text-[9px] font-bold text-[#6B7280] uppercase tracking-wider mb-0.5">Entry Fee</div>
+                        <div className="text-sm font-black text-[#16A34A]">💰 ₹{t.entryFee}</div>
                     </div>
                 </div>
 
                 {/* Organizer */}
-                <div className="flex items-center gap-2 mb-5">
-                    <div className="w-6 h-6 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center shrink-0">
-                        <span className="text-[10px] font-bold text-slate-300">{t.organizer.charAt(0)}</span>
+                <div className="flex items-center gap-2 mb-4">
+                    <div className="w-6 h-6 rounded-full bg-[#F7F9FC] border border-[#E5E7EB] flex items-center justify-center shrink-0">
+                        <span className="text-[10px] font-black text-[#111827]">{t.organizer.charAt(0)}</span>
                     </div>
                     <div className="flex-1">
-                        <div className="text-[8px] text-slate-500 uppercase font-bold tracking-widest leading-none mb-0.5">Hosted By</div>
-                        <div className="text-[10px] font-black text-white flex items-center gap-1">
-                            {t.organizer} <HiOutlineBadgeCheck className="w-3 h-3 text-blue-400" />
+                        <div className="text-[9px] text-[#6B7280] uppercase font-bold tracking-wider leading-none mb-0.5">Hosted By</div>
+                        <div className="text-[11px] font-black text-[#111827] flex items-center gap-1">
+                            {t.organizer} <HiOutlineBadgeCheck className="w-3.5 h-3.5 text-blue-600" />
                         </div>
                     </div>
                 </div>
 
                 {/* Bottom Actions */}
                 <div className="mt-auto flex flex-col gap-3">
-                    <div className="flex items-center gap-4 text-slate-400">
-                        <button onClick={(e) => { e.stopPropagation(); }} className="flex items-center gap-1 hover:text-rose-400 transition-colors text-[9px] font-bold uppercase tracking-widest">
+                    <div className="flex items-center gap-4 text-[#6B7280]">
+                        <button onClick={(e) => { e.stopPropagation(); }} className="flex items-center gap-1 hover:text-rose-500 transition-colors text-[10px] font-bold uppercase tracking-wider">
                             <HiOutlineHeart className="w-3.5 h-3.5" /> Save
                         </button>
-                        <button onClick={(e) => { e.stopPropagation(); }} className="flex items-center gap-1 hover:text-blue-400 transition-colors text-[9px] font-bold uppercase tracking-widest">
+                        <button onClick={(e) => { e.stopPropagation(); }} className="flex items-center gap-1 hover:text-blue-600 transition-colors text-[10px] font-bold uppercase tracking-wider">
                             <HiOutlineShare className="w-3.5 h-3.5" /> Share
                         </button>
-                        <button onClick={(e) => { e.stopPropagation(); }} className="flex items-center gap-1 hover:text-amber-400 transition-colors text-[9px] font-bold uppercase tracking-widest ml-auto">
+                        <button onClick={(e) => { e.stopPropagation(); }} className="flex items-center gap-1 hover:text-amber-500 transition-colors text-[10px] font-bold uppercase tracking-wider ml-auto">
                             <HiOutlineSwitchHorizontal className="w-3.5 h-3.5" /> Compare
                         </button>
                     </div>
@@ -163,13 +163,13 @@ export default function TournamentCardPremium({ tournament }) {
                     <div className="flex gap-2">
                         <button 
                             onClick={(e) => { e.stopPropagation(); navigate(`/tournaments/${t.id}`); }}
-                            className="flex-1 py-2 bg-slate-800 hover:bg-slate-700 text-white text-[10px] font-black uppercase tracking-widest rounded-lg transition-colors border border-white/5"
+                            className="flex-1 py-2 bg-[#F7F9FC] hover:bg-[#E5E7EB] text-[#111827] text-[11px] font-black uppercase tracking-wider rounded-xl transition-colors border border-[#E5E7EB] active:scale-95"
                         >
                             View
                         </button>
                         <button 
                             onClick={(e) => { e.stopPropagation(); navigate(`/tournaments/${t.id}/register`); }}
-                            className="flex-1 py-2 bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-[10px] font-black uppercase tracking-widest rounded-lg transition-colors shadow-[0_0_15px_rgba(16,185,129,0.3)]"
+                            className="flex-1 py-2 bg-[#C8FF2E] hover:bg-[#B5F000] text-[#111827] text-[11px] font-black uppercase tracking-wider rounded-xl transition-colors border border-[#B5F000] shadow-sm active:scale-95"
                         >
                             Join Now
                         </button>

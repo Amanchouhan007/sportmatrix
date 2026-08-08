@@ -5,7 +5,6 @@ import Button from '../components/ui/Button'
 
 const navLinks = [
     { label: 'Home', to: '/' },
-    { label: 'Admin', to: '/admin' },
     { label: 'Turfs', to: '/turfs' },
     { label: 'Tournaments', to: '/tournaments' },
     { label: 'Membership', to: '/membership' },
@@ -28,15 +27,32 @@ export default function WebsiteLayout({ children }) {
     }, [])
 
     return (
-        <div className="min-h-screen bg-surface-50 overflow-x-clip">
-            {/* Navbar: Transparent to Solid Transition */}
-            <nav className={`fixed top-0 inset-x-0 z-50 transition-all duration-[400ms] ${isScrolled ? 'bg-[#0f172a] shadow-[0_4px_20px_rgba(0,0,0,0.4)] border-b border-white/5 py-0' : 'bg-transparent py-0'}`}>
+        <div 
+            style={{ 
+                background: 'radial-gradient(circle at top left, #F3FFF5 0%, #FFFFFF 50%), radial-gradient(circle at bottom right, #F4FFF7 0%, transparent 40%)' 
+            }} 
+            className="min-h-screen overflow-x-clip relative"
+        >
+            {/* Ambient Background Glow Blobs */}
+            <div className="fixed top-0 left-0 w-[500px] h-[500px] bg-[#16A34A]/5 rounded-full blur-3xl pointer-events-none -z-10" />
+            <div className="fixed bottom-0 right-0 w-[600px] h-[600px] bg-[#C8FF2E]/10 rounded-full blur-3xl pointer-events-none -z-10" />
 
-                <div className="w-full px-5 md:px-10 lg:px-20 h-[48px] flex items-center justify-between relative z-10">
+            {/* Navbar: High Contrast Light Glass Nav */}
+            <nav 
+                style={{
+                    background: 'rgba(255, 255, 255, 0.82)',
+                    backdropFilter: 'blur(18px)',
+                    WebkitBackdropFilter: 'blur(18px)',
+                    borderBottom: '1px solid rgba(90, 200, 120, 0.12)'
+                }}
+                className={`fixed top-0 inset-x-0 z-50 transition-all duration-300 ${isScrolled ? 'shadow-sm py-0' : 'py-0'}`}
+            >
+
+                <div className="w-full px-5 md:px-10 lg:px-16 h-[58px] flex items-center justify-between relative z-10">
                     {/* Logo */}
                     <NavLink to="/" className="flex items-center gap-2.5 group shrink-0">
-                        <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center font-black text-white text-sm shadow-[0_0_15px_rgba(16,185,129,0.4)] group-hover:scale-105 transition-transform">SM</div>
-                        <span className="text-xl font-black text-white tracking-[-0.05em] leading-none uppercase italic" style={{ textShadow: '0 2px 10px rgba(0,0,0,0.5)' }}>SportMatrix<span className="text-emerald-500 text-2xl font-black">.</span></span>
+                        <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#16A34A] to-emerald-600 flex items-center justify-center font-black text-white text-sm shadow-md group-hover:scale-105 transition-transform">SM</div>
+                        <span className="text-xl font-black text-[#111827] tracking-[-0.05em] leading-none uppercase italic">SportMatrix<span className="text-[#16A34A] text-2xl font-black">.</span></span>
                     </NavLink>
 
                     {/* Nav Links (Absolutely centered on desktop) */}
@@ -48,16 +64,15 @@ export default function WebsiteLayout({ children }) {
                                 className={({ isActive }) => 
                                     `relative group text-[11px] font-black tracking-widest uppercase transition-all duration-300 py-2 ${
                                         isActive 
-                                            ? 'text-white' 
-                                            : 'text-slate-300 hover:text-white'
+                                            ? 'text-[#16A34A]' 
+                                            : 'text-[#111827] hover:text-[#16A34A]'
                                     }`
                                 } 
-                                style={{ textShadow: '0 2px 4px rgba(0,0,0,0.8)' }}
                             >
                                 {({ isActive }) => (
                                     <>
                                         {link.label}
-                                        <span className={`absolute -bottom-1 left-0 w-full h-[3px] bg-emerald-500 shadow-[0_0_10px_#10b981] transform origin-left transition-transform duration-300 ease-out ${
+                                        <span className={`absolute -bottom-1 left-0 w-full h-[3px] bg-[#16A34A] shadow-sm transform origin-left transition-transform duration-300 ease-out ${
                                             isActive ? 'scale-x-100' : 'scale-x-0 group-hover:scale-x-100'
                                         }`} />
                                     </>
@@ -66,83 +81,78 @@ export default function WebsiteLayout({ children }) {
                         ))}
                     </div>
 
-                    {/* Auth Buttons (Desktop) */}
+                    {/* Auth Buttons (Desktop) - Admin Button Removed */}
                     <div className="hidden lg:flex items-center gap-3 shrink-0">
-                        <Button variant="outline" size="sm" onClick={() => navigate('/admin')} className="font-black text-[10px] tracking-widest uppercase px-4 border-indigo-500/40 text-indigo-300 hover:border-indigo-400 hover:text-white hover:bg-indigo-600/30 transition-all shadow-lg backdrop-blur-sm flex items-center gap-1">⚙️ Admin</Button>
-                        <Button variant="outline" size="sm" onClick={() => navigate('/login')} className="font-black text-[10px] tracking-widest uppercase px-5 border-white/20 text-white hover:border-[#00E6A7] hover:text-[#00E6A7] hover:bg-[#00E6A7]/10 transition-all shadow-lg backdrop-blur-sm">Log In</Button>
-                        <div className="relative group">
-                            <div className="absolute inset-0 bg-[#00E6A7] opacity-0 blur-xl rounded-full group-hover:opacity-50 transition-opacity duration-500" />
-                            <Button size="sm" onClick={() => navigate('/register')} className="relative bg-gradient-to-r from-[#00E6A7] to-[#00C2FF] text-slate-950 font-black text-[10px] tracking-widest uppercase px-6 border border-[#00E6A7] rounded-full shadow-[0_0_20px_rgba(0,230,167,0.35)] hover:from-[#00c892] hover:to-[#00b0e6] transition-all transform hover:scale-[1.03]">Get Started</Button>
-                        </div>
+                        <Button variant="outline" size="sm" onClick={() => navigate('/login')} className="font-black text-[10px] tracking-widest uppercase px-5 border-[#E5E7EB] text-[#111827] hover:border-[#16A34A] hover:text-[#16A34A] hover:bg-slate-50 transition-all rounded-[14px]">Log In</Button>
+                        <Button size="sm" onClick={() => navigate('/register')} className="bg-[#C8FF2E] hover:bg-[#B5F000] text-[#111827] font-black text-[10px] tracking-widest uppercase px-6 border border-[#B5F000] rounded-full shadow-[0_12px_25px_rgba(184,255,44,0.28)] transition-all transform hover:scale-[1.03]">Get Started</Button>
                     </div>
 
                     {/* Mobile Toggle */}
-                    <button onClick={() => setMobileOpen(!mobileOpen)} className="lg:hidden p-2 rounded-lg hover:bg-white/10 cursor-pointer drop-shadow-md shrink-0" aria-label="Toggle menu">
-                        {mobileOpen ? <HiX className="w-6 h-6 text-white" /> : <HiMenu className="w-6 h-6 text-white" />}
+                    <button onClick={() => setMobileOpen(!mobileOpen)} className="lg:hidden p-2 rounded-lg hover:bg-slate-100 cursor-pointer shrink-0" aria-label="Toggle menu">
+                        {mobileOpen ? <HiX className="w-6 h-6 text-[#111827]" /> : <HiMenu className="w-6 h-6 text-[#111827]" />}
                     </button>
                 </div>
 
                 {mobileOpen && (
-                    <div className="lg:hidden bg-slate-950 border-t border-white/10 px-6 pb-6 pt-3 space-y-1 fade-up shadow-2xl">
+                    <div className="lg:hidden bg-white/95 backdrop-blur-xl border-t border-[#00A651]/12 px-6 pb-6 pt-3 space-y-1 fade-up shadow-xl">
                         {navLinks.map((link) => (
-                            <NavLink key={link.to} to={link.to} onClick={() => setMobileOpen(false)} className={({ isActive }) => `block px-4 py-3 rounded-sm text-[11px] font-black uppercase tracking-widest ${isActive ? 'bg-[#00E6A7]/10 text-[#00E6A7] border-l-2 border-[#00E6A7]' : 'text-slate-400 hover:bg-white/5 hover:text-white'}`}>
+                            <NavLink key={link.to} to={link.to} onClick={() => setMobileOpen(false)} className={({ isActive }) => `block px-4 py-3 rounded-md text-[11px] font-black uppercase tracking-widest ${isActive ? 'bg-[#C8FF2E]/30 text-[#111827] border-l-4 border-[#16A34A]' : 'text-[#111827] hover:bg-slate-50'}`}>
                                 {({ isActive }) => (
                                     <>{link.label}</>
                                 )}
                             </NavLink>
                         ))}
-                        <div className="pt-5 space-y-3 border-t border-white/10 mt-3">
-                            <button className="w-full py-3 bg-indigo-600 hover:bg-indigo-500 text-white font-black text-[10px] tracking-widest uppercase rounded-lg shadow-md transition-all flex items-center justify-center gap-1.5" onClick={() => { navigate('/admin'); setMobileOpen(false) }}>⚙️ Admin Dashboard</button>
-                            <button className="w-full py-3 border border-white/20 text-white font-black text-[10px] tracking-widest uppercase rounded-lg hover:border-[#00E6A7] hover:text-[#00E6A7] transition-all" onClick={() => { navigate('/login'); setMobileOpen(false) }}>Log In</button>
-                            <button className="w-full py-3 bg-gradient-to-r from-[#00E6A7] to-[#00C2FF] text-slate-950 font-black text-[10px] tracking-widest uppercase rounded-lg shadow-[0_0_20px_rgba(0,230,167,0.35)] hover:from-[#00c892] hover:to-[#00b0e6] transition-all" onClick={() => { navigate('/register'); setMobileOpen(false) }}>Get Started</button>
+                        <div className="pt-4 space-y-2.5 border-t border-[#E5E7EB] mt-3">
+                            <button className="w-full py-3 border border-[#E5E7EB] text-[#111827] font-black text-[10px] tracking-widest uppercase rounded-[14px] hover:border-[#16A34A] hover:text-[#16A34A] transition-all" onClick={() => { navigate('/login'); setMobileOpen(false) }}>Log In</button>
+                            <button className="w-full py-3 bg-[#C8FF2E] hover:bg-[#B5F000] text-[#111827] font-black text-[10px] tracking-widest uppercase rounded-full shadow-[0_12px_25px_rgba(184,255,44,0.28)] transition-all" onClick={() => { navigate('/register'); setMobileOpen(false) }}>Get Started</button>
                         </div>
                     </div>
                 )}
             </nav>
 
-            <main>{children}</main>
+            <main className="relative z-10">{children}</main>
 
-            <footer className="bg-slate-950 border-t border-slate-900/60">
-                <div className="max-w-7xl mx-auto px-6 py-8">
+            <footer className="bg-gradient-to-b from-white via-[#F8FFF9] to-[#F3FFF5] border-t border-[#00A651]/12 text-[#111827] relative z-10">
+                <div className="max-w-7xl mx-auto px-6 py-12">
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-8">
                         <div className="lg:col-span-2 space-y-3">
                             <div className="flex items-center gap-2">
-                                <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center font-black text-white text-xs shadow-[0_0_15px_rgba(16,185,129,0.3)]">SM</div>
-                                <span className="text-lg font-black text-white tracking-[-0.05em] uppercase italic">SportMatrix<span className="text-emerald-500">.</span></span>
+                                <div className="w-8 h-8 rounded-xl bg-[#C8FF2E] border border-[#B5F000] flex items-center justify-center font-black text-[#111827] text-xs shadow-sm">SM</div>
+                                <span className="text-lg font-black text-[#111827] tracking-[-0.05em] uppercase italic">SportMatrix<span className="text-[#16A34A]">.</span></span>
                             </div>
-                            <p className="text-[13px] font-medium text-slate-400 max-w-xs leading-relaxed">The complete digital operating system for sports turfs. Manage everything from one platform.</p>
+                            <p className="text-[13px] font-semibold text-[#6B7280] max-w-xs leading-relaxed">The complete digital operating system for sports turfs. Manage everything from one platform.</p>
                         </div>
                         
                         <div>
-                            <h4 className="text-xs font-black text-white uppercase tracking-widest mb-3">Quick Links</h4>
+                            <h4 className="text-xs font-black text-[#111827] uppercase tracking-widest mb-3">Quick Links</h4>
                             <ul className="space-y-2">
-                                <li><NavLink to="/" className="text-[13px] font-bold text-slate-400 hover:text-emerald-400 transition-colors">Home</NavLink></li>
-                                <li><NavLink to="/turfs" className="text-[13px] font-bold text-slate-400 hover:text-emerald-400 transition-colors">Explore Turfs</NavLink></li>
-                                <li><NavLink to="/tournaments" className="text-[13px] font-bold text-slate-400 hover:text-emerald-400 transition-colors">Tournaments</NavLink></li>
-                                <li><NavLink to="/membership" className="text-[13px] font-bold text-slate-400 hover:text-emerald-400 transition-colors">Membership Plans</NavLink></li>
-                                <li><NavLink to="/contact" className="text-[13px] font-bold text-slate-400 hover:text-emerald-400 transition-colors">Contact Us</NavLink></li>
+                                <li><NavLink to="/" className="text-[13px] font-bold text-[#6B7280] hover:text-[#16A34A] transition-colors">Home</NavLink></li>
+                                <li><NavLink to="/turfs" className="text-[13px] font-bold text-[#6B7280] hover:text-[#16A34A] transition-colors">Explore Turfs</NavLink></li>
+                                <li><NavLink to="/tournaments" className="text-[13px] font-bold text-[#6B7280] hover:text-[#16A34A] transition-colors">Tournaments</NavLink></li>
+                                <li><NavLink to="/membership" className="text-[13px] font-bold text-[#6B7280] hover:text-[#16A34A] transition-colors">Membership Plans</NavLink></li>
+                                <li><NavLink to="/contact" className="text-[13px] font-bold text-[#6B7280] hover:text-[#16A34A] transition-colors">Contact Us</NavLink></li>
                             </ul>
                         </div>
 
                         <div>
-                            <h4 className="text-xs font-black text-white uppercase tracking-widest mb-3">Subscription</h4>
+                            <h4 className="text-xs font-black text-[#111827] uppercase tracking-widest mb-3">Subscription</h4>
                             <ul className="space-y-2">
-                                <li><NavLink to="/membership" className="text-[13px] font-bold text-slate-400 hover:text-emerald-400 transition-colors">7-Day Free Trial</NavLink></li>
-                                <li><NavLink to="/membership" className="text-[13px] font-bold text-slate-400 hover:text-emerald-400 transition-colors">Basic Plan</NavLink></li>
-                                <li><NavLink to="/membership" className="text-[13px] font-bold text-slate-400 hover:text-emerald-400 transition-colors">Premium Plan</NavLink></li>
+                                <li><NavLink to="/membership" className="text-[13px] font-bold text-[#6B7280] hover:text-[#16A34A] transition-colors">7-Day Free Trial</NavLink></li>
+                                <li><NavLink to="/membership" className="text-[13px] font-bold text-[#6B7280] hover:text-[#16A34A] transition-colors">Basic Plan</NavLink></li>
+                                <li><NavLink to="/membership" className="text-[13px] font-bold text-[#6B7280] hover:text-[#16A34A] transition-colors">Premium Plan</NavLink></li>
                             </ul>
                         </div>
 
                         <div>
-                            <h4 className="text-xs font-black text-white uppercase tracking-widest mb-3">Sports</h4>
+                            <h4 className="text-xs font-black text-[#111827] uppercase tracking-widest mb-3">Sports</h4>
                             <ul className="space-y-2">
-                                <li><NavLink to="/turfs?sport=Football" className="text-[13px] font-bold text-slate-400 hover:text-emerald-400 transition-colors">Football Turfs</NavLink></li>
-                                <li><NavLink to="/turfs?sport=Cricket" className="text-[13px] font-bold text-slate-400 hover:text-emerald-400 transition-colors">Cricket Turfs</NavLink></li>
+                                <li><NavLink to="/turfs?sport=Football" className="text-[13px] font-bold text-[#6B7280] hover:text-[#16A34A] transition-colors">Football Turfs</NavLink></li>
+                                <li><NavLink to="/turfs?sport=Cricket" className="text-[13px] font-bold text-[#6B7280] hover:text-[#16A34A] transition-colors">Cricket Turfs</NavLink></li>
                             </ul>
                         </div>
                     </div>
                     
-                    <div className="mt-8 pt-4 border-t border-slate-900/60 text-center text-[11px] text-slate-500">
+                    <div className="mt-10 pt-6 border-t border-[#16A34A]/15 text-center text-[11px] font-semibold text-[#6B7280]">
                         © {new Date().getFullYear()} SportMatrix. All rights reserved.
                     </div>
                 </div>

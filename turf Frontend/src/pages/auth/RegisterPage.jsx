@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
+import { HiArrowLeft } from 'react-icons/hi'
 import Button from '../../components/ui/Button'
 import Input from '../../components/ui/Input'
 
@@ -17,7 +18,15 @@ export default function RegisterPage() {
     }
 
     return (
-        <div className="min-h-screen bg-surface-50 flex items-center justify-center p-8">
+        <div className="min-h-screen bg-surface-50 flex items-center justify-center p-8 relative">
+            {/* Back to Home Button */}
+            <Link 
+                to="/" 
+                className="absolute top-6 left-6 inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white hover:bg-slate-100 border border-slate-200 text-slate-700 hover:text-slate-900 font-bold text-xs tracking-wide transition-all z-50 shadow-sm group"
+            >
+                <HiArrowLeft className="w-4 h-4 transition-transform group-hover:-translate-x-1 text-emerald-600" />
+                <span>Back to Home</span>
+            </Link>
             <div className="w-full max-w-md">
                 <div className="flex flex-col items-center mb-8">
                     <div className="w-10 h-10 rounded-xl bg-primary-600 flex items-center justify-center font-bold text-white text-lg">SM</div>

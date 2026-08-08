@@ -49,30 +49,29 @@ export default function TournamentListPage() {
     });
 
     return (
-        <div className="min-h-screen bg-slate-950 pt-[88px] pb-20 relative overflow-hidden">
-            {/* Background elements */}
-            <div className="absolute inset-x-0 top-0 h-[60vh] z-0 pointer-events-none">
-                <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-10" />
-                <div className="absolute inset-0 bg-gradient-to-b from-slate-900/40 via-slate-950/90 to-slate-950" />
+        <div className="min-h-screen bg-white text-[#111827] pt-[72px] md:pt-[78px] pb-20 relative overflow-hidden">
+            {/* Ambient background glows */}
+            <div className="fixed inset-0 z-0 overflow-hidden pointer-events-none">
+                <div className="absolute top-[-10%] left-[-10%] w-[50vw] h-[50vw] bg-[#C8FF2E]/10 blur-[130px] rounded-full pointer-events-none" />
+                <div className="absolute bottom-[-10%] right-[-10%] w-[40vw] h-[40vw] bg-[#16A34A]/5 blur-[120px] rounded-full pointer-events-none" />
             </div>
 
+            <div className="max-w-[1400px] mx-auto px-5 md:px-8 relative z-10 pt-4">
 
-
-            <div className="max-w-[1400px] mx-auto px-5 md:px-8 relative z-10">
                 {/* Filter Pills above grid */}
-                <div className="flex justify-between items-end mb-6 border-b border-white/5 pb-4 mt-8">
-                    <h2 className="text-xl font-black text-white italic uppercase tracking-tighter">
-                        Active Tournaments <span className="text-slate-500 font-medium text-sm not-italic tracking-normal">({filtered.length})</span>
+                <div className="flex justify-between items-center mb-6 border-b border-[#E5E7EB] pb-4 mt-6">
+                    <h2 className="text-xl font-black text-[#111827] uppercase tracking-tight">
+                        Active Tournaments
                     </h2>
                     
-                    <div className="flex flex-wrap items-center gap-2 bg-slate-900/60 p-1.5 rounded-full border border-white/10 backdrop-blur-xl">
+                    <div className="flex flex-wrap items-center gap-1.5 bg-[#F7F9FC] p-1.5 rounded-full border border-[#E5E7EB] shadow-xs">
                         {['All', 'Running', 'Upcoming', 'Closed'].map(f => (
                             <button
                                 key={f}
                                 onClick={() => setFilter(f)}
-                                className={`px-4 py-1.5 rounded-full text-[10px] font-black tracking-widest uppercase transition-all duration-300 ${filter === f
-                                    ? 'bg-emerald-500 text-slate-950 shadow-[0_0_15px_rgba(16,185,129,0.3)]'
-                                    : 'text-slate-400 hover:text-white hover:bg-white/5'
+                                className={`px-4 py-1.5 rounded-full text-[11px] font-black tracking-wider uppercase transition-all duration-300 cursor-pointer ${filter === f
+                                    ? 'bg-[#C8FF2E] text-[#111827] border border-[#B5F000] shadow-sm'
+                                    : 'text-[#6B7280] hover:text-[#111827] hover:bg-white'
                                     }`}
                             >
                                 {f}
@@ -85,7 +84,7 @@ export default function TournamentListPage() {
                 {loading && (
                     <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                         {[...Array(8)].map((_, i) => (
-                            <div key={i} className="bg-slate-900 border border-white/10 rounded-2xl overflow-hidden animate-pulse h-[400px]" />
+                            <div key={i} className="bg-white border border-[#E5E7EB] rounded-2xl overflow-hidden animate-pulse h-[400px]" />
                         ))}
                     </div>
                 )}
@@ -99,9 +98,9 @@ export default function TournamentListPage() {
                 )}
 
                 {!loading && !error && filtered.length === 0 && (
-                    <div className="text-center py-20 bg-slate-900/30 border border-white/5 rounded-2xl mt-8">
-                        <HiLightningBolt className="w-12 h-12 text-slate-600 mx-auto mb-4 opacity-50" />
-                        <p className="text-slate-400 font-bold uppercase tracking-widest text-sm">No tournaments currently available for this filter.</p>
+                    <div className="text-center py-20 bg-[#F7F9FC] border border-[#E5E7EB] rounded-2xl mt-8">
+                        <HiLightningBolt className="w-12 h-12 text-[#16A34A] mx-auto mb-4 opacity-70" />
+                        <p className="text-[#6B7280] font-bold uppercase tracking-widest text-sm">No tournaments currently available for this filter.</p>
                     </div>
                 )}
 
