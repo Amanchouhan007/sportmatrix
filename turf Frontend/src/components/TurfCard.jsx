@@ -126,7 +126,7 @@ export default function TurfCard({ turf, onMouseEnter, onMouseLeave, i = 0 }) {
                     </div>
 
                     <button
-                        onClick={(e) => { e.stopPropagation(); navigate(`/turfs/${turf.id}`) }}
+                        onClick={(e) => { e.stopPropagation(); navigate(`/booking/${turf.id}`) }}
                         className="px-4 py-2 rounded-[14px] text-[11px] font-black text-[#111827] bg-[#C8FF2E] hover:bg-[#B5F000] transition-all duration-300 shadow-[0_4px_15px_rgba(200,255,46,0.4)] hover:shadow-[0_6px_20px_rgba(200,255,46,0.6)] hover:scale-105 active:scale-95 flex-shrink-0 cursor-pointer border border-[#B5F000]"
                     >
                         Book Now

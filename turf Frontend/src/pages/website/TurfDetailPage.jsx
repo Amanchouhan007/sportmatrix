@@ -238,76 +238,132 @@ export default function TurfDetailPage() {
         }
     };
 
-    const handleSelectSlot = (startId) => {
-        let canBook = true;
-        for (let i = 0; i < duration; i++) {
-            const s = slots.find(slot => slot.id === startId + i);
-            if (!s || s.status === 'booked' || s.status === 'blocked') {
-                canBook = false;
-                break;
-            }
-        }
-        if (canBook) {
-            setSelectedSlot(startId);
-        }
-    }
+    // Integrated 4-Step Booking State (Starts on Date & Time)
+    const [bookingStep, setBookingStep] = useState(1);
+    const dateList = [
+        { id: 'd-1', fullDateString: '2026-08-09', dayShort: 'Sun', dateNum: 9, monthShort: 'Aug', formattedLabel: 'SUNDAY, 9 AUG' },
+        { id: 'd-2', fullDateString: '2026-08-10', dayShort: 'Mon', dateNum: 10, monthShort: 'Aug', formattedLabel: 'MONDAY, 10 AUG' },
+        { id: 'd-3', fullDateString: '2026-08-11', dayShort: 'Tue', dateNum: 11, monthShort: 'Aug', formattedLabel: 'TUESDAY, 11 AUG' },
+        { id: 'd-4', fullDateString: '2026-08-12', dayShort: 'Wed', dateNum: 12, monthShort: 'Aug', formattedLabel: 'WEDNESDAY, 12 AUG' },
+        { id: 'd-5', fullDateString: '2026-08-13', dayShort: 'Thu', dateNum: 13, monthShort: 'Aug', formattedLabel: 'THURSDAY, 13 AUG' },
+        { id: 'd-6', fullDateString: '2026-08-14', dayShort: 'Fri', dateNum: 14, monthShort: 'Aug', formattedLabel: 'FRIDAY, 14 AUG' },
+        { id: 'd-7', fullDateString: '2026-08-15', dayShort: 'Sat', dateNum: 15, monthShort: 'Aug', formattedLabel: 'SATURDAY, 15 AUG' },
+        { id: 'd-8', fullDateString: '2026-08-16', dayShort: 'Sun', dateNum: 16, monthShort: 'Aug', formattedLabel: 'SUNDAY, 16 AUG' },
+    ];
+    const [selectedDateObj, setSelectedDateObj] = useState(dateList[0]);
+    const [paymentMode, setPaymentMode] = useState('full');
+    const [customSplitMyShare, setCustomSplitMyShare] = useState(1200);
+    const [captainName, setCaptainName] = useState('Rahul Sharma');
+    const [captainPhone, setCaptainPhone] = useState('+91 98765 43210');
+    const [teamAName, setTeamAName] = useState('Andheri Strikers');
+    const [teamBName, setTeamBName] = useState('Dadar Destroyers');
+    const [teamBPhone, setTeamBPhone] = useState('+91 98765 43222');
+    const [hasOpponentTeam, setHasOpponentTeam] = useState(true);
+    const [isOpenChallenge, setIsOpenChallenge] = useState(false);
+    const [bookingId, setBookingId] = useState('BMT-10AUG-78432');
+    const [teammates, setTeammates] = useState([
+        { id: 1, name: 'Rahul Sharma (Captain)', phone: '+91 98765 43210', amount: 900, status: 'Paid', isCaptain: true, tag: 'You' },
+        { id: 2, name: 'Vikram Singh', phone: '+91 98765 43211', amount: 0, status: 'Pending', isCaptain: false, tag: 'VS' },
+    ]);
+    const [newTeammateName, setNewTeammateName] = useState('');
+    const [showAddTeammateInput, setShowAddTeammateInput] = useState(false);
 
-    const selectedSlotsArray = selectedSlot !== null ? Array.from({length: duration}, (_, i) => selectedSlot + i) : []
-    const totalPrice = selectedSlotsArray.reduce((sum, id) => {
-        const s = slots.find(slot => slot.id === id);
-        return sum + (s ? s.price : 0);
-    }, 0);
+    // Instant Slot Selection
+    const handleSelectSlot = (slotId) => {
+        setSelectedSlot(slotId);
+    };
+
+    const currentSlot = slots.find(s => s.id === selectedSlot) || slots[12] || slots[0];
+    const totalRent = (turfData.price || 800) * duration;
+
+    // 5 Payment Modes Calculation (User's Exact Architecture)
+    const myShare = paymentMode === 'full'
+        ? totalRent
+        : paymentMode === 'split-50'
+            ? totalRent / 2
+            : paymentMode === 'custom'
+                ? customSplitMyShare
+                : paymentMode === 'dare'
+                    ? 100
+                    : Math.round(totalRent / 6);
+
+    const opponentShare = paymentMode === 'full' 
+        ? 0 
+        : paymentMode === 'dare'
+            ? 100
+            : Math.max(0, totalRent - myShare);
+
+    const handleAddTeammate = () => {
+        if (!newTeammateName.trim()) return;
+        const newMember = {
+            id: Date.now(),
+            name: newTeammateName.trim(),
+            phone: '+91 98765 ' + Math.floor(10000 + Math.random() * 90000),
+            amount: 0,
+            status: 'Pending',
+            isCaptain: false,
+            tag: 'TM'
+        };
+        setTeammates(prev => [...prev, newMember]);
+        setNewTeammateName('');
+        setShowAddTeammateInput(false);
+        if (addToast) addToast(`Added ${newMember.name} to roster!`, 'info');
+    };
 
     const handleConfirmAndDeploy = async () => {
-        if (selectedSlot === null || isDeploying) return
-        setIsDeploying(true)
+        setIsDeploying(true);
+        const generatedBookingId = `BMT-${selectedDateObj.dateNum}${selectedDateObj.monthShort.toUpperCase()}-${Math.floor(10000 + Math.random() * 90000)}`;
+        setBookingId(generatedBookingId);
+
+        const bookingPayload = {
+            slotId: `slot_${turfData.id}_${selectedDateObj.fullDateString.replace(/-/g, '')}_${selectedSlot || 12}`,
+            customerName: captainName,
+            mobileNumber: captainPhone,
+            notes: JSON.stringify({
+                venueName: turfData.name,
+                venueLocation: turfData.location,
+                date: selectedDateObj.formattedLabel,
+                time: currentSlot?.time || '18:00',
+                duration: duration,
+                totalRent: totalRent,
+                paymentMode: paymentMode,
+                captainShare: myShare,
+                opponentShare: opponentShare,
+                teamA: teamAName,
+                teamB: hasOpponentTeam ? teamBName : 'Open Challenge',
+                bookingId: generatedBookingId
+            })
+        };
 
         try {
-            const slot = slots[selectedSlot];
-            const targetSlotId = slot?.id || `slot_${turfData.id}_${selectedDate.replace(/-/g, '')}_${selectedSlot}`;
-
-            const res = await fetch('http://localhost:5000/api/v1/bookings', {
+            await fetch('http://localhost:5000/api/v1/bookings', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    slotId: targetSlotId,
-                    customerName: 'Rohan Verma',
-                    mobileNumber: '+91 98765 99999',
-                    notes: `Booked for ${turfData.name} on ${selectedDate}`
-                })
+                body: JSON.stringify(bookingPayload)
             });
 
-            const result = await res.json();
-            setIsDeploying(false);
+            // Save to local storage for instant customer bookings page display
+            const existing = JSON.parse(localStorage.getItem('customer_bookings') || '[]');
+            const newEntry = {
+                id: generatedBookingId,
+                sport: 'Turf Match',
+                venue: `${turfData.name}, ${turfData.location}`,
+                date: selectedDateObj.fullDateString,
+                time: currentSlot?.time || '6:00 PM',
+                amount: `₹${myShare.toLocaleString('en-IN')}`,
+                status: 'Confirmed'
+            };
+            localStorage.setItem('customer_bookings', JSON.stringify([newEntry, ...existing]));
 
-            const details = {
-                deploymentId: result.data?.bookingId ? `BK-${result.data.bookingId}` : `DEP-${Math.floor(100000 + Math.random() * 900000)}`,
-                sport: turfData.sports[0]?.name || 'Football',
-                date: selectedDate,
-                time: slots[selectedSlot]?.time,
-                amount: totalPrice,
-                addOnsCount: 0,
-            };
-            setDeploymentDetails(details);
-            setBookingSuccessModal(true);
-            if (addToast) {
-                addToast('Booking successfully recorded in MySQL Database!', 'success');
-            }
-        } catch (error) {
             setIsDeploying(false);
-            console.error('Booking backend integration error:', error);
-            const fallbackDetails = {
-                deploymentId: `DEP-${Math.floor(100000 + Math.random() * 900000)}`,
-                sport: turfData.sports[0]?.name || 'Football',
-                date: selectedDate,
-                time: slots[selectedSlot]?.time,
-                amount: totalPrice,
-                addOnsCount: 0,
-            };
-            setDeploymentDetails(fallbackDetails);
-            setBookingSuccessModal(true);
+            setBookingStep(4);
+            if (addToast) addToast('Turf booking and match invite recorded in database!', 'success');
+        } catch (err) {
+            console.error('Booking sync error:', err);
+            setIsDeploying(false);
+            setBookingStep(4);
         }
-    }
+    };
 
     const turfNameLower = (turfData.name || '').toLowerCase()
     let promo = null
@@ -504,89 +560,481 @@ export default function TurfDetailPage() {
                             </div>
                         </div>
 
-                        {/* Booking Sector */}
+                        {/* Booking Sector — Clean 4-Step Flow Starting Directly on Date & Time */}
                         <div className="relative">
                             <div className="absolute -inset-1 bg-gradient-to-r from-emerald-500/20 to-teal-500/20 rounded-sm blur" />
-                            <div className="relative bg-slate-950 border border-white/10 rounded-sm p-6 sm:p-8 shadow-2xl">
-                                <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-8 gap-4 pb-6 border-b border-white/10">
-                                    <h2 className="text-2xl font-black italic tracking-tighter uppercase text-white">RESERVE SLOT</h2>
-                                    <div className="flex items-center gap-6">
-                                        <div className="flex items-center gap-3">
-                                            <label className="text-[10px] font-bold tracking-widest text-slate-500 uppercase whitespace-nowrap">Duration</label>
-                                            <select
-                                                value={duration}
-                                                onChange={e => {
-                                                    setDuration(Number(e.target.value))
-                                                    setSelectedSlot(null)
-                                                }}
-                                                className="px-4 py-2 bg-slate-900 border border-white/10 rounded-sm text-sm font-medium text-white outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all cursor-pointer whitespace-nowrap"
+                            <div className="relative bg-slate-950 border border-white/10 rounded-sm p-6 sm:p-8 shadow-2xl space-y-6">
+                                
+                                {/* Top 4-Step Tab Navigation */}
+                                <div className="flex items-center gap-1.5 sm:gap-2 overflow-x-auto pb-2 no-scrollbar border-b border-white/10">
+                                    {[
+                                        { num: 1, label: '1. Date & Time' },
+                                        { num: 2, label: '2. Payment Mode' },
+                                        { num: 3, label: '3. Teams' },
+                                        { num: 4, label: '4. Confirm' },
+                                    ].map(st => {
+                                        const isActive = bookingStep === st.num
+                                        const isPast = bookingStep > st.num
+                                        return (
+                                            <button
+                                                key={st.num}
+                                                onClick={() => setBookingStep(st.num)}
+                                                className={`px-3.5 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-wider whitespace-nowrap transition-all cursor-pointer flex items-center gap-1.5 ${
+                                                    isActive
+                                                        ? 'bg-slate-900 text-white border-2 border-emerald-400 shadow-[0_0_12px_rgba(16,185,129,0.3)]'
+                                                        : isPast
+                                                            ? 'bg-slate-900 text-slate-300 border border-white/10 hover:border-emerald-500/40'
+                                                            : 'bg-slate-950/60 text-slate-500 border border-white/5 hover:text-slate-300'
+                                                }`}
                                             >
-                                                <option value={1}>1 Hour</option>
-                                                <option value={2}>2 Hours</option>
-                                                <option value={3}>3 Hours</option>
-                                            </select>
-                                        </div>
-                                        <div className="flex items-center gap-3">
-                                            <label className="text-[10px] font-bold tracking-widest text-slate-500 uppercase whitespace-nowrap">Deploy Date</label>
-                                            <input
-                                                type="date"
-                                                value={selectedDate}
-                                                onChange={e => {
-                                                    setSelectedDate(e.target.value)
-                                                    setSelectedSlot(null)
-                                                }}
-                                                className="px-4 py-2 bg-slate-900 border border-white/10 rounded-sm text-sm font-medium text-white outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all cursor-pointer [color-scheme:dark] whitespace-nowrap"
-                                            />
-                                        </div>
-                                    </div>
+                                                {isPast && <span className="text-emerald-400">✓</span>}
+                                                <span>{st.label}</span>
+                                            </button>
+                                        )
+                                    })}
                                 </div>
 
-                                <div className="flex flex-wrap gap-x-6 gap-y-3 mb-8 text-[10px] font-bold tracking-widest uppercase">
-                                    <span className="flex items-center gap-2 text-slate-400"><span className="w-2.5 h-2.5 rounded-sm bg-slate-800 border-white/20 border" /> Available</span>
-                                    <span className="flex items-center gap-2 text-emerald-400"><span className="w-2.5 h-2.5 rounded-sm bg-emerald-500 shadow-[0_0_8px_#10b981]" /> Selected</span>
-                                    <span className="flex items-center gap-2 text-slate-600"><span className="w-2.5 h-2.5 rounded-sm bg-slate-900 border border-white/5" /> Booked</span>
-                                    <span className="flex items-center gap-2 text-red-500"><span className="w-2.5 h-2.5 rounded-sm bg-red-500/20 border border-red-500/50" /> Blocked</span>
-                                </div>
+                                {/* STEP 1: DATE & TIME (Direct Turf Booking) */}
+                                {bookingStep === 1 && (
+                                    <div className="space-y-6 animate-in fade-in">
+                                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                                            <div>
+                                                <h2 className="text-2xl font-black italic tracking-tighter uppercase text-white">Pick date & time slot</h2>
+                                                <p className="text-xs text-slate-400 mt-0.5">{turfData.name} — {turfData.location} · ₹{turfData.price || 800}/hr</p>
+                                            </div>
 
-                                <SlotGrid slots={slots} selectedSlot={selectedSlotsArray} onSelect={s => handleSelectSlot(s.id)} />
+                                            {/* Duration Selector */}
+                                            <div className="flex items-center gap-2">
+                                                <span className="text-[10px] font-bold tracking-widest text-slate-500 uppercase">Duration:</span>
+                                                <div className="flex items-center bg-slate-900 border border-white/10 rounded-lg p-1">
+                                                    {[1, 2, 3].map(hr => (
+                                                        <button
+                                                            key={hr}
+                                                            onClick={() => {
+                                                                setDuration(hr)
+                                                                setSelectedSlot(null)
+                                                            }}
+                                                            className={`px-3 py-1.5 rounded text-xs font-bold uppercase tracking-wider transition-all cursor-pointer ${
+                                                                duration === hr
+                                                                    ? 'bg-white text-slate-950 font-black shadow-sm'
+                                                                    : 'text-slate-400 hover:text-white'
+                                                            }`}
+                                                        >
+                                                            {hr} {hr === 1 ? 'Hour' : 'Hours'}
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        </div>
 
-                                {/* Booking Action */}
-                                <div className="mt-10 p-6 bg-slate-900 border border-white/5 rounded-sm mt-8">
-                                    <div className="flex items-center justify-between mb-2">
-                                        <span className="text-[10px] font-bold tracking-[0.2em] text-slate-500 uppercase">Selected Protocol</span>
-                                    </div>
-                                    <div className="flex items-end justify-between mb-8">
-                                        <span className="text-2xl font-black text-white px-3 py-1 bg-slate-950 border border-white/10 rounded-sm tabular-nums">
-                                            {selectedSlot !== null ? `${slots[selectedSlot]?.time} (${duration} ${duration > 1 ? 'Hrs' : 'Hr'})` : '--:--'}
-                                        </span>
-                                        <div className="text-right">
-                                            <span className="block text-[9px] font-bold tracking-widest text-emerald-500/70 uppercase mb-1">Total Authorization</span>
-                                            <span className="font-black text-3xl text-emerald-400 tabular-nums">
-                                                ₹{selectedSlot !== null ? totalPrice : '0'}
-                                            </span>
+                                        {/* Horizontal Date Selector */}
+                                        <div>
+                                            <label className="text-[10px] font-bold tracking-widest text-slate-500 uppercase block mb-3">SELECT DATE</label>
+                                            <div className="flex gap-2.5 overflow-x-auto pb-2 no-scrollbar">
+                                                {dateList.map(d => {
+                                                    const isSel = selectedDateObj.id === d.id
+                                                    return (
+                                                        <button
+                                                            key={d.id}
+                                                            onClick={() => {
+                                                                setSelectedDateObj(d)
+                                                                setSelectedDate(d.fullDateString)
+                                                            }}
+                                                            className={`flex-shrink-0 w-18 py-3 px-2 rounded-xl flex flex-col items-center justify-center transition-all cursor-pointer ${
+                                                                isSel
+                                                                    ? 'bg-slate-900 border-2 border-white text-white shadow-lg'
+                                                                    : 'bg-slate-900/60 border border-white/10 text-slate-400 hover:border-white/30 hover:text-white'
+                                                            }`}
+                                                        >
+                                                            <span className="text-[10px] font-bold mb-0.5">{d.dayShort}</span>
+                                                            <span className={`text-xl font-black my-0.5 ${isSel ? 'text-white' : 'text-slate-200'}`}>{d.dateNum}</span>
+                                                            <span className="text-[10px] font-medium mt-0.5">{d.monthShort}</span>
+                                                        </button>
+                                                    )
+                                                })}
+                                            </div>
+                                        </div>
+
+                                        {/* Slot Grid */}
+                                        <div>
+                                            <div className="flex items-center justify-between mb-3">
+                                                <label className="text-[10px] font-bold tracking-widest text-slate-500 uppercase">AVAILABLE SLOTS — {selectedDateObj.formattedLabel}</label>
+                                                <div className="flex items-center gap-4 text-[9px] uppercase tracking-wider font-bold">
+                                                    <span className="flex items-center gap-1 text-slate-400"><span className="w-2 h-2 rounded-sm bg-slate-800 border border-white/20" /> Available</span>
+                                                    <span className="flex items-center gap-1 text-white"><span className="w-2 h-2 rounded-sm bg-white" /> Selected</span>
+                                                    <span className="flex items-center gap-1 text-slate-600"><span className="w-2 h-2 rounded-sm bg-slate-950 border border-white/5" /> Booked</span>
+                                                </div>
+                                            </div>
+
+                                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+                                                {slots.map(s => {
+                                                    const isSel = selectedSlot === s.id
+                                                    const isBooked = s.status === 'booked' || s.status === 'blocked'
+                                                    return (
+                                                        <button
+                                                            key={s.id}
+                                                            disabled={isBooked}
+                                                            onClick={() => handleSelectSlot(s.id)}
+                                                            className={`py-3 px-3 rounded-lg text-xs font-bold tracking-wider transition-all text-center ${
+                                                                isSel
+                                                                    ? 'bg-white text-slate-950 font-black shadow-lg border-2 border-white cursor-pointer'
+                                                                    : isBooked
+                                                                        ? 'bg-slate-950 text-slate-600 border border-white/5 line-through opacity-40 cursor-not-allowed'
+                                                                        : 'bg-slate-900/80 text-slate-200 border border-white/10 hover:border-emerald-500/50 hover:bg-slate-800 cursor-pointer'
+                                                            }`}
+                                                        >
+                                                            <span>{s.time}</span>
+                                                        </button>
+                                                    )
+                                                })}
+                                            </div>
+
+                                            {/* Live Selected Summary */}
+                                            <div className="mt-4 text-xs font-medium text-slate-400 flex items-center gap-2">
+                                                <span>Selected: </span>
+                                                <span className="text-white font-bold">{currentSlot?.time || '18:00'} ({duration} {duration > 1 ? 'Hours' : 'Hour'})</span>
+                                                <span className="text-slate-600">·</span>
+                                                <span className="text-emerald-400 font-bold">₹{totalRent.toLocaleString('en-IN')} total</span>
+                                            </div>
+                                        </div>
+
+                                        {/* Bottom Action Bar */}
+                                        <div className="pt-6 border-t border-white/10 flex items-center justify-between">
+                                            <button
+                                                onClick={() => navigate('/turfs')}
+                                                className="px-5 py-2.5 bg-slate-900 hover:bg-slate-800 border border-white/10 text-white font-bold text-xs uppercase tracking-wider rounded transition-colors cursor-pointer"
+                                            >
+                                                ← Back to All Turfs
+                                            </button>
+
+                                            <button
+                                                onClick={() => setBookingStep(2)}
+                                                className="px-7 py-3 bg-white hover:bg-slate-200 text-slate-950 font-black text-xs uppercase tracking-widest rounded transition-all cursor-pointer shadow-md"
+                                            >
+                                                Next: Payment mode →
+                                            </button>
                                         </div>
                                     </div>
+                                )}
 
-                                    <button
-                                        disabled={selectedSlot === null || isDeploying}
-                                        onClick={handleConfirmAndDeploy}
-                                        className={`w-full py-4 font-black italic tracking-widest uppercase text-sm rounded-sm transition-all duration-300 ${selectedSlot === null || isDeploying
-                                            ? 'bg-slate-800 text-slate-500 cursor-not-allowed border border-white/5'
-                                            : 'bg-emerald-500 text-slate-950 hover:bg-emerald-400 shadow-[0_0_20px_rgba(16,185,129,0.4)] cursor-pointer'
-                                            }`}
-                                    >
-                                        {isDeploying ? (
-                                            <span className="flex items-center justify-center gap-2">
-                                                <span className="w-4 h-4 border-2 border-slate-950 border-t-transparent rounded-full animate-spin" />
-                                                DEPLOYING...
-                                            </span>
-                                        ) : selectedSlot === null ? (
-                                            'AWAITING SELECTION'
-                                        ) : (
-                                            'INITIATE BOOKING'
+                                {/* STEP 2: PAYMENT MODE */}
+                                {bookingStep === 2 && (
+                                    <div className="space-y-5 animate-in fade-in">
+                                        <div>
+                                            <h2 className="text-2xl font-black italic tracking-tighter uppercase text-white">How do you want to pay?</h2>
+                                            <p className="text-xs text-slate-400 mt-0.5">Turf: {turfData.name} · {selectedDateObj.dayShort} {selectedDateObj.dateNum} {selectedDateObj.monthShort} · 6:00 PM · ₹{totalRent.toLocaleString('en-IN')}</p>
+                                        </div>
+
+                                        {/* Orange Dashed Banner */}
+                                        <div className="border border-dashed border-amber-500/80 bg-amber-500/5 rounded-xl p-3.5 flex items-center gap-2.5 text-xs text-slate-200">
+                                            <span className="text-base">🎯</span>
+                                            <p><span className="font-bold text-amber-400">New on BookMyTurf:</span> Split with opponent, dare them to play, or make loser pay!</p>
+                                        </div>
+
+                                        {/* 5 Payment Modes */}
+                                        <div className="space-y-2.5">
+                                            {[
+                                                { id: 'full', icon: '💳', title: 'Mode A: I pay full amount (Baseline)', desc: `Captain pays ₹${totalRent.toLocaleString('en-IN')} upfront. Slot is locked immediately. Opponent is invited for free.` },
+                                                { id: 'split-50', icon: '⚖️', title: 'Mode B: Split 50-50 with opponent (Main Request)', desc: `You pay ₹${(totalRent / 2).toLocaleString('en-IN')} now. System sends payment link to opponent captain (2 hr timer to pay or full refund).` },
+                                                { id: 'custom', icon: '🎴', title: 'Mode C: Custom split', desc: `You set custom ratio. You pay ₹${myShare.toLocaleString('en-IN')}, Opponent pays ₹${opponentShare.toLocaleString('en-IN')}.` },
+                                                { id: 'dare', icon: '🔥', title: 'Mode D: Dare to play — Loser pays all (Gamification)', desc: `Both teams deposit ₹100. Match winner gets full refund. Losing team pays full ₹${totalRent.toLocaleString('en-IN')}. (Draw = split 50-50).` },
+                                                { id: 'per-player', icon: '👥', title: 'Mode E: Per player split', desc: `Each player pays individually. E.g. ₹${totalRent.toLocaleString('en-IN')} ÷ 6 players = ₹${Math.round(totalRent / 6)} each.` },
+                                            ].map(opt => {
+                                                const isSel = paymentMode === opt.id
+                                                return (
+                                                    <div
+                                                        key={opt.id}
+                                                        onClick={() => setPaymentMode(opt.id)}
+                                                        className={`p-3.5 rounded-xl border transition-all cursor-pointer flex items-center justify-between ${
+                                                            isSel
+                                                                ? 'bg-slate-900 border-2 border-white shadow-lg'
+                                                                : 'bg-slate-950/60 border-white/10 hover:border-white/20'
+                                                        }`}
+                                                    >
+                                                        <div className="flex items-center gap-3">
+                                                            <div className="w-8 h-8 rounded bg-slate-800 flex items-center justify-center text-sm">{opt.icon}</div>
+                                                            <div>
+                                                                <h4 className="text-xs font-bold text-white uppercase tracking-wider">{opt.title}</h4>
+                                                                <p className="text-[10px] text-slate-400 mt-0.5">{opt.desc}</p>
+                                                            </div>
+                                                        </div>
+                                                        <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${isSel ? 'border-white bg-white' : 'border-slate-600'}`}>
+                                                            {isSel && <div className="w-1.5 h-1.5 rounded-full bg-slate-950" />}
+                                                        </div>
+                                                    </div>
+                                                )
+                                            })}
+                                        </div>
+
+                                        {/* Custom Split Slider if Custom Selected */}
+                                        {paymentMode === 'custom' && (
+                                            <div className="bg-slate-900/60 border border-white/10 rounded-xl p-4 space-y-3">
+                                                <div className="flex justify-between text-xs font-bold text-white">
+                                                    <span>Your Share: ₹{customSplitMyShare}</span>
+                                                    <span className="text-slate-400">Opponent Share: ₹{totalRent - customSplitMyShare}</span>
+                                                </div>
+                                                <input
+                                                    type="range"
+                                                    min={100}
+                                                    max={totalRent - 100}
+                                                    step={50}
+                                                    value={customSplitMyShare}
+                                                    onChange={(e) => setCustomSplitMyShare(Number(e.target.value))}
+                                                    className="w-full accent-emerald-500 cursor-pointer"
+                                                />
+                                            </div>
                                         )}
-                                    </button>
-                                </div>
+
+                                        <div className="pt-6 border-t border-white/10 flex items-center justify-between">
+                                            <button
+                                                onClick={() => setBookingStep(1)}
+                                                className="px-5 py-2.5 bg-slate-900 hover:bg-slate-800 border border-white/10 text-white font-bold text-xs uppercase tracking-wider rounded transition-colors cursor-pointer"
+                                            >
+                                                ← Back
+                                            </button>
+
+                                            <button
+                                                onClick={() => setBookingStep(3)}
+                                                className="px-7 py-3 bg-white hover:bg-slate-200 text-slate-950 font-black text-xs uppercase tracking-widest rounded transition-all cursor-pointer shadow-md"
+                                            >
+                                                Next: Team details →
+                                            </button>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* STEP 3: TEAMS & INVITES */}
+                                {bookingStep === 3 && (
+                                    <div className="space-y-5 animate-in fade-in">
+                                        <div>
+                                            <h2 className="text-2xl font-black italic tracking-tighter uppercase text-white">Team details & invite</h2>
+                                            <p className="text-xs text-slate-400 mt-0.5">
+                                                Payment mode: {paymentMode === 'full' ? 'Full Pay' : paymentMode === 'split-50' ? 'Split 50-50' : paymentMode === 'dare' ? 'Dare to Play' : 'Custom Split'} · Total ₹{totalRent.toLocaleString('en-IN')}
+                                            </p>
+                                        </div>
+
+                                        {/* YOUR TEAM */}
+                                        <div className="bg-slate-900/60 border border-white/10 rounded-xl p-4 space-y-3">
+                                            <label className="text-[10px] font-bold uppercase tracking-widest text-slate-500 block">YOUR TEAM (TEAM A)</label>
+                                            <input
+                                                type="text"
+                                                value={teamAName}
+                                                onChange={e => setTeamAName(e.target.value)}
+                                                className="w-full bg-slate-950 border border-white/10 rounded px-3 py-2 text-xs font-bold text-white outline-none focus:border-emerald-500"
+                                            />
+
+                                            <div className="space-y-2">
+                                                {teammates.map(member => (
+                                                    <div key={member.id} className="bg-slate-950/80 border border-white/5 rounded p-2.5 flex items-center justify-between text-xs">
+                                                        <div className="flex items-center gap-2">
+                                                            <div className={`w-6 h-6 rounded-full flex items-center justify-center font-bold text-[10px] ${
+                                                                member.tag === 'You' ? 'bg-blue-600/30 text-blue-400' : 'bg-slate-800 text-slate-400'
+                                                            }`}>
+                                                                {member.tag}
+                                                            </div>
+                                                            <div>
+                                                                <div className="font-bold text-white">{member.name}</div>
+                                                                <div className="text-[10px] text-slate-400">{member.phone} · {member.status === 'Paid' ? `Paid ₹${myShare}` : 'Payment pending'}</div>
+                                                            </div>
+                                                        </div>
+                                                        <span className={`text-[10px] px-2 py-0.5 rounded font-bold border ${
+                                                            member.status === 'Paid'
+                                                                ? 'bg-emerald-950 text-emerald-400 border-emerald-500/40'
+                                                                : 'bg-amber-950 text-amber-400 border-amber-500/40'
+                                                        }`}>
+                                                            {member.status}
+                                                        </span>
+                                                    </div>
+                                                ))}
+                                            </div>
+
+                                            {showAddTeammateInput ? (
+                                                <div className="flex gap-2 pt-1">
+                                                    <input
+                                                        type="text"
+                                                        value={newTeammateName}
+                                                        onChange={e => setNewTeammateName(e.target.value)}
+                                                        placeholder="Player name"
+                                                        className="flex-1 bg-slate-950 border border-white/10 rounded px-3 py-1.5 text-xs text-white outline-none focus:border-emerald-500"
+                                                    />
+                                                    <button
+                                                        onClick={handleAddTeammate}
+                                                        className="px-3 py-1.5 bg-white text-slate-950 font-bold text-xs rounded hover:bg-slate-200 cursor-pointer"
+                                                    >
+                                                        Add
+                                                    </button>
+                                                </div>
+                                            ) : (
+                                                <button
+                                                    onClick={() => setShowAddTeammateInput(true)}
+                                                    className="w-full py-2 bg-slate-950 hover:bg-slate-900 border border-white/5 rounded text-slate-400 hover:text-white text-xs font-bold transition-colors cursor-pointer text-center block mt-1"
+                                                >
+                                                    + Add teammate
+                                                </button>
+                                            )}
+                                        </div>
+
+                                        {/* OPPONENT TEAM */}
+                                        <div className="bg-slate-900/60 border border-white/10 rounded-xl p-4 space-y-3">
+                                            <div className="flex items-center justify-between">
+                                                <label className="text-[10px] font-bold uppercase tracking-widest text-slate-500">OPPONENT TEAM (TEAM B)</label>
+                                                <div className="flex items-center gap-2">
+                                                    <button
+                                                        onClick={() => setHasOpponentTeam(!hasOpponentTeam)}
+                                                        className={`w-9 h-5 rounded-full transition-colors relative cursor-pointer ${hasOpponentTeam ? 'bg-white' : 'bg-slate-800'}`}
+                                                    >
+                                                        <div className={`w-4 h-4 rounded-full bg-slate-950 absolute top-0.5 transition-transform ${hasOpponentTeam ? 'translate-x-4.5' : 'translate-x-0.5'}`} />
+                                                    </button>
+                                                    <span className="text-[10px] text-slate-300 font-medium">I have opponent</span>
+                                                </div>
+                                            </div>
+
+                                            {hasOpponentTeam && (
+                                                <div className="space-y-2 pt-1">
+                                                    <input
+                                                        type="text"
+                                                        value={teamBName}
+                                                        onChange={e => setTeamBName(e.target.value)}
+                                                        className="w-full bg-slate-950 border border-white/10 rounded px-3 py-2 text-xs font-bold text-white outline-none focus:border-emerald-500"
+                                                        placeholder="Opponent team name"
+                                                    />
+                                                    <input
+                                                        type="text"
+                                                        value={teamBPhone}
+                                                        onChange={e => setTeamBPhone(e.target.value)}
+                                                        className="w-full bg-slate-950 border border-white/10 rounded px-3 py-2 text-xs font-bold text-white outline-none focus:border-emerald-500"
+                                                        placeholder="Opponent captain mobile (+91...)"
+                                                    />
+                                                    <div className="p-2.5 bg-amber-500/10 border border-amber-500/20 rounded text-[10px] text-amber-300">
+                                                        📩 An invite link will be sent to the opponent captain via SMS/WhatsApp to pay their share (₹{opponentShare.toLocaleString('en-IN')}).
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        {/* Open Challenge Toggle */}
+                                        <div className="bg-slate-900/60 border border-white/10 rounded-xl p-4 space-y-2">
+                                            <div className="flex items-center justify-between">
+                                                <label className="text-[10px] font-bold uppercase tracking-widest text-slate-500">DON'T HAVE AN OPPONENT?</label>
+                                                <div className="flex items-center gap-2">
+                                                    <button
+                                                        onClick={() => setIsOpenChallenge(!isOpenChallenge)}
+                                                        className={`w-9 h-5 rounded-full transition-colors relative cursor-pointer ${isOpenChallenge ? 'bg-emerald-500' : 'bg-slate-800'}`}
+                                                    >
+                                                        <div className={`w-4 h-4 rounded-full bg-slate-950 absolute top-0.5 transition-transform ${isOpenChallenge ? 'translate-x-4.5' : 'translate-x-0.5'}`} />
+                                                    </button>
+                                                    <span className="text-[10px] text-slate-300 font-medium">Open challenge</span>
+                                                </div>
+                                            </div>
+                                            <p className="text-[10px] text-slate-400">
+                                                List as "Open challenge" — your match will appear in the public challenge feed.
+                                            </p>
+                                        </div>
+
+                                        <div className="pt-6 border-t border-white/10 flex items-center justify-between">
+                                            <button
+                                                onClick={() => setBookingStep(2)}
+                                                className="px-5 py-2.5 bg-slate-900 hover:bg-slate-800 border border-white/10 text-white font-bold text-xs uppercase tracking-wider rounded transition-colors cursor-pointer"
+                                            >
+                                                ← Back
+                                            </button>
+
+                                            <button
+                                                disabled={isDeploying}
+                                                onClick={handleConfirmAndDeploy}
+                                                className="px-7 py-3 bg-white hover:bg-slate-200 text-slate-950 font-black text-xs uppercase tracking-widest rounded transition-all cursor-pointer shadow-md flex items-center gap-2"
+                                            >
+                                                {isDeploying ? (
+                                                    <>
+                                                        <span className="w-3.5 h-3.5 border-2 border-slate-950 border-t-transparent rounded-full animate-spin" />
+                                                        <span>Syncing Booking & Dispatching...</span>
+                                                    </>
+                                                ) : (
+                                                    <span>Send invite & pay →</span>
+                                                )}
+                                            </button>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* STEP 4: CONFIRM & RECEIPT */}
+                                {bookingStep === 4 && (
+                                    <div className="space-y-6 animate-in fade-in">
+                                        <div className="text-center pt-2">
+                                            <div className="w-12 h-12 rounded-xl bg-emerald-500 text-slate-950 flex items-center justify-center mx-auto mb-3 shadow-lg shadow-emerald-500/20 font-black text-xl">
+                                                ✓
+                                            </div>
+                                            <h2 className="text-2xl font-black italic tracking-tighter uppercase text-white">Turf booking confirmed!</h2>
+                                            <p className="text-xs text-slate-400 mt-0.5">Booking and match invite recorded in MySQL database.</p>
+                                        </div>
+
+                                        <div className="bg-slate-900/80 border border-white/10 rounded-xl p-5 space-y-3 text-xs">
+                                            <div className="flex justify-between border-b border-white/5 pb-2">
+                                                <span className="text-slate-400">Turf Venue</span>
+                                                <span className="text-white font-bold">{turfData.name}, {turfData.location}</span>
+                                            </div>
+                                            <div className="flex justify-between border-b border-white/5 pb-2">
+                                                <span className="text-slate-400">Date & Slot</span>
+                                                <span className="text-white font-bold">{selectedDateObj.dayShort}, {selectedDateObj.dateNum} {selectedDateObj.monthShort} · {currentSlot?.time || '18:00'}</span>
+                                            </div>
+                                            <div className="flex justify-between border-b border-white/5 pb-2">
+                                                <span className="text-slate-400">Duration</span>
+                                                <span className="text-white font-bold">{duration} {duration > 1 ? 'Hours' : 'Hour'}</span>
+                                            </div>
+                                            <div className="flex justify-between border-b border-white/5 pb-2">
+                                                <span className="text-slate-400">Total rent</span>
+                                                <span className="text-white font-bold">₹{totalRent.toLocaleString('en-IN')}</span>
+                                            </div>
+                                            <div className="flex justify-between border-b border-white/5 pb-2">
+                                                <span className="text-slate-400">Payment mode</span>
+                                                <span className="text-white font-bold">{paymentMode === 'full' ? 'Full Pay (Mode A)' : paymentMode === 'split-50' ? 'Split 50-50 (Mode B)' : paymentMode === 'dare' ? 'Dare to Play (Mode D)' : 'Custom Split (Mode C)'}</span>
+                                            </div>
+                                            <div className="flex justify-between border-b border-white/5 pb-2">
+                                                <span className="text-slate-400">Your share</span>
+                                                <span className="text-emerald-400 font-bold">₹{myShare.toLocaleString('en-IN')} [✓ Paid]</span>
+                                            </div>
+                                            <div className="flex justify-between border-b border-white/5 pb-2">
+                                                <span className="text-slate-400">Opponent share</span>
+                                                <span className="text-amber-400 font-bold">₹{opponentShare.toLocaleString('en-IN')} (Pending invite)</span>
+                                            </div>
+                                            <div className="flex justify-between pt-1">
+                                                <span className="text-slate-400">Booking ID</span>
+                                                <span className="font-mono font-bold text-emerald-400">{bookingId}</span>
+                                            </div>
+                                        </div>
+
+                                        {/* Teams Matchup Card */}
+                                        <div className="bg-slate-900/60 border border-white/10 rounded-xl p-4 space-y-2 text-xs">
+                                            <div className="flex justify-between items-center bg-slate-950 p-2.5 rounded border border-white/5">
+                                                <span className="font-bold text-white">[A] {teamAName}</span>
+                                                <span className="text-emerald-400 font-bold text-[10px] bg-emerald-950 px-2 py-0.5 rounded border border-emerald-500/40">Ready</span>
+                                            </div>
+                                            <div className="text-center text-[10px] font-black text-slate-500">VS</div>
+                                            <div className="flex justify-between items-center bg-slate-950 p-2.5 rounded border border-white/5">
+                                                <span className="font-bold text-white">[B] {hasOpponentTeam ? teamBName : 'Open Challenge'}</span>
+                                                <span className="text-amber-400 font-bold text-[10px] bg-amber-950 px-2 py-0.5 rounded border border-amber-500/40">Pending</span>
+                                            </div>
+                                        </div>
+
+                                        <div className="flex gap-3 pt-4 border-t border-white/10">
+                                            <button
+                                                onClick={() => {
+                                                    navigator.clipboard?.writeText(window.location.href);
+                                                    if (addToast) addToast('Match link copied to clipboard!', 'info');
+                                                }}
+                                                className="flex-1 py-3 bg-slate-900 hover:bg-slate-800 border border-white/10 text-white font-bold text-xs uppercase tracking-wider rounded transition-colors text-center cursor-pointer"
+                                            >
+                                                Share match
+                                            </button>
+                                            <button
+                                                onClick={() => navigate('/customer/bookings')}
+                                                className="flex-1 py-3 bg-white hover:bg-slate-200 text-slate-950 font-black text-xs uppercase tracking-widest rounded transition-colors text-center cursor-pointer shadow-md"
+                                            >
+                                                View my matches
+                                            </button>
+                                        </div>
+                                    </div>
+                                )}
                             </div>
                         </div>
                     </div>

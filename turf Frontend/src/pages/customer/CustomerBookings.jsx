@@ -27,25 +27,33 @@ export default function CustomerBookings() {
         const fetchBookings = async () => {
             try {
                 const token = localStorage.getItem('token');
-                if (!token) return;
                 const res = await fetch('http://localhost:5000/api/v1/bookings/history', {
-                    headers: { 'Authorization': `Bearer ${token}` }
+                    headers: token ? { 'Authorization': `Bearer ${token}` } : {}
                 });
                 const data = await res.json();
                 if (data.success && Array.isArray(data.data) && data.data.length > 0) {
                     const mapped = data.data.map(b => ({
                         id: `BK-${b.booking_id}`,
-                        sport: b.sport_name || 'Football',
-                        venue: b.court_name || 'SportZone Arena',
-                        date: b.slot_date ? b.slot_date.substring(0, 10) : '2026-03-15',
-                        time: b.start_time ? b.start_time.substring(0, 5) : '10:00 AM',
-                        amount: `₹${b.amount}`,
+                        sport: b.sport_name || 'Turf Match',
+                        venue: b.court_name || 'Super Strikers Turf',
+                        date: b.slot_date ? b.slot_date.substring(0, 10) : '2026-08-09',
+                        time: b.start_time ? b.start_time.substring(0, 5) : '06:00 PM',
+                        amount: `₹${b.amount || 1800}`,
                         status: b.booking_status === 'CONFIRMED' ? 'Confirmed' : b.booking_status === 'CANCELLED' ? 'Cancelled' : 'Completed'
                     }));
-                    setBookingsList(mapped);
+                    
+                    // Merge with existing local bookings
+                    const localSaved = JSON.parse(localStorage.getItem('customer_bookings') || '[]');
+                    const combined = [...localSaved];
+                    mapped.forEach(m => {
+                        if (!combined.some(c => c.id === m.id)) {
+                            combined.push(m);
+                        }
+                    });
+                    setBookingsList(combined.length > 0 ? combined : mapped);
                 }
             } catch (err) {
-                console.error('Error fetching live customer bookings:', err);
+                console.warn('Error fetching live customer bookings, using stored:', err.message);
             }
         };
         fetchBookings();

@@ -71,22 +71,48 @@ export default function BookingManagement() {
                         customer: r.customer_name || 'Rahul Kumar',
                         phone: r.mobile_number || '+91 98765 00001',
                         email: 'customer@gmail.com',
-                        sport: r.sport_name || 'Football',
-                        court: r.court_name || 'Turf A',
-                        date: r.slot_date ? new Date(r.slot_date).toISOString().split('T')[0] : '2026-03-16',
+                        sport: r.sport_name || 'Turf Match',
+                        court: r.court_name || 'Super Strikers Turf',
+                        date: r.slot_date ? new Date(r.slot_date).toISOString().split('T')[0] : '2026-08-09',
                         dayOfWeek: dayNames[d.getDay()],
                         time: formattedTime,
                         slotRange: `${formattedTime}–${formattedEndTime}`,
-                        amount: `₹${(r.amount || 800).toLocaleString()}`,
+                        amount: `₹${(r.amount || 1800).toLocaleString()}`,
                         type: 'Online',
                         status: r.booking_status === 'CONFIRMED' ? 'Confirmed' : r.booking_status === 'PENDING' ? 'Pending' : r.booking_status === 'CANCELLED' ? 'Cancelled' : r.booking_status || 'Confirmed',
                         notes: r.booking_notes || 'Booking confirmed'
                     };
                 });
-                setBookings(formatted);
+                
+                // Merge with locally booked entries
+                const localSaved = JSON.parse(localStorage.getItem('customer_bookings') || '[]');
+                const mappedLocal = localSaved.map(l => ({
+                    id: l.id,
+                    customer: 'You (Current User)',
+                    phone: '+91 98765 43210',
+                    email: 'captain@gmail.com',
+                    sport: l.sport || 'Cricket',
+                    court: l.venue || 'Super Strikers Turf',
+                    date: l.date || '2026-08-09',
+                    dayOfWeek: 'Sat',
+                    time: l.time || '06:00 PM',
+                    slotRange: `${l.time || '06:00 PM'}–07:00 PM`,
+                    amount: l.amount || '₹1,800',
+                    type: 'Online',
+                    status: l.status || 'Confirmed',
+                    notes: 'Advance paid online'
+                }));
+                
+                const combined = [...mappedLocal];
+                formatted.forEach(f => {
+                    if (!combined.some(c => c.id === f.id)) {
+                        combined.push(f);
+                    }
+                });
+                setBookings(combined.length > 0 ? combined : formatted);
             }
         } catch (err) {
-            console.error('Error fetching live bookings:', err);
+            console.warn('Error fetching live bookings, using defaults:', err.message);
         }
     };
 

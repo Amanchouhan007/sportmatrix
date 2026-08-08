@@ -1,12 +1,12 @@
 import { useState, useEffect } from 'react'
-import { HiMenuAlt4, HiX } from 'react-icons/hi'
+import { HiMenuAlt4, HiX, HiUser, HiLogout, HiTicket } from 'react-icons/hi'
 import { useNavigate, useLocation } from 'react-router-dom'
+import { useAuth } from '../context/AuthContext'
 
 const navLinks = [
+    { label: 'TURFS & VENUES', href: '/turfs', isPage: true },
     { label: 'FEATURES', href: 'features' },
     { label: 'MODULES', href: 'modules' },
-    { label: 'ROLES', href: 'roles' },
-    { label: 'INTEL', href: 'how-it-works' },
     { label: 'MEMBERSHIP', href: '/membership', isPage: true },
 ]
 
@@ -15,6 +15,7 @@ export default function Navbar() {
     const [scrolled, setScrolled] = useState(false)
     const navigate = useNavigate()
     const location = useLocation()
+    const { user, logout } = useAuth()
 
     useEffect(() => {
         const handleScroll = () => setScrolled(window.scrollY > 20)
@@ -29,7 +30,6 @@ export default function Navbar() {
         } else {
             if (location.pathname !== '/') {
                 navigate('/')
-                // Allow routing to complete, then scroll
                 setTimeout(() => {
                     document.getElementById(link.href)?.scrollIntoView({ behavior: 'smooth' })
                 }, 100)
@@ -52,6 +52,11 @@ export default function Navbar() {
         setMobileOpen(false)
     }
 
+    const handleLogout = () => {
+        logout()
+        navigate('/login')
+    }
+
     return (
         <nav className={`fixed top-0 left-0 right-0 z-[100] transition-all duration-500 ${scrolled ? 'bg-white/95 backdrop-blur-xl border-b border-[#E5E7EB] py-2 shadow-sm' : 'bg-white/85 backdrop-blur-md border-b border-[#E5E7EB] py-3'}`}>
             <div className="max-w-7xl mx-auto px-6 flex items-center justify-between">
@@ -72,7 +77,7 @@ export default function Navbar() {
                     </div>
                 </div>
 
-                {/* NAV LINKS: CLEAN MODERN TYPOGRAPHY */}
+                {/* NAV LINKS */}
                 <div className="hidden lg:flex items-center gap-10">
                     {navLinks.map((link) => (
                         <button
@@ -88,19 +93,59 @@ export default function Navbar() {
                     ))}
                 </div>
 
-                {/* TACTICAL CTA: LIGHT VOLT THEME */}
+                {/* AUTH & USER ACTIONS */}
                 <div className="hidden lg:flex items-center gap-3">
+                    {user ? (
+                        <div className="flex items-center gap-2.5 bg-slate-50 border border-slate-200 rounded-full pl-3 pr-1.5 py-1">
+                            <div className="flex items-center gap-2">
+                                <div className="w-6 h-6 rounded-full bg-[#16A34A] text-white flex items-center justify-center text-xs font-black">
+                                    {(user.name || user.email || 'U').charAt(0).toUpperCase()}
+                                </div>
+                                <span className="text-xs font-black text-slate-800 truncate max-w-[120px]">
+                                    {user.name || user.email?.split('@')[0] || 'Player'}
+                                </span>
+                            </div>
+
+                            <button
+                                onClick={() => navigate('/customer/bookings')}
+                                className="inline-flex items-center gap-1 px-3 py-1 bg-white hover:bg-slate-100 border border-slate-200 text-slate-700 rounded-full text-xs font-bold transition-colors cursor-pointer shadow-2xs"
+                                title="View your matches"
+                            >
+                                <HiTicket className="w-3.5 h-3.5 text-[#16A34A]" />
+                                <span>My Bookings</span>
+                            </button>
+
+                            <button
+                                onClick={handleLogout}
+                                className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-full transition-colors cursor-pointer"
+                                title="Sign out"
+                            >
+                                <HiLogout className="w-4 h-4" />
+                            </button>
+                        </div>
+                    ) : (
+                        <>
+                            <button
+                                onClick={() => navigate('/login')}
+                                className="px-4 py-2 text-[#111827] hover:text-[#16A34A] font-black text-[11px] tracking-wider uppercase transition-colors cursor-pointer"
+                            >
+                                Log In
+                            </button>
+                            <button
+                                onClick={() => navigate('/login')}
+                                className="px-5 py-2.5 bg-[#C8FF2E] hover:bg-[#B5F000] text-[#111827] font-black text-[10.5px] tracking-[0.15em] uppercase rounded-xl transition-all transform hover:scale-105 active:scale-95 shadow-[0_4px_15px_rgba(200,255,46,0.3)] cursor-pointer"
+                            >
+                                Get Started
+                            </button>
+                        </>
+                    )}
+
                     <button
                         onClick={() => navigate('/admin')}
-                        className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-[#111827] font-black text-[10.5px] tracking-[0.2em] uppercase rounded-[14px] border border-[#E5E7EB] transition-all transform hover:scale-105 active:scale-95 flex items-center gap-1.5 cursor-pointer shadow-sm"
+                        className="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-[#111827] font-black text-[10px] tracking-[0.15em] uppercase rounded-xl border border-[#E5E7EB] transition-all cursor-pointer shadow-2xs"
+                        title="Portal Switcher"
                     >
-                        <span>⚙️</span> Admin
-                    </button>
-                    <button
-                        onClick={() => scrollTo('cta')}
-                        className="px-6 py-2.5 bg-[#C8FF2E] hover:bg-[#B5F000] text-[#111827] font-black text-[10.5px] tracking-[0.2em] uppercase rounded-[14px] transition-all transform hover:scale-105 active:scale-95 shadow-[0_10px_25px_rgba(200,255,46,0.35)] cursor-pointer"
-                    >
-                        INITIATE_PRO_OPS
+                        ⚙️ Admin
                     </button>
                 </div>
 
