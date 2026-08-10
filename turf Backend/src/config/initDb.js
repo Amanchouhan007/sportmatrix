@@ -612,27 +612,168 @@ async function initializeDatabase() {
             // Column already exists, ignore
         }
 
-        // Subscription Plans
+        // Team Match Payment Engine Tables
         await connection.query(`
-            CREATE TABLE IF NOT EXISTS subscription_plans (
+            CREATE TABLE IF NOT EXISTS slot_holds (
                 id VARCHAR(50) PRIMARY KEY,
-                plan_name VARCHAR(100) NOT NULL,
-                description TEXT,
-                is_popular BOOLEAN DEFAULT FALSE,
-                status ENUM('active', 'inactive') DEFAULT 'active',
-                monthly_price DECIMAL(10, 2) DEFAULT 0.00,
-                monthly_branch_limit INT DEFAULT 1,
-                monthly_sports_limit INT DEFAULT 2,
-                monthly_booking_limit INT DEFAULT 200,
-                monthly_active_users_limit INT DEFAULT 5,
-                yearly_price DECIMAL(10, 2) DEFAULT 0.00,
-                yearly_branch_limit INT DEFAULT 1,
-                yearly_sports_limit INT DEFAULT 2,
-                yearly_booking_limit INT DEFAULT 2500,
-                yearly_active_users_limit INT DEFAULT 5,
-                features JSON,
+                turf_id VARCHAR(50) NOT NULL,
+                slot_date DATE NOT NULL,
+                start_time TIME NOT NULL,
+                end_time TIME NOT NULL,
+                match_id VARCHAR(50) NULL,
+                expires_at TIMESTAMP NOT NULL,
+                status ENUM('ACTIVE', 'CONVERTED', 'EXPIRED', 'RELEASED') DEFAULT 'ACTIVE',
+                INDEX idx_slot_timing (turf_id, slot_date, start_time),
+                INDEX idx_expires_at (expires_at)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+        `);
+
+        await connection.query(`
+            CREATE TABLE IF NOT EXISTS matches (
+                id VARCHAR(50) PRIMARY KEY,
+                slot_id VARCHAR(50) NOT NULL,
+                turf_id VARCHAR(50) NOT NULL,
+                sport_id VARCHAR(50) NOT NULL,
+                captain_a_id VARCHAR(50) NOT NULL,
+                captain_b_id VARCHAR(50) NULL,
+                team_a_name VARCHAR(100) NOT NULL,
+                team_b_name VARCHAR(100) DEFAULT 'Open Challenge',
+                payment_mode ENUM('FULL_PAY', 'SPLIT_50_50', 'CUSTOM_SPLIT', 'DARE_TO_PLAY', 'PER_PLAYER') NOT NULL,
+                match_status ENUM('DRAFT', 'SLOT_HELD', 'PAYMENT_PENDING', 'PARTIALLY_FUNDED', 'WAITING_FOR_OPPONENT', 'CONFIRMED', 'IN_PROGRESS', 'RESULTS_PENDING', 'SETTLEMENT_PENDING', 'COMPLETED', 'EXPIRED', 'CANCELLED', 'DISPUTED', 'REFUND_PENDING', 'REFUNDED') DEFAULT 'DRAFT',
+                total_amount INT NOT NULL,
+                team_a_share INT NOT NULL,
+                team_b_share INT NOT NULL,
+                per_player_amount INT DEFAULT 0,
+                opponent_payment_deadline TIMESTAMP NULL,
+                dare_strategy ENUM('PREAUTH', 'SECURED_PREPAYMENT', 'DISABLED') DEFAULT 'SECURED_PREPAYMENT',
+                financial_snapshot JSON,
+                commission_rate_snapshot DECIMAL(5,2) DEFAULT 10.00,
+                plan_id_snapshot VARCHAR(50) DEFAULT 'plan_starter',
+                cancellation_policy_snapshot JSON,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                INDEX idx_match_status (match_status),
+                INDEX idx_turf_id (turf_id)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+        `);
+
+        await connection.query(`
+            CREATE TABLE IF NOT EXISTS match_teams (
+                id VARCHAR(50) PRIMARY KEY,
+                match_id VARCHAR(50) NOT NULL,
+                team_side ENUM('A', 'B') NOT NULL,
+                team_name VARCHAR(100) NOT NULL,
+                captain_name VARCHAR(100),
+                captain_phone VARCHAR(20),
+                paid_player_count INT DEFAULT 0,
+                INDEX idx_match_team (match_id, team_side)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+        `);
+
+        await connection.query(`
+            CREATE TABLE IF NOT EXISTS match_players (
+                id VARCHAR(50) PRIMARY KEY,
+                match_id VARCHAR(50) NOT NULL,
+                team_side ENUM('A', 'B') NOT NULL,
+                player_name VARCHAR(100),
+                player_phone VARCHAR(20),
+                user_id VARCHAR(50) NULL,
+                share_amount INT NOT NULL,
+                payment_status ENUM('CREATED', 'PENDING', 'AUTHORIZED', 'CAPTURED', 'FAILED', 'CANCELLED', 'REFUND_PENDING', 'REFUNDED') DEFAULT 'CREATED',
+                token_hash VARCHAR(255),
+                INDEX idx_match_player (match_id, team_side)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+        `);
+
+        await connection.query(`
+            CREATE TABLE IF NOT EXISTS match_invites (
+                id VARCHAR(50) PRIMARY KEY,
+                match_id VARCHAR(50) NOT NULL,
+                team_side ENUM('A', 'B') NOT NULL,
+                token_hash VARCHAR(255) NOT NULL UNIQUE,
+                recipient VARCHAR(100),
+                expected_amount INT NOT NULL,
+                expires_at TIMESTAMP NOT NULL,
+                status ENUM('SENT', 'VIEWED', 'ACCEPTED', 'PAID', 'DECLINED', 'EXPIRED', 'REVOKED') DEFAULT 'SENT',
+                INDEX idx_match_invite (match_id, team_side, status)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+        `);
+
+        await connection.query(`
+            CREATE TABLE IF NOT EXISTS match_payments (
+                id VARCHAR(50) PRIMARY KEY,
+                match_id VARCHAR(50) NOT NULL,
+                user_id VARCHAR(50) NULL,
+                amount INT NOT NULL,
+                gateway_order_id VARCHAR(100),
+                gateway_payment_id VARCHAR(100) UNIQUE,
+                gateway_event_id VARCHAR(100) UNIQUE,
+                idempotency_key VARCHAR(100) UNIQUE,
+                payment_method VARCHAR(50) DEFAULT 'UPI',
+                payment_status ENUM('CREATED', 'PENDING', 'AUTHORIZED', 'CAPTURED', 'FAILED', 'CANCELLED', 'REFUND_PENDING', 'PARTIALLY_REFUNDED', 'REFUNDED') DEFAULT 'PENDING',
+                refund_reference VARCHAR(100) NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                INDEX idx_match_payment (match_id)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+        `);
+
+        await connection.query(`
+            CREATE TABLE IF NOT EXISTS match_results (
+                id VARCHAR(50) PRIMARY KEY,
+                match_id VARCHAR(50) NOT NULL UNIQUE,
+                team_a_score_captain_a INT NULL,
+                team_b_score_captain_a INT NULL,
+                team_a_score_captain_b INT NULL,
+                team_b_score_captain_b INT NULL,
+                outcome ENUM('TEAM_A_WIN', 'TEAM_B_WIN', 'DRAW', 'DISPUTED') NULL,
+                status ENUM('SUBMITTED', 'MATCHED', 'DISPUTED', 'RESOLVED') DEFAULT 'SUBMITTED',
+                admin_notes TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+        `);
+
+        await connection.query(`
+            CREATE TABLE IF NOT EXISTS match_settlements (
+                id VARCHAR(50) PRIMARY KEY,
+                match_id VARCHAR(50) NOT NULL UNIQUE,
+                gross_amount INT NOT NULL,
+                commission_rate DECIMAL(5,2) DEFAULT 10.00,
+                platform_commission INT NOT NULL,
+                owner_net_amount INT NOT NULL,
+                payout_status ENUM('PAYOUT_NOT_READY', 'PAYOUT_READY', 'PAYOUT_PROCESSING', 'PAYOUT_PAID', 'PAYOUT_FAILED', 'PAYOUT_ON_HOLD') DEFAULT 'PAYOUT_NOT_READY',
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+        `);
+
+        await connection.query(`
+            CREATE TABLE IF NOT EXISTS financial_ledger (
+                id VARCHAR(50) PRIMARY KEY,
+                transaction_id VARCHAR(100) NOT NULL,
+                match_id VARCHAR(50) NOT NULL,
+                payment_id VARCHAR(50) NULL,
+                user_id VARCHAR(50) NULL,
+                owner_id VARCHAR(50) NULL,
+                type ENUM('BOOKING_PAYMENT', 'PLAYER_SHARE_PAYMENT', 'TEAM_SHARE_PAYMENT', 'DARE_AUTHORIZATION', 'DARE_CAPTURE', 'SECURITY_DEPOSIT', 'DEPOSIT_RELEASE', 'CONVENIENCE_FEE', 'PLATFORM_COMMISSION', 'OWNER_PAYABLE', 'OWNER_PAYOUT', 'REFUND', 'PARTIAL_REFUND', 'OVERPAYMENT', 'REVERSAL', 'ADJUSTMENT', 'DISPUTE_HOLD') NOT NULL,
+                direction ENUM('CREDIT', 'DEBIT') NOT NULL,
+                amount INT NOT NULL,
+                gateway_reference VARCHAR(100),
+                metadata JSON,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                INDEX idx_ledger_match (match_id)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+        `);
+
+        await connection.query(`
+            CREATE TABLE IF NOT EXISTS match_audit_logs (
+                id VARCHAR(50) PRIMARY KEY,
+                match_id VARCHAR(50) NOT NULL,
+                actor_id VARCHAR(50) DEFAULT 'SYSTEM',
+                action VARCHAR(100) NOT NULL,
+                before_state JSON,
+                after_state JSON,
+                reason VARCHAR(255),
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                INDEX idx_audit_match (match_id)
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
         `);
 

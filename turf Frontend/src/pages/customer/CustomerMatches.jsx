@@ -17,7 +17,7 @@ export default function CustomerMatches() {
             const tRes = await getPublicTournaments()
             if (tRes.success && Array.isArray(tRes.data)) {
                 const activeTourneys = tRes.data.filter(t => ['Approved', 'Active'].includes(t.status))
-                
+
                 let allFixtures = []
                 for (let t of activeTourneys) {
                     try {
@@ -63,36 +63,36 @@ export default function CustomerMatches() {
                         const isWon = m.winner_team_id !== null // simplified check
                         let resultText = status
                         let scoreText = '—'
-                        
+
                         if (status === 'Completed') {
                             resultText = 'Completed'
                             scoreText = `${m.team1_score ?? 0} vs ${m.team2_score ?? 0}`
                         }
 
                         return (
-                        <Card key={m.id || m._id} hover>
-                            <div className="flex items-center justify-between">
-                                <div className="flex items-center gap-4">
-                                    <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-white font-bold text-lg ${
-                                        status === 'Completed' ? 'bg-accent-500' : 'bg-primary-500'
-                                    }`}>
-                                        {status === 'Completed' ? 'W' : '—'}
+                            <Card key={m.id || m._id} hover>
+                                <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-4">
+                                        <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-white font-bold text-lg ${status === 'Completed' ? 'bg-accent-500' : 'bg-primary-500'
+                                            }`}>
+                                            {status === 'Completed' ? 'W' : '—'}
+                                        </div>
+                                        <div>
+                                            <p className="font-semibold text-surface-900">{m.team1_name || 'TBD'} vs {m.team2_name || 'TBD'}</p>
+                                            <p className="text-sm text-surface-400">{m.tournament} · {m.match_date ? new Date(m.match_date).toLocaleDateString() : 'TBD'} · {m.match_time || 'TBD'}</p>
+                                            <p className="text-xs text-surface-500 mt-1">{m.venue}</p>
+                                        </div>
                                     </div>
-                                    <div>
-                                        <p className="font-semibold text-surface-900">{m.team1_name || 'TBD'} vs {m.team2_name || 'TBD'}</p>
-                                        <p className="text-sm text-surface-400">{m.tournament} · {m.match_date ? new Date(m.match_date).toLocaleDateString() : 'TBD'} · {m.match_time || 'TBD'}</p>
-                                        <p className="text-xs text-surface-500 mt-1">{m.venue}</p>
+                                    <div className="text-right">
+                                        <Badge variant={status === 'Completed' ? 'success' : 'warning'}>
+                                            {resultText}
+                                        </Badge>
+                                        {scoreText !== '—' && <p className="text-sm font-medium text-surface-700 mt-2">{scoreText}</p>}
                                     </div>
                                 </div>
-                                <div className="text-right">
-                                    <Badge variant={status === 'Completed' ? 'success' : 'warning'}>
-                                        {resultText}
-                                    </Badge>
-                                    {scoreText !== '—' && <p className="text-sm font-medium text-surface-700 mt-2">{scoreText}</p>}
-                                </div>
-                            </div>
-                        </Card>
-                    )})}
+                            </Card>
+                        )
+                    })}
 
                     {!loading && matches.length === 0 && (
                         <div className="text-center py-12 bg-surface-50 rounded-xl border border-surface-100">

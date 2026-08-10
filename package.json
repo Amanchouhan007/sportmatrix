@@ -1,0 +1,10 @@
+{
+  "name": "sportturf-root",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "npm --prefix \"turf Frontend\" run dev",
+    "build": "npm --prefix \"turf Frontend\" run build",
+    "start": "npm --prefix \"turf Frontend\" run dev"
+  }
+}

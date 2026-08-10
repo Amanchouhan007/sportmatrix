@@ -20,17 +20,17 @@ export default function CustomerDashboard() {
             try {
                 const tRes = await getPublicTournaments()
                 const teamRes = await getTeams()
-                
+
                 let activeTournaments = 0
                 if (tRes.success && Array.isArray(tRes.data)) {
                     activeTournaments = tRes.data.filter(t => ['Approved', 'Active'].includes(t.status)).length
                 }
-                
+
                 let activeTeams = 0
                 if (teamRes.success && Array.isArray(teamRes.data)) {
                     activeTeams = teamRes.data.length
                 }
-                
+
                 setStats({ activeTournaments, activeTeams, matchesPlayed: 0 }) // Matches played mock for now
             } catch (err) {
                 console.error("Failed to load tournament dashboard stats", err)
@@ -45,7 +45,7 @@ export default function CustomerDashboard() {
                 <h1 className="text-2xl font-bold text-surface-900">My Dashboard</h1>
                 <p className="text-surface-500 text-sm mt-1">Welcome back! Here&apos;s your activity overview.</p>
             </div>
-            
+
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                 <StatCard label="Total Bookings" value="24" icon="📅" colorTheme="blue" />
                 <StatCard label="Active Teams" value={stats.activeTeams.toString()} icon="👥" colorTheme="emerald" />

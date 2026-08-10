@@ -3,6 +3,7 @@ import Card from '../../components/ui/Card'
 import Badge from '../../components/ui/Badge'
 import Modal from '../../components/ui/Modal'
 import Pagination from '../../components/ui/Pagination'
+import CustomDatePicker from '../../components/ui/CustomDatePicker'
 import { useToast } from '../../components/ui/Toast'
 import { getPaymentLogs, getPaymentLogById, getPaymentStats } from '../../services/paymentLogService'
 import { FiEye, FiSearch, FiFilter, FiX, FiRefreshCw, FiChevronDown, FiCheck } from 'react-icons/fi'
@@ -172,8 +173,7 @@ export default function PaymentLogs() {
 
     // ── Initial load ────────────────────────────────────────────────────────
     useEffect(() => {
-        fetchStats()
-        fetchLogs(1, true)
+        Promise.all([fetchStats(), fetchLogs(1, true)])
     }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
     // ── Re-fetch on filter changes (debounced for search) ──────────────────
@@ -352,7 +352,7 @@ export default function PaymentLogs() {
             </div>
 
             {/* Filter & Table Unified Container (24px Glass Card) */}
-            <div className="bg-white/90 backdrop-blur-md rounded-[24px] border border-white/80 shadow-[0_15px_40px_rgba(0,0,0,0.04)] overflow-hidden p-6 space-y-5">
+            <div className="bg-white/90 backdrop-blur-md rounded-[24px] border border-white/80 shadow-[0_15px_40px_rgba(0,0,0,0.04)] p-6 space-y-5 relative">
                 {/* Search & Select Controls */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                     {/* Search Input (54px Height) */}
@@ -517,18 +517,18 @@ export default function PaymentLogs() {
 
                     <div className="flex flex-wrap items-center gap-2">
                         <span className="text-xs font-semibold text-slate-400">Custom:</span>
-                        <input
-                            type="date"
+                        <CustomDatePicker
                             value={startDate}
-                            onChange={e => { setStartDate(e.target.value); setActiveDatePreset('') }}
-                            className="px-3.5 py-1.5 border border-slate-200 rounded-xl text-xs font-semibold bg-white text-slate-800 outline-none focus:border-[#16A34A]"
+                            onChange={val => { setStartDate(val); setActiveDatePreset('') }}
+                            placeholder="Start date"
+                            align="right"
                         />
                         <span className="text-xs font-semibold text-slate-400">to</span>
-                        <input
-                            type="date"
+                        <CustomDatePicker
                             value={endDate}
-                            onChange={e => { setEndDate(e.target.value); setActiveDatePreset('') }}
-                            className="px-3.5 py-1.5 border border-slate-200 rounded-xl text-xs font-semibold bg-white text-slate-800 outline-none focus:border-[#16A34A]"
+                            onChange={val => { setEndDate(val); setActiveDatePreset('') }}
+                            placeholder="End date"
+                            align="right"
                         />
                         {hasActiveFilters && (
                             <button

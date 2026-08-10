@@ -1,8 +1,21 @@
 import { useState, useEffect } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { createPortal } from 'react-dom'
+import { useNavigate, useParams, useLocation } from 'react-router-dom'
 import { HiArrowLeft, HiLocationMarker, HiCalendar, HiDocumentText, HiX } from 'react-icons/hi'
 import BracketComponent from '../../components/ui/BracketComponent'
+import CustomSelect from '../../components/ui/CustomSelect'
 import { getTournamentById, getFixtures, getLeaderboard, registerTeam, fallbackPublicTournaments } from '../../services/tournamentService'
+
+const jerseyColorOptions = [
+    { value: 'Blue', label: 'Royal Blue', color: '#2563EB' },
+    { value: 'Red', label: 'Crimson Red', color: '#DC2626' },
+    { value: 'Green', label: 'Emerald Green', color: '#16A34A' },
+    { value: 'Yellow', label: 'Electric Yellow', color: '#EAB308' },
+    { value: 'White', label: 'Pure White', color: '#FFFFFF' },
+    { value: 'Black', label: 'Midnight Black', color: '#111827' },
+    { value: 'Orange', label: 'Sunset Orange', color: '#F97316' },
+    { value: 'Purple', label: 'Deep Purple', color: '#9333EA' },
+];
 
 // Fallback bracket for display when no API fixtures available
 const fallbackBracketRounds = [
@@ -74,6 +87,7 @@ const getDefaultPerks = (sport) => {
 export default function TournamentDetailPage() {
     const navigate = useNavigate()
     const { id } = useParams()
+    const location = useLocation()
     const initialT = fallbackPublicTournaments.find(t => t.id === id) || fallbackPublicTournaments[0]
     const [tournament, setTournament] = useState(initialT)
     const [fixtures, setFixtures] = useState([])
@@ -89,11 +103,25 @@ export default function TournamentDetailPage() {
     })
 
     useEffect(() => {
+        if (showRegModal) {
+            document.body.style.overflow = 'hidden'
+        } else {
+            document.body.style.overflow = ''
+        }
+        return () => {
+            document.body.style.overflow = ''
+        }
+    }, [showRegModal])
+
+    useEffect(() => {
         window.scrollTo(0, 0)
         const matchT = fallbackPublicTournaments.find(t => t.id === id) || fallbackPublicTournaments[0]
         setTournament(matchT)
+        if (location.search.includes('register=true')) {
+            setShowRegModal(true)
+        }
         fetchData()
-    }, [id])
+    }, [id, location.search])
 
     const fetchData = async () => {
         try {
@@ -484,19 +512,20 @@ export default function TournamentDetailPage() {
                 </div>
             </div>
 
-            {/* Team Registration Modal */}
-            {showRegModal && (
-                <div className="fixed inset-0 z-[200] flex items-center justify-center pt-16 pb-4 px-3 sm:p-6 bg-black/65 backdrop-blur-sm">
-                    <div className="bg-white border border-[#E5E7EB] rounded-[24px] w-full max-w-lg max-h-[90vh] overflow-y-auto shadow-2xl">
-                        <div className="flex items-center justify-between p-6 border-b border-[#E5E7EB] bg-slate-50">
-                            <h3 className="text-lg font-black italic uppercase text-[#111827] tracking-tight">Register Your Squad</h3>
-                            <button onClick={() => setShowRegModal(false)} className="w-8 h-8 rounded-full bg-white border border-[#E5E7EB] flex items-center justify-center text-[#6B7280] hover:text-[#111827] transition-colors cursor-pointer">
+            {/* Team Registration Modal rendered via Portal onto document.body */}
+            {showRegModal && createPortal(
+                <div className="fixed inset-0 w-full h-[100dvh] z-[9999] bg-black/60 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 md:p-6 overflow-y-auto">
+                    <div className="bg-white border border-[#E5E7EB] rounded-[24px] w-[calc(100%-24px)] sm:w-full max-w-[460px] max-h-[calc(100dvh-24px)] sm:max-h-[calc(100dvh-32px)] flex flex-col shadow-2xl overflow-hidden my-auto relative z-10">
+                        {/* Sticky Modal Header */}
+                        <div className="flex items-center justify-between px-5 py-4 sm:px-6 sm:py-5 border-b border-[#E5E7EB] bg-white sticky top-0 z-20 shrink-0">
+                            <h3 className="text-base sm:text-lg font-black italic uppercase text-[#111827] tracking-tight">Register Your Squad</h3>
+                            <button onClick={() => setShowRegModal(false)} className="w-8 h-8 rounded-full bg-white border border-[#E5E7EB] flex items-center justify-center text-[#6B7280] hover:text-[#111827] transition-colors cursor-pointer shrink-0">
                                 <HiX className="w-4 h-4" />
                             </button>
                         </div>
 
                         {regSuccess ? (
-                            <div className="p-8 text-center">
+                            <div className="p-8 text-center my-auto">
                                 <div className="w-16 h-16 bg-green-50 border border-green-200 rounded-full flex items-center justify-center mx-auto mb-4 text-[#16A34A]">
                                     <span className="text-2xl font-black">✓</span>
                                 </div>
@@ -504,7 +533,7 @@ export default function TournamentDetailPage() {
                                 <p className="text-[#6B7280] text-xs font-semibold mt-2">Your team has been registered for this tournament.</p>
                             </div>
                         ) : (
-                            <form onSubmit={handleRegister} className="p-6 space-y-5">
+                            <form onSubmit={handleRegister} className="p-5 sm:p-6 space-y-4 sm:space-y-5 overflow-y-auto flex-1">
                                 {/* Team Info */}
                                 <div>
                                     <label className="text-[9px] font-black text-[#6B7280] uppercase tracking-widest mb-1.5 block">Team Name *</label>
@@ -513,7 +542,7 @@ export default function TournamentDetailPage() {
                                         placeholder="e.g. Thunder XI"
                                     />
                                 </div>
-                                <div className="grid grid-cols-2 gap-4">
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 sm:gap-4">
                                     <div>
                                         <label className="text-[9px] font-black text-[#6B7280] uppercase tracking-widest mb-1.5 block">Captain Name *</label>
                                         <input type="text" required value={regForm.captainName} onChange={e => setRegForm(prev => ({ ...prev, captainName: e.target.value }))}
@@ -529,7 +558,7 @@ export default function TournamentDetailPage() {
                                         />
                                     </div>
                                 </div>
-                                <div className="grid grid-cols-2 gap-4">
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 sm:gap-4">
                                     <div>
                                         <label className="text-[9px] font-black text-[#6B7280] uppercase tracking-widest mb-1.5 block">Captain Email</label>
                                         <input type="email" value={regForm.captainEmail} onChange={e => setRegForm(prev => ({ ...prev, captainEmail: e.target.value }))}
@@ -537,14 +566,12 @@ export default function TournamentDetailPage() {
                                             placeholder="captain@email.com"
                                         />
                                     </div>
-                                    <div>
-                                        <label className="text-[9px] font-black text-[#6B7280] uppercase tracking-widest mb-1.5 block">Jersey Color</label>
-                                        <select value={regForm.jerseyColor} onChange={e => setRegForm(prev => ({ ...prev, jerseyColor: e.target.value }))}
-                                            className="w-full bg-white border border-[#E5E7EB] rounded-xl px-4 py-3 text-sm text-[#111827] focus:border-[#16A34A] focus:outline-none transition-colors font-bold"
-                                        >
-                                            {['Blue', 'Red', 'Green', 'Yellow', 'White', 'Black', 'Orange', 'Purple'].map(c => <option key={c} value={c}>{c}</option>)}
-                                        </select>
-                                    </div>
+                                    <CustomSelect
+                                        label="Jersey Color"
+                                        value={regForm.jerseyColor}
+                                        onChange={val => setRegForm(prev => ({ ...prev, jerseyColor: val }))}
+                                        options={jerseyColorOptions}
+                                    />
                                 </div>
 
                                 {/* Players Section */}
@@ -553,20 +580,20 @@ export default function TournamentDetailPage() {
                                         <label className="text-[9px] font-black text-[#6B7280] uppercase tracking-widest">Players Roster</label>
                                         <button type="button" onClick={addPlayer} className="text-[9px] font-black text-[#16A34A] uppercase tracking-widest hover:underline cursor-pointer">+ Add Player</button>
                                     </div>
-                                    <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
+                                    <div className="space-y-2 max-h-44 overflow-y-auto pr-1">
                                         {regForm.players.map((p, idx) => (
-                                            <div key={idx} className="flex items-center gap-2 bg-[#F7F9FC] border border-[#E5E7EB] rounded-xl p-2.5">
+                                            <div key={idx} className="flex items-center gap-2 bg-[#F7F9FC] border border-[#E5E7EB] rounded-xl p-2 sm:p-2.5">
                                                 <input type="text" placeholder="Player Name" value={p.name} onChange={e => updatePlayer(idx, 'name', e.target.value)}
-                                                    className="flex-1 bg-transparent text-xs text-[#111827] placeholder-slate-400 focus:outline-none font-bold"
+                                                    className="flex-1 min-w-0 bg-transparent text-xs text-[#111827] placeholder-slate-400 focus:outline-none font-bold"
                                                 />
                                                 <input type="text" placeholder="Mobile" value={p.mobile} onChange={e => updatePlayer(idx, 'mobile', e.target.value)}
-                                                    className="w-24 bg-transparent text-xs text-[#111827] placeholder-slate-400 focus:outline-none font-bold"
+                                                    className="w-20 sm:w-24 bg-transparent text-xs text-[#111827] placeholder-slate-400 focus:outline-none font-bold"
                                                 />
                                                 <input type="number" placeholder="#" value={p.jerseyNumber} onChange={e => updatePlayer(idx, 'jerseyNumber', e.target.value)}
-                                                    className="w-12 bg-transparent text-xs text-[#111827] placeholder-slate-400 focus:outline-none text-center font-bold"
+                                                    className="w-10 sm:w-12 bg-transparent text-xs text-[#111827] placeholder-slate-400 focus:outline-none text-center font-bold"
                                                 />
                                                 {regForm.players.length > 1 && (
-                                                    <button type="button" onClick={() => removePlayer(idx)} className="text-red-500 hover:text-red-600 text-xs font-bold">✕</button>
+                                                    <button type="button" onClick={() => removePlayer(idx)} className="text-red-500 hover:text-red-600 text-xs font-bold shrink-0 p-1">✕</button>
                                                 )}
                                             </div>
                                         ))}
@@ -576,7 +603,7 @@ export default function TournamentDetailPage() {
                                 {/* Payment Method */}
                                 <div>
                                     <label className="text-[9px] font-black text-[#6B7280] uppercase tracking-widest mb-1.5 block">Payment Method</label>
-                                    <div className="flex gap-2">
+                                    <div className="flex flex-wrap gap-2">
                                         {['UPI', 'CASH', 'CARD', 'WALLET'].map(m => (
                                             <button key={m} type="button" onClick={() => setRegForm(prev => ({ ...prev, paymentMethod: m }))}
                                                 className={`px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all cursor-pointer ${regForm.paymentMethod === m
@@ -604,7 +631,8 @@ export default function TournamentDetailPage() {
                             </form>
                         )}
                     </div>
-                </div>
+                </div>,
+                document.body
             )}
         </div>
     )

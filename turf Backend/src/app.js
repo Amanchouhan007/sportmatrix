@@ -99,6 +99,24 @@ app.use('/api/v1/subscriptions', subscriptionsRouter);
 const mobileSyncRouter = require('./modules/mobile/mobileSync.routes');
 app.use('/api/v1/mobile-sync', mobileSyncRouter);
 
+// Team Match Payments Engine Routes registration
+const matchPaymentRouter = require('./modules/bookings/matchPayment.routes');
+app.use('/api/v1/match-payments', matchPaymentRouter);
+
+// Start Background Expiry & Reconciliation Worker
+const MatchExpiryService = require('./services/matchExpiry.service');
+const MatchReconciliationService = require('./services/matchReconciliation.service');
+
+setInterval(async () => {
+    try {
+        await MatchExpiryService.runExpiryTasks();
+        await MatchReconciliationService.reconcilePendingPayments();
+        await MatchReconciliationService.reconcilePendingRefunds();
+    } catch (e) {
+        console.error('[BackgroundWorker] Error:', e.message);
+    }
+}, 60000); // Runs every 60 seconds
+
 // Basic Root Health Check Route
 app.get('/api/v1/health', (req, res) => {
     res.status(200).json({

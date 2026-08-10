@@ -19,7 +19,7 @@ export const fallbackPublicTournaments = [
         maxTeams: 16,
         registrations: 12,
         prize: '₹50,000',
-        entryFee: '₹500',
+        entryFee: '500',
         status: 'Active'
     },
     {
@@ -35,7 +35,7 @@ export const fallbackPublicTournaments = [
         maxTeams: 8,
         registrations: 5,
         prize: '₹30,000',
-        entryFee: '₹800',
+        entryFee: '800',
         status: 'Active'
     },
     {
@@ -51,23 +51,23 @@ export const fallbackPublicTournaments = [
         maxTeams: 12,
         registrations: 9,
         prize: '₹75,000',
-        entryFee: '₹1,000',
+        entryFee: '1000',
         status: 'Upcoming'
     },
     {
         id: 't_004',
-        title: 'Bangalore Smash Badminton Open',
-        name: 'Bangalore Smash Badminton Open',
+        title: 'Bangalore T20 Cricket Open',
+        name: 'Bangalore T20 Cricket Open',
         banner: '/images/turf4.png',
-        description: 'Indoor singles & doubles badminton tournament.',
-        sport: 'Badminton',
-        category: 'Master Singles',
+        description: 'Pro floodlight T20 cricket tournament in Bangalore.',
+        sport: 'Cricket',
+        category: 'Open Division',
         location: 'Koramangala, Bangalore',
         date: '10 Sep - 12 Sep 2026',
-        maxTeams: 32,
-        registrations: 28,
-        prize: '₹25,000',
-        entryFee: '₹400',
+        maxTeams: 16,
+        registrations: 12,
+        prize: '₹40,000',
+        entryFee: '600',
         status: 'Upcoming'
     }
 ];

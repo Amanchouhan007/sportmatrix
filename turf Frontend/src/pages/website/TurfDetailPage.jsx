@@ -28,15 +28,20 @@ const defaultTurfData = {
 }
 
 const allTurfsList = [
-    { id: 1, name: 'Green Arena Football Turf', location: 'Andheri West, Mumbai', city: 'Mumbai', rating: 4.8, price: 1200, image: '/images/turf1.png', sports: ['Football'], amenities: ['Floodlights', 'Parking', 'Washroom'], lat: 19.1136, lng: 72.8697 },
-    { id: 2, name: 'Champion Cricket Academy', location: 'Koramangala, Bangalore', city: 'Bangalore', rating: 4.9, price: 1500, image: '/images/turf2.png', sports: ['Cricket'], amenities: ['Floodlights', 'Seating', 'Drinking Water'], lat: 12.9352, lng: 77.6245 },
-    { id: 4, name: 'Elite Sports Complex', location: 'Whitefield, Bangalore', city: 'Bangalore', rating: 4.6, price: 2000, image: '/images/turf3.png', sports: ['Football', 'Cricket'], amenities: ['Floodlights', 'Parking', 'Seating', 'Washroom'], lat: 12.9698, lng: 77.7500 },
+    { id: 1, name: 'SportZone Arena', location: 'Andheri West, Mumbai', city: 'Mumbai', rating: 4.8, price: 1200, image: '/images/turf1.png', sports: ['Cricket', 'Football'], amenities: ['Floodlights', 'Parking', 'Washroom', 'Drinking Water'], lat: 19.1136, lng: 72.8697 },
+    { id: 2, name: 'Champion Cricket Ground', location: 'Koramangala, Bangalore', city: 'Bangalore', rating: 4.9, price: 1500, image: '/images/turf2.png', sports: ['Cricket'], amenities: ['Floodlights', 'Seating', 'Drinking Water'], lat: 12.9352, lng: 77.6245 },
+    { id: 3, name: 'GameVault Center', location: 'Koramangala, Bangalore', city: 'Bangalore', rating: 4.9, price: 1200, image: '/images/turf3.png', sports: ['Football', 'Cricket'], amenities: ['Floodlights', 'Parking', 'Washroom', 'Seating', 'Drinking Water'], lat: 12.9352, lng: 77.6245 },
+    { id: 4, name: 'ProKick Stadium', location: 'Indiranagar, Bangalore', city: 'Bangalore', rating: 4.7, price: 1400, image: '/images/turf4.png', sports: ['Football'], amenities: ['Floodlights', 'Parking', 'Washroom'], lat: 12.9698, lng: 77.7500 },
     { id: 5, name: 'ProPlay Arena', location: 'Vashi, Navi Mumbai', city: 'Mumbai', rating: 4.5, price: 1000, image: '/images/turf4.png', sports: ['Football'], amenities: ['Floodlights', 'Parking'], lat: 19.0330, lng: 73.0297 },
-    { id: 6, name: 'Royal Cricket Ground', location: 'Vijay Nagar, Indore', city: 'Indore', rating: 4.7, price: 600, image: '/images/turf5.png', sports: ['Cricket'], amenities: ['Floodlights', 'Parking', 'Drinking Water'], lat: 22.7533, lng: 75.8937 },
+    { id: 6, name: 'Royal Cricket Ground', location: 'Vijay Nagar, Indore', city: 'Indore', rating: 4.7, price: 1000, image: '/images/turf5.png', sports: ['Cricket'], amenities: ['Floodlights', 'Parking', 'Drinking Water'], lat: 22.7533, lng: 75.8937 },
+    { id: 7, name: 'DunkZone', location: 'Bandra, Mumbai', city: 'Mumbai', rating: 4.3, price: 750, image: '/images/turf2.png', sports: ['Football'], amenities: ['Floodlights', 'Parking'], lat: 19.0596, lng: 72.8295 },
+    { id: 8, name: 'PixelArena', location: 'HSR Layout, Bangalore', city: 'Bangalore', rating: 4.8, price: 1500, image: '/images/turf6.png', sports: ['Football', 'Cricket'], amenities: ['Floodlights', 'Parking', 'Washroom', 'Seating', 'Drinking Water', 'AC'], lat: 12.9121, lng: 77.6446 },
     { id: 9, name: 'Skyline Football Turf', location: 'Powai, Mumbai', city: 'Mumbai', rating: 4.6, price: 1400, image: '/images/turf6.png', sports: ['Football'], amenities: ['Floodlights', 'Washroom'], lat: 19.1176, lng: 72.9060 },
+    { id: 10, name: 'StrikeZone Cricket', location: 'Noida, Delhi', city: 'Delhi', rating: 4.6, price: 850, image: '/images/turf7.png', sports: ['Cricket'], amenities: ['Floodlights', 'Parking', 'Washroom', 'Drinking Water'], lat: 28.5355, lng: 77.3910 },
     { id: 11, name: 'Master Blaster Cricket', location: 'Saket, Delhi', city: 'Delhi', rating: 4.8, price: 1100, image: '/images/turf7.png', sports: ['Cricket'], amenities: ['Floodlights', 'Equipment'], lat: 28.5244, lng: 77.2167 },
+    { id: 12, name: 'Pune Football Arena', location: 'Kothrud, Pune', city: 'Pune', rating: 4.5, price: 1000, image: '/images/turf2.png', sports: ['Football'], amenities: ['Floodlights', 'Parking', 'Washroom', 'Seating'], lat: 18.5074, lng: 73.8077 },
     { id: 13, name: 'Spike Football Turf', location: 'Bhawarkua, Indore', city: 'Indore', rating: 4.6, price: 500, image: '/images/turf1.png', sports: ['Football'], amenities: ['Floodlights', 'Parking', 'Washroom'], lat: 22.6953, lng: 75.8690 },
-    { id: 14, name: 'Indore Sports Arena', location: 'LIG Colony, Indore', city: 'Indore', rating: 4.9, price: 800, image: '/images/turf2.png', sports: ['Football', 'Cricket'], amenities: ['Floodlights', 'Parking', 'Seating', 'Washroom', 'AC'], lat: 22.7380, lng: 75.8916 },
+    { id: 14, name: 'Indore Sports Complex', location: 'LIG Colony, Indore', city: 'Indore', rating: 4.9, price: 1200, image: '/images/turf3.png', sports: ['Football', 'Cricket'], amenities: ['Floodlights', 'Parking', 'Seating', 'Washroom', 'AC'], lat: 22.7380, lng: 75.8916 },
     { id: 15, name: 'Rajiv Gandhi Stadium Turf', location: 'Navlakha, Indore', city: 'Indore', rating: 4.5, price: 700, image: '/images/turf3.png', sports: ['Football', 'Cricket'], amenities: ['Floodlights', 'Parking', 'Seating', 'Drinking Water'], lat: 22.7000, lng: 75.8752 },
 ]
 
@@ -93,12 +98,17 @@ function SectionLabel({ children, accent = 'emerald' }) {
     )
 }
 
-const generateSlots = () => {
+const generateSlots = (hourlyPrice = 1200, durationHours = 1) => {
     const times = ['06:00', '07:00', '08:00', '09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00', '18:00', '19:00', '20:00', '21:00', '22:00']
-    return times.map((t, i) => ({
-        id: i, time: t, price: i >= 10 && i <= 14 ? 1200 : 800,
-        status: [3, 7, 11, 15].includes(i) ? 'booked' : i === 5 ? 'blocked' : 'available',
-    }))
+    return times.map((t, i) => {
+        const slotPrice = Math.round((i >= 12 && i <= 20 ? hourlyPrice * 1.2 : hourlyPrice) * durationHours)
+        return {
+            id: i,
+            time: t,
+            price: slotPrice,
+            status: [3, 7, 11, 15].includes(i) ? 'booked' : i === 5 ? 'blocked' : 'available',
+        }
+    })
 }
 
 export default function TurfDetailPage() {
@@ -113,10 +123,10 @@ export default function TurfDetailPage() {
     const [deploymentDetails, setDeploymentDetails] = useState(null)
     const toastContext = useToast()
     const addToast = toastContext?.addToast
-    const slots = generateSlots()
-    const videoRef = useRef(null)
 
     const activeTurf = allTurfsList.find(t => t.id === Number(id)) || allTurfsList[0];
+    const slots = generateSlots(activeTurf.price, duration)
+    const videoRef = useRef(null)
 
     const uploadedFilesMedia = [
         { type: 'video', url: 'http://localhost:5000/uploads/files-1785914796662-273628137.mp4', thumbnail: '', filename: 'Uploaded Video' },
@@ -269,7 +279,22 @@ export default function TurfDetailPage() {
     };
 
     const currentSlot = slots.find(s => s.id === selectedSlot) || slots[12] || slots[0];
-    const totalRent = (turfData.price || 800) * duration;
+    const totalRent = (activeTurf.price || 1200) * duration;
+
+    useEffect(() => {
+        setCustomSplitMyShare(Math.round(totalRent * 0.6))
+    }, [totalRent])
+
+    const getPaymentModeTitle = (mode) => {
+        switch (mode) {
+            case 'full': return 'Full Pay'
+            case 'split-50': return 'Split 50-50'
+            case 'custom': return 'Custom Split'
+            case 'dare': return 'Dare to Play'
+            case 'per-player': return 'Per Player Split'
+            default: return 'Full Pay'
+        }
+    }
 
     const myShare = paymentMode === 'full'
         ? totalRent
@@ -309,32 +334,48 @@ export default function TurfDetailPage() {
         const generatedBookingId = `BMT-${selectedDateObj.dateNum}${selectedDateObj.monthShort.toUpperCase()}-${Math.floor(10000 + Math.random() * 90000)}`;
         setBookingId(generatedBookingId);
 
-        const bookingPayload = {
-            slotId: `slot_${turfData.id}_${selectedDateObj.fullDateString.replace(/-/g, '')}_${selectedSlot || 12}`,
-            customerName: captainName,
-            mobileNumber: captainPhone,
-            notes: JSON.stringify({
-                venueName: turfData.name,
-                venueLocation: turfData.location,
-                date: selectedDateObj.formattedLabel,
-                time: currentSlot?.time || '18:00',
-                duration: duration,
-                totalRent: totalRent,
-                paymentMode: paymentMode,
-                captainShare: myShare,
-                opponentShare: opponentShare,
-                teamA: teamAName,
-                teamB: hasOpponentTeam ? teamBName : 'Open Challenge',
-                bookingId: generatedBookingId
-            })
-        };
-
         try {
-            await fetch('http://localhost:5000/api/v1/bookings', {
+            // 1. Create Match & 5-minute Slot Hold in MySQL
+            const createRes = await fetch('http://localhost:5000/api/v1/match-payments/create', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(bookingPayload)
+                body: JSON.stringify({
+                    turfId: `turf_${turfData.id}`,
+                    slotId: `slot_${turfData.id}_${selectedDateObj.fullDateString.replace(/-/g, '')}`,
+                    sportId: 'Turf Match',
+                    captainName,
+                    captainPhone,
+                    teamAName,
+                    teamBName: hasOpponentTeam ? teamBName : 'Open Challenge',
+                    paymentMode: paymentMode.toUpperCase().replace(/-/g, '_'),
+                    durationHours: duration,
+                    slotDate: selectedDateObj.fullDateString,
+                    startTime: currentSlot?.time || '18:00:00',
+                    endTime: `${(parseInt(currentSlot?.time || '18') || 18) + duration}:00:00`,
+                    captainShareInput: myShare,
+                    hasOpponentTeam
+                })
             });
+            const createData = await createRes.json();
+
+            if (createData.success && createData.data?.matchId) {
+                // 2. Verify Payment & Generate Token
+                const verifyRes = await fetch('http://localhost:5000/api/v1/match-payments/verify', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        matchId: createData.data.matchId,
+                        holdId: createData.data.holdId,
+                        gatewayOrderId: `order_${Date.now()}`,
+                        gatewayPaymentId: `pay_${Date.now()}`,
+                        idempotencyKey: `idemp_${Date.now()}`
+                    })
+                });
+                const verifyData = await verifyRes.json();
+                if (verifyData.data?.matchId) {
+                    setBookingId(verifyData.data.matchId);
+                }
+            }
 
             const existing = JSON.parse(localStorage.getItem('customer_bookings') || '[]');
             const newEntry = {
@@ -348,7 +389,7 @@ export default function TurfDetailPage() {
             };
             localStorage.setItem('customer_bookings', JSON.stringify([newEntry, ...existing]));
         } catch (e) {
-            console.error('Booking sync failed:', e);
+            console.error('Match payment engine API error:', e);
         }
 
         setIsDeploying(false);
@@ -586,7 +627,7 @@ export default function TurfDetailPage() {
                                         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                                             <div>
                                                 <h2 className="text-xl sm:text-2xl font-black italic tracking-tight uppercase text-[#111827]">Pick date & time slot</h2>
-                                                <p className="text-xs text-[#6B7280] font-semibold mt-0.5">{turfData.name} — {turfData.location} · ₹{turfData.price || 800}/hr</p>
+                                                <p className="text-xs text-[#6B7280] font-semibold mt-0.5">{turfData.name} — {turfData.location} · ₹{(activeTurf.price || 1200).toLocaleString('en-IN')}/hr</p>
                                             </div>
 
                                             {/* Duration Selector */}
@@ -724,7 +765,7 @@ export default function TurfDetailPage() {
                                                 { id: 'split-50', icon: '⚖️', title: 'Mode B: Split 50-50 with opponent (Main Request)', desc: `You pay ₹${(totalRent / 2).toLocaleString('en-IN')} now. System sends payment link to opponent captain (2 hr timer to pay or full refund).` },
                                                 { id: 'custom', icon: '🎴', title: 'Mode C: Custom split', desc: `You set custom ratio. You pay ₹${myShare.toLocaleString('en-IN')}, Opponent pays ₹${opponentShare.toLocaleString('en-IN')}.` },
                                                 { id: 'dare', icon: '🔥', title: 'Mode D: Dare to play — Loser pays all (Gamification)', desc: `Both teams deposit ₹100. Match winner gets full refund. Losing team pays full ₹${totalRent.toLocaleString('en-IN')}. (Draw = split 50-50).` },
-                                                { id: 'per-player', icon: '👥', title: 'Mode E: Per player split', desc: `Each player pays individually. E.g. ₹${totalRent.toLocaleString('en-IN')} ÷ 6 players = ₹${Math.round(totalRent / 6)} each.` },
+                                                { id: 'per-player', icon: '👥', title: 'Mode E: Per player split', desc: `Each player pays individually. E.g. ₹${totalRent.toLocaleString('en-IN')} ÷ 6 players = ₹${Math.round(totalRent / 6).toLocaleString('en-IN')} each.` },
                                             ].map(opt => {
                                                 const isSel = paymentMode === opt.id
                                                 return (
@@ -795,7 +836,7 @@ export default function TurfDetailPage() {
                                         <div>
                                             <h2 className="text-xl sm:text-2xl font-black italic tracking-tight uppercase text-[#111827]">Team details & invite</h2>
                                             <p className="text-xs text-[#6B7280] font-semibold mt-0.5">
-                                                Payment mode: {paymentMode === 'full' ? 'Full Pay' : paymentMode === 'split-50' ? 'Split 50-50' : paymentMode === 'dare' ? 'Dare to Play' : 'Custom Split'} · Total ₹{totalRent.toLocaleString('en-IN')}
+                                                Payment mode: <span className="font-bold text-[#111827]">{getPaymentModeTitle(paymentMode)}</span> · Total ₹{totalRent.toLocaleString('en-IN')}
                                             </p>
                                         </div>
 
@@ -809,55 +850,69 @@ export default function TurfDetailPage() {
                                                 className="w-full bg-white border border-[#E5E7EB] rounded-xl px-3.5 py-2 text-xs font-bold text-[#111827] outline-none focus:border-[#16A34A]"
                                             />
 
-                                            <div className="space-y-2">
-                                                {teammates.map(member => (
-                                                    <div key={member.id} className="bg-white border border-[#E5E7EB] rounded-xl p-2.5 flex items-center justify-between text-xs shadow-xs">
-                                                        <div className="flex items-center gap-2">
-                                                            <div className={`w-6 h-6 rounded-full flex items-center justify-center font-bold text-[10px] ${
-                                                                member.tag === 'You' ? 'bg-blue-50 text-blue-600 border border-blue-200' : 'bg-slate-100 text-[#6B7280]'
-                                                            }`}>
-                                                                {member.tag}
-                                                            </div>
-                                                            <div>
-                                                                <div className="font-bold text-[#111827]">{member.name}</div>
-                                                                <div className="text-[10px] text-[#6B7280]">{member.phone} · {member.status === 'Paid' ? `Paid ₹${myShare}` : 'Payment pending'}</div>
-                                                            </div>
-                                                        </div>
-                                                        <span className={`text-[10px] px-2.5 py-0.5 rounded-full font-black border ${
-                                                            member.status === 'Paid'
-                                                                ? 'bg-green-50 text-[#16A34A] border-green-200'
-                                                                : 'bg-amber-50 text-amber-700 border-amber-200'
-                                                        }`}>
-                                                            {member.status}
-                                                        </span>
+                                            {paymentMode === 'full' ? (
+                                                <div className="bg-green-50 border border-green-200 rounded-xl p-3 text-xs font-semibold text-green-950 flex items-center gap-2">
+                                                    <span>💳</span>
+                                                    <div>
+                                                        <strong className="block text-green-900 font-bold">Full Pay Selected (100% Paid by You)</strong>
+                                                        You are paying full ₹{totalRent.toLocaleString('en-IN')}. No teammate split payment links required.
                                                     </div>
-                                                ))}
-                                            </div>
-
-                                            {showAddTeammateInput ? (
-                                                <div className="flex gap-2 pt-1">
-                                                    <input
-                                                        type="text"
-                                                        value={newTeammateName}
-                                                        onChange={e => setNewTeammateName(e.target.value)}
-                                                        placeholder="Player name"
-                                                        className="flex-1 bg-white border border-[#E5E7EB] rounded-xl px-3 py-1.5 text-xs text-[#111827] font-bold outline-none focus:border-[#16A34A]"
-                                                    />
-                                                    <button
-                                                        onClick={handleAddTeammate}
-                                                        className="px-3.5 py-1.5 bg-[#C8FF2E] text-[#111827] font-black text-xs rounded-xl hover:bg-[#B5F000] cursor-pointer border border-[#B5F000]"
-                                                    >
-                                                        Add
-                                                    </button>
                                                 </div>
-                                            ) : (
-                                                <button
-                                                    onClick={() => setShowAddTeammateInput(true)}
-                                                    className="w-full py-2 bg-white hover:bg-slate-50 border border-[#E5E7EB] rounded-xl text-[#6B7280] hover:text-[#111827] text-xs font-bold transition-colors cursor-pointer text-center block mt-1"
-                                                >
-                                                    + Add teammate
-                                                </button>
-                                            )}
+                                            ) : paymentMode === 'per-player' ? (
+                                                <>
+                                                    <div className="space-y-2">
+                                                        {teammates.map(member => (
+                                                            <div key={member.id} className="bg-white border border-[#E5E7EB] rounded-xl p-2.5 flex items-center justify-between text-xs shadow-xs">
+                                                                <div className="flex items-center gap-2">
+                                                                    <div className={`w-6 h-6 rounded-full flex items-center justify-center font-bold text-[10px] ${
+                                                                        member.tag === 'You' ? 'bg-blue-50 text-blue-600 border border-blue-200' : 'bg-slate-100 text-[#6B7280]'
+                                                                    }`}>
+                                                                        {member.tag}
+                                                                    </div>
+                                                                    <div>
+                                                                        <div className="font-bold text-[#111827]">{member.name}</div>
+                                                                        <div className="text-[10px] text-[#6B7280]">
+                                                                            {member.phone} · {member.isCaptain ? `Captain Share (₹${myShare.toLocaleString('en-IN')})` : `Share: ₹${(member.amount || Math.round(totalRent / 6)).toLocaleString('en-IN')}`}
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                                <span className={`text-[10px] px-2.5 py-0.5 rounded-full font-black border ${
+                                                                    member.status === 'Paid' || member.isCaptain
+                                                                        ? 'bg-green-50 text-[#16A34A] border-green-200'
+                                                                        : 'bg-amber-50 text-amber-700 border-amber-200'
+                                                                }`}>
+                                                                    {member.isCaptain || member.status === 'Paid' ? 'Paid' : 'Pending'}
+                                                                </span>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+
+                                                    {showAddTeammateInput ? (
+                                                        <div className="flex gap-2 pt-1">
+                                                            <input
+                                                                type="text"
+                                                                value={newTeammateName}
+                                                                onChange={e => setNewTeammateName(e.target.value)}
+                                                                placeholder="Player name"
+                                                                className="flex-1 bg-white border border-[#E5E7EB] rounded-xl px-3 py-1.5 text-xs text-[#111827] font-bold outline-none focus:border-[#16A34A]"
+                                                            />
+                                                            <button
+                                                                onClick={handleAddTeammate}
+                                                                className="px-3.5 py-1.5 bg-[#C8FF2E] text-[#111827] font-black text-xs rounded-xl hover:bg-[#B5F000] cursor-pointer border border-[#B5F000]"
+                                                            >
+                                                                Add
+                                                            </button>
+                                                        </div>
+                                                    ) : (
+                                                        <button
+                                                            onClick={() => setShowAddTeammateInput(true)}
+                                                            className="w-full py-2 bg-white hover:bg-slate-50 border border-[#E5E7EB] rounded-xl text-[#6B7280] hover:text-[#111827] text-xs font-bold transition-colors cursor-pointer text-center block mt-1"
+                                                        >
+                                                            + Add teammate (Send Share Link)
+                                                        </button>
+                                                    )}
+                                                </>
+                                            ) : null}
                                         </div>
 
                                         {/* OPPONENT TEAM */}
@@ -873,6 +928,39 @@ export default function TurfDetailPage() {
                                                     </button>
                                                     <span className="text-[10px] text-[#4B5563] font-bold">I have opponent</span>
                                                 </div>
+                                            </div>
+
+                                            {/* Explicit Rule Banner for Selected Mode */}
+                                            <div className="bg-slate-50 border border-[#E5E7EB] p-3 rounded-xl text-xs space-y-1.5">
+                                                <div className="flex items-center justify-between font-black text-[#111827] uppercase tracking-wider text-[10px] border-b border-[#E5E7EB] pb-1.5">
+                                                    <span>Payment Condition & Rules</span>
+                                                    <span className="text-[#16A34A]">{getPaymentModeTitle(paymentMode)}</span>
+                                                </div>
+                                                {paymentMode === 'full' && (
+                                                    <p className="text-[#4B5563] text-[11px] font-medium leading-relaxed">
+                                                        💳 <strong>Full Pay (100%):</strong> You pay ₹{totalRent.toLocaleString('en-IN')} upfront. Slot is locked immediately. Opponent team is invited for free with zero payment required.
+                                                    </p>
+                                                )}
+                                                {paymentMode === 'split-50' && (
+                                                    <p className="text-[#4B5563] text-[11px] font-medium leading-relaxed">
+                                                        ⚖️ <strong>Split 50-50:</strong> You pay ₹{(totalRent / 2).toLocaleString('en-IN')} now. Opponent captain gets an SMS/WA link to pay the remaining ₹{(totalRent / 2).toLocaleString('en-IN')}. If opponent doesn't pay within <strong>2 hours</strong>, slot is released and you get a <strong>100% refund</strong>.
+                                                    </p>
+                                                )}
+                                                {paymentMode === 'custom' && (
+                                                    <p className="text-[#4B5563] text-[11px] font-medium leading-relaxed">
+                                                        🎴 <strong>Custom Split:</strong> You pay ₹{myShare.toLocaleString('en-IN')} now. Opponent captain receives a payment link for the remaining ₹{opponentShare.toLocaleString('en-IN')}.
+                                                    </p>
+                                                )}
+                                                {paymentMode === 'dare' && (
+                                                    <p className="text-[#4B5563] text-[11px] font-medium leading-relaxed">
+                                                        🔥 <strong>Dare to Play:</strong> Both teams deposit ₹100 now. Winner gets deposit refunded; losing team pays full ₹{totalRent.toLocaleString('en-IN')} after match score confirmation.
+                                                    </p>
+                                                )}
+                                                {paymentMode === 'per-player' && (
+                                                    <p className="text-[#4B5563] text-[11px] font-medium leading-relaxed">
+                                                        👥 <strong>Per-Player Split:</strong> You pay your ₹{Math.round(totalRent / 6).toLocaleString('en-IN')} share. Share links generated for players. Minimum 4 paid players per side required to confirm.
+                                                    </p>
+                                                )}
                                             </div>
 
                                             {hasOpponentTeam && (
@@ -891,9 +979,6 @@ export default function TurfDetailPage() {
                                                         className="w-full bg-white border border-[#E5E7EB] rounded-xl px-3.5 py-2 text-xs font-bold text-[#111827] outline-none focus:border-[#16A34A]"
                                                         placeholder="Opponent captain mobile (+91...)"
                                                     />
-                                                    <div className="p-2.5 bg-amber-50 border border-amber-200 rounded-xl text-[10px] text-amber-800 font-semibold">
-                                                        📩 An invite link will be sent to the opponent captain via SMS/WhatsApp to pay their share (₹{opponentShare.toLocaleString('en-IN')}).
-                                                    </div>
                                                 </div>
                                             )}
                                         </div>
@@ -973,7 +1058,7 @@ export default function TurfDetailPage() {
                                             </div>
                                             <div className="flex justify-between border-b border-[#E5E7EB] pb-2">
                                                 <span className="text-[#6B7280]">Payment mode</span>
-                                                <span className="text-[#111827] font-bold">{paymentMode === 'full' ? 'Full Pay (Mode A)' : paymentMode === 'split-50' ? 'Split 50-50 (Mode B)' : paymentMode === 'dare' ? 'Dare to Play (Mode D)' : 'Custom Split (Mode C)'}</span>
+                                                <span className="text-[#111827] font-bold">{getPaymentModeTitle(paymentMode)}</span>
                                             </div>
                                             <div className="flex justify-between border-b border-[#E5E7EB] pb-2">
                                                 <span className="text-[#6B7280]">Your share</span>
@@ -981,7 +1066,13 @@ export default function TurfDetailPage() {
                                             </div>
                                             <div className="flex justify-between border-b border-[#E5E7EB] pb-2">
                                                 <span className="text-[#6B7280]">Opponent share</span>
-                                                <span className="text-amber-700 font-bold">₹{opponentShare.toLocaleString('en-IN')} (Pending invite)</span>
+                                                <span className="font-bold text-[#111827]">
+                                                    {paymentMode === 'full'
+                                                        ? '₹0 (Free Invite)'
+                                                        : paymentMode === 'dare'
+                                                            ? '₹100 (Deposit Pending)'
+                                                            : `₹${opponentShare.toLocaleString('en-IN')} (Invite Pending)`}
+                                                </span>
                                             </div>
                                             <div className="flex justify-between pt-1">
                                                 <span className="text-[#6B7280]">Booking ID</span>
@@ -993,14 +1084,70 @@ export default function TurfDetailPage() {
                                         <div className="bg-[#F7F9FC] border border-[#E5E7EB] rounded-2xl p-4 space-y-2 text-xs">
                                             <div className="flex justify-between items-center bg-white p-2.5 rounded-xl border border-[#E5E7EB]">
                                                 <span className="font-bold text-[#111827]">[A] {teamAName}</span>
-                                                <span className="text-[#16A34A] font-black text-[10px] bg-green-50 px-2.5 py-0.5 rounded-full border border-green-200">Ready</span>
+                                                <span className="text-[#16A34A] font-black text-[10px] bg-green-50 px-2.5 py-0.5 rounded-full border border-green-200">Confirmed</span>
                                             </div>
                                             <div className="text-center text-[10px] font-black text-[#9CA3AF]">VS</div>
                                             <div className="flex justify-between items-center bg-white p-2.5 rounded-xl border border-[#E5E7EB]">
                                                 <span className="font-bold text-[#111827]">[B] {hasOpponentTeam ? teamBName : 'Open Challenge'}</span>
-                                                <span className="text-amber-700 font-black text-[10px] bg-amber-50 px-2.5 py-0.5 rounded-full border border-amber-200">Pending</span>
+                                                <span className={`font-black text-[10px] px-2.5 py-0.5 rounded-full border ${paymentMode === 'full' ? 'bg-sky-50 text-sky-800 border-sky-200' : 'bg-amber-50 text-amber-700 border-amber-200'}`}>
+                                                    {paymentMode === 'full' ? 'Invited (Free)' : paymentMode === 'dare' ? 'Challenge Sent' : 'Payment Pending'}
+                                                </span>
                                             </div>
+
+                                            {/* Interactive Opponent Action Buttons */}
+                                            {paymentMode !== 'full' && (
+                                                <div className="pt-1 flex flex-wrap items-center gap-1.5">
+                                                    <button
+                                                        onClick={() => {
+                                                            const url = `${window.location.origin}/turfs/${turfData.id}?mode=${paymentMode}&pay=opponent`
+                                                            navigator.clipboard?.writeText(url)
+                                                            if (addToast) addToast(`Opponent Payment Link copied! (₹${opponentShare.toLocaleString('en-IN')})`, 'success')
+                                                        }}
+                                                        className="px-2.5 py-1 bg-[#16A34A] text-white font-bold text-[10px] rounded-lg transition-colors cursor-pointer"
+                                                    >
+                                                        📋 Copy Link
+                                                    </button>
+                                                    <button
+                                                        onClick={() => {
+                                                            const text = `Join our match at ${turfData.name}! Pay your ₹${opponentShare.toLocaleString('en-IN')} share: ${window.location.origin}/turfs/${turfData.id}`
+                                                            window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`, '_blank')
+                                                        }}
+                                                        className="px-2.5 py-1 bg-[#25D366] text-white font-bold text-[10px] rounded-lg transition-colors cursor-pointer"
+                                                    >
+                                                        💬 WhatsApp
+                                                    </button>
+                                                    <button
+                                                        onClick={() => {
+                                                            const newTeam = prompt('Enter new opponent team name:', 'Thunder XI')
+                                                            if (newTeam) {
+                                                                setTeamBName(newTeam)
+                                                                if (addToast) addToast(`Re-invited ${newTeam}! Share link sent.`, 'info')
+                                                            }
+                                                        }}
+                                                        className="px-2.5 py-1 bg-slate-200 text-[#111827] font-bold text-[10px] rounded-lg transition-colors cursor-pointer"
+                                                    >
+                                                        🔄 Change Team
+                                                    </button>
+                                                </div>
+                                            )}
                                         </div>
+
+                                        {/* 2-Hour Pre-Match Guarantee Card */}
+                                        {paymentMode !== 'full' && (
+                                            <div className="bg-amber-50 border border-amber-300 rounded-2xl p-3.5 space-y-2 text-xs text-amber-950">
+                                                <div className="flex items-center justify-between font-black uppercase text-[10px] text-amber-900 border-b border-amber-200 pb-1.5">
+                                                    <span>🛡️ 2-Hour Pre-Match Policy</span>
+                                                    <span className="bg-amber-200 text-amber-900 px-2 py-0.5 rounded-full text-[9px]">Active</span>
+                                                </div>
+                                                <p className="text-[11px] font-medium leading-relaxed">
+                                                    If Team B doesn't pay 2h before match time (4:00 PM), you can either:
+                                                </p>
+                                                <div className="grid grid-cols-2 gap-2 text-[10px] font-bold">
+                                                    <div className="bg-white p-2 rounded-lg border border-amber-200 text-emerald-700">✓ 100% Refund (₹{myShare.toLocaleString('en-IN')})</div>
+                                                    <div className="bg-white p-2 rounded-lg border border-amber-200 text-blue-700">✓ Pay ₹{opponentShare.toLocaleString('en-IN')} & play solo</div>
+                                                </div>
+                                            </div>
+                                        )}
 
                                         <div className="flex gap-3 pt-4 border-t border-[#E5E7EB]">
                                             <button

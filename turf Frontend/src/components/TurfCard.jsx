@@ -81,14 +81,18 @@ export default function TurfCard({ turf, onMouseEnter, onMouseLeave, i = 0 }) {
                     >
                         <span>📍 {turf.location}</span>
                     </a>
-                    <span className="text-slate-300">•</span>
-                    <span>{(Number(turf.distance) || 4.2).toFixed(1)} km</span>
+                    {turf.distance !== null && turf.distance !== undefined && !isNaN(Number(turf.distance)) && (
+                        <>
+                            <span className="text-slate-300">•</span>
+                            <span>{Number(turf.distance).toFixed(1)} km</span>
+                        </>
+                    )}
                 </div>
 
                 <div className="text-[10px] text-[#6B7280] mb-1.5 flex items-center gap-1">
                     <span className="text-amber-500 text-[10px]">⭐</span>
-                    <span className="font-bold text-[#111827]">{turf.rating.toFixed(1)}</span>
-                    <span className="font-medium text-[#6B7280]">(324)</span>
+                    <span className="font-bold text-[#111827]">{turf.rating ? Number(turf.rating).toFixed(1) : '4.5'}</span>
+                    <span className="font-medium text-[#6B7280]">({turf.reviews || 120})</span>
                 </div>
 
                 <div className="flex flex-wrap items-center gap-1.5 mb-1.5">
@@ -120,7 +124,7 @@ export default function TurfCard({ turf, onMouseEnter, onMouseLeave, i = 0 }) {
                     <div className="flex flex-col">
                         <span className="text-[8px] text-[#6B7280] uppercase tracking-widest font-black mb-0.5 leading-none">Starts From</span>
                         <div className="flex items-baseline text-[#111827]">
-                            <span className="text-[19px] font-black leading-none tracking-tight text-[#111827]">₹{turf.price}</span>
+                            <span className="text-[19px] font-black leading-none tracking-tight text-[#111827]">₹{Number(turf.price).toLocaleString('en-IN')}</span>
                             <span className="text-[10px] text-[#6B7280] font-bold ml-1">/hr</span>
                         </div>
                     </div>

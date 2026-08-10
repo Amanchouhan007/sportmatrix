@@ -8,22 +8,38 @@ import {
 
 export default function TournamentCardPremium({ tournament }) {
     const navigate = useNavigate();
+
+    const rawPrize = tournament?.prize || tournament?.prize_pool || tournament?.total_prize;
+    const formattedPrize = (() => {
+        if (!rawPrize || String(rawPrize).includes('NaN')) return '₹50,000';
+        if (typeof rawPrize === 'number') return `₹${rawPrize.toLocaleString('en-IN')}`;
+        const str = String(rawPrize).trim();
+        return str.startsWith('₹') ? str : `₹${str}`;
+    })();
+
+    const rawFee = tournament?.entryFee || tournament?.entry_fee || tournament?.price;
+    const formattedFee = (() => {
+        if (!rawFee || String(rawFee).includes('NaN')) return '500';
+        if (typeof rawFee === 'number') return rawFee.toLocaleString('en-IN');
+        const str = String(rawFee).replace(/[^0-9]/g, '');
+        return str || '500';
+    })();
     
     // Mock data for rich UI presentation if real data is missing
     const t = {
-        id: tournament?.id || tournament?._id || 'mock_id',
+        id: tournament?.id || tournament?._id || 't_001',
         title: tournament?.title || tournament?.name || 'Premier Cricket Cup',
-        image: tournament?.banner || '/images/turf1.png',
+        image: tournament?.banner || tournament?.image || '/images/turf1.png',
         rating: tournament?.rating || 4.9,
-        maxTeams: tournament?.maxTeams || 16,
-        registeredTeams: tournament?.registrations || 12,
+        maxTeams: tournament?.maxTeams || tournament?.max_teams || 16,
+        registeredTeams: tournament?.registrations || tournament?.registered_teams || 12,
         location: tournament?.location || 'Vijay Nagar, Indore',
-        date: tournament?.date || '15 Aug 2026',
+        date: tournament?.date || tournament?.start_date || '15 Aug 2026',
         time: tournament?.time || '6:00 PM',
         level: tournament?.level || 'Intermediate',
         age: tournament?.age || '18+',
-        prize: tournament?.prize || '₹50,000',
-        entryFee: tournament?.entryFee || '500',
+        prize: formattedPrize,
+        entryFee: formattedFee,
         organizer: tournament?.organizer || 'SportMatrix',
         isVerified: true,
         isTrending: true,
@@ -168,7 +184,7 @@ export default function TournamentCardPremium({ tournament }) {
                             View
                         </button>
                         <button 
-                            onClick={(e) => { e.stopPropagation(); navigate(`/tournaments/${t.id}/register`); }}
+                            onClick={(e) => { e.stopPropagation(); navigate(`/tournaments/${t.id}?register=true`); }}
                             className="flex-1 py-2 bg-[#C8FF2E] hover:bg-[#B5F000] text-[#111827] text-[11px] font-black uppercase tracking-wider rounded-xl transition-colors border border-[#B5F000] shadow-sm active:scale-95"
                         >
                             Join Now
