@@ -13,7 +13,7 @@ export default function TournamentCardPremium({ tournament }) {
     const t = {
         id: tournament?.id || tournament?._id || 'mock_id',
         title: tournament?.title || tournament?.name || 'Premier Cricket Cup',
-        image: tournament?.banner || 'https://images.unsplash.com/photo-1551958219-acbc608c6377?auto=format&fit=crop&q=80&w=800',
+        image: tournament?.banner || '/images/turf1.png',
         rating: tournament?.rating || 4.9,
         maxTeams: tournament?.maxTeams || 16,
         registeredTeams: tournament?.registrations || 12,

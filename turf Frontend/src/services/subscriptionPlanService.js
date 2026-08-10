@@ -1,7 +1,7 @@
 import api from './api';
 
 // Fallback Seed Plans if backend is offline
-const defaultFallbackPlans = [
+export const defaultFallbackPlans = [
     {
         _id: 'plan_starter',
         id: 'plan_starter',
@@ -80,7 +80,7 @@ let localPlans = [...defaultFallbackPlans];
  */
 export const getAllPlans = async () => {
     try {
-        const response = await api.get('/subscriptions');
+        const response = await api.get('/subscriptions', { timeout: 400 });
         if (response.data && response.data.success) {
             localPlans = response.data.data;
             return {

@@ -5,12 +5,12 @@ import api from './api';
  */
 
 // Fallback Public Tournaments list
-const fallbackPublicTournaments = [
+export const fallbackPublicTournaments = [
     {
         id: 't_001',
         title: 'Premier Cricket Championship 2026',
         name: 'Premier Cricket Championship 2026',
-        banner: 'https://images.unsplash.com/photo-1540747913346-19e32dc3e97e?auto=format&fit=crop&q=80&w=800',
+        banner: '/images/turf2.png',
         description: 'Indore annual cricket master tournament under floodlights.',
         sport: 'Cricket',
         category: 'Open Category',
@@ -26,7 +26,7 @@ const fallbackPublicTournaments = [
         id: 't_002',
         title: 'Super 5 Football Cup',
         name: 'Super 5 Football Cup',
-        banner: 'https://images.unsplash.com/photo-1551958219-acbc608c6377?auto=format&fit=crop&q=80&w=800',
+        banner: '/images/turf1.png',
         description: '5-a-side football tournament with exciting prize pool.',
         sport: 'Football',
         category: 'Pro Division',
@@ -42,7 +42,7 @@ const fallbackPublicTournaments = [
         id: 't_003',
         title: 'Mumbai Turf Football League',
         name: 'Mumbai Turf Football League',
-        banner: 'https://images.unsplash.com/photo-1579952363873-27f3bade9f55?auto=format&fit=crop&q=80&w=800',
+        banner: '/images/turf3.png',
         description: 'High stakes 7-a-side football championship in Mumbai.',
         sport: 'Football',
         category: 'Open Division',
@@ -58,7 +58,7 @@ const fallbackPublicTournaments = [
         id: 't_004',
         title: 'Bangalore Smash Badminton Open',
         name: 'Bangalore Smash Badminton Open',
-        banner: 'https://images.unsplash.com/photo-1626224583764-f87db24ac4ea?auto=format&fit=crop&q=80&w=800',
+        banner: '/images/turf4.png',
         description: 'Indoor singles & doubles badminton tournament.',
         sport: 'Badminton',
         category: 'Master Singles',
@@ -75,10 +75,10 @@ const fallbackPublicTournaments = [
 /**
  * Fetch public tournaments list (only Approved/Active/Completed)
  */
-export const getPublicTournaments = async (filters = {}) => {
+export const getPublicTournaments = async (filters = {}, config = {}) => {
     try {
         const params = { role: 'CUSTOMER', ...filters };
-        const response = await api.get('/tournaments', { params });
+        const response = await api.get('/tournaments', { params, timeout: 1000, ...config });
         if (response.data && response.data.success && Array.isArray(response.data.data) && response.data.data.length > 0) {
             return response.data;
         }
@@ -97,7 +97,7 @@ export const getPublicTournaments = async (filters = {}) => {
  */
 export const getTournamentById = async (id) => {
     try {
-        const response = await api.get(`/tournaments/${id}`);
+        const response = await api.get(`/tournaments/${id}`, { timeout: 800 });
         if (response.data && response.data.success) {
             return response.data;
         }
@@ -117,7 +117,7 @@ export const getTournamentById = async (id) => {
  */
 export const getFixtures = async (tournamentId) => {
     try {
-        const response = await api.get(`/tournaments/${tournamentId}/fixtures`);
+        const response = await api.get(`/tournaments/${tournamentId}/fixtures`, { timeout: 800 });
         return response.data;
     } catch (error) {
         return { success: true, data: [] };
@@ -129,7 +129,7 @@ export const getFixtures = async (tournamentId) => {
  */
 export const getLeaderboard = async (tournamentId) => {
     try {
-        const response = await api.get(`/tournaments/${tournamentId}/leaderboard`);
+        const response = await api.get(`/tournaments/${tournamentId}/leaderboard`, { timeout: 800 });
         return response.data;
     } catch (error) {
         return { success: true, data: [] };

@@ -185,7 +185,7 @@ export default function ContactPage() {
 
             {/* Message Sent Confirmation Modal */}
             {sentSuccessModal && sentData && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-in fade-in zoom-in-95 duration-200">
+                <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/65 backdrop-blur-sm p-4 animate-in fade-in zoom-in-95 duration-200">
                     <div className="bg-white border border-[#E5E7EB] rounded-2xl p-6 sm:p-8 max-w-md w-full shadow-2xl relative text-[#111827]">
                         <button
                             onClick={() => setSentSuccessModal(false)}

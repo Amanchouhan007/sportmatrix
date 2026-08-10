@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { HiLightningBolt } from 'react-icons/hi';
-import { getPublicTournaments } from '../../services/tournamentService';
+import { getPublicTournaments, fallbackPublicTournaments } from '../../services/tournamentService';
 import TournamentHero from '../../components/tournaments/TournamentHero';
 import TournamentSearchBar from '../../components/tournaments/TournamentSearchBar';
 import TournamentCardPremium from '../../components/tournaments/TournamentCardPremium';
@@ -9,8 +9,8 @@ import FloatingActions from '../../components/tournaments/FloatingActions';
 
 export default function TournamentListPage() {
     const [filter, setFilter] = useState('All');
-    const [tournaments, setTournaments] = useState([]);
-    const [loading, setLoading] = useState(true);
+    const [tournaments, setTournaments] = useState(fallbackPublicTournaments);
+    const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
 
     useEffect(() => {
@@ -19,21 +19,13 @@ export default function TournamentListPage() {
     }, []);
 
     const fetchTournaments = async () => {
-        setLoading(true);
-        setError(null);
         try {
-            const res = await getPublicTournaments();
-            if (res.success && Array.isArray(res.data)) {
+            const res = await getPublicTournaments({}, { timeout: 800 });
+            if (res && res.success && Array.isArray(res.data) && res.data.length > 0) {
                 setTournaments(res.data);
-            } else {
-                setTournaments([]);
             }
         } catch (err) {
-            console.error('Error fetching tournaments:', err);
-            setTournaments([]);
-            setError('Failed to fetch tournaments');
-        } finally {
-            setLoading(false);
+            console.error('Error fetching tournaments in background:', err);
         }
     }
 

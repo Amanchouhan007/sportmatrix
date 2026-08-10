@@ -101,23 +101,23 @@ export default function MediaUploadModal({ isOpen, onClose, currentMedia = [], o
     };
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-fadeIn">
-            <div className="relative w-full max-w-3xl bg-slate-900 border border-white/10 rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+        <div className="fixed inset-0 z-[200] flex items-center justify-center pt-16 pb-4 px-3 sm:p-6 bg-black/65 backdrop-blur-sm animate-fadeIn">
+            <div className="relative w-full max-w-3xl bg-white border border-[#E5E7EB] rounded-[24px] shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
                 
                 {/* Modal Header */}
-                <div className="px-6 py-4 border-b border-white/10 flex items-center justify-between bg-slate-950/50">
+                <div className="px-6 py-4 border-b border-[#E5E7EB] flex items-center justify-between bg-slate-50">
                     <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500/20 to-teal-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
+                        <div className="w-10 h-10 rounded-2xl bg-green-50 border border-green-200 flex items-center justify-center text-[#16A34A]">
                             <HiPhotograph className="w-6 h-6" />
                         </div>
                         <div>
-                            <h2 className="text-lg font-black text-white italic tracking-tight uppercase">Turf Media Manager</h2>
-                            <p className="text-xs text-slate-400 font-bold">Upload Photos & Videos (MP4, WEBM, PNG, JPG)</p>
+                            <h2 className="text-lg font-black text-[#111827] italic tracking-tight uppercase">Turf Media Manager</h2>
+                            <p className="text-xs text-[#6B7280] font-semibold">Upload Photos & Videos (MP4, WEBM, PNG, JPG)</p>
                         </div>
                     </div>
                     <button
                         onClick={onClose}
-                        className="p-2 text-slate-400 hover:text-white rounded-lg hover:bg-white/5 transition-colors"
+                        className="p-2 text-[#6B7280] hover:text-[#111827] rounded-xl hover:bg-slate-100 transition-colors cursor-pointer"
                     >
                         <HiX className="w-6 h-6" />
                     </button>
@@ -127,7 +127,7 @@ export default function MediaUploadModal({ isOpen, onClose, currentMedia = [], o
                 <div className="p-6 overflow-y-auto space-y-6 flex-1 custom-scrollbar">
                     
                     {/* Upload Drop Zone */}
-                    <div className="border-2 border-dashed border-emerald-500/30 hover:border-emerald-500/60 rounded-xl p-6 text-center bg-emerald-500/[0.02] hover:bg-emerald-500/[0.05] transition-all cursor-pointer group"
+                    <div className="border-2 border-dashed border-[#16A34A]/40 hover:border-[#16A34A] rounded-2xl p-6 text-center bg-green-50/40 hover:bg-green-50 transition-all cursor-pointer group"
                         onClick={() => fileInputRef.current?.click()}
                     >
                         <input
@@ -139,36 +139,36 @@ export default function MediaUploadModal({ isOpen, onClose, currentMedia = [], o
                             className="hidden"
                         />
                         <div className="flex justify-center items-center gap-3 mb-3">
-                            <div className="w-12 h-12 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400 group-hover:scale-110 transition-transform">
+                            <div className="w-12 h-12 rounded-2xl bg-white border border-[#E5E7EB] flex items-center justify-center text-[#16A34A] shadow-xs group-hover:scale-110 transition-transform">
                                 <HiUpload className="w-6 h-6" />
                             </div>
-                            <div className="w-12 h-12 rounded-xl bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center text-cyan-400 group-hover:scale-110 transition-transform">
+                            <div className="w-12 h-12 rounded-2xl bg-white border border-[#E5E7EB] flex items-center justify-center text-blue-600 shadow-xs group-hover:scale-110 transition-transform">
                                 <HiVideoCamera className="w-6 h-6" />
                             </div>
                         </div>
-                        <h3 className="text-sm font-black text-white uppercase tracking-wider mb-1">
+                        <h3 className="text-sm font-black text-[#111827] uppercase tracking-wider mb-1">
                             Click or Drag & Drop Photos & Videos
                         </h3>
-                        <p className="text-xs text-slate-400 font-bold">
+                        <p className="text-xs text-[#6B7280] font-semibold">
                             Supports high-res Photos (JPG, PNG, WEBP) & Full HD Videos (MP4, WEBM, MOV) up to 100MB
                         </p>
 
                         {isUploading && (
-                            <div className="mt-4 flex items-center justify-center gap-2 text-xs font-bold text-emerald-400">
-                                <div className="w-4 h-4 border-2 border-emerald-400 border-t-transparent rounded-full animate-spin" />
+                            <div className="mt-4 flex items-center justify-center gap-2 text-xs font-bold text-[#16A34A]">
+                                <div className="w-4 h-4 border-2 border-[#16A34A] border-t-transparent rounded-full animate-spin" />
                                 <span>{uploadProgress}</span>
                             </div>
                         )}
                     </div>
 
                     {/* Or URL Input */}
-                    <form onSubmit={handleAddCustomUrl} className="bg-slate-950/60 p-4 border border-white/5 rounded-xl space-y-3">
-                        <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Or Add Direct Photo / Video Web URL:</span>
+                    <form onSubmit={handleAddCustomUrl} className="bg-[#F7F9FC] p-4 border border-[#E5E7EB] rounded-2xl space-y-3">
+                        <span className="text-[10px] font-black uppercase tracking-widest text-[#6B7280]">Or Add Direct Photo / Video Web URL:</span>
                         <div className="flex flex-col sm:flex-row gap-2">
                             <select
                                 value={customType}
                                 onChange={(e) => setCustomType(e.target.value)}
-                                className="px-3 py-2 bg-slate-900 border border-white/10 rounded-lg text-xs font-bold text-white outline-none focus:border-emerald-500"
+                                className="px-3.5 py-2 bg-white border border-[#E5E7EB] rounded-xl text-xs font-bold text-[#111827] outline-none focus:border-[#16A34A]"
                             >
                                 <option value="image">📷 Photo</option>
                                 <option value="video">🎥 Video</option>
@@ -178,11 +178,11 @@ export default function MediaUploadModal({ isOpen, onClose, currentMedia = [], o
                                 value={customUrl}
                                 onChange={(e) => setCustomUrl(e.target.value)}
                                 placeholder="Paste photo or video URL (https://...)"
-                                className="flex-1 px-4 py-2 bg-slate-900 border border-white/10 rounded-lg text-xs font-medium text-white outline-none focus:border-emerald-500"
+                                className="flex-1 px-4 py-2 bg-white border border-[#E5E7EB] rounded-xl text-xs font-semibold text-[#111827] outline-none focus:border-[#16A34A]"
                             />
                             <button
                                 type="submit"
-                                className="px-5 py-2 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs uppercase tracking-wider rounded-lg transition-all"
+                                className="px-5 py-2 bg-[#C8FF2E] hover:bg-[#B5F000] text-[#111827] font-black text-xs uppercase tracking-wider rounded-xl transition-all border border-[#B5F000] cursor-pointer"
                             >
                                 Add Media
                             </button>
@@ -191,24 +191,24 @@ export default function MediaUploadModal({ isOpen, onClose, currentMedia = [], o
 
                     {/* Current Media List Grid */}
                     <div>
-                        <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-3 flex items-center justify-between">
+                        <h4 className="text-xs font-black text-[#6B7280] uppercase tracking-widest mb-3 flex items-center justify-between">
                             <span>Uploaded Media Items ({mediaList.length})</span>
-                            <span className="text-[10px] text-slate-500">First item is primary display</span>
+                            <span className="text-[10px] text-[#9CA3AF]">First item is primary display</span>
                         </h4>
 
                         {mediaList.length === 0 ? (
-                            <div className="p-8 text-center bg-slate-950/40 border border-white/5 rounded-xl text-slate-500 text-xs font-bold">
+                            <div className="p-8 text-center bg-slate-50 border border-[#E5E7EB] rounded-2xl text-[#6B7280] text-xs font-semibold">
                                 No media uploaded yet. Upload a photo or video above!
                             </div>
                         ) : (
                             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
                                 {mediaList.map((item, idx) => (
-                                    <div key={idx} className="relative group rounded-xl overflow-hidden border border-white/10 bg-slate-950 aspect-video flex items-center justify-center shadow-md">
+                                    <div key={idx} className="relative group rounded-2xl overflow-hidden border border-[#E5E7EB] bg-slate-900 aspect-video flex items-center justify-center shadow-xs">
                                         {item.type === 'video' ? (
                                             <div className="w-full h-full relative bg-slate-950">
                                                 <video src={item.url} className="w-full h-full object-cover" muted />
                                                 <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
-                                                    <span className="w-9 h-9 rounded-full bg-slate-900/90 border border-emerald-500/50 flex items-center justify-center text-emerald-400 text-sm pl-0.5">
+                                                    <span className="w-8 h-8 rounded-full bg-slate-900/90 border border-emerald-500/50 flex items-center justify-center text-emerald-400 text-xs pl-0.5">
                                                         ▶
                                                     </span>
                                                 </div>
@@ -228,7 +228,7 @@ export default function MediaUploadModal({ isOpen, onClose, currentMedia = [], o
                                         {/* Remove Button */}
                                         <button
                                             onClick={() => handleRemoveMedia(idx)}
-                                            className="absolute top-1.5 right-1.5 p-1.5 bg-red-500/80 hover:bg-red-500 text-white rounded-lg opacity-0 group-hover:opacity-100 transition-opacity"
+                                            className="absolute top-1.5 right-1.5 p-1.5 bg-red-500/80 hover:bg-red-500 text-white rounded-lg opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
                                             title="Delete Media"
                                         >
                                             <HiTrash className="w-4 h-4" />
@@ -242,22 +242,22 @@ export default function MediaUploadModal({ isOpen, onClose, currentMedia = [], o
                 </div>
 
                 {/* Modal Footer */}
-                <div className="px-6 py-4 border-t border-white/10 bg-slate-950/80 flex items-center justify-between">
-                    <span className="text-xs font-bold text-slate-400">
+                <div className="px-6 py-4 border-t border-[#E5E7EB] bg-slate-50 flex items-center justify-between">
+                    <span className="text-xs font-semibold text-[#6B7280]">
                         {mediaList.filter(m => m.type === 'video').length} Videos • {mediaList.filter(m => m.type === 'image').length} Photos
                     </span>
                     <div className="flex gap-3">
                         <button
                             onClick={onClose}
-                            className="px-5 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 font-black text-xs uppercase tracking-wider rounded-lg transition-colors"
+                            className="px-5 py-2 bg-white hover:bg-slate-100 text-[#111827] font-bold text-xs uppercase tracking-wider rounded-full transition-colors border border-[#E5E7EB] cursor-pointer"
                         >
                             Cancel
                         </button>
                         <button
                             onClick={handleSave}
-                            className="px-6 py-2 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 font-black text-xs uppercase tracking-wider rounded-lg transition-all shadow-[0_0_15px_rgba(16,185,129,0.3)] flex items-center gap-1.5"
+                            className="px-6 py-2 bg-[#C8FF2E] hover:bg-[#B5F000] text-[#111827] font-black text-xs uppercase tracking-wider rounded-full transition-all border border-[#B5F000] cursor-pointer shadow-xs flex items-center gap-1.5"
                         >
-                            <HiCheckCircle className="w-4 h-4" />
+                            <HiCheckCircle className="w-4 h-4 text-[#16A34A]" />
                             Save Gallery
                         </button>
                     </div>

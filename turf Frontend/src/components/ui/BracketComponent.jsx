@@ -6,63 +6,63 @@ export default function BracketComponent({ rounds = [] }) {
                     <div key={ri} className="flex flex-col justify-around gap-8 min-w-[280px] relative">
                         {/* Round Header */}
                         <div className="absolute -top-6 left-0 right-0 text-center">
-                            <h4 className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">{round.name}</h4>
-                            <div className="h-px w-16 mx-auto bg-slate-800 mt-2" />
+                            <h4 className="text-[10px] font-black text-[#6B7280] uppercase tracking-[0.2em]">{round.name}</h4>
+                            <div className="h-px w-16 mx-auto bg-[#E5E7EB] mt-2" />
                         </div>
 
                         {round.matches.map((match, mi) => (
-                            <div key={mi} className="relative group p-px rounded-sm bg-gradient-to-b from-white/10 to-transparent hover:from-emerald-500/50 transition-colors duration-500">
-                                <div className="bg-slate-900 rounded-sm overflow-hidden flex flex-col relative z-10 shadow-lg">
+                            <div key={mi} className="relative group p-px rounded-2xl bg-[#E5E7EB] hover:bg-[#16A34A]/40 transition-colors duration-300 shadow-xs">
+                                <div className="bg-white rounded-2xl overflow-hidden flex flex-col relative z-10 border border-[#E5E7EB]">
                                     {match.teams.map((team, ti) => (
                                         <div
                                             key={ti}
-                                            className={`flex items-center justify-between px-4 py-3 relative transition-colors duration-300 ${ti === 0 ? 'border-b border-white/5 pb-3.5' : 'pt-3.5'
+                                            className={`flex items-center justify-between px-4 py-3 relative transition-colors duration-300 ${ti === 0 ? 'border-b border-[#E5E7EB] pb-3' : 'pt-3'
                                                 } ${team.winner
-                                                    ? 'bg-emerald-500/10 shadow-[inset_2px_0_0_0_#10b981]'
-                                                    : 'bg-transparent hover:bg-white/5'
+                                                    ? 'bg-green-50/80 border-l-4 border-l-[#16A34A]'
+                                                    : 'bg-white hover:bg-slate-50'
                                                 }`}
                                         >
                                             {/* Connecting Lines for Bracket (Right Side) */}
                                             {ri < rounds.length - 1 && (
-                                                <div className="absolute -right-6 top-1/2 w-6 h-px bg-slate-800 pointer-events-none group-hover:bg-emerald-500/30 transition-colors" />
+                                                <div className="absolute -right-6 top-1/2 w-6 h-px bg-[#E5E7EB] pointer-events-none group-hover:bg-[#16A34A]/50 transition-colors" />
                                             )}
 
-                                            {/* Vertical Connector (Generated dynamically via CSS ideally, simplified here) */}
+                                            {/* Vertical Connector */}
                                             {ri < rounds.length - 1 && mi % 2 === 0 && ti === 1 && (
-                                                <div className="absolute -right-6 top-1/2 w-px h-[calc(100%+2rem)] bg-slate-800 pointer-events-none group-hover:bg-emerald-500/30 transition-colors" />
+                                                <div className="absolute -right-6 top-1/2 w-px h-[calc(100%+2rem)] bg-[#E5E7EB] pointer-events-none group-hover:bg-[#16A34A]/50 transition-colors" />
                                             )}
                                             {ri < rounds.length - 1 && mi % 2 === 1 && ti === 0 && (
-                                                <div className="absolute -right-6 bottom-1/2 w-px h-[calc(100%+2rem)] bg-slate-800 pointer-events-none group-hover:bg-emerald-500/30 transition-colors" />
+                                                <div className="absolute -right-6 bottom-1/2 w-px h-[calc(100%+2rem)] bg-[#E5E7EB] pointer-events-none group-hover:bg-[#16A34A]/50 transition-colors" />
                                             )}
 
                                             {/* Left Connecting Line (Incoming) */}
                                             {ri > 0 && ti === 0 && (
-                                                <div className="absolute -left-6 top-full w-6 h-px bg-slate-800 pointer-events-none" />
+                                                <div className="absolute -left-6 top-full w-6 h-px bg-[#E5E7EB] pointer-events-none" />
                                             )}
 
                                             <div className="flex items-center gap-3">
-                                                <div className={`w-5 h-5 rounded-sm flex items-center justify-center text-[9px] font-black font-mono transition-colors ${team.winner
-                                                    ? 'bg-emerald-500 text-slate-950 shadow-[0_0_10px_rgba(16,185,129,0.3)]'
+                                                <div className={`w-5 h-5 rounded-md flex items-center justify-center text-[9px] font-black font-mono transition-colors ${team.winner
+                                                    ? 'bg-[#C8FF2E] text-[#111827] border border-[#B5F000] shadow-xs'
                                                     : team.name === 'TBD'
-                                                        ? 'bg-slate-950/50 border border-white/5 text-slate-700'
-                                                        : 'bg-slate-800 text-slate-400'
+                                                        ? 'bg-slate-100 border border-[#E5E7EB] text-[#9CA3AF]'
+                                                        : 'bg-slate-100 border border-[#E5E7EB] text-[#6B7280]'
                                                     }`}>
                                                     {team.seed}
                                                 </div>
                                                 <span className={`text-xs uppercase tracking-wide truncate max-w-[120px] transition-colors ${team.winner
-                                                    ? 'font-black text-white'
+                                                    ? 'font-black text-[#16A34A]'
                                                     : team.name === 'TBD'
-                                                        ? 'font-bold text-slate-600'
-                                                        : 'font-bold text-slate-300 group-hover:text-white'
+                                                        ? 'font-bold text-[#9CA3AF]'
+                                                        : 'font-bold text-[#111827]'
                                                     }`}>
                                                     {team.name}
                                                 </span>
                                             </div>
                                             <span className={`text-sm tabular-nums font-black transition-colors ${team.winner
-                                                ? 'text-emerald-400'
+                                                ? 'text-[#16A34A]'
                                                 : team.name === 'TBD'
-                                                    ? 'text-slate-700'
-                                                    : 'text-slate-500 group-hover:text-slate-300'
+                                                    ? 'text-[#9CA3AF]'
+                                                    : 'text-[#6B7280]'
                                                 }`}>
                                                 {team.score}
                                             </span>

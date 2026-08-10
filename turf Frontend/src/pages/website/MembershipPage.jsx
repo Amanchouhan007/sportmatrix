@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { HiCheck, HiStar, HiLightningBolt, HiFire, HiShieldCheck, HiX, HiCheckCircle, HiRefresh, HiClipboardCopy, HiUser, HiOfficeBuilding, HiLocationMarker } from 'react-icons/hi'
 import { useToast } from '../../components/ui/Toast'
 import { useAuth } from '../../context/AuthContext'
-import { getAllPlans } from '../../services/subscriptionPlanService'
+import { getAllPlans, defaultFallbackPlans } from '../../services/subscriptionPlanService'
 import { createOwner } from '../../services/ownerService'
 
 export default function MembershipPage() {
@@ -12,8 +12,8 @@ export default function MembershipPage() {
     const addToast = toastContext?.addToast
     const { setSession } = useAuth()
 
-    const [dbPlans, setDbPlans] = useState([])
-    const [isLoadingPlans, setIsLoadingPlans] = useState(true)
+    const [dbPlans, setDbPlans] = useState(() => defaultFallbackPlans.filter(p => p.status === 'active'))
+    const [isLoadingPlans, setIsLoadingPlans] = useState(false)
     const [billingCycle, setBillingCycle] = useState('monthly') // 'monthly' | 'yearly'
 
     // Owner Registration Modal State
@@ -54,17 +54,14 @@ export default function MembershipPage() {
     }, [])
 
     const fetchSubscriptionPlans = async () => {
-        setIsLoadingPlans(true)
         try {
             const res = await getAllPlans()
-            if (res && res.success && Array.isArray(res.data)) {
+            if (res && res.success && Array.isArray(res.data) && res.data.length > 0) {
                 const active = res.data.filter(p => p.status === 'active')
                 setDbPlans(active)
             }
         } catch (err) {
             console.error('Failed to load subscription plans:', err)
-        } finally {
-            setIsLoadingPlans(false)
         }
     }
 
@@ -385,32 +382,32 @@ export default function MembershipPage() {
 
             {/* STEP 1: Fully Responsive Owner Registration Form Modal */}
             {isRegisterModalOpen && selectedPlanForRegistration && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-3 sm:p-6 overflow-hidden animate-in fade-in duration-200">
-                    <div className="bg-white border border-[#E5E7EB] rounded-2xl max-w-2xl w-full shadow-2xl relative flex flex-col max-h-[92vh] sm:max-h-[88vh] overflow-hidden text-[#111827]">
+                <div className="fixed inset-0 z-[200] flex items-start justify-center bg-black/65 backdrop-blur-sm pt-20 sm:pt-24 pb-6 px-3 sm:px-6 overflow-y-auto animate-in fade-in duration-200">
+                    <div className="bg-white border border-[#E5E7EB] rounded-[20px] sm:rounded-[24px] max-w-2xl w-full shadow-2xl relative flex flex-col max-h-[80vh] overflow-hidden text-[#111827] my-auto">
                         
                         {/* Sticky Header */}
-                        <div className="p-4 sm:p-6 border-b border-[#E5E7EB] shrink-0 relative bg-white">
+                        <div className="p-3.5 sm:p-5 border-b border-[#E5E7EB] shrink-0 relative bg-white">
                             <button
                                 type="button"
                                 onClick={() => setIsRegisterModalOpen(false)}
-                                className="absolute top-4 right-4 text-[#6B7280] hover:text-[#111827] transition-colors cursor-pointer p-1 rounded-lg hover:bg-[#F7F9FC]"
+                                className="absolute top-3.5 right-3.5 text-[#6B7280] hover:text-[#111827] transition-colors cursor-pointer p-1.5 rounded-full hover:bg-[#F7F9FC]"
                             >
                                 <HiX className="w-5 h-5" />
                             </button>
 
-                            <div className="inline-flex items-center gap-2 px-3 py-1 bg-[#F7F9FC] border border-[#E5E7EB] rounded-full mb-2 max-w-[85%] sm:max-w-full">
+                            <div className="inline-flex items-center gap-2 px-3 py-1 bg-[#F7F9FC] border border-[#E5E7EB] rounded-full mb-1.5 max-w-[85%] sm:max-w-full">
                                 <HiCheckCircle className="w-3.5 h-3.5 text-[#16A34A] shrink-0" />
                                 <span className="text-[10px] font-black text-[#111827] uppercase tracking-wider truncate">
                                     Selected Plan: {selectedPlanForRegistration.name} ({selectedPlanForRegistration.price} INR {selectedPlanForRegistration.period})
                                 </span>
                             </div>
-                            <h2 className="text-lg sm:text-2xl font-black text-[#111827] uppercase tracking-tight">OWNER REGISTRATION & ACCOUNT SETUP</h2>
-                            <p className="text-[11px] sm:text-xs text-[#6B7280] mt-0.5 font-semibold">Fill details below to activate your venue admin account.</p>
+                            <h2 className="text-base sm:text-xl md:text-2xl font-black text-[#111827] uppercase tracking-tight pr-8">OWNER REGISTRATION & ACCOUNT SETUP</h2>
+                            <p className="text-[10px] sm:text-xs text-[#6B7280] mt-0.5 font-semibold">Fill details below to activate your venue admin account.</p>
                         </div>
 
                         {/* Scrollable Form Body */}
-                        <form onSubmit={handleOwnerFormSubmit} className="flex flex-col flex-1 overflow-hidden">
-                            <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-6">
+                        <form onSubmit={handleOwnerFormSubmit} className="flex flex-col flex-1 min-h-0 overflow-hidden">
+                            <div className="flex-1 min-h-0 overflow-y-auto p-3.5 sm:p-6 space-y-5 custom-scrollbar">
 
                                 {/* Section 1: Personal Information */}
                                 <div>
@@ -418,7 +415,7 @@ export default function MembershipPage() {
                                         <HiUser className="w-4 h-4 shrink-0" />
                                         <span>Personal Information</span>
                                     </div>
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 sm:gap-4">
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                                         <div>
                                             <label className="block text-[10px] font-bold text-[#111827] uppercase mb-1">Full Name *</label>
                                             <input
@@ -427,7 +424,7 @@ export default function MembershipPage() {
                                                 placeholder="e.g. Rahul Sharma"
                                                 value={ownerFormData.fullName}
                                                 onChange={e => setOwnerFormData({ ...ownerFormData, fullName: e.target.value })}
-                                                className="w-full bg-[#F7F9FC] border border-[#E5E7EB] rounded-xl px-3.5 py-2.5 text-xs text-[#111827] placeholder-[#6B7280] focus:outline-none focus:border-[#C8FF2E] font-bold"
+                                                className="w-full bg-[#F7F9FC] border border-[#E5E7EB] rounded-xl px-3.5 py-2 text-xs text-[#111827] placeholder-[#6B7280] focus:outline-none focus:border-[#16A34A] font-bold"
                                             />
                                         </div>
                                         <div>
@@ -636,7 +633,7 @@ export default function MembershipPage() {
 
             {/* STEP 2: Subscription Plan Authorized Success Modal */}
             {isSuccessModalOpen && subDetails && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-in fade-in zoom-in-95 duration-200">
+                <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/65 backdrop-blur-sm pt-20 sm:pt-24 pb-6 px-4 animate-in fade-in zoom-in-95 duration-200">
                     <div className="bg-white border border-[#E5E7EB] rounded-2xl p-6 sm:p-8 max-w-md w-full shadow-2xl relative text-[#111827]">
                         <button
                             onClick={handleGoToDashboard}

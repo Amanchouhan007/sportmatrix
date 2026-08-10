@@ -160,37 +160,67 @@ export default function Navbar() {
             </div>
 
             {/* MOBILE INTERFACE: LIGHT SLIDE */}
-            <div className={`lg:hidden absolute top-0 left-0 w-full h-screen bg-white transition-all duration-700 ${mobileOpen ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-full pointer-events-none'}`}>
-                <div className="flex flex-col h-full px-8 pt-32 pb-12 overflow-hidden">
-                    <div className="space-y-10">
-                        {navLinks.map((link, i) => (
-                            <button
-                                key={link.href}
-                                onClick={() => handleNavClick(link)}
-                                className={`block text-3xl font-black text-slate-900 hover:text-[#16a34a] transition-all w-full text-left uppercase italic tracking-tighter ${mobileOpen ? 'translate-x-0 opacity-100' : '-translate-x-10 opacity-0'}`}
-                                style={{ transitionDelay: `${i * 100}ms` }}
-                            >
-                                <span className="text-emerald-500/20 mr-4 text-xl not-italic">0{i + 1} //</span>
-                                {link.label}
-                            </button>
-                        ))}
+            <div className={`lg:hidden fixed inset-0 z-[120] bg-white transition-all duration-300 flex flex-col ${mobileOpen ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-full pointer-events-none'}`}>
+                {/* Header inside mobile drawer */}
+                <div className="px-6 py-4 border-b border-[#E5E7EB] flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                        <div className="w-9 h-9 rounded-xl bg-[#16A34A] text-white flex items-center justify-center font-black text-xs">SM</div>
+                        <span className="text-lg font-black text-[#111827] uppercase italic">SportMatrix.</span>
                     </div>
-
-                    <div className="mt-auto space-y-6">
-                        <button
-                            onClick={() => scrollTo('cta')}
-                            className="w-full py-6 bg-slate-900 text-white font-black text-lg tracking-tighter uppercase italic rounded-sm transition-all shadow-2xl shadow-slate-900/20"
-                        >
-                            LAUNCH_COMMAND_CENTER
-                        </button>
-                        <p className="text-center text-[8px] font-black text-slate-300 tracking-[0.5em] uppercase italic">ENCRYPTED_SESSION_v2.04</p>
-                    </div>
+                    <button onClick={() => setMobileOpen(false)} className="p-2 text-[#111827] hover:bg-slate-100 rounded-full cursor-pointer">
+                        <HiX className="w-7 h-7" />
+                    </button>
                 </div>
 
-                {/* Close Button Mobile Overlay */}
-                <button onClick={() => setMobileOpen(false)} className="absolute top-6 right-6 text-slate-900 p-4">
-                    <HiX className="w-10 h-10" />
-                </button>
+                {/* Nav Links List */}
+                <div className="flex-1 overflow-y-auto p-6 space-y-3">
+                    {[
+                        { label: 'HOME', href: '/', isPage: true },
+                        { label: 'TURFS & VENUES', href: '/turfs', isPage: true },
+                        { label: 'TOURNAMENTS', href: '/tournaments', isPage: true },
+                        { label: 'MEMBERSHIP', href: '/membership', isPage: true },
+                        { label: 'CONTACT', href: '/contact', isPage: true },
+                    ].map((link) => (
+                        <button
+                            key={link.href}
+                            onClick={() => handleNavClick(link)}
+                            className={`w-full text-left py-3.5 px-4 rounded-2xl text-base font-black tracking-wider uppercase transition-all flex items-center justify-between cursor-pointer ${
+                                location.pathname === link.href ? 'bg-green-50 text-[#16A34A] border border-green-200' : 'text-[#111827] hover:bg-slate-50 border border-transparent'
+                            }`}
+                        >
+                            <span>{link.label}</span>
+                            <span className="text-xs text-[#6B7280]">→</span>
+                        </button>
+                    ))}
+                </div>
+
+                {/* Footer Action Buttons */}
+                <div className="p-6 border-t border-[#E5E7EB] bg-slate-50 space-y-3 shrink-0">
+                    {user ? (
+                        <button
+                            onClick={() => { navigate('/customer/bookings'); setMobileOpen(false); }}
+                            className="w-full py-3.5 bg-[#16A34A] text-white font-black text-xs uppercase tracking-wider rounded-xl transition-all shadow-xs flex items-center justify-center gap-2 cursor-pointer"
+                        >
+                            <HiTicket className="w-4 h-4" />
+                            <span>My Bookings</span>
+                        </button>
+                    ) : (
+                        <div className="flex gap-3">
+                            <button
+                                onClick={() => { navigate('/login'); setMobileOpen(false); }}
+                                className="flex-1 py-3 bg-white border border-[#E5E7EB] text-[#111827] font-black text-xs uppercase tracking-wider rounded-xl cursor-pointer"
+                            >
+                                Log In
+                            </button>
+                            <button
+                                onClick={() => { navigate('/login'); setMobileOpen(false); }}
+                                className="flex-1 py-3 bg-[#C8FF2E] hover:bg-[#B5F000] text-[#111827] border border-[#B5F000] font-black text-xs uppercase tracking-wider rounded-xl shadow-xs cursor-pointer"
+                            >
+                                Get Started
+                            </button>
+                        </div>
+                    )}
+                </div>
             </div>
         </nav>
     )

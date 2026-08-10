@@ -45,7 +45,7 @@ export default function WebsiteLayout({ children }) {
                     WebkitBackdropFilter: 'blur(18px)',
                     borderBottom: '1px solid rgba(90, 200, 120, 0.12)'
                 }}
-                className={`fixed top-0 inset-x-0 z-50 transition-all duration-300 ${isScrolled ? 'shadow-sm py-0' : 'py-0'}`}
+                className={`fixed top-0 inset-x-0 z-40 transition-all duration-300 ${isScrolled ? 'shadow-sm py-0' : 'py-0'}`}
             >
 
                 <div className="w-full px-5 md:px-10 lg:px-16 h-[58px] flex items-center justify-between relative z-10">

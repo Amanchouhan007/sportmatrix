@@ -83,29 +83,22 @@ const hostData = {
     email: 'vikram@sportzone.in',
 }
 
+/* ── Section Label Component ── */
+function SectionLabel({ children, accent = 'emerald' }) {
+    return (
+        <h2 className="text-[#16A34A] text-xs font-black uppercase tracking-[0.25em] bg-green-50 border border-green-200 px-4 py-1.5 rounded-full shadow-sm inline-flex items-center gap-2 mb-6">
+            <span>⚽</span>
+            <span>{children}</span>
+        </h2>
+    )
+}
+
 const generateSlots = () => {
     const times = ['06:00', '07:00', '08:00', '09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00', '18:00', '19:00', '20:00', '21:00', '22:00']
     return times.map((t, i) => ({
         id: i, time: t, price: i >= 10 && i <= 14 ? 1200 : 800,
         status: [3, 7, 11, 15].includes(i) ? 'booked' : i === 5 ? 'blocked' : 'available',
     }))
-}
-
-/* ── Section Label Component ── */
-function SectionLabel({ children, accent = 'emerald' }) {
-    const colors = {
-        emerald: 'text-emerald-400 bg-emerald-500/50',
-        blue: 'text-blue-400 bg-blue-500/50',
-        amber: 'text-amber-400 bg-amber-500/50',
-        purple: 'text-purple-400 bg-purple-500/50',
-    }
-    return (
-        <h2 className={`text-sm md:text-base font-black tracking-[0.2em] uppercase ${colors[accent]?.split(' ')[0] || 'text-emerald-400'} mb-6 flex items-center gap-3`}>
-            <span className={`h-px w-6 ${colors[accent]?.split(' ')[1] || 'bg-emerald-500/50'}`} />
-            {children}
-            <span className={`h-px flex-1 ${colors[accent]?.split(' ')[1] || 'bg-emerald-500/50'} opacity-30`} />
-        </h2>
-    )
 }
 
 export default function TurfDetailPage() {
@@ -150,8 +143,11 @@ export default function TurfDetailPage() {
 
     useEffect(() => {
         const fetchTurfMedia = async () => {
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 800);
             try {
-                const res = await fetch(`http://localhost:5000/api/v1/turfs/${activeTurf.id}`);
+                const res = await fetch(`http://localhost:5000/api/v1/turfs/${activeTurf.id}`, { signal: controller.signal });
+                clearTimeout(timeoutId);
                 const data = await res.json();
                 if (data.success && data.data && data.data.media) {
                     const backendMedia = typeof data.data.media === 'string' ? JSON.parse(data.data.media) : data.data.media;
@@ -161,7 +157,8 @@ export default function TurfDetailPage() {
                     }
                 }
             } catch (err) {
-                console.error('Could not fetch turf media from server:', err);
+                clearTimeout(timeoutId);
+                // Fail silently to local preview state
             }
         };
         fetchTurfMedia();
@@ -238,7 +235,6 @@ export default function TurfDetailPage() {
         }
     };
 
-    // Integrated 4-Step Booking State (Starts on Date & Time)
     const [bookingStep, setBookingStep] = useState(1);
     const dateList = [
         { id: 'd-1', fullDateString: '2026-08-09', dayShort: 'Sun', dateNum: 9, monthShort: 'Aug', formattedLabel: 'SUNDAY, 9 AUG' },
@@ -268,7 +264,6 @@ export default function TurfDetailPage() {
     const [newTeammateName, setNewTeammateName] = useState('');
     const [showAddTeammateInput, setShowAddTeammateInput] = useState(false);
 
-    // Instant Slot Selection
     const handleSelectSlot = (slotId) => {
         setSelectedSlot(slotId);
     };
@@ -276,7 +271,6 @@ export default function TurfDetailPage() {
     const currentSlot = slots.find(s => s.id === selectedSlot) || slots[12] || slots[0];
     const totalRent = (turfData.price || 800) * duration;
 
-    // 5 Payment Modes Calculation (User's Exact Architecture)
     const myShare = paymentMode === 'full'
         ? totalRent
         : paymentMode === 'split-50'
@@ -342,7 +336,6 @@ export default function TurfDetailPage() {
                 body: JSON.stringify(bookingPayload)
             });
 
-            // Save to local storage for instant customer bookings page display
             const existing = JSON.parse(localStorage.getItem('customer_bookings') || '[]');
             const newEntry = {
                 id: generatedBookingId,
@@ -354,15 +347,13 @@ export default function TurfDetailPage() {
                 status: 'Confirmed'
             };
             localStorage.setItem('customer_bookings', JSON.stringify([newEntry, ...existing]));
-
-            setIsDeploying(false);
-            setBookingStep(4);
-            if (addToast) addToast('Turf booking and match invite recorded in database!', 'success');
-        } catch (err) {
-            console.error('Booking sync error:', err);
-            setIsDeploying(false);
-            setBookingStep(4);
+        } catch (e) {
+            console.error('Booking sync failed:', e);
         }
+
+        setIsDeploying(false);
+        setBookingStep(4);
+        if (addToast) addToast('Match booked successfully!', 'success');
     };
 
     const turfNameLower = (turfData.name || '').toLowerCase()
@@ -378,20 +369,17 @@ export default function TurfDetailPage() {
     }
 
     return (
-        <div className="min-h-screen bg-slate-950 pt-24 pb-16 relative">
-            {/* Background elements */}
-            <div className="absolute inset-x-0 top-0 h-[60vh] z-0 pointer-events-none">
-                <img src={turfData.media[0].url} className="w-full h-full object-cover opacity-10 mix-blend-overlay blur-sm" alt="Background" />
-                <div className="absolute inset-0 bg-gradient-to-b from-slate-950/20 via-slate-950/80 to-slate-950" />
-            </div>
+        <div className="min-h-screen bg-white text-[#111827] pt-24 pb-16 relative">
+            {/* Subtle background glow */}
+            <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-[1400px] h-[400px] bg-gradient-to-b from-emerald-50/50 via-white to-transparent pointer-events-none -z-10" />
 
             <div className="max-w-[1400px] mx-auto px-4 sm:px-6 relative z-10">
                 <button
                     onClick={() => navigate('/turfs')}
-                    className="inline-flex items-center gap-2 text-xs font-bold tracking-widest uppercase text-slate-400 hover:text-emerald-400 transition-colors mb-8 group"
+                    className="inline-flex items-center gap-2 text-xs font-black tracking-wider uppercase text-[#6B7280] hover:text-[#16A34A] transition-colors mb-6 group bg-white border border-[#E5E7EB] hover:border-[#16A34A]/50 px-4 py-2 rounded-full shadow-sm cursor-pointer"
                 >
                     <HiArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
-                    BACK TO PREMIUM VENUES
+                    <span>Back to Premium Venues</span>
                 </button>
 
                 <div className="flex flex-col lg:flex-row gap-10 xl:gap-16">
@@ -399,7 +387,7 @@ export default function TurfDetailPage() {
                     <div className="lg:w-[50%] xl:w-[55%]">
                         <div className="sticky top-28 space-y-4">
                             {/* Main Media Display */}
-                            <div className="w-full h-[350px] md:h-[500px] rounded-sm overflow-hidden bg-slate-900 border border-white/10 relative group shadow-2xl">
+                            <div className="w-full h-[350px] md:h-[500px] rounded-[20px] overflow-hidden bg-slate-100 border border-[#E5E7EB] relative group shadow-[0_15px_45px_rgba(0,0,0,0.08)]">
                                 {activeMedia.type === 'video' ? (
                                     <div className="w-full h-full relative">
                                         <video
@@ -415,17 +403,16 @@ export default function TurfDetailPage() {
                                 ) : (
                                     <img src={activeMedia.url} alt={turfData.name} className="w-full h-full object-cover" />
                                 )}
-                                <div className="absolute inset-0 ring-1 ring-inset ring-white/10 pointer-events-none rounded-sm" />
-                                <div className="absolute top-4 left-4 flex items-center gap-2 px-3 py-1.5 bg-slate-950/80 backdrop-blur border border-white/10 rounded-sm">
-                                    <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_8px_#10b981]" />
-                                    <span className="text-[10px] font-black tracking-widest text-white uppercase">Live Feed</span>
+                                <div className="absolute top-4 left-4 flex items-center gap-2 px-3 py-1.5 bg-white/90 backdrop-blur-md border border-[#E5E7EB] rounded-full shadow-xs">
+                                    <div className="w-2 h-2 rounded-full bg-[#16A34A] animate-pulse shadow-xs" />
+                                    <span className="text-[10px] font-black tracking-widest text-[#111827] uppercase">Live Feed</span>
                                 </div>
                                 {promo && (
-                                    <div className="absolute top-4 right-4 z-20 bg-slate-950/80 backdrop-blur-md border border-white/10 rounded px-3 py-2 flex flex-col shadow-lg pointer-events-none">
-                                        <span className="text-[10px] font-black text-orange-500 uppercase tracking-tight flex items-center gap-1.5 leading-none mb-1">
+                                    <div className="absolute top-4 right-4 z-20 bg-white/90 backdrop-blur-md border border-[#E5E7EB] rounded-2xl px-3 py-2 flex flex-col shadow-xs pointer-events-none">
+                                        <span className="text-[10px] font-black text-amber-700 uppercase tracking-tight flex items-center gap-1.5 leading-none mb-1">
                                             <span className="text-[12px]">{promo.icon}</span> {promo.text.includes('•') ? promo.text.split('•')[0].trim() : 'SPECIAL OFFER'}
                                         </span>
-                                        <span className="text-[9px] font-bold text-white uppercase tracking-widest leading-none">
+                                        <span className="text-[9px] font-bold text-[#111827] uppercase tracking-widest leading-none">
                                             {promo.text.includes('•') ? promo.text.split('•')[1].trim() : promo.text}
                                         </span>
                                     </div>
@@ -434,7 +421,7 @@ export default function TurfDetailPage() {
                                 {/* Delete active photo/video action */}
                                 <button
                                     onClick={handleDeleteActiveMedia}
-                                    className="absolute bottom-4 right-4 z-20 px-3 py-1.5 bg-red-500/80 hover:bg-red-600 backdrop-blur-md text-white text-[10px] font-black uppercase tracking-wider rounded border border-white/20 transition-all flex items-center gap-1 shadow-lg hover:scale-105 cursor-pointer"
+                                    className="absolute bottom-4 right-4 z-20 px-3 py-1.5 bg-red-500 hover:bg-red-600 backdrop-blur-md text-white text-[10px] font-black uppercase tracking-wider rounded-full transition-all flex items-center gap-1 shadow-sm hover:scale-105 cursor-pointer"
                                     title="Delete this photo/video permanently"
                                 >
                                     <span>🗑️ Delete {activeMedia.type === 'video' ? 'Video' : 'Photo'}</span>
@@ -447,14 +434,14 @@ export default function TurfDetailPage() {
                                     <button
                                         key={i}
                                         onClick={() => setSelectedMediaId(i)}
-                                        className={`flex-shrink-0 w-24 h-24 rounded-sm overflow-hidden cursor-pointer transition-all relative border ${selectedMediaId === i ? 'border-emerald-500 opacity-100 shadow-[0_0_15px_rgba(16,185,129,0.3)]' : 'border-white/10 opacity-50 hover:opacity-100 hover:border-white/30'
+                                        className={`flex-shrink-0 w-24 h-24 rounded-2xl overflow-hidden cursor-pointer transition-all relative border ${selectedMediaId === i ? 'border-[#16A34A] ring-2 ring-[#16A34A]/20 opacity-100 shadow-sm' : 'border-[#E5E7EB] opacity-60 hover:opacity-100'
                                             }`}
                                     >
                                         {media.type === 'video' ? (
-                                            <div className="w-full h-full relative bg-slate-950">
+                                            <div className="w-full h-full relative bg-slate-900">
                                                 <video src={media.url} className="w-full h-full object-cover" muted />
-                                                <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
-                                                    <span className="w-8 h-8 rounded-full bg-slate-900/80 border border-white/20 backdrop-blur-sm flex items-center justify-center text-white text-xs pl-0.5">▶</span>
+                                                <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
+                                                    <span className="w-7 h-7 rounded-full bg-white/90 border border-[#E5E7EB] flex items-center justify-center text-[#111827] text-xs pl-0.5 shadow-xs">▶</span>
                                                 </div>
                                             </div>
                                         ) : (
@@ -467,13 +454,13 @@ export default function TurfDetailPage() {
                             {/* Media Upload / Manage Action */}
                             <button
                                 onClick={() => setIsMediaModalOpen(true)}
-                                className="w-full py-2.5 px-4 bg-slate-900/90 hover:bg-slate-900 border border-emerald-500/40 hover:border-emerald-400 text-emerald-400 font-black text-xs uppercase tracking-widest rounded-sm transition-all flex items-center justify-between shadow-lg group cursor-pointer"
+                                className="w-full py-3 px-4 bg-[#F7F9FC] hover:bg-green-50/60 border border-[#E5E7EB] hover:border-[#16A34A] text-[#111827] font-black text-xs uppercase tracking-wider rounded-[14px] transition-all flex items-center justify-between shadow-xs group cursor-pointer"
                             >
                                 <span className="flex items-center gap-2">
                                     <span>📸 🎥</span>
                                     <span>Upload Photos & Videos</span>
                                 </span>
-                                <span className="text-[10px] bg-emerald-500/20 px-2 py-1 rounded text-emerald-300 font-bold group-hover:bg-emerald-500 group-hover:text-slate-950 transition-colors">
+                                <span className="text-[10px] bg-[#C8FF2E] border border-[#B5F000] px-2.5 py-1 rounded-full text-[#111827] font-black group-hover:bg-[#B5F000] transition-colors">
                                     + Add / Manage
                                 </span>
                             </button>
@@ -486,47 +473,47 @@ export default function TurfDetailPage() {
                         <div className="mb-6">
                             <div className="flex items-start justify-between mb-4">
                                 <div>
-                                    <h1 className="text-4xl md:text-5xl font-black text-white italic tracking-tighter uppercase mb-2">{turfData.name}</h1>
+                                    <h1 className="text-3xl sm:text-4xl md:text-5xl font-black text-[#111827] italic tracking-tighter uppercase mb-2">{turfData.name}</h1>
                                     <a
                                         href={`https://www.google.com/maps/dir/?api=1&destination=${turfData.coordinates?.lat || 19.1136},${turfData.coordinates?.lng || 72.8697}`}
                                         target="_blank"
                                         rel="noopener noreferrer"
-                                        className="inline-flex items-center gap-2 text-sm text-slate-300 hover:text-emerald-400 font-medium group transition-colors cursor-pointer"
+                                        className="inline-flex items-center gap-2 text-sm text-[#4B5563] hover:text-[#16A34A] font-semibold group transition-colors cursor-pointer"
                                         title="Click to get directions on Google Maps"
                                     >
-                                        <HiLocationMarker className="text-emerald-500 shrink-0 w-4 h-4 group-hover:scale-125 transition-transform" />
-                                        <span className="underline underline-offset-4 decoration-emerald-500/40 group-hover:decoration-emerald-400">{turfData.location}</span>
-                                        <span className="text-[10px] font-bold tracking-widest uppercase bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 px-2 py-0.5 rounded-full flex items-center gap-1 group-hover:bg-emerald-500 group-hover:text-slate-950 transition-all">
+                                        <HiLocationMarker className="text-[#16A34A] shrink-0 w-4 h-4 group-hover:scale-125 transition-transform" />
+                                        <span className="underline underline-offset-4 decoration-[#16A34A]/40 group-hover:decoration-[#16A34A]">{turfData.location}</span>
+                                        <span className="text-[10px] font-bold tracking-wider uppercase bg-green-50 border border-green-200 text-[#16A34A] px-2.5 py-0.5 rounded-full flex items-center gap-1 group-hover:bg-[#C8FF2E] group-hover:text-[#111827] group-hover:border-[#B5F000] transition-all">
                                             📍 Get Directions ↗
                                         </span>
                                     </a>
                                 </div>
                                 <div className="text-right flex-shrink-0 ml-4">
-                                    <div className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-500 border border-emerald-400 rounded-sm shadow-[0_0_15px_rgba(16,185,129,0.2)]">
-                                        <HiStar className="w-4 h-4 text-slate-950" />
-                                        <span className="text-sm font-black text-slate-950">{turfData.rating}</span>
+                                    <div className="flex items-center gap-1.5 px-3 py-1.5 bg-[#C8FF2E] border border-[#B5F000] rounded-xl shadow-xs">
+                                        <HiStar className="w-4 h-4 text-[#111827]" />
+                                        <span className="text-sm font-black text-[#111827]">{turfData.rating}</span>
                                     </div>
-                                    <p className="text-[10px] font-bold text-slate-500 tracking-widest uppercase mt-2">{turfData.reviews} Reviews</p>
+                                    <p className="text-[10px] font-bold text-[#6B7280] tracking-widest uppercase mt-2">{turfData.reviews} Reviews</p>
                                 </div>
                             </div>
 
-                            <div className="inline-block px-3 py-1 bg-slate-900 border border-white/10 rounded-sm mb-6">
-                                <span className="text-[10px] font-bold text-slate-400 tracking-widest uppercase">Hours: <span className="text-white">{turfData.timing}</span></span>
+                            <div className="inline-block px-3 py-1 bg-slate-50 border border-[#E5E7EB] rounded-full mb-6">
+                                <span className="text-[10px] font-bold text-[#6B7280] tracking-widest uppercase">Hours: <span className="text-[#111827] font-black">{turfData.timing}</span></span>
                             </div>
 
-                            <p className="text-slate-300 text-sm leading-relaxed mb-8">{turfData.description}</p>
+                            <p className="text-[#4B5563] text-sm leading-relaxed mb-8 font-medium">{turfData.description}</p>
                         </div>
 
-                        <div className="h-px w-full bg-gradient-to-r from-white/10 via-white/5 to-transparent mb-8" />
+                        <div className="h-px w-full bg-[#E5E7EB] mb-8" />
 
                         {/* Amenities */}
                         <div className="mb-10">
-                            <h2 className="text-[10px] font-black tracking-[0.3em] uppercase text-emerald-400 mb-5 flex items-center gap-2">
-                                <span className="h-px w-4 bg-emerald-500/50" /> FACILITY AMENITIES
+                            <h2 className="text-[10px] font-black tracking-[0.25em] uppercase text-[#16A34A] mb-4 flex items-center gap-2">
+                                <span>✨</span> FACILITY AMENITIES
                             </h2>
                             <div className="flex flex-wrap gap-2">
                                 {turfData.amenities.map(a => (
-                                    <span key={a} className="px-3 py-1.5 bg-slate-900/50 border border-white/10 text-[10px] font-bold tracking-widest text-slate-300 uppercase rounded-sm hover:border-emerald-500/50 transition-colors">
+                                    <span key={a} className="px-3.5 py-1.5 bg-slate-50 border border-[#E5E7EB] text-xs font-bold tracking-wide text-[#111827] uppercase rounded-full hover:border-[#16A34A] transition-colors shadow-xs">
                                         {a}
                                     </span>
                                 ))}
@@ -535,24 +522,24 @@ export default function TurfDetailPage() {
 
                         {/* Sports & Pricing */}
                         <div className="mb-10">
-                            <h2 className="text-[10px] font-black tracking-[0.3em] uppercase text-emerald-400 mb-5 flex items-center gap-2">
-                                <span className="h-px w-4 bg-emerald-500/50" /> DISCIPLINE PRICING
+                            <h2 className="text-[10px] font-black tracking-[0.25em] uppercase text-[#16A34A] mb-4 flex items-center gap-2">
+                                <span>💰</span> DISCIPLINE PRICING
                             </h2>
-                            <div className="overflow-hidden border border-white/10 rounded-sm bg-slate-900/30">
+                            <div className="overflow-hidden border border-[#E5E7EB] rounded-[16px] bg-white shadow-xs">
                                 <table className="w-full text-sm">
                                     <thead>
-                                        <tr className="bg-slate-900 border-b border-white/5">
-                                            <th className="text-left px-5 py-4 text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">Sport</th>
-                                            <th className="text-left px-5 py-4 text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">Standard</th>
-                                            <th className="text-left px-5 py-4 text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">Peak Hour</th>
+                                        <tr className="bg-[#F7F9FC] border-b border-[#E5E7EB]">
+                                            <th className="text-left px-5 py-3.5 text-[10px] font-black text-[#6B7280] uppercase tracking-[0.2em]">Sport</th>
+                                            <th className="text-left px-5 py-3.5 text-[10px] font-black text-[#6B7280] uppercase tracking-[0.2em]">Standard</th>
+                                            <th className="text-left px-5 py-3.5 text-[10px] font-black text-[#6B7280] uppercase tracking-[0.2em]">Peak Hour</th>
                                         </tr>
                                     </thead>
-                                    <tbody className="divide-y divide-white/5">
+                                    <tbody className="divide-y divide-[#E5E7EB]">
                                         {turfData.sports.map(s => (
-                                            <tr key={s.name} className="hover:bg-slate-800/50 transition-colors">
-                                                <td className="px-5 py-4 font-bold text-white text-xs tracking-wider uppercase">{s.name}</td>
-                                                <td className="px-5 py-4 text-emerald-400 font-bold tabular-nums">₹{s.price}<span className="text-[10px] text-slate-500 ml-1">/hr</span></td>
-                                                <td className="px-5 py-4 text-amber-400 font-bold tabular-nums bg-amber-500/5">₹{s.peakPrice}<span className="text-[10px] text-amber-500/50 ml-1">/hr</span></td>
+                                            <tr key={s.name} className="hover:bg-green-50/40 transition-colors">
+                                                <td className="px-5 py-4 font-black text-[#111827] text-xs tracking-wider uppercase">{s.name}</td>
+                                                <td className="px-5 py-4 text-[#16A34A] font-black tabular-nums">₹{s.price}<span className="text-[10px] text-[#6B7280] font-semibold ml-1">/hr</span></td>
+                                                <td className="px-5 py-4 text-amber-600 font-black tabular-nums bg-amber-50/50">₹{s.peakPrice}<span className="text-[10px] text-amber-700/60 font-semibold ml-1">/hr</span></td>
                                             </tr>
                                         ))}
                                     </tbody>
@@ -562,11 +549,10 @@ export default function TurfDetailPage() {
 
                         {/* Booking Sector — Clean 4-Step Flow Starting Directly on Date & Time */}
                         <div className="relative">
-                            <div className="absolute -inset-1 bg-gradient-to-r from-emerald-500/20 to-teal-500/20 rounded-sm blur" />
-                            <div className="relative bg-slate-950 border border-white/10 rounded-sm p-6 sm:p-8 shadow-2xl space-y-6">
+                            <div className="relative bg-white border border-[#E5E7EB] rounded-[20px] p-6 sm:p-8 shadow-[0_15px_45px_rgba(0,0,0,0.08)] space-y-6">
                                 
                                 {/* Top 4-Step Tab Navigation */}
-                                <div className="flex items-center gap-1.5 sm:gap-2 overflow-x-auto pb-2 no-scrollbar border-b border-white/10">
+                                <div className="flex items-center gap-1.5 sm:gap-2 overflow-x-auto pb-2 no-scrollbar border-b border-[#E5E7EB]">
                                     {[
                                         { num: 1, label: '1. Date & Time' },
                                         { num: 2, label: '2. Payment Mode' },
@@ -579,15 +565,15 @@ export default function TurfDetailPage() {
                                             <button
                                                 key={st.num}
                                                 onClick={() => setBookingStep(st.num)}
-                                                className={`px-3.5 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-wider whitespace-nowrap transition-all cursor-pointer flex items-center gap-1.5 ${
+                                                className={`px-3.5 py-1.5 rounded-full text-[10px] font-black uppercase tracking-wider whitespace-nowrap transition-all cursor-pointer flex items-center gap-1.5 ${
                                                     isActive
-                                                        ? 'bg-slate-900 text-white border-2 border-emerald-400 shadow-[0_0_12px_rgba(16,185,129,0.3)]'
+                                                        ? 'bg-[#C8FF2E] text-[#111827] border border-[#B5F000] shadow-sm'
                                                         : isPast
-                                                            ? 'bg-slate-900 text-slate-300 border border-white/10 hover:border-emerald-500/40'
-                                                            : 'bg-slate-950/60 text-slate-500 border border-white/5 hover:text-slate-300'
+                                                            ? 'bg-green-50 text-[#16A34A] border border-green-200'
+                                                            : 'bg-[#F7F9FC] text-[#6B7280] border border-[#E5E7EB] hover:text-[#111827]'
                                                 }`}
                                             >
-                                                {isPast && <span className="text-emerald-400">✓</span>}
+                                                {isPast && <span>✓</span>}
                                                 <span>{st.label}</span>
                                             </button>
                                         )
@@ -599,14 +585,14 @@ export default function TurfDetailPage() {
                                     <div className="space-y-6 animate-in fade-in">
                                         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                                             <div>
-                                                <h2 className="text-2xl font-black italic tracking-tighter uppercase text-white">Pick date & time slot</h2>
-                                                <p className="text-xs text-slate-400 mt-0.5">{turfData.name} — {turfData.location} · ₹{turfData.price || 800}/hr</p>
+                                                <h2 className="text-xl sm:text-2xl font-black italic tracking-tight uppercase text-[#111827]">Pick date & time slot</h2>
+                                                <p className="text-xs text-[#6B7280] font-semibold mt-0.5">{turfData.name} — {turfData.location} · ₹{turfData.price || 800}/hr</p>
                                             </div>
 
                                             {/* Duration Selector */}
                                             <div className="flex items-center gap-2">
-                                                <span className="text-[10px] font-bold tracking-widest text-slate-500 uppercase">Duration:</span>
-                                                <div className="flex items-center bg-slate-900 border border-white/10 rounded-lg p-1">
+                                                <span className="text-[10px] font-black tracking-widest text-[#6B7280] uppercase">Duration:</span>
+                                                <div className="flex items-center bg-[#F7F9FC] border border-[#E5E7EB] rounded-full p-1 shadow-xs">
                                                     {[1, 2, 3].map(hr => (
                                                         <button
                                                             key={hr}
@@ -614,10 +600,10 @@ export default function TurfDetailPage() {
                                                                 setDuration(hr)
                                                                 setSelectedSlot(null)
                                                             }}
-                                                            className={`px-3 py-1.5 rounded text-xs font-bold uppercase tracking-wider transition-all cursor-pointer ${
+                                                            className={`px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider transition-all cursor-pointer ${
                                                                 duration === hr
-                                                                    ? 'bg-white text-slate-950 font-black shadow-sm'
-                                                                    : 'text-slate-400 hover:text-white'
+                                                                    ? 'bg-[#C8FF2E] text-[#111827] border border-[#B5F000] shadow-xs'
+                                                                    : 'text-[#6B7280] hover:text-[#111827]'
                                                             }`}
                                                         >
                                                             {hr} {hr === 1 ? 'Hour' : 'Hours'}
@@ -629,7 +615,7 @@ export default function TurfDetailPage() {
 
                                         {/* Horizontal Date Selector */}
                                         <div>
-                                            <label className="text-[10px] font-bold tracking-widest text-slate-500 uppercase block mb-3">SELECT DATE</label>
+                                            <label className="text-[10px] font-black tracking-widest text-[#6B7280] uppercase block mb-3">SELECT DATE</label>
                                             <div className="flex gap-2.5 overflow-x-auto pb-2 no-scrollbar">
                                                 {dateList.map(d => {
                                                     const isSel = selectedDateObj.id === d.id
@@ -640,14 +626,14 @@ export default function TurfDetailPage() {
                                                                 setSelectedDateObj(d)
                                                                 setSelectedDate(d.fullDateString)
                                                             }}
-                                                            className={`flex-shrink-0 w-18 py-3 px-2 rounded-xl flex flex-col items-center justify-center transition-all cursor-pointer ${
+                                                            className={`flex-shrink-0 w-18 py-3 px-2 rounded-2xl flex flex-col items-center justify-center transition-all cursor-pointer ${
                                                                 isSel
-                                                                    ? 'bg-slate-900 border-2 border-white text-white shadow-lg'
-                                                                    : 'bg-slate-900/60 border border-white/10 text-slate-400 hover:border-white/30 hover:text-white'
+                                                                    ? 'bg-[#C8FF2E] border-2 border-[#B5F000] text-[#111827] font-black shadow-sm'
+                                                                    : 'bg-[#F7F9FC] border border-[#E5E7EB] text-[#6B7280] hover:border-[#16A34A] hover:text-[#111827]'
                                                             }`}
                                                         >
                                                             <span className="text-[10px] font-bold mb-0.5">{d.dayShort}</span>
-                                                            <span className={`text-xl font-black my-0.5 ${isSel ? 'text-white' : 'text-slate-200'}`}>{d.dateNum}</span>
+                                                            <span className={`text-xl font-black my-0.5 ${isSel ? 'text-[#111827]' : 'text-[#111827]'}`}>{d.dateNum}</span>
                                                             <span className="text-[10px] font-medium mt-0.5">{d.monthShort}</span>
                                                         </button>
                                                     )
@@ -658,11 +644,11 @@ export default function TurfDetailPage() {
                                         {/* Slot Grid */}
                                         <div>
                                             <div className="flex items-center justify-between mb-3">
-                                                <label className="text-[10px] font-bold tracking-widest text-slate-500 uppercase">AVAILABLE SLOTS — {selectedDateObj.formattedLabel}</label>
+                                                <label className="text-[10px] font-black tracking-widest text-[#6B7280] uppercase">AVAILABLE SLOTS — {selectedDateObj.formattedLabel}</label>
                                                 <div className="flex items-center gap-4 text-[9px] uppercase tracking-wider font-bold">
-                                                    <span className="flex items-center gap-1 text-slate-400"><span className="w-2 h-2 rounded-sm bg-slate-800 border border-white/20" /> Available</span>
-                                                    <span className="flex items-center gap-1 text-white"><span className="w-2 h-2 rounded-sm bg-white" /> Selected</span>
-                                                    <span className="flex items-center gap-1 text-slate-600"><span className="w-2 h-2 rounded-sm bg-slate-950 border border-white/5" /> Booked</span>
+                                                    <span className="flex items-center gap-1 text-[#6B7280]"><span className="w-2 h-2 rounded-sm bg-white border border-[#E5E7EB]" /> Available</span>
+                                                    <span className="flex items-center gap-1 text-[#111827]"><span className="w-2 h-2 rounded-sm bg-[#C8FF2E] border border-[#B5F000]" /> Selected</span>
+                                                    <span className="flex items-center gap-1 text-[#9CA3AF]"><span className="w-2 h-2 rounded-sm bg-slate-100 border border-[#E5E7EB]" /> Booked</span>
                                                 </div>
                                             </div>
 
@@ -675,12 +661,12 @@ export default function TurfDetailPage() {
                                                             key={s.id}
                                                             disabled={isBooked}
                                                             onClick={() => handleSelectSlot(s.id)}
-                                                            className={`py-3 px-3 rounded-lg text-xs font-bold tracking-wider transition-all text-center ${
+                                                            className={`py-3 px-3 rounded-xl text-xs font-bold tracking-wider transition-all text-center ${
                                                                 isSel
-                                                                    ? 'bg-white text-slate-950 font-black shadow-lg border-2 border-white cursor-pointer'
+                                                                    ? 'bg-[#C8FF2E] text-[#111827] font-black shadow-sm border-2 border-[#B5F000] cursor-pointer'
                                                                     : isBooked
-                                                                        ? 'bg-slate-950 text-slate-600 border border-white/5 line-through opacity-40 cursor-not-allowed'
-                                                                        : 'bg-slate-900/80 text-slate-200 border border-white/10 hover:border-emerald-500/50 hover:bg-slate-800 cursor-pointer'
+                                                                        ? 'bg-slate-100 text-[#9CA3AF] border border-[#E5E7EB] line-through opacity-50 cursor-not-allowed'
+                                                                        : 'bg-white text-[#111827] border border-[#E5E7EB] hover:border-[#16A34A] hover:bg-green-50/50 cursor-pointer'
                                                             }`}
                                                         >
                                                             <span>{s.time}</span>
@@ -690,26 +676,26 @@ export default function TurfDetailPage() {
                                             </div>
 
                                             {/* Live Selected Summary */}
-                                            <div className="mt-4 text-xs font-medium text-slate-400 flex items-center gap-2">
+                                            <div className="mt-4 text-xs font-semibold text-[#6B7280] flex items-center gap-2">
                                                 <span>Selected: </span>
-                                                <span className="text-white font-bold">{currentSlot?.time || '18:00'} ({duration} {duration > 1 ? 'Hours' : 'Hour'})</span>
-                                                <span className="text-slate-600">·</span>
-                                                <span className="text-emerald-400 font-bold">₹{totalRent.toLocaleString('en-IN')} total</span>
+                                                <span className="text-[#111827] font-black">{currentSlot?.time || '18:00'} ({duration} {duration > 1 ? 'Hours' : 'Hour'})</span>
+                                                <span className="text-[#E5E7EB]">·</span>
+                                                <span className="text-[#16A34A] font-black">₹{totalRent.toLocaleString('en-IN')} total</span>
                                             </div>
                                         </div>
 
                                         {/* Bottom Action Bar */}
-                                        <div className="pt-6 border-t border-white/10 flex items-center justify-between">
+                                        <div className="pt-6 border-t border-[#E5E7EB] flex items-center justify-between">
                                             <button
                                                 onClick={() => navigate('/turfs')}
-                                                className="px-5 py-2.5 bg-slate-900 hover:bg-slate-800 border border-white/10 text-white font-bold text-xs uppercase tracking-wider rounded transition-colors cursor-pointer"
+                                                className="px-5 py-2.5 bg-white hover:bg-slate-50 border border-[#E5E7EB] text-[#111827] font-bold text-xs uppercase tracking-wider rounded-full transition-colors cursor-pointer"
                                             >
                                                 ← Back to All Turfs
                                             </button>
 
                                             <button
                                                 onClick={() => setBookingStep(2)}
-                                                className="px-7 py-3 bg-white hover:bg-slate-200 text-slate-950 font-black text-xs uppercase tracking-widest rounded transition-all cursor-pointer shadow-md"
+                                                className="px-7 py-3 bg-[#C8FF2E] hover:bg-[#B5F000] text-[#111827] font-black text-xs uppercase tracking-widest rounded-full transition-all cursor-pointer shadow-sm border border-[#B5F000]"
                                             >
                                                 Next: Payment mode →
                                             </button>
@@ -721,14 +707,14 @@ export default function TurfDetailPage() {
                                 {bookingStep === 2 && (
                                     <div className="space-y-5 animate-in fade-in">
                                         <div>
-                                            <h2 className="text-2xl font-black italic tracking-tighter uppercase text-white">How do you want to pay?</h2>
-                                            <p className="text-xs text-slate-400 mt-0.5">Turf: {turfData.name} · {selectedDateObj.dayShort} {selectedDateObj.dateNum} {selectedDateObj.monthShort} · 6:00 PM · ₹{totalRent.toLocaleString('en-IN')}</p>
+                                            <h2 className="text-xl sm:text-2xl font-black italic tracking-tight uppercase text-[#111827]">How do you want to pay?</h2>
+                                            <p className="text-xs text-[#6B7280] font-semibold mt-0.5">Turf: {turfData.name} · {selectedDateObj.dayShort} {selectedDateObj.dateNum} {selectedDateObj.monthShort} · 6:00 PM · ₹{totalRent.toLocaleString('en-IN')}</p>
                                         </div>
 
-                                        {/* Orange Dashed Banner */}
-                                        <div className="border border-dashed border-amber-500/80 bg-amber-500/5 rounded-xl p-3.5 flex items-center gap-2.5 text-xs text-slate-200">
+                                        {/* Green Dashed Banner */}
+                                        <div className="border border-dashed border-[#16A34A] bg-green-50/80 rounded-2xl p-3.5 flex items-center gap-2.5 text-xs text-[#111827]">
                                             <span className="text-base">🎯</span>
-                                            <p><span className="font-bold text-amber-400">New on BookMyTurf:</span> Split with opponent, dare them to play, or make loser pay!</p>
+                                            <p><span className="font-black text-[#16A34A]">New on BookMyTurf:</span> Split with opponent, dare them to play, or make loser pay!</p>
                                         </div>
 
                                         {/* 5 Payment Modes */}
@@ -745,21 +731,21 @@ export default function TurfDetailPage() {
                                                     <div
                                                         key={opt.id}
                                                         onClick={() => setPaymentMode(opt.id)}
-                                                        className={`p-3.5 rounded-xl border transition-all cursor-pointer flex items-center justify-between ${
+                                                        className={`p-3.5 rounded-2xl border transition-all cursor-pointer flex items-center justify-between ${
                                                             isSel
-                                                                ? 'bg-slate-900 border-2 border-white shadow-lg'
-                                                                : 'bg-slate-950/60 border-white/10 hover:border-white/20'
+                                                                ? 'bg-white border-2 border-[#16A34A] shadow-md ring-1 ring-[#16A34A]'
+                                                                : 'bg-[#F7F9FC] border-[#E5E7EB] hover:border-[#16A34A]'
                                                         }`}
                                                     >
                                                         <div className="flex items-center gap-3">
-                                                            <div className="w-8 h-8 rounded bg-slate-800 flex items-center justify-center text-sm">{opt.icon}</div>
+                                                            <div className="w-8 h-8 rounded-xl bg-green-50 flex items-center justify-center text-sm border border-green-200">{opt.icon}</div>
                                                             <div>
-                                                                <h4 className="text-xs font-bold text-white uppercase tracking-wider">{opt.title}</h4>
-                                                                <p className="text-[10px] text-slate-400 mt-0.5">{opt.desc}</p>
+                                                                <h4 className="text-xs font-black text-[#111827] uppercase tracking-wider">{opt.title}</h4>
+                                                                <p className="text-[10px] text-[#6B7280] font-semibold mt-0.5">{opt.desc}</p>
                                                             </div>
                                                         </div>
-                                                        <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${isSel ? 'border-white bg-white' : 'border-slate-600'}`}>
-                                                            {isSel && <div className="w-1.5 h-1.5 rounded-full bg-slate-950" />}
+                                                        <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${isSel ? 'border-[#16A34A] bg-[#16A34A]' : 'border-[#9CA3AF]'}`}>
+                                                            {isSel && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
                                                         </div>
                                                     </div>
                                                 )
@@ -768,10 +754,10 @@ export default function TurfDetailPage() {
 
                                         {/* Custom Split Slider if Custom Selected */}
                                         {paymentMode === 'custom' && (
-                                            <div className="bg-slate-900/60 border border-white/10 rounded-xl p-4 space-y-3">
-                                                <div className="flex justify-between text-xs font-bold text-white">
+                                            <div className="bg-[#F7F9FC] border border-[#E5E7EB] rounded-2xl p-4 space-y-3">
+                                                <div className="flex justify-between text-xs font-bold text-[#111827]">
                                                     <span>Your Share: ₹{customSplitMyShare}</span>
-                                                    <span className="text-slate-400">Opponent Share: ₹{totalRent - customSplitMyShare}</span>
+                                                    <span className="text-[#6B7280]">Opponent Share: ₹{totalRent - customSplitMyShare}</span>
                                                 </div>
                                                 <input
                                                     type="range"
@@ -780,22 +766,22 @@ export default function TurfDetailPage() {
                                                     step={50}
                                                     value={customSplitMyShare}
                                                     onChange={(e) => setCustomSplitMyShare(Number(e.target.value))}
-                                                    className="w-full accent-emerald-500 cursor-pointer"
+                                                    className="w-full accent-[#16A34A] cursor-pointer"
                                                 />
                                             </div>
                                         )}
 
-                                        <div className="pt-6 border-t border-white/10 flex items-center justify-between">
+                                        <div className="pt-6 border-t border-[#E5E7EB] flex items-center justify-between">
                                             <button
                                                 onClick={() => setBookingStep(1)}
-                                                className="px-5 py-2.5 bg-slate-900 hover:bg-slate-800 border border-white/10 text-white font-bold text-xs uppercase tracking-wider rounded transition-colors cursor-pointer"
+                                                className="px-5 py-2.5 bg-white hover:bg-slate-50 border border-[#E5E7EB] text-[#111827] font-bold text-xs uppercase tracking-wider rounded-full transition-colors cursor-pointer"
                                             >
                                                 ← Back
                                             </button>
 
                                             <button
                                                 onClick={() => setBookingStep(3)}
-                                                className="px-7 py-3 bg-white hover:bg-slate-200 text-slate-950 font-black text-xs uppercase tracking-widest rounded transition-all cursor-pointer shadow-md"
+                                                className="px-7 py-3 bg-[#C8FF2E] hover:bg-[#B5F000] text-[#111827] font-black text-xs uppercase tracking-widest rounded-full transition-all cursor-pointer shadow-sm border border-[#B5F000]"
                                             >
                                                 Next: Team details →
                                             </button>
@@ -807,40 +793,40 @@ export default function TurfDetailPage() {
                                 {bookingStep === 3 && (
                                     <div className="space-y-5 animate-in fade-in">
                                         <div>
-                                            <h2 className="text-2xl font-black italic tracking-tighter uppercase text-white">Team details & invite</h2>
-                                            <p className="text-xs text-slate-400 mt-0.5">
+                                            <h2 className="text-xl sm:text-2xl font-black italic tracking-tight uppercase text-[#111827]">Team details & invite</h2>
+                                            <p className="text-xs text-[#6B7280] font-semibold mt-0.5">
                                                 Payment mode: {paymentMode === 'full' ? 'Full Pay' : paymentMode === 'split-50' ? 'Split 50-50' : paymentMode === 'dare' ? 'Dare to Play' : 'Custom Split'} · Total ₹{totalRent.toLocaleString('en-IN')}
                                             </p>
                                         </div>
 
                                         {/* YOUR TEAM */}
-                                        <div className="bg-slate-900/60 border border-white/10 rounded-xl p-4 space-y-3">
-                                            <label className="text-[10px] font-bold uppercase tracking-widest text-slate-500 block">YOUR TEAM (TEAM A)</label>
+                                        <div className="bg-[#F7F9FC] border border-[#E5E7EB] rounded-2xl p-4 space-y-3">
+                                            <label className="text-[10px] font-black uppercase tracking-widest text-[#6B7280] block">YOUR TEAM (TEAM A)</label>
                                             <input
                                                 type="text"
                                                 value={teamAName}
                                                 onChange={e => setTeamAName(e.target.value)}
-                                                className="w-full bg-slate-950 border border-white/10 rounded px-3 py-2 text-xs font-bold text-white outline-none focus:border-emerald-500"
+                                                className="w-full bg-white border border-[#E5E7EB] rounded-xl px-3.5 py-2 text-xs font-bold text-[#111827] outline-none focus:border-[#16A34A]"
                                             />
 
                                             <div className="space-y-2">
                                                 {teammates.map(member => (
-                                                    <div key={member.id} className="bg-slate-950/80 border border-white/5 rounded p-2.5 flex items-center justify-between text-xs">
+                                                    <div key={member.id} className="bg-white border border-[#E5E7EB] rounded-xl p-2.5 flex items-center justify-between text-xs shadow-xs">
                                                         <div className="flex items-center gap-2">
                                                             <div className={`w-6 h-6 rounded-full flex items-center justify-center font-bold text-[10px] ${
-                                                                member.tag === 'You' ? 'bg-blue-600/30 text-blue-400' : 'bg-slate-800 text-slate-400'
+                                                                member.tag === 'You' ? 'bg-blue-50 text-blue-600 border border-blue-200' : 'bg-slate-100 text-[#6B7280]'
                                                             }`}>
                                                                 {member.tag}
                                                             </div>
                                                             <div>
-                                                                <div className="font-bold text-white">{member.name}</div>
-                                                                <div className="text-[10px] text-slate-400">{member.phone} · {member.status === 'Paid' ? `Paid ₹${myShare}` : 'Payment pending'}</div>
+                                                                <div className="font-bold text-[#111827]">{member.name}</div>
+                                                                <div className="text-[10px] text-[#6B7280]">{member.phone} · {member.status === 'Paid' ? `Paid ₹${myShare}` : 'Payment pending'}</div>
                                                             </div>
                                                         </div>
-                                                        <span className={`text-[10px] px-2 py-0.5 rounded font-bold border ${
+                                                        <span className={`text-[10px] px-2.5 py-0.5 rounded-full font-black border ${
                                                             member.status === 'Paid'
-                                                                ? 'bg-emerald-950 text-emerald-400 border-emerald-500/40'
-                                                                : 'bg-amber-950 text-amber-400 border-amber-500/40'
+                                                                ? 'bg-green-50 text-[#16A34A] border-green-200'
+                                                                : 'bg-amber-50 text-amber-700 border-amber-200'
                                                         }`}>
                                                             {member.status}
                                                         </span>
@@ -855,11 +841,11 @@ export default function TurfDetailPage() {
                                                         value={newTeammateName}
                                                         onChange={e => setNewTeammateName(e.target.value)}
                                                         placeholder="Player name"
-                                                        className="flex-1 bg-slate-950 border border-white/10 rounded px-3 py-1.5 text-xs text-white outline-none focus:border-emerald-500"
+                                                        className="flex-1 bg-white border border-[#E5E7EB] rounded-xl px-3 py-1.5 text-xs text-[#111827] font-bold outline-none focus:border-[#16A34A]"
                                                     />
                                                     <button
                                                         onClick={handleAddTeammate}
-                                                        className="px-3 py-1.5 bg-white text-slate-950 font-bold text-xs rounded hover:bg-slate-200 cursor-pointer"
+                                                        className="px-3.5 py-1.5 bg-[#C8FF2E] text-[#111827] font-black text-xs rounded-xl hover:bg-[#B5F000] cursor-pointer border border-[#B5F000]"
                                                     >
                                                         Add
                                                     </button>
@@ -867,7 +853,7 @@ export default function TurfDetailPage() {
                                             ) : (
                                                 <button
                                                     onClick={() => setShowAddTeammateInput(true)}
-                                                    className="w-full py-2 bg-slate-950 hover:bg-slate-900 border border-white/5 rounded text-slate-400 hover:text-white text-xs font-bold transition-colors cursor-pointer text-center block mt-1"
+                                                    className="w-full py-2 bg-white hover:bg-slate-50 border border-[#E5E7EB] rounded-xl text-[#6B7280] hover:text-[#111827] text-xs font-bold transition-colors cursor-pointer text-center block mt-1"
                                                 >
                                                     + Add teammate
                                                 </button>
@@ -875,17 +861,17 @@ export default function TurfDetailPage() {
                                         </div>
 
                                         {/* OPPONENT TEAM */}
-                                        <div className="bg-slate-900/60 border border-white/10 rounded-xl p-4 space-y-3">
+                                        <div className="bg-[#F7F9FC] border border-[#E5E7EB] rounded-2xl p-4 space-y-3">
                                             <div className="flex items-center justify-between">
-                                                <label className="text-[10px] font-bold uppercase tracking-widest text-slate-500">OPPONENT TEAM (TEAM B)</label>
+                                                <label className="text-[10px] font-black uppercase tracking-widest text-[#6B7280]">OPPONENT TEAM (TEAM B)</label>
                                                 <div className="flex items-center gap-2">
                                                     <button
                                                         onClick={() => setHasOpponentTeam(!hasOpponentTeam)}
-                                                        className={`w-9 h-5 rounded-full transition-colors relative cursor-pointer ${hasOpponentTeam ? 'bg-white' : 'bg-slate-800'}`}
+                                                        className={`w-9 h-5 rounded-full transition-colors relative cursor-pointer ${hasOpponentTeam ? 'bg-[#16A34A]' : 'bg-slate-300'}`}
                                                     >
-                                                        <div className={`w-4 h-4 rounded-full bg-slate-950 absolute top-0.5 transition-transform ${hasOpponentTeam ? 'translate-x-4.5' : 'translate-x-0.5'}`} />
+                                                        <div className={`w-4 h-4 rounded-full bg-white absolute top-0.5 transition-transform ${hasOpponentTeam ? 'translate-x-4.5' : 'translate-x-0.5'}`} />
                                                     </button>
-                                                    <span className="text-[10px] text-slate-300 font-medium">I have opponent</span>
+                                                    <span className="text-[10px] text-[#4B5563] font-bold">I have opponent</span>
                                                 </div>
                                             </div>
 
@@ -895,17 +881,17 @@ export default function TurfDetailPage() {
                                                         type="text"
                                                         value={teamBName}
                                                         onChange={e => setTeamBName(e.target.value)}
-                                                        className="w-full bg-slate-950 border border-white/10 rounded px-3 py-2 text-xs font-bold text-white outline-none focus:border-emerald-500"
+                                                        className="w-full bg-white border border-[#E5E7EB] rounded-xl px-3.5 py-2 text-xs font-bold text-[#111827] outline-none focus:border-[#16A34A]"
                                                         placeholder="Opponent team name"
                                                     />
                                                     <input
                                                         type="text"
                                                         value={teamBPhone}
                                                         onChange={e => setTeamBPhone(e.target.value)}
-                                                        className="w-full bg-slate-950 border border-white/10 rounded px-3 py-2 text-xs font-bold text-white outline-none focus:border-emerald-500"
+                                                        className="w-full bg-white border border-[#E5E7EB] rounded-xl px-3.5 py-2 text-xs font-bold text-[#111827] outline-none focus:border-[#16A34A]"
                                                         placeholder="Opponent captain mobile (+91...)"
                                                     />
-                                                    <div className="p-2.5 bg-amber-500/10 border border-amber-500/20 rounded text-[10px] text-amber-300">
+                                                    <div className="p-2.5 bg-amber-50 border border-amber-200 rounded-xl text-[10px] text-amber-800 font-semibold">
                                                         📩 An invite link will be sent to the opponent captain via SMS/WhatsApp to pay their share (₹{opponentShare.toLocaleString('en-IN')}).
                                                     </div>
                                                 </div>
@@ -913,28 +899,28 @@ export default function TurfDetailPage() {
                                         </div>
 
                                         {/* Open Challenge Toggle */}
-                                        <div className="bg-slate-900/60 border border-white/10 rounded-xl p-4 space-y-2">
+                                        <div className="bg-[#F7F9FC] border border-[#E5E7EB] rounded-2xl p-4 space-y-2">
                                             <div className="flex items-center justify-between">
-                                                <label className="text-[10px] font-bold uppercase tracking-widest text-slate-500">DON'T HAVE AN OPPONENT?</label>
+                                                <label className="text-[10px] font-black uppercase tracking-widest text-[#6B7280]">DON'T HAVE AN OPPONENT?</label>
                                                 <div className="flex items-center gap-2">
                                                     <button
                                                         onClick={() => setIsOpenChallenge(!isOpenChallenge)}
-                                                        className={`w-9 h-5 rounded-full transition-colors relative cursor-pointer ${isOpenChallenge ? 'bg-emerald-500' : 'bg-slate-800'}`}
+                                                        className={`w-9 h-5 rounded-full transition-colors relative cursor-pointer ${isOpenChallenge ? 'bg-[#16A34A]' : 'bg-slate-300'}`}
                                                     >
-                                                        <div className={`w-4 h-4 rounded-full bg-slate-950 absolute top-0.5 transition-transform ${isOpenChallenge ? 'translate-x-4.5' : 'translate-x-0.5'}`} />
+                                                        <div className={`w-4 h-4 rounded-full bg-white absolute top-0.5 transition-transform ${isOpenChallenge ? 'translate-x-4.5' : 'translate-x-0.5'}`} />
                                                     </button>
-                                                    <span className="text-[10px] text-slate-300 font-medium">Open challenge</span>
+                                                    <span className="text-[10px] text-[#4B5563] font-bold">Open challenge</span>
                                                 </div>
                                             </div>
-                                            <p className="text-[10px] text-slate-400">
+                                            <p className="text-[10px] text-[#6B7280] font-medium">
                                                 List as "Open challenge" — your match will appear in the public challenge feed.
                                             </p>
                                         </div>
 
-                                        <div className="pt-6 border-t border-white/10 flex items-center justify-between">
+                                        <div className="pt-6 border-t border-[#E5E7EB] flex items-center justify-between">
                                             <button
                                                 onClick={() => setBookingStep(2)}
-                                                className="px-5 py-2.5 bg-slate-900 hover:bg-slate-800 border border-white/10 text-white font-bold text-xs uppercase tracking-wider rounded transition-colors cursor-pointer"
+                                                className="px-5 py-2.5 bg-white hover:bg-slate-50 border border-[#E5E7EB] text-[#111827] font-bold text-xs uppercase tracking-wider rounded-full transition-colors cursor-pointer"
                                             >
                                                 ← Back
                                             </button>
@@ -942,12 +928,12 @@ export default function TurfDetailPage() {
                                             <button
                                                 disabled={isDeploying}
                                                 onClick={handleConfirmAndDeploy}
-                                                className="px-7 py-3 bg-white hover:bg-slate-200 text-slate-950 font-black text-xs uppercase tracking-widest rounded transition-all cursor-pointer shadow-md flex items-center gap-2"
+                                                className="px-7 py-3 bg-[#C8FF2E] hover:bg-[#B5F000] text-[#111827] font-black text-xs uppercase tracking-widest rounded-full transition-all cursor-pointer shadow-sm border border-[#B5F000] flex items-center gap-2"
                                             >
                                                 {isDeploying ? (
                                                     <>
-                                                        <span className="w-3.5 h-3.5 border-2 border-slate-950 border-t-transparent rounded-full animate-spin" />
-                                                        <span>Syncing Booking & Dispatching...</span>
+                                                        <span className="w-3.5 h-3.5 border-2 border-[#111827] border-t-transparent rounded-full animate-spin" />
+                                                        <span>Syncing Booking...</span>
                                                     </>
                                                 ) : (
                                                     <span>Send invite & pay →</span>
@@ -961,74 +947,74 @@ export default function TurfDetailPage() {
                                 {bookingStep === 4 && (
                                     <div className="space-y-6 animate-in fade-in">
                                         <div className="text-center pt-2">
-                                            <div className="w-12 h-12 rounded-xl bg-emerald-500 text-slate-950 flex items-center justify-center mx-auto mb-3 shadow-lg shadow-emerald-500/20 font-black text-xl">
+                                            <div className="w-12 h-12 rounded-2xl bg-[#C8FF2E] border border-[#B5F000] text-[#111827] flex items-center justify-center mx-auto mb-3 shadow-sm font-black text-xl">
                                                 ✓
                                             </div>
-                                            <h2 className="text-2xl font-black italic tracking-tighter uppercase text-white">Turf booking confirmed!</h2>
-                                            <p className="text-xs text-slate-400 mt-0.5">Booking and match invite recorded in MySQL database.</p>
+                                            <h2 className="text-xl sm:text-2xl font-black italic tracking-tight uppercase text-[#111827]">Turf booking confirmed!</h2>
+                                            <p className="text-xs text-[#6B7280] font-semibold mt-0.5">Booking and match invite recorded in MySQL database.</p>
                                         </div>
 
-                                        <div className="bg-slate-900/80 border border-white/10 rounded-xl p-5 space-y-3 text-xs">
-                                            <div className="flex justify-between border-b border-white/5 pb-2">
-                                                <span className="text-slate-400">Turf Venue</span>
-                                                <span className="text-white font-bold">{turfData.name}, {turfData.location}</span>
+                                        <div className="bg-[#F7F9FC] border border-[#E5E7EB] rounded-2xl p-5 space-y-3 text-xs">
+                                            <div className="flex justify-between border-b border-[#E5E7EB] pb-2">
+                                                <span className="text-[#6B7280]">Turf Venue</span>
+                                                <span className="text-[#111827] font-bold">{turfData.name}, {turfData.location}</span>
                                             </div>
-                                            <div className="flex justify-between border-b border-white/5 pb-2">
-                                                <span className="text-slate-400">Date & Slot</span>
-                                                <span className="text-white font-bold">{selectedDateObj.dayShort}, {selectedDateObj.dateNum} {selectedDateObj.monthShort} · {currentSlot?.time || '18:00'}</span>
+                                            <div className="flex justify-between border-b border-[#E5E7EB] pb-2">
+                                                <span className="text-[#6B7280]">Date & Slot</span>
+                                                <span className="text-[#111827] font-bold">{selectedDateObj.dayShort}, {selectedDateObj.dateNum} {selectedDateObj.monthShort} · {currentSlot?.time || '18:00'}</span>
                                             </div>
-                                            <div className="flex justify-between border-b border-white/5 pb-2">
-                                                <span className="text-slate-400">Duration</span>
-                                                <span className="text-white font-bold">{duration} {duration > 1 ? 'Hours' : 'Hour'}</span>
+                                            <div className="flex justify-between border-b border-[#E5E7EB] pb-2">
+                                                <span className="text-[#6B7280]">Duration</span>
+                                                <span className="text-[#111827] font-bold">{duration} {duration > 1 ? 'Hours' : 'Hour'}</span>
                                             </div>
-                                            <div className="flex justify-between border-b border-white/5 pb-2">
-                                                <span className="text-slate-400">Total rent</span>
-                                                <span className="text-white font-bold">₹{totalRent.toLocaleString('en-IN')}</span>
+                                            <div className="flex justify-between border-b border-[#E5E7EB] pb-2">
+                                                <span className="text-[#6B7280]">Total rent</span>
+                                                <span className="text-[#111827] font-bold">₹{totalRent.toLocaleString('en-IN')}</span>
                                             </div>
-                                            <div className="flex justify-between border-b border-white/5 pb-2">
-                                                <span className="text-slate-400">Payment mode</span>
-                                                <span className="text-white font-bold">{paymentMode === 'full' ? 'Full Pay (Mode A)' : paymentMode === 'split-50' ? 'Split 50-50 (Mode B)' : paymentMode === 'dare' ? 'Dare to Play (Mode D)' : 'Custom Split (Mode C)'}</span>
+                                            <div className="flex justify-between border-b border-[#E5E7EB] pb-2">
+                                                <span className="text-[#6B7280]">Payment mode</span>
+                                                <span className="text-[#111827] font-bold">{paymentMode === 'full' ? 'Full Pay (Mode A)' : paymentMode === 'split-50' ? 'Split 50-50 (Mode B)' : paymentMode === 'dare' ? 'Dare to Play (Mode D)' : 'Custom Split (Mode C)'}</span>
                                             </div>
-                                            <div className="flex justify-between border-b border-white/5 pb-2">
-                                                <span className="text-slate-400">Your share</span>
-                                                <span className="text-emerald-400 font-bold">₹{myShare.toLocaleString('en-IN')} [✓ Paid]</span>
+                                            <div className="flex justify-between border-b border-[#E5E7EB] pb-2">
+                                                <span className="text-[#6B7280]">Your share</span>
+                                                <span className="text-[#16A34A] font-black">₹{myShare.toLocaleString('en-IN')} [✓ Paid]</span>
                                             </div>
-                                            <div className="flex justify-between border-b border-white/5 pb-2">
-                                                <span className="text-slate-400">Opponent share</span>
-                                                <span className="text-amber-400 font-bold">₹{opponentShare.toLocaleString('en-IN')} (Pending invite)</span>
+                                            <div className="flex justify-between border-b border-[#E5E7EB] pb-2">
+                                                <span className="text-[#6B7280]">Opponent share</span>
+                                                <span className="text-amber-700 font-bold">₹{opponentShare.toLocaleString('en-IN')} (Pending invite)</span>
                                             </div>
                                             <div className="flex justify-between pt-1">
-                                                <span className="text-slate-400">Booking ID</span>
-                                                <span className="font-mono font-bold text-emerald-400">{bookingId}</span>
+                                                <span className="text-[#6B7280]">Booking ID</span>
+                                                <span className="font-mono font-bold text-[#16A34A]">{bookingId}</span>
                                             </div>
                                         </div>
 
                                         {/* Teams Matchup Card */}
-                                        <div className="bg-slate-900/60 border border-white/10 rounded-xl p-4 space-y-2 text-xs">
-                                            <div className="flex justify-between items-center bg-slate-950 p-2.5 rounded border border-white/5">
-                                                <span className="font-bold text-white">[A] {teamAName}</span>
-                                                <span className="text-emerald-400 font-bold text-[10px] bg-emerald-950 px-2 py-0.5 rounded border border-emerald-500/40">Ready</span>
+                                        <div className="bg-[#F7F9FC] border border-[#E5E7EB] rounded-2xl p-4 space-y-2 text-xs">
+                                            <div className="flex justify-between items-center bg-white p-2.5 rounded-xl border border-[#E5E7EB]">
+                                                <span className="font-bold text-[#111827]">[A] {teamAName}</span>
+                                                <span className="text-[#16A34A] font-black text-[10px] bg-green-50 px-2.5 py-0.5 rounded-full border border-green-200">Ready</span>
                                             </div>
-                                            <div className="text-center text-[10px] font-black text-slate-500">VS</div>
-                                            <div className="flex justify-between items-center bg-slate-950 p-2.5 rounded border border-white/5">
-                                                <span className="font-bold text-white">[B] {hasOpponentTeam ? teamBName : 'Open Challenge'}</span>
-                                                <span className="text-amber-400 font-bold text-[10px] bg-amber-950 px-2 py-0.5 rounded border border-amber-500/40">Pending</span>
+                                            <div className="text-center text-[10px] font-black text-[#9CA3AF]">VS</div>
+                                            <div className="flex justify-between items-center bg-white p-2.5 rounded-xl border border-[#E5E7EB]">
+                                                <span className="font-bold text-[#111827]">[B] {hasOpponentTeam ? teamBName : 'Open Challenge'}</span>
+                                                <span className="text-amber-700 font-black text-[10px] bg-amber-50 px-2.5 py-0.5 rounded-full border border-amber-200">Pending</span>
                                             </div>
                                         </div>
 
-                                        <div className="flex gap-3 pt-4 border-t border-white/10">
+                                        <div className="flex gap-3 pt-4 border-t border-[#E5E7EB]">
                                             <button
                                                 onClick={() => {
                                                     navigator.clipboard?.writeText(window.location.href);
                                                     if (addToast) addToast('Match link copied to clipboard!', 'info');
                                                 }}
-                                                className="flex-1 py-3 bg-slate-900 hover:bg-slate-800 border border-white/10 text-white font-bold text-xs uppercase tracking-wider rounded transition-colors text-center cursor-pointer"
+                                                className="flex-1 py-3 bg-white hover:bg-slate-50 border border-[#E5E7EB] text-[#111827] font-bold text-xs uppercase tracking-wider rounded-full transition-colors text-center cursor-pointer"
                                             >
                                                 Share match
                                             </button>
                                             <button
                                                 onClick={() => navigate('/customer/bookings')}
-                                                className="flex-1 py-3 bg-white hover:bg-slate-200 text-slate-950 font-black text-xs uppercase tracking-widest rounded transition-colors text-center cursor-pointer shadow-md"
+                                                className="flex-1 py-3 bg-[#C8FF2E] hover:bg-[#B5F000] text-[#111827] font-black text-xs uppercase tracking-widest rounded-full transition-colors text-center cursor-pointer shadow-sm border border-[#B5F000]"
                                             >
                                                 View my matches
                                             </button>
@@ -1043,24 +1029,23 @@ export default function TurfDetailPage() {
                 {/* ══════════════════════════════════════════════
                     FULL-WIDTH PREMIUM SECTIONS BELOW
                 ══════════════════════════════════════════════ */}
-                <div className="mt-20 space-y-16">
+                <div className="mt-16 space-y-16">
 
                     {/* ── SECTION: WHAT THIS PLACE OFFERS ── */}
                     <section className="relative">
-                        <div className="absolute -top-10 left-[20%] w-[40vw] h-[30vw] bg-emerald-500/[0.03] blur-[120px] rounded-full pointer-events-none" />
                         <SectionLabel accent="emerald">What This Place Offers</SectionLabel>
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                             {features.map((f, i) => (
                                 <div
                                     key={i}
-                                    className="group bg-slate-900/40 border border-white/[0.06] rounded-xl p-5 flex items-start gap-4 hover:border-emerald-500/30 hover:bg-slate-900/60 transition-all duration-500 hover:-translate-y-0.5 hover:shadow-[0_8px_25px_rgba(16,185,129,0.08)]"
+                                    className="group bg-white border border-[#E5E7EB] rounded-[18px] p-5 flex items-start gap-4 hover:border-[#16A34A]/40 hover:shadow-[0_15px_40px_rgba(0,0,0,0.06)] transition-all duration-300 hover:-translate-y-0.5"
                                 >
-                                    <div className="w-11 h-11 bg-gradient-to-br from-emerald-500/15 to-teal-500/10 border border-emerald-500/20 rounded-xl flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform duration-500">
-                                        <f.icon className="w-5 h-5 text-emerald-400/80 group-hover:text-emerald-300 transition-colors" />
+                                    <div className="w-11 h-11 bg-green-50 border border-green-200 rounded-2xl flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform duration-300">
+                                        <f.icon className="w-5 h-5 text-[#16A34A]" />
                                     </div>
                                     <div>
-                                        <h3 className="text-sm font-black uppercase text-white tracking-wider mb-1">{f.label}</h3>
-                                        <p className="text-xs text-slate-400 font-bold leading-relaxed">{f.desc}</p>
+                                        <h3 className="text-xs font-black uppercase text-[#111827] tracking-wider mb-1">{f.label}</h3>
+                                        <p className="text-xs text-[#6B7280] font-semibold leading-relaxed">{f.desc}</p>
                                     </div>
                                 </div>
                             ))}
@@ -1069,30 +1054,29 @@ export default function TurfDetailPage() {
 
                     {/* ── SECTION: LOCATION & DIRECTIONS ── */}
                     <section className="relative">
-                        <div className="absolute top-0 right-[10%] w-[35vw] h-[35vw] bg-blue-500/[0.03] blur-[120px] rounded-full pointer-events-none" />
                         <SectionLabel accent="blue">Location & Directions</SectionLabel>
                         <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
                             {/* Live Interactive Google Map Embed */}
-                            <div className="lg:col-span-3 relative rounded-xl overflow-hidden border border-white/10 bg-slate-900 min-h-[350px] lg:h-auto group shadow-2xl flex flex-col">
+                            <div className="lg:col-span-3 relative rounded-[20px] overflow-hidden border border-[#E5E7EB] bg-white min-h-[350px] lg:h-auto group shadow-sm flex flex-col">
                                 <iframe
                                     title={`Google Map - ${turfData.name}`}
                                     width="100%"
                                     height="100%"
-                                    className="w-full h-full min-h-[320px] rounded-xl border-0 filter contrast-105 brightness-95"
+                                    className="w-full h-full min-h-[320px] rounded-[20px] border-0 filter contrast-105"
                                     loading="lazy"
                                     allowFullScreen
                                     src={`https://maps.google.com/maps?q=${turfData.coordinates?.lat || 19.1136},${turfData.coordinates?.lng || 72.8697}&t=&z=15&ie=UTF-8&iwloc=&output=embed`}
                                 />
-                                <div className="p-4 bg-slate-900/90 backdrop-blur border-t border-white/10 flex flex-wrap items-center justify-between gap-3 z-10">
-                                    <div className="flex items-center gap-2 text-slate-300 text-xs font-bold truncate max-w-md">
-                                        <HiLocationMarker className="text-blue-400 w-5 h-5 shrink-0" />
+                                <div className="p-4 bg-white/95 backdrop-blur border-t border-[#E5E7EB] flex flex-wrap items-center justify-between gap-3 z-10">
+                                    <div className="flex items-center gap-2 text-[#111827] text-xs font-bold truncate max-w-md">
+                                        <HiLocationMarker className="text-[#16A34A] w-5 h-5 shrink-0" />
                                         <span className="truncate">{turfData.fullAddress}</span>
                                     </div>
                                     <a
                                         href={`https://www.google.com/maps/dir/?api=1&destination=${turfData.coordinates?.lat || 19.1136},${turfData.coordinates?.lng || 72.8697}`}
                                         target="_blank"
                                         rel="noopener noreferrer"
-                                        className="px-5 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-black text-xs uppercase tracking-wider rounded-lg transition-all flex items-center gap-2 shadow-[0_0_15px_rgba(59,130,246,0.3)] hover:scale-105"
+                                        className="px-5 py-2.5 bg-[#C8FF2E] hover:bg-[#B5F000] text-[#111827] font-black text-xs uppercase tracking-wider rounded-full transition-all flex items-center gap-2 shadow-xs border border-[#B5F000]"
                                     >
                                         <span>Open in Google Maps</span>
                                         <span className="text-base leading-none">↗</span>
@@ -1102,30 +1086,30 @@ export default function TurfDetailPage() {
 
                             {/* Address & Landmarks */}
                             <div className="lg:col-span-2 space-y-4">
-                                <div className="bg-slate-900/40 border border-white/[0.06] rounded-xl p-6">
-                                    <h3 className="text-xs font-black uppercase text-blue-400 tracking-widest mb-4">Full Address</h3>
-                                    <p className="text-base text-slate-300 font-bold leading-relaxed">{turfData.fullAddress}</p>
+                                <div className="bg-white border border-[#E5E7EB] rounded-[18px] p-6 shadow-xs">
+                                    <h3 className="text-xs font-black uppercase text-[#16A34A] tracking-widest mb-3">Full Address</h3>
+                                    <p className="text-sm text-[#111827] font-bold leading-relaxed">{turfData.fullAddress}</p>
                                 </div>
 
-                                <div className="bg-slate-900/40 border border-white/[0.06] rounded-xl p-6">
-                                    <h3 className="text-xs font-black uppercase text-blue-400 tracking-widest mb-4">Nearby Landmarks</h3>
-                                    <ul className="space-y-3">
+                                <div className="bg-white border border-[#E5E7EB] rounded-[18px] p-6 shadow-xs">
+                                    <h3 className="text-xs font-black uppercase text-[#16A34A] tracking-widest mb-3">Nearby Landmarks</h3>
+                                    <ul className="space-y-2.5">
                                         {turfData.landmarks.map((lm, i) => (
-                                            <li key={i} className="flex items-center gap-3">
-                                                <span className="w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0" />
-                                                <span className="text-sm text-slate-300 font-bold">{lm}</span>
+                                            <li key={i} className="flex items-center gap-2.5">
+                                                <span className="w-1.5 h-1.5 rounded-full bg-[#16A34A] shrink-0" />
+                                                <span className="text-xs text-[#4B5563] font-bold">{lm}</span>
                                             </li>
                                         ))}
                                     </ul>
                                 </div>
 
-                                <div className="bg-slate-900/40 border border-white/[0.06] rounded-xl p-6">
-                                    <h3 className="text-xs font-black uppercase text-blue-400 tracking-widest mb-3">Operating Hours</h3>
-                                    <div className="flex items-center gap-3">
-                                        <HiClock className="w-5 h-5 text-blue-400" />
-                                        <span className="text-base text-white font-bold">{turfData.timing}</span>
+                                <div className="bg-white border border-[#E5E7EB] rounded-[18px] p-6 shadow-xs">
+                                    <h3 className="text-xs font-black uppercase text-[#16A34A] tracking-widest mb-2">Operating Hours</h3>
+                                    <div className="flex items-center gap-2.5">
+                                        <HiClock className="w-5 h-5 text-[#16A34A]" />
+                                        <span className="text-sm text-[#111827] font-black">{turfData.timing}</span>
                                     </div>
-                                    <p className="text-xs text-slate-400 font-bold mt-2">Open all days including weekends & public holidays</p>
+                                    <p className="text-xs text-[#6B7280] font-semibold mt-2">Open all days including weekends & public holidays</p>
                                 </div>
                             </div>
                         </div>
@@ -1133,32 +1117,31 @@ export default function TurfDetailPage() {
 
                     {/* ── SECTION: REVIEWS ── */}
                     <section className="relative">
-                        <div className="absolute bottom-0 left-[10%] w-[40vw] h-[30vw] bg-amber-500/[0.03] blur-[120px] rounded-full pointer-events-none" />
                         <SectionLabel accent="amber">Player Reviews</SectionLabel>
                         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                             {/* Rating Summary Card */}
-                            <div className="bg-slate-900/40 border border-white/[0.06] rounded-xl p-7 flex flex-col items-center justify-center text-center">
-                                <div className="text-6xl font-black text-white mb-2">{turfData.rating}</div>
+                            <div className="bg-white border border-[#E5E7EB] rounded-[20px] p-7 flex flex-col items-center justify-center text-center shadow-xs">
+                                <div className="text-5xl font-black text-[#111827] mb-2">{turfData.rating}</div>
                                 <div className="flex gap-1 mb-3">
                                     {[1, 2, 3, 4, 5].map(s => (
-                                        <HiStar key={s} className={`w-5 h-5 ${s <= Math.round(turfData.rating) ? 'text-amber-400' : 'text-slate-700'}`} />
+                                        <HiStar key={s} className={`w-5 h-5 ${s <= Math.round(turfData.rating) ? 'text-amber-400' : 'text-slate-200'}`} />
                                     ))}
                                 </div>
-                                <p className="text-sm text-slate-300 font-bold uppercase tracking-widest mb-6">Based on {totalReviews} reviews</p>
+                                <p className="text-xs text-[#6B7280] font-bold uppercase tracking-widest mb-6">Based on {totalReviews} reviews</p>
 
                                 {/* Rating Bars */}
                                 <div className="w-full space-y-2.5">
                                     {ratingBreakdown.map(r => (
                                         <div key={r.stars} className="flex items-center gap-3">
-                                            <span className="text-xs font-black text-slate-400 w-3 text-right">{r.stars}</span>
-                                            <HiStar className="w-4 h-4 text-amber-500/60" />
-                                            <div className="flex-1 h-2.5 bg-slate-800 rounded-full overflow-hidden">
+                                            <span className="text-xs font-bold text-[#6B7280] w-3 text-right">{r.stars}</span>
+                                            <HiStar className="w-4 h-4 text-amber-400" />
+                                            <div className="flex-1 h-2.5 bg-slate-100 rounded-full overflow-hidden">
                                                 <div
-                                                    className="h-full bg-gradient-to-r from-amber-500 to-amber-400 rounded-full transition-all duration-700"
+                                                    className="h-full bg-amber-400 rounded-full transition-all duration-700"
                                                     style={{ width: `${(r.count / totalReviews) * 100}%` }}
                                                 />
                                             </div>
-                                            <span className="text-xs font-bold text-slate-400 w-8 text-right">{r.count}</span>
+                                            <span className="text-xs font-bold text-[#6B7280] w-8 text-right">{r.count}</span>
                                         </div>
                                     ))}
                                 </div>
@@ -1167,24 +1150,24 @@ export default function TurfDetailPage() {
                             {/* Individual Reviews */}
                             <div className="lg:col-span-2 space-y-4">
                                 {reviewsData.map(r => (
-                                    <div key={r.id} className="group bg-slate-900/40 border border-white/[0.06] rounded-xl p-5 hover:border-amber-500/20 transition-all duration-500">
+                                    <div key={r.id} className="group bg-white border border-[#E5E7EB] rounded-[18px] p-5 hover:border-[#16A34A]/40 transition-all duration-300 shadow-xs">
                                         <div className="flex items-start justify-between mb-3">
                                             <div className="flex items-center gap-3">
-                                                <div className="w-10 h-10 rounded-full bg-slate-800 border border-white/10 flex items-center justify-center text-lg">
+                                                <div className="w-10 h-10 rounded-full bg-slate-100 border border-[#E5E7EB] flex items-center justify-center text-lg">
                                                     {r.avatar}
                                                 </div>
                                                 <div>
-                                                    <h4 className="text-base font-bold text-white mb-0.5">{r.name}</h4>
-                                                    <p className="text-xs text-slate-400 font-bold">{r.date}</p>
+                                                    <h4 className="text-sm font-black text-[#111827] mb-0.5">{r.name}</h4>
+                                                    <p className="text-xs text-[#6B7280] font-semibold">{r.date}</p>
                                                 </div>
                                             </div>
                                             <div className="flex gap-0.5">
                                                 {[1, 2, 3, 4, 5].map(s => (
-                                                    <HiStar key={s} className={`w-3.5 h-3.5 ${s <= r.rating ? 'text-amber-400' : 'text-slate-700'}`} />
+                                                    <HiStar key={s} className={`w-3.5 h-3.5 ${s <= r.rating ? 'text-amber-400' : 'text-slate-200'}`} />
                                                 ))}
                                             </div>
                                         </div>
-                                        <p className="text-sm md:text-base text-slate-300 leading-relaxed font-semibold">{r.text}</p>
+                                        <p className="text-xs sm:text-sm text-[#4B5563] leading-relaxed font-semibold">{r.text}</p>
                                     </div>
                                 ))}
                             </div>
@@ -1193,83 +1176,79 @@ export default function TurfDetailPage() {
 
                     {/* ── SECTION: MEET YOUR HOST ── */}
                     <section className="relative pb-10">
-                        <div className="absolute top-[20%] right-[5%] w-[35vw] h-[35vw] bg-purple-500/[0.03] blur-[120px] rounded-full pointer-events-none" />
                         <SectionLabel accent="purple">Meet Your Host</SectionLabel>
                         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                             {/* Host Profile Card */}
-                            <div className="bg-slate-900/40 border border-white/[0.06] rounded-xl p-7 flex flex-col items-center text-center relative overflow-hidden group hover:border-purple-500/20 transition-all duration-500">
-                                {/* Glow accent */}
-                                <div className="absolute -top-[30%] left-[50%] -translate-x-1/2 w-[60%] h-[40%] bg-purple-500/10 blur-[60px] rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none" />
-
-                                <div className="w-20 h-20 rounded-full bg-slate-800 border-2 border-purple-500/30 flex items-center justify-center text-3xl mb-4 shadow-[0_0_20px_rgba(168,85,247,0.15)] relative z-10">
+                            <div className="bg-white border border-[#E5E7EB] rounded-[20px] p-7 flex flex-col items-center text-center relative overflow-hidden group shadow-xs">
+                                <div className="w-20 h-20 rounded-full bg-green-50 border-2 border-[#16A34A] flex items-center justify-center text-3xl mb-4 relative z-10">
                                     {hostData.avatar}
                                 </div>
 
-                                <h3 className="text-2xl font-black text-white mb-1 relative z-10">{hostData.name}</h3>
+                                <h3 className="text-xl font-black text-[#111827] mb-1 relative z-10">{hostData.name}</h3>
 
                                 <div className="flex items-center gap-2 mb-5 relative z-10">
                                     {hostData.verified && (
-                                        <span className="inline-flex items-center gap-1 text-[11px] font-black uppercase tracking-widest text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-3 py-1.5 rounded-full">
-                                            <HiShieldCheck className="w-3.5 h-3.5" /> Verified
+                                        <span className="inline-flex items-center gap-1 text-[11px] font-black uppercase tracking-wider text-[#16A34A] bg-green-50 border border-green-200 px-3 py-1 rounded-full">
+                                            <HiShieldCheck className="w-3.5 h-3.5 text-[#16A34A]" /> Verified
                                         </span>
                                     )}
                                     {hostData.superhost && (
-                                        <span className="inline-flex items-center gap-1 text-[11px] font-black uppercase tracking-widest text-purple-400 bg-purple-500/10 border border-purple-500/20 px-3 py-1.5 rounded-full">
-                                            <RiShieldStarFill className="w-3.5 h-3.5" /> Superhost
+                                        <span className="inline-flex items-center gap-1 text-[11px] font-black uppercase tracking-wider text-purple-700 bg-purple-50 border border-purple-200 px-3 py-1 rounded-full">
+                                            <RiShieldStarFill className="w-3.5 h-3.5 text-purple-600" /> Superhost
                                         </span>
                                     )}
                                 </div>
 
                                 <div className="grid grid-cols-2 gap-3 w-full mb-6 relative z-10">
-                                    <div className="bg-slate-950/60 border border-white/5 rounded-lg p-3">
-                                        <div className="text-2xl font-black text-white">{hostData.totalVenues}</div>
-                                        <div className="text-[11px] font-black text-slate-400 uppercase tracking-widest mt-0.5">Venues</div>
+                                    <div className="bg-[#F7F9FC] border border-[#E5E7EB] rounded-xl p-3">
+                                        <div className="text-xl font-black text-[#111827]">{hostData.totalVenues}</div>
+                                        <div className="text-[10px] font-black text-[#6B7280] uppercase tracking-widest mt-0.5">Venues</div>
                                     </div>
-                                    <div className="bg-slate-950/60 border border-white/5 rounded-lg p-3">
-                                        <div className="text-2xl font-black text-white">{hostData.responseRate}</div>
-                                        <div className="text-[11px] font-black text-slate-400 uppercase tracking-widest mt-0.5">Response</div>
+                                    <div className="bg-[#F7F9FC] border border-[#E5E7EB] rounded-xl p-3">
+                                        <div className="text-xl font-black text-[#111827]">{hostData.responseRate}</div>
+                                        <div className="text-[10px] font-black text-[#6B7280] uppercase tracking-widest mt-0.5">Response</div>
                                     </div>
                                 </div>
 
-                                <p className="text-xs text-slate-400 font-bold relative z-10">Hosting since {hostData.hostingSince}</p>
+                                <p className="text-xs text-[#6B7280] font-semibold relative z-10">Hosting since {hostData.hostingSince}</p>
                             </div>
 
                             {/* Host Bio & Contact */}
                             <div className="lg:col-span-2 space-y-4">
-                                <div className="bg-slate-900/40 border border-white/[0.06] rounded-xl p-6">
-                                    <h3 className="text-xs font-black uppercase text-purple-400 tracking-widest mb-4">About the Host</h3>
-                                    <p className="text-base text-slate-200 font-semibold leading-relaxed">{hostData.bio}</p>
+                                <div className="bg-white border border-[#E5E7EB] rounded-[20px] p-6 shadow-xs">
+                                    <h3 className="text-xs font-black uppercase text-[#16A34A] tracking-widest mb-3">About the Host</h3>
+                                    <p className="text-sm text-[#4B5563] font-semibold leading-relaxed">{hostData.bio}</p>
                                 </div>
 
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                    <div className="bg-slate-900/40 border border-white/[0.06] rounded-xl p-5 flex items-center gap-4 group hover:border-purple-500/20 transition-all duration-500">
-                                        <div className="w-11 h-11 bg-purple-500/10 border border-purple-500/20 rounded-xl flex items-center justify-center shrink-0">
-                                            <HiClock className="w-5 h-5 text-purple-400" />
+                                    <div className="bg-white border border-[#E5E7EB] rounded-[18px] p-5 flex items-center gap-4 shadow-xs">
+                                        <div className="w-11 h-11 bg-green-50 border border-green-200 rounded-2xl flex items-center justify-center shrink-0">
+                                            <HiClock className="w-5 h-5 text-[#16A34A]" />
                                         </div>
                                         <div>
-                                            <h4 className="text-xs font-black uppercase text-slate-400 tracking-widest mb-0.5">Response Time</h4>
-                                            <p className="text-base text-white font-bold">{hostData.responseTime}</p>
+                                            <h4 className="text-xs font-black uppercase text-[#6B7280] tracking-widest mb-0.5">Response Time</h4>
+                                            <p className="text-sm text-[#111827] font-black">{hostData.responseTime}</p>
                                         </div>
                                     </div>
 
-                                    <div className="bg-slate-900/40 border border-white/[0.06] rounded-xl p-5 flex items-center gap-4 group hover:border-purple-500/20 transition-all duration-500">
-                                        <div className="w-11 h-11 bg-purple-500/10 border border-purple-500/20 rounded-xl flex items-center justify-center shrink-0">
-                                            <HiPhone className="w-5 h-5 text-purple-400" />
+                                    <div className="bg-white border border-[#E5E7EB] rounded-[18px] p-5 flex items-center gap-4 shadow-xs">
+                                        <div className="w-11 h-11 bg-green-50 border border-green-200 rounded-2xl flex items-center justify-center shrink-0">
+                                            <HiPhone className="w-5 h-5 text-[#16A34A]" />
                                         </div>
                                         <div>
-                                            <h4 className="text-xs font-black uppercase text-slate-400 tracking-widest mb-0.5">Contact</h4>
-                                            <p className="text-base text-white font-bold">{hostData.phone}</p>
+                                            <h4 className="text-xs font-black uppercase text-[#6B7280] tracking-widest mb-0.5">Contact</h4>
+                                            <p className="text-sm text-[#111827] font-black">{hostData.phone}</p>
                                         </div>
                                     </div>
                                 </div>
 
-                                <div className="bg-slate-900/40 border border-white/[0.06] rounded-xl p-5 flex items-center gap-4 group hover:border-purple-500/20 transition-all duration-500">
-                                    <div className="w-11 h-11 bg-purple-500/10 border border-purple-500/20 rounded-xl flex items-center justify-center shrink-0">
-                                        <HiMail className="w-5 h-5 text-purple-400" />
+                                <div className="bg-white border border-[#E5E7EB] rounded-[18px] p-5 flex items-center gap-4 shadow-xs">
+                                    <div className="w-11 h-11 bg-green-50 border border-green-200 rounded-2xl flex items-center justify-center shrink-0">
+                                        <HiMail className="w-5 h-5 text-[#16A34A]" />
                                     </div>
                                     <div>
-                                        <h4 className="text-xs font-black uppercase text-slate-400 tracking-widest mb-0.5">Email</h4>
-                                        <p className="text-base text-white font-bold">{hostData.email}</p>
+                                        <h4 className="text-xs font-black uppercase text-[#6B7280] tracking-widest mb-0.5">Email</h4>
+                                        <p className="text-sm text-[#111827] font-black">{hostData.email}</p>
                                     </div>
                                 </div>
                             </div>
@@ -1280,46 +1259,42 @@ export default function TurfDetailPage() {
             </div>
             {/* Deployment Confirmation Modal */}
             {bookingSuccessModal && deploymentDetails && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-md p-4">
-                    <div className="bg-slate-900 border border-emerald-500/30 rounded-lg p-6 sm:p-8 max-w-md w-full shadow-2xl relative animate-in fade-in zoom-in-95 duration-200">
+                <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/65 backdrop-blur-sm p-4">
+                    <div className="bg-white border border-[#E5E7EB] rounded-[24px] p-6 sm:p-8 max-w-md w-full shadow-2xl relative animate-in fade-in zoom-in-95 duration-200">
                         <button
                             onClick={() => setBookingSuccessModal(false)}
-                            className="absolute top-4 right-4 text-slate-400 hover:text-white transition-colors cursor-pointer"
+                            className="absolute top-4 right-4 text-[#6B7280] hover:text-[#111827] transition-colors cursor-pointer"
                         >
                             <HiX className="w-5 h-5" />
                         </button>
 
-                        <div className="w-12 h-12 rounded-full bg-emerald-500/20 border border-emerald-500/50 flex items-center justify-center mb-4 text-emerald-400 mx-auto">
+                        <div className="w-12 h-12 rounded-full bg-green-50 border border-green-200 flex items-center justify-center mb-4 text-[#16A34A] mx-auto">
                             <HiCheckCircle className="w-8 h-8" />
                         </div>
 
-                        <h3 className="text-xl font-black italic text-center text-white tracking-wider uppercase mb-1">
-                            DEPLOYMENT CONFIRMED
+                        <h3 className="text-xl font-black italic text-center text-[#111827] tracking-wider uppercase mb-1">
+                            BOOKING CONFIRMED
                         </h3>
-                        <p className="text-xs text-center text-emerald-400 font-bold uppercase tracking-widest mb-6">
-                            Session Successfully Authorized
+                        <p className="text-xs text-center text-[#16A34A] font-bold uppercase tracking-widest mb-6">
+                            Slot Successfully Locked
                         </p>
 
-                        <div className="bg-slate-950/80 border border-white/10 rounded p-4 space-y-3 mb-6 text-xs font-medium">
-                            <div className="flex justify-between border-b border-white/5 pb-2">
-                                <span className="text-slate-400">Deployment Ref</span>
-                                <span className="text-emerald-400 font-mono font-bold">{deploymentDetails.deploymentId}</span>
+                        <div className="bg-[#F7F9FC] border border-[#E5E7EB] rounded-2xl p-4 space-y-3 mb-6 text-xs font-medium">
+                            <div className="flex justify-between border-b border-[#E5E7EB] pb-2">
+                                <span className="text-[#6B7280]">Booking ID</span>
+                                <span className="text-[#16A34A] font-mono font-bold">{deploymentDetails.deploymentId}</span>
                             </div>
-                            <div className="flex justify-between border-b border-white/5 pb-2">
-                                <span className="text-slate-400">Discipline</span>
-                                <span className="text-white font-bold">{deploymentDetails.sport}</span>
+                            <div className="flex justify-between border-b border-[#E5E7EB] pb-2">
+                                <span className="text-[#6B7280]">Sport</span>
+                                <span className="text-[#111827] font-bold">{deploymentDetails.sport}</span>
                             </div>
-                            <div className="flex justify-between border-b border-white/5 pb-2">
-                                <span className="text-slate-400">Date & Time</span>
-                                <span className="text-white font-bold">{deploymentDetails.date} @ {deploymentDetails.time}</span>
-                            </div>
-                            <div className="flex justify-between border-b border-white/5 pb-2">
-                                <span className="text-slate-400">Add-ons Selected</span>
-                                <span className="text-white font-bold">{deploymentDetails.addOnsCount} Authorized</span>
+                            <div className="flex justify-between border-b border-[#E5E7EB] pb-2">
+                                <span className="text-[#6B7280]">Date & Time</span>
+                                <span className="text-[#111827] font-bold">{deploymentDetails.date} @ {deploymentDetails.time}</span>
                             </div>
                             <div className="flex justify-between pt-1">
-                                <span className="text-slate-400 font-bold uppercase">Total Amount</span>
-                                <span className="text-emerald-400 text-sm font-black">₹{deploymentDetails.amount}</span>
+                                <span className="text-[#6B7280] font-bold uppercase">Total Amount</span>
+                                <span className="text-[#16A34A] text-sm font-black">₹{deploymentDetails.amount}</span>
                             </div>
                         </div>
 
@@ -1329,7 +1304,7 @@ export default function TurfDetailPage() {
                                     setBookingSuccessModal(false)
                                     navigate('/customer/bookings')
                                 }}
-                                className="flex-1 py-3 px-4 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black italic tracking-wider text-xs uppercase rounded transition-colors cursor-pointer text-center"
+                                className="flex-1 py-3 px-4 bg-[#C8FF2E] hover:bg-[#B5F000] text-[#111827] font-black tracking-wider text-xs uppercase rounded-full transition-colors cursor-pointer text-center border border-[#B5F000]"
                             >
                                 View My Bookings
                             </button>
@@ -1338,7 +1313,7 @@ export default function TurfDetailPage() {
                                     setBookingSuccessModal(false)
                                     setSelectedSlot(null)
                                 }}
-                                className="flex-1 py-3 px-4 bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs uppercase tracking-wider rounded transition-colors cursor-pointer text-center border border-white/10"
+                                className="flex-1 py-3 px-4 bg-white hover:bg-slate-50 text-[#111827] font-bold text-xs uppercase tracking-wider rounded-full transition-colors cursor-pointer text-center border border-[#E5E7EB]"
                             >
                                 Book Another
                             </button>

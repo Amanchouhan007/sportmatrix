@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
-import { IoRefreshOutline, IoLocationOutline, IoCalendarOutline, IoTimeOutline, IoTrophyOutline, IoPeopleOutline, IoSearch, IoFootball } from 'react-icons/io5'
+import { IoRefreshOutline, IoLocationOutline, IoCalendarOutline, IoTimeOutline, IoTrophyOutline, IoPeopleOutline, IoSearch, IoFootball, IoChevronBack, IoChevronForward } from 'react-icons/io5'
 import { GiCricketBat } from 'react-icons/gi'
 
 /* ── Location Data ── */
@@ -52,6 +52,107 @@ function getWeekendDate() {
     const daysUntilSat = day === 0 ? 6 : (6 - day)
     d.setDate(d.getDate() + daysUntilSat)
     return d.toISOString().split('T')[0]
+}
+
+/* ── Custom Sports Calendar Component ── */
+function CustomCalendarWidget({ selectedDate, onSelectDate }) {
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+
+    const initialDate = selectedDate ? new Date(selectedDate + 'T00:00:00') : today
+    const [viewDate, setViewDate] = useState(new Date(initialDate.getFullYear(), initialDate.getMonth(), 1))
+
+    const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
+    const dayLabels = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa']
+
+    const year = viewDate.getFullYear()
+    const month = viewDate.getMonth()
+
+    const firstDayIndex = new Date(year, month, 1).getDay()
+    const daysInMonth = new Date(year, month + 1, 0).getDate()
+
+    const prevMonth = () => {
+        setViewDate(new Date(year, month - 1, 1))
+    }
+
+    const nextMonth = () => {
+        setViewDate(new Date(year, month + 1, 1))
+    }
+
+    const todayStr = getDateString(0)
+
+    return (
+        <div className="w-full select-none pt-0.5">
+            {/* Header: Month Year + Prev / Next */}
+            <div className="flex items-center justify-between mb-1.5 px-0.5">
+                <span className="text-[11px] font-black uppercase tracking-wider text-[#111827]">
+                    {monthNames[month]} {year}
+                </span>
+                <div className="flex items-center gap-0.5">
+                    <button
+                        type="button"
+                        onClick={prevMonth}
+                        className="p-0.5 rounded-full hover:bg-slate-100 text-[#4B5563] hover:text-[#111827] transition-colors cursor-pointer"
+                    >
+                        <IoChevronBack className="w-3.5 h-3.5" />
+                    </button>
+                    <button
+                        type="button"
+                        onClick={nextMonth}
+                        className="p-0.5 rounded-full hover:bg-slate-100 text-[#4B5563] hover:text-[#111827] transition-colors cursor-pointer"
+                    >
+                        <IoChevronForward className="w-3.5 h-3.5" />
+                    </button>
+                </div>
+            </div>
+
+            {/* Days Grid Header */}
+            <div className="grid grid-cols-7 text-center mb-1">
+                {dayLabels.map((day) => (
+                    <span key={day} className="text-[9px] font-black uppercase tracking-wider text-[#6B7280]">
+                        {day}
+                    </span>
+                ))}
+            </div>
+
+            {/* Calendar Days */}
+            <div className="grid grid-cols-7 gap-0.5 text-center">
+                {Array.from({ length: firstDayIndex }).map((_, i) => (
+                    <div key={`empty-${i}`} className="h-6.5 w-6.5" />
+                ))}
+                {Array.from({ length: daysInMonth }).map((_, i) => {
+                    const dayNum = i + 1
+                    const dateObj = new Date(year, month, dayNum)
+                    dateObj.setHours(0, 0, 0, 0)
+
+                    const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(dayNum).padStart(2, '0')}`
+                    const isSelected = selectedDate === dateStr
+                    const isToday = todayStr === dateStr
+                    const isPast = dateObj < today
+
+                    return (
+                        <button
+                            key={dayNum}
+                            type="button"
+                            disabled={isPast}
+                            onClick={() => onSelectDate(dateStr)}
+                            className={`h-6.5 w-6.5 mx-auto rounded-full flex items-center justify-center text-[10.5px] font-bold transition-all cursor-pointer ${
+                                isPast
+                                    ? 'opacity-30 cursor-not-allowed text-[#9CA3AF]'
+                                    : isSelected
+                                        ? 'bg-[#C8FF2E] text-[#111827] font-black border border-[#B5F000] shadow-[0_2px_8px_rgba(200,255,46,0.4)] scale-105'
+                                        : isToday
+                                            ? 'border border-[#16A34A] text-[#16A34A] hover:bg-green-50'
+                                            : 'hover:bg-slate-100 text-[#111827]'
+                            }`}
+                        >
+                            {dayNum}
+                        </button>
+                    )
+                })}
+            </div>
+        </div>
+    )
 }
 
 export default function TurfSearchBar({ onSearch, values, onChange, onClear }) {
@@ -290,15 +391,17 @@ export default function TurfSearchBar({ onSearch, values, onChange, onClear }) {
                         </div>
                     </div>
                     {dateOpen && (
-                        <div className="absolute top-full left-0 md:left-1/2 md:-translate-x-1/2 w-[285px] bg-white border border-[#E5E7EB] p-4 rounded-[20px] mt-2 shadow-[0_20px_40px_rgba(0,0,0,0.1)] z-[9999]">
-                            <span className="text-[10px] font-black uppercase tracking-wider text-[#6B7280] block mb-2">Select Date</span>
-                            <div className="flex gap-1.5 mb-3 flex-wrap">
+                        <div className="absolute top-full left-0 md:left-1/2 md:-translate-x-1/2 w-[235px] bg-white border border-[#E5E7EB] p-3 rounded-[20px] mt-2 shadow-[0_15px_35px_rgba(0,0,0,0.12)] z-[9999]">
+                            {/* Quick Presets Bar */}
+                            <span className="text-[9px] font-black uppercase tracking-wider text-[#6B7280] block mb-1.5">Select Date</span>
+                            <div className="flex gap-1 mb-2 flex-wrap">
                                 {[{ l: 'Today', v: getDateString(0) }, { l: 'Tomorrow', v: getDateString(1) }, { l: 'Weekend', v: getWeekendDate() }].map(opt => (
                                     <button
                                         key={opt.l}
-                                        className={`px-3 py-1.5 rounded-full text-[11px] font-bold transition-all border shadow-sm ${
+                                        type="button"
+                                        className={`px-2.5 py-1 rounded-full text-[10px] font-bold transition-all border shadow-sm cursor-pointer ${
                                             date === opt.v
-                                                ? 'bg-[#C8FF2E] text-[#111827] border-[#B5F000] shadow-[0_4px_12px_rgba(200,255,46,0.35)]'
+                                                ? 'bg-[#C8FF2E] text-[#111827] border-[#B5F000] shadow-[0_2px_8px_rgba(200,255,46,0.35)]'
                                                 : 'bg-white hover:bg-[#C8FF2E] text-[#111827] border-[#E5E7EB] hover:border-[#B5F000]'
                                         }`}
                                         onClick={() => selectDate(opt.v)}
@@ -307,13 +410,11 @@ export default function TurfSearchBar({ onSearch, values, onChange, onClear }) {
                                     </button>
                                 ))}
                             </div>
-                            <input
-                                type="date"
-                                className="w-full bg-white border border-[#E5E7EB] hover:border-[#C8FF2E] focus:border-[#C8FF2E] rounded-full px-3.5 py-2 text-xs text-[#111827] outline-none font-bold shadow-sm transition-all cursor-pointer"
-                                value={date}
-                                min={todayStr}
-                                onChange={(e) => selectDate(e.target.value)}
-                            />
+                            
+                            {/* Custom Modern Sports Calendar Widget */}
+                            <div className="pt-1.5 border-t border-[#E5E7EB]">
+                                <CustomCalendarWidget selectedDate={date} onSelectDate={selectDate} />
+                            </div>
                         </div>
                     )}
                 </div>
