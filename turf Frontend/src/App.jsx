@@ -1,223 +1,229 @@
+import { lazy, Suspense } from 'react'
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import { ToastProvider } from './components/ui/Toast'
+import PageLoader from './components/ui/PageLoader'
+import { AuthProvider } from './context/AuthContext'
+import ProtectedRoute from './routes/ProtectedRoute'
 
 // Layouts
 import WebsiteLayout from './layouts/WebsiteLayout'
 import DashboardLayout from './layouts/DashboardLayout'
 
-// Auth
-import LoginPage from './pages/auth/LoginPage'
-import RegisterPage from './pages/auth/RegisterPage'
-import NotFoundPage from './pages/NotFoundPage'
-import { AuthProvider } from './context/AuthContext'
-import ProtectedRoute from './routes/ProtectedRoute'
-
-// Public Website
+// Critical Path / Public Website (Loaded eagerly for instant home response)
 import HomePage from './pages/website/HomePage'
-import AllTurfsPage from './pages/website/AllTurfsPage'
-import TurfDetailPage from './pages/website/TurfDetailPage'
-import SlotBookingPage from './pages/website/SlotBookingPage'
-import TournamentListPage from './pages/website/TournamentListPage'
-import TournamentDetailPage from './pages/website/TournamentDetailPage'
-import MembershipPage from './pages/website/MembershipPage'
-import ContactPage from './pages/website/ContactPage'
 
-// Super Admin
-import SADashboard from './pages/superadmin/SADashboard'
-import BranchManagement from './pages/superadmin/BranchManagement'
-import OwnerManagement from './pages/superadmin/OwnerManagement'
-import SubscriptionPlans from './pages/superadmin/SubscriptionPlans'
-import GlobalAnalytics from './pages/superadmin/GlobalAnalytics'
-import UserManagement from './pages/superadmin/UserManagement'
-import PaymentLogs from './pages/superadmin/PaymentLogs'
-import Disputes from './pages/superadmin/Disputes'
-import SystemSettings from './pages/superadmin/SystemSettings'
+// Lazy Auth
+const LoginPage = lazy(() => import('./pages/auth/LoginPage'))
+const RegisterPage = lazy(() => import('./pages/auth/RegisterPage'))
+const NotFoundPage = lazy(() => import('./pages/NotFoundPage'))
 
-// Owner
-import OwnerDashboard from './pages/owner/OwnerDashboard'
-import SportsManagement from './pages/owner/SportsManagement'
-import SlotManagement from './pages/owner/SlotManagement'
-import BookingManagement from './pages/owner/BookingManagement'
-import TurfCalendarPage from './pages/owner/TurfCalendarPage'
-import TeamsPlayers from './pages/owner/TeamsPlayers';
-import WalletPage from './pages/owner/WalletPage'
-import ReportsPage from './pages/owner/ReportsPage'
-import InventoryPage from './pages/owner/InventoryPage'
-import MaintenancePage from './pages/owner/MaintenancePage'
-import StaffManagement from './pages/owner/StaffManagement'
-import OwnerPOS from './pages/owner/OwnerPOS'
-import BillingHistory from './pages/owner/BillingHistory';
+// Lazy Public Website
+const AllTurfsPage = lazy(() => import('./pages/website/AllTurfsPage'))
+const TurfDetailPage = lazy(() => import('./pages/website/TurfDetailPage'))
+const SlotBookingPage = lazy(() => import('./pages/website/SlotBookingPage'))
+const TournamentListPage = lazy(() => import('./pages/website/TournamentListPage'))
+const TournamentDetailPage = lazy(() => import('./pages/website/TournamentDetailPage'))
+const MembershipPage = lazy(() => import('./pages/website/MembershipPage'))
+const ContactPage = lazy(() => import('./pages/website/ContactPage'))
 
-// Staff
-import StaffDashboard from './pages/staff/StaffDashboard'
-import StaffBookings from './pages/staff/StaffBookings'
-import StaffRefunds from './pages/staff/StaffRefunds'
-import StaffMaintenance from './pages/staff/StaffMaintenance'
-import StaffEquipment from './pages/staff/StaffEquipment'
+// Lazy Super Admin
+const SADashboard = lazy(() => import('./pages/superadmin/SADashboard'))
+const BranchManagement = lazy(() => import('./pages/superadmin/BranchManagement'))
+const OwnerManagement = lazy(() => import('./pages/superadmin/OwnerManagement'))
+const SubscriptionPlans = lazy(() => import('./pages/superadmin/SubscriptionPlans'))
+const GlobalAnalytics = lazy(() => import('./pages/superadmin/GlobalAnalytics'))
+const UserManagement = lazy(() => import('./pages/superadmin/UserManagement'))
+const PaymentLogs = lazy(() => import('./pages/superadmin/PaymentLogs'))
+const Disputes = lazy(() => import('./pages/superadmin/Disputes'))
+const SystemSettings = lazy(() => import('./pages/superadmin/SystemSettings'))
 
-// Customer
-import CustomerDashboard from './pages/customer/CustomerDashboard'
-import CustomerBookings from './pages/customer/CustomerBookings'
-import CustomerTeams from './pages/customer/CustomerTeams'
-import CustomerMatches from './pages/customer/CustomerMatches'
-import CustomerTournaments from './pages/customer/CustomerTournaments'
-import CustomerTournamentDetail from './pages/customer/CustomerTournamentDetail'
-import CustomerWallet from './pages/customer/CustomerWallet'
-import CustomerProfile from './pages/customer/CustomerProfile'
+// Lazy Owner
+const OwnerDashboard = lazy(() => import('./pages/owner/OwnerDashboard'))
+const SportsManagement = lazy(() => import('./pages/owner/SportsManagement'))
+const SlotManagement = lazy(() => import('./pages/owner/SlotManagement'))
+const BookingManagement = lazy(() => import('./pages/owner/BookingManagement'))
+const TurfCalendarPage = lazy(() => import('./pages/owner/TurfCalendarPage'))
+const TeamsPlayers = lazy(() => import('./pages/owner/TeamsPlayers'))
+const WalletPage = lazy(() => import('./pages/owner/WalletPage'))
+const ReportsPage = lazy(() => import('./pages/owner/ReportsPage'))
+const InventoryPage = lazy(() => import('./pages/owner/InventoryPage'))
+const MaintenancePage = lazy(() => import('./pages/owner/MaintenancePage'))
+const StaffManagement = lazy(() => import('./pages/owner/StaffManagement'))
+const OwnerPOS = lazy(() => import('./pages/owner/OwnerPOS'))
+const BillingHistory = lazy(() => import('./pages/owner/BillingHistory'))
 
-// Advertising & Marketing Modules
-import AllAdvertisements from './pages/advertising/AllAdvertisements'
-import CreateAdvertisement from './pages/advertising/CreateAdvertisement'
-import CommissionManagement from './pages/advertising/CommissionManagement'
-import AdAnalyticsDashboard from './pages/advertising/AdAnalyticsDashboard'
-import AdPaymentsPage from './pages/advertising/AdPaymentsPage'
-import OwnerMyAdvertisements from './pages/advertising/OwnerMyAdvertisements'
-import OwnerAdAnalytics from './pages/advertising/OwnerAdAnalytics'
-import DiscountOffersList from './pages/discounts/DiscountOffersList'
-import CreateDiscountOffer from './pages/discounts/CreateDiscountOffer'
+// Lazy Staff
+const StaffDashboard = lazy(() => import('./pages/staff/StaffDashboard'))
+const StaffBookings = lazy(() => import('./pages/staff/StaffBookings'))
+const StaffRefunds = lazy(() => import('./pages/staff/StaffRefunds'))
+const StaffMaintenance = lazy(() => import('./pages/staff/StaffMaintenance'))
+const StaffEquipment = lazy(() => import('./pages/staff/StaffEquipment'))
 
-// Tournament Management System Module Pages
-import TournamentDashboard from './pages/tournaments/TournamentDashboard'
-import TournamentAllPage from './pages/tournaments/TournamentAllPage'
-import TournamentCreatePage from './pages/tournaments/TournamentCreatePage'
-import TournamentPendingPage from './pages/tournaments/TournamentPendingPage'
-import TournamentCategoriesPage from './pages/tournaments/TournamentCategoriesPage'
-import TournamentRegistrationsPage from './pages/tournaments/TournamentRegistrationsPage'
-import TournamentFixturesPage from './pages/tournaments/TournamentFixturesPage'
-import TournamentMatchesPage from './pages/tournaments/TournamentMatchesPage'
-import TournamentPaymentsPage from './pages/tournaments/TournamentPaymentsPage'
-import TournamentSponsorsPage from './pages/tournaments/TournamentSponsorsPage'
-import TournamentReportsPage from './pages/tournaments/TournamentReportsPage'
-import TournamentSettingsPage from './pages/tournaments/TournamentSettingsPage'
+// Lazy Customer
+const CustomerDashboard = lazy(() => import('./pages/customer/CustomerDashboard'))
+const CustomerBookings = lazy(() => import('./pages/customer/CustomerBookings'))
+const CustomerTeams = lazy(() => import('./pages/customer/CustomerTeams'))
+const CustomerMatches = lazy(() => import('./pages/customer/CustomerMatches'))
+const CustomerTournaments = lazy(() => import('./pages/customer/CustomerTournaments'))
+const CustomerTournamentDetail = lazy(() => import('./pages/customer/CustomerTournamentDetail'))
+const CustomerWallet = lazy(() => import('./pages/customer/CustomerWallet'))
+const CustomerProfile = lazy(() => import('./pages/customer/CustomerProfile'))
 
-import MobileControllerStandalonePage from './pages/mobile/MobileControllerStandalonePage'
+// Lazy Advertising & Marketing Modules
+const AllAdvertisements = lazy(() => import('./pages/advertising/AllAdvertisements'))
+const CreateAdvertisement = lazy(() => import('./pages/advertising/CreateAdvertisement'))
+const CommissionManagement = lazy(() => import('./pages/advertising/CommissionManagement'))
+const AdAnalyticsDashboard = lazy(() => import('./pages/advertising/AdAnalyticsDashboard'))
+const AdPaymentsPage = lazy(() => import('./pages/advertising/AdPaymentsPage'))
+const OwnerMyAdvertisements = lazy(() => import('./pages/advertising/OwnerMyAdvertisements'))
+const OwnerAdAnalytics = lazy(() => import('./pages/advertising/OwnerAdAnalytics'))
+const DiscountOffersList = lazy(() => import('./pages/discounts/DiscountOffersList'))
+const CreateDiscountOffer = lazy(() => import('./pages/discounts/CreateDiscountOffer'))
+
+// Lazy Tournament Management System
+const TournamentDashboard = lazy(() => import('./pages/tournaments/TournamentDashboard'))
+const TournamentAllPage = lazy(() => import('./pages/tournaments/TournamentAllPage'))
+const TournamentCreatePage = lazy(() => import('./pages/tournaments/TournamentCreatePage'))
+const TournamentPendingPage = lazy(() => import('./pages/tournaments/TournamentPendingPage'))
+const TournamentCategoriesPage = lazy(() => import('./pages/tournaments/TournamentCategoriesPage'))
+const TournamentRegistrationsPage = lazy(() => import('./pages/tournaments/TournamentRegistrationsPage'))
+const TournamentFixturesPage = lazy(() => import('./pages/tournaments/TournamentFixturesPage'))
+const TournamentMatchesPage = lazy(() => import('./pages/tournaments/TournamentMatchesPage'))
+const TournamentPaymentsPage = lazy(() => import('./pages/tournaments/TournamentPaymentsPage'))
+const TournamentSponsorsPage = lazy(() => import('./pages/tournaments/TournamentSponsorsPage'))
+const TournamentReportsPage = lazy(() => import('./pages/tournaments/TournamentReportsPage'))
+const TournamentSettingsPage = lazy(() => import('./pages/tournaments/TournamentSettingsPage'))
+
+const MobileControllerStandalonePage = lazy(() => import('./pages/mobile/MobileControllerStandalonePage'))
 
 export default function App() {
   return (
     <AuthProvider>
       <BrowserRouter>
         <ToastProvider>
-          <Routes>
-            {/* Mobile Remote Controller Public Route */}
-            <Route path="/mobile-controller/:sessionId" element={<MobileControllerStandalonePage />} />
+          <Suspense fallback={<PageLoader text="Loading SportMatrix..." />}>
+            <Routes>
+              {/* Mobile Remote Controller Public Route */}
+              <Route path="/mobile-controller/:sessionId" element={<MobileControllerStandalonePage />} />
 
-            {/* Auth */}
-            <Route path="/login" element={<LoginPage />} />
-            <Route path="/register" element={<RegisterPage />} />
+              {/* Auth */}
+              <Route path="/login" element={<LoginPage />} />
+              <Route path="/register" element={<RegisterPage />} />
 
-            {/* Public Website */}
-            <Route path="/" element={<WebsiteLayout><HomePage /></WebsiteLayout>} />
-            <Route path="/turfs" element={<WebsiteLayout><AllTurfsPage /></WebsiteLayout>} />
-            <Route path="/turfs/:id" element={<WebsiteLayout><TurfDetailPage /></WebsiteLayout>} />
-            <Route path="/booking/:id" element={<WebsiteLayout><SlotBookingPage /></WebsiteLayout>} />
-            <Route path="/tournaments" element={<WebsiteLayout><TournamentListPage /></WebsiteLayout>} />
-            <Route path="/tournaments/:id" element={<WebsiteLayout><TournamentDetailPage /></WebsiteLayout>} />
-            <Route path="/membership" element={<WebsiteLayout><MembershipPage /></WebsiteLayout>} />
-            <Route path="/contact" element={<WebsiteLayout><ContactPage /></WebsiteLayout>} />
+              {/* Public Website */}
+              <Route path="/" element={<WebsiteLayout><HomePage /></WebsiteLayout>} />
+              <Route path="/turfs" element={<WebsiteLayout><AllTurfsPage /></WebsiteLayout>} />
+              <Route path="/turfs/:id" element={<WebsiteLayout><TurfDetailPage /></WebsiteLayout>} />
+              <Route path="/booking/:id" element={<WebsiteLayout><SlotBookingPage /></WebsiteLayout>} />
+              <Route path="/tournaments" element={<WebsiteLayout><TournamentListPage /></WebsiteLayout>} />
+              <Route path="/tournaments/:id" element={<WebsiteLayout><TournamentDetailPage /></WebsiteLayout>} />
+              <Route path="/membership" element={<WebsiteLayout><MembershipPage /></WebsiteLayout>} />
+              <Route path="/contact" element={<WebsiteLayout><ContactPage /></WebsiteLayout>} />
 
-            {/* Super Admin Dashboard */}
-            <Route path="/super-admin" element={<ProtectedRoute allowedRoles={['SUPER_ADMIN']}><DashboardLayout role="superadmin" /></ProtectedRoute>}>
-              <Route index element={<SADashboard />} />
-              <Route path="owners" element={<OwnerManagement />} />
-              <Route path="subscriptions" element={<SubscriptionPlans />} />
-              <Route path="ads" element={<AllAdvertisements />} />
-              <Route path="ads/create" element={<CreateAdvertisement />} />
-              <Route path="ads/commissions" element={<CommissionManagement />} />
-              <Route path="ads/analytics" element={<AdAnalyticsDashboard />} />
-              <Route path="ads/payments" element={<AdPaymentsPage />} />
-              <Route path="analytics" element={<GlobalAnalytics />} />
-              <Route path="users" element={<UserManagement />} />
-              <Route path="payments" element={<PaymentLogs />} />
-              <Route path="disputes" element={<Disputes />} />
-              <Route path="settings" element={<SystemSettings />} />
-            </Route>
+              {/* Super Admin Dashboard */}
+              <Route path="/super-admin" element={<ProtectedRoute allowedRoles={['SUPER_ADMIN']}><DashboardLayout role="superadmin" /></ProtectedRoute>}>
+                <Route index element={<SADashboard />} />
+                <Route path="owners" element={<OwnerManagement />} />
+                <Route path="subscriptions" element={<SubscriptionPlans />} />
+                <Route path="ads" element={<AllAdvertisements />} />
+                <Route path="ads/create" element={<CreateAdvertisement />} />
+                <Route path="ads/commissions" element={<CommissionManagement />} />
+                <Route path="ads/analytics" element={<AdAnalyticsDashboard />} />
+                <Route path="ads/payments" element={<AdPaymentsPage />} />
+                <Route path="analytics" element={<GlobalAnalytics />} />
+                <Route path="users" element={<UserManagement />} />
+                <Route path="payments" element={<PaymentLogs />} />
+                <Route path="disputes" element={<Disputes />} />
+                <Route path="settings" element={<SystemSettings />} />
+              </Route>
 
-            {/* Admin Dashboard (/admin) */}
-            <Route path="/admin" element={<ProtectedRoute allowedRoles={['OWNER']}><DashboardLayout role="owner" /></ProtectedRoute>}>
-              <Route index element={<OwnerDashboard />} />
-              <Route path="ads" element={<OwnerMyAdvertisements />} />
-              <Route path="ads/all" element={<AllAdvertisements />} />
-              <Route path="ads/create" element={<CreateAdvertisement />} />
-              <Route path="ads/commissions" element={<CommissionManagement />} />
-              <Route path="ads/analytics" element={<AdAnalyticsDashboard />} />
-              <Route path="ads/payments" element={<AdPaymentsPage />} />
-              <Route path="ads/owner-analytics" element={<OwnerAdAnalytics />} />
-              <Route path="discount-offers" element={<DiscountOffersList />} />
-              <Route path="discount-offers/create" element={<CreateDiscountOffer />} />
-              <Route path="sports" element={<SportsManagement />} />
-              <Route path="calendar" element={<TurfCalendarPage />} />
-              <Route path="slots" element={<TurfCalendarPage />} />
-              <Route path="bookings" element={<BookingManagement />} />
-              <Route path="pos" element={<OwnerPOS />} />
-              <Route path="billing-history" element={<BillingHistory />} />
+              {/* Admin Dashboard (/admin) */}
+              <Route path="/admin" element={<ProtectedRoute allowedRoles={['OWNER']}><DashboardLayout role="owner" /></ProtectedRoute>}>
+                <Route index element={<OwnerDashboard />} />
+                <Route path="ads" element={<OwnerMyAdvertisements />} />
+                <Route path="ads/all" element={<AllAdvertisements />} />
+                <Route path="ads/create" element={<CreateAdvertisement />} />
+                <Route path="ads/commissions" element={<CommissionManagement />} />
+                <Route path="ads/analytics" element={<AdAnalyticsDashboard />} />
+                <Route path="ads/payments" element={<AdPaymentsPage />} />
+                <Route path="ads/owner-analytics" element={<OwnerAdAnalytics />} />
+                <Route path="discount-offers" element={<DiscountOffersList />} />
+                <Route path="discount-offers/create" element={<CreateDiscountOffer />} />
+                <Route path="sports" element={<SportsManagement />} />
+                <Route path="calendar" element={<TurfCalendarPage />} />
+                <Route path="slots" element={<TurfCalendarPage />} />
+                <Route path="bookings" element={<BookingManagement />} />
+                <Route path="pos" element={<OwnerPOS />} />
+                <Route path="billing-history" element={<BillingHistory />} />
 
-              {/* Tournament Management System Sub-Routes */}
-              <Route path="tournaments" element={<TournamentAllPage role="owner" />} />
-              <Route path="tournaments/dashboard" element={<TournamentDashboard role="owner" />} />
-              <Route path="tournaments/all" element={<TournamentAllPage role="owner" />} />
-              <Route path="tournaments/create" element={<TournamentCreatePage role="owner" />} />
-              <Route path="tournaments/pending" element={<TournamentPendingPage role="owner" />} />
-              <Route path="tournaments/categories" element={<TournamentCategoriesPage />} />
-              <Route path="tournaments/registrations" element={<TournamentRegistrationsPage />} />
-              <Route path="tournaments/fixtures" element={<TournamentFixturesPage />} />
-              <Route path="tournaments/matches" element={<TournamentMatchesPage />} />
-              <Route path="tournaments/payments" element={<TournamentPaymentsPage />} />
-              <Route path="tournaments/sponsors" element={<TournamentSponsorsPage role="owner" />} />
-              <Route path="tournaments/reports" element={<TournamentReportsPage />} />
-              <Route path="tournaments/settings" element={<TournamentSettingsPage />} />
+                {/* Tournament Management System Sub-Routes */}
+                <Route path="tournaments" element={<TournamentAllPage role="owner" />} />
+                <Route path="tournaments/dashboard" element={<TournamentDashboard role="owner" />} />
+                <Route path="tournaments/all" element={<TournamentAllPage role="owner" />} />
+                <Route path="tournaments/create" element={<TournamentCreatePage role="owner" />} />
+                <Route path="tournaments/pending" element={<TournamentPendingPage role="owner" />} />
+                <Route path="tournaments/categories" element={<TournamentCategoriesPage />} />
+                <Route path="tournaments/registrations" element={<TournamentRegistrationsPage />} />
+                <Route path="tournaments/fixtures" element={<TournamentFixturesPage />} />
+                <Route path="tournaments/matches" element={<TournamentMatchesPage />} />
+                <Route path="tournaments/payments" element={<TournamentPaymentsPage />} />
+                <Route path="tournaments/sponsors" element={<TournamentSponsorsPage role="owner" />} />
+                <Route path="tournaments/reports" element={<TournamentReportsPage />} />
+                <Route path="tournaments/settings" element={<TournamentSettingsPage />} />
 
-              <Route path="teams" element={<TeamsPlayers />} />
-              <Route path="players" element={<TeamsPlayers />} />
-              <Route path="wallet" element={<WalletPage />} />
-              <Route path="reports" element={<ReportsPage />} />
-              <Route path="inventory" element={<InventoryPage />} />
-              <Route path="maintenance" element={<MaintenancePage />} />
-              <Route path="staff" element={<StaffManagement />} />
-            </Route>
+                <Route path="teams" element={<TeamsPlayers />} />
+                <Route path="players" element={<TeamsPlayers />} />
+                <Route path="wallet" element={<WalletPage />} />
+                <Route path="reports" element={<ReportsPage />} />
+                <Route path="inventory" element={<InventoryPage />} />
+                <Route path="maintenance" element={<MaintenancePage />} />
+                <Route path="staff" element={<StaffManagement />} />
+              </Route>
 
-            {/* Staff Dashboard (/staff) */}
-            <Route path="/staff" element={<ProtectedRoute allowedRoles={['STAFF']}><DashboardLayout role="staff" /></ProtectedRoute>}>
-              <Route index element={<StaffDashboard />} />
-              <Route path="ads" element={<OwnerMyAdvertisements />} />
-              <Route path="ads/create" element={<CreateAdvertisement />} />
-              <Route path="ads/analytics" element={<OwnerAdAnalytics />} />
-              <Route path="bookings" element={<StaffBookings />} />
+              {/* Staff Dashboard (/staff) */}
+              <Route path="/staff" element={<ProtectedRoute allowedRoles={['STAFF']}><DashboardLayout role="staff" /></ProtectedRoute>}>
+                <Route index element={<StaffDashboard />} />
+                <Route path="ads" element={<OwnerMyAdvertisements />} />
+                <Route path="ads/create" element={<CreateAdvertisement />} />
+                <Route path="ads/analytics" element={<OwnerAdAnalytics />} />
+                <Route path="bookings" element={<StaffBookings />} />
 
-              {/* Staff Tournament Management Sub-Routes */}
-              <Route path="tournaments" element={<TournamentAllPage role="staff" />} />
-              <Route path="tournaments/dashboard" element={<TournamentDashboard role="staff" />} />
-              <Route path="tournaments/all" element={<TournamentAllPage role="staff" />} />
-              <Route path="tournaments/create" element={<TournamentCreatePage role="staff" />} />
-              <Route path="tournaments/pending" element={<TournamentPendingPage role="staff" />} />
-              <Route path="tournaments/categories" element={<TournamentCategoriesPage />} />
-              <Route path="tournaments/registrations" element={<TournamentRegistrationsPage />} />
-              <Route path="tournaments/fixtures" element={<TournamentFixturesPage />} />
-              <Route path="tournaments/matches" element={<TournamentMatchesPage />} />
-              <Route path="tournaments/payments" element={<TournamentPaymentsPage />} />
-              <Route path="tournaments/sponsors" element={<TournamentSponsorsPage role="staff" />} />
-              <Route path="tournaments/reports" element={<TournamentReportsPage />} />
-              <Route path="tournaments/settings" element={<TournamentSettingsPage />} />
+                {/* Staff Tournament Management Sub-Routes */}
+                <Route path="tournaments" element={<TournamentAllPage role="staff" />} />
+                <Route path="tournaments/dashboard" element={<TournamentDashboard role="staff" />} />
+                <Route path="tournaments/all" element={<TournamentAllPage role="staff" />} />
+                <Route path="tournaments/create" element={<TournamentCreatePage role="staff" />} />
+                <Route path="tournaments/pending" element={<TournamentPendingPage role="staff" />} />
+                <Route path="tournaments/categories" element={<TournamentCategoriesPage />} />
+                <Route path="tournaments/registrations" element={<TournamentRegistrationsPage />} />
+                <Route path="tournaments/fixtures" element={<TournamentFixturesPage />} />
+                <Route path="tournaments/matches" element={<TournamentMatchesPage />} />
+                <Route path="tournaments/payments" element={<TournamentPaymentsPage />} />
+                <Route path="tournaments/sponsors" element={<TournamentSponsorsPage role="staff" />} />
+                <Route path="tournaments/reports" element={<TournamentReportsPage />} />
+                <Route path="tournaments/settings" element={<TournamentSettingsPage />} />
 
-              <Route path="refunds" element={<StaffRefunds />} />
-              <Route path="maintenance" element={<StaffMaintenance />} />
-              <Route path="equipment" element={<StaffEquipment />} />
-            </Route>
+                <Route path="refunds" element={<StaffRefunds />} />
+                <Route path="maintenance" element={<StaffMaintenance />} />
+                <Route path="equipment" element={<StaffEquipment />} />
+              </Route>
 
-            {/* Customer Dashboard */}
-            <Route path="/customer" element={<ProtectedRoute allowedRoles={['CUSTOMER']}><DashboardLayout role="customer" /></ProtectedRoute>}>
-              <Route index element={<CustomerDashboard />} />
-              <Route path="bookings" element={<CustomerBookings />} />
-              <Route path="teams" element={<CustomerTeams />} />
-              <Route path="matches" element={<CustomerMatches />} />
-              <Route path="tournaments" element={<CustomerTournaments />} />
-              <Route path="tournaments/:id" element={<CustomerTournamentDetail />} />
-              <Route path="wallet" element={<CustomerWallet />} />
-              <Route path="profile" element={<CustomerProfile />} />
-            </Route>
+              {/* Customer Dashboard */}
+              <Route path="/customer" element={<ProtectedRoute allowedRoles={['CUSTOMER']}><DashboardLayout role="customer" /></ProtectedRoute>}>
+                <Route index element={<CustomerDashboard />} />
+                <Route path="bookings" element={<CustomerBookings />} />
+                <Route path="teams" element={<CustomerTeams />} />
+                <Route path="matches" element={<CustomerMatches />} />
+                <Route path="tournaments" element={<CustomerTournaments />} />
+                <Route path="tournaments/:id" element={<CustomerTournamentDetail />} />
+                <Route path="wallet" element={<CustomerWallet />} />
+                <Route path="profile" element={<CustomerProfile />} />
+              </Route>
 
-            {/* 404 */}
-            <Route path="*" element={<NotFoundPage />} />
-          </Routes>
+              {/* 404 */}
+              <Route path="*" element={<NotFoundPage />} />
+            </Routes>
+          </Suspense>
         </ToastProvider>
       </BrowserRouter>
     </AuthProvider>

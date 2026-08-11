@@ -4,146 +4,108 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="theme-color" content="#0f172a" />
+    <meta name="theme-color" content="#0a120c" />
     <link rel="manifest" href="/manifest.json" />
-    <meta name="description" content="SBOS — The complete digital operating system for sports turfs and facilities. Manage bookings, tournaments, players, and revenue analytics from one platform." />
+    <meta name="description" content="SportMatrix — The complete digital operating system for sports turfs and facilities." />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet" />
-    <title>SBOS — Sports Business Operating System</title>
+    <title>SportMatrix — Sports Business Operating System</title>
   </head>
   <body>
     <div id="root">
-      <!-- 🎬 HYPER-REALISTIC CINEMATIC CRICKET ARENA PRELOADER -->
+      <!-- ⚡ ULTRA-FAST ZERO-LAG HARDWARE-ACCELERATED PRELOADER -->
       <style>
-        @keyframes cinematicZoomPulse {
-          0% { transform: scale(1); filter: brightness(1) contrast(1.05); }
-          50% { transform: scale(1.06); filter: brightness(1.15) contrast(1.15); }
-          100% { transform: scale(1); filter: brightness(1) contrast(1.05); }
+        @keyframes smPulseRing {
+          0% { transform: scale(0.95); opacity: 0.7; }
+          50% { transform: scale(1.05); opacity: 1; }
+          100% { transform: scale(0.95); opacity: 0.7; }
         }
-        @keyframes laserSeamBeam {
-          0% { left: -100%; opacity: 0; }
-          30% { opacity: 1; }
-          70% { opacity: 1; }
-          100% { left: 200%; opacity: 0; }
+        @keyframes smProgressShimmer {
+          0% { transform: translateX(-100%); }
+          100% { transform: translateX(100%); }
         }
-        @keyframes bailsGlowFlash {
-          0%, 100% { opacity: 0.4; filter: drop-shadow(0 0 5px #C8FF2E); }
-          50% { opacity: 1; filter: drop-shadow(0 0 25px #C8FF2E) drop-shadow(0 0 45px #16A34A); }
-        }
-        @keyframes barProgressMotion {
-          0% { width: 0%; }
-          100% { width: 100%; }
-        }
-
-        .cinematic-preloader {
+        .sm-preloader {
           position: fixed;
           inset: 0;
-          background: radial-gradient(circle at 50% 40%, #0D1F15 0%, #06100B 70%, #020503 100%);
+          background: #08100a;
           display: flex;
           flex-direction: column;
           align-items: center;
           justify-content: center;
           z-index: 99999;
           font-family: 'Inter', system-ui, -apple-system, sans-serif;
-          overflow: hidden;
-          transition: opacity 0.2s ease-out;
+          transition: opacity 0.15s ease-out;
+          will-change: opacity;
         }
-
-        .cinematic-preloader.fade-out {
+        .sm-preloader.fade-out {
           opacity: 0;
           pointer-events: none;
         }
-
-        /* 21:9 Widescreen Cinema Viewport with Real Photo Asset */
-        .cinema-viewport {
+        .sm-logo-box {
           position: relative;
-          width: 92%;
-          max-width: 820px;
-          height: 280px;
-          background: url('/cricket_preloader.png') center/cover no-repeat;
-          border: 1.5px solid rgba(200, 255, 46, 0.5);
-          border-radius: 24px;
-          box-shadow: inset 0 0 60px rgba(0,0,0,0.8), 0 20px 60px rgba(0,0,0,0.7), 0 0 35px rgba(22, 163, 74, 0.35);
-          overflow: hidden;
-          margin-bottom: 24px;
-          animation: cinematicZoomPulse 4s infinite ease-in-out;
-        }
-
-        /* Holographic Light Beam & Motion Vignette */
-        .cinema-viewport::before {
-          content: '';
-          position: absolute;
-          inset: 0;
-          background: radial-gradient(circle at 75% 45%, rgba(200, 255, 46, 0.25) 0%, transparent 60%),
-                      linear-gradient(180deg, transparent 60%, rgba(0, 0, 0, 0.7) 100%);
-          pointer-events: none;
-        }
-
-        /* Speed Streak Beam */
-        .speed-streak-laser {
-          position: absolute;
-          top: 30%;
-          width: 60%;
-          height: 3px;
-          background: linear-gradient(90deg, transparent 0%, #C8FF2E 50%, #16A34A 100%);
-          box-shadow: 0 0 20px #C8FF2E;
-          transform: rotate(-12deg);
-          animation: laserSeamBeam 2.2s infinite ease-in-out;
-        }
-
-        /* Brand Typography & Progress Track */
-        .loader-brand-title {
-          color: #FFFFFF;
-          font-size: 24px;
+          width: 72px;
+          height: 72px;
+          border-radius: 20px;
+          background: linear-gradient(135deg, #16a34a 0%, #15803d 100%);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          color: #ffffff;
           font-weight: 900;
-          letter-spacing: 3px;
+          font-size: 26px;
+          box-shadow: 0 10px 30px rgba(22, 163, 74, 0.4);
+          animation: smPulseRing 2s infinite ease-in-out;
+          margin-bottom: 20px;
+          will-change: transform;
+        }
+        .sm-title {
+          color: #ffffff;
+          font-size: 22px;
+          font-weight: 900;
+          letter-spacing: 2px;
           text-transform: uppercase;
           font-style: italic;
-          margin-bottom: 2px;
-          text-shadow: 0 4px 15px rgba(22, 163, 74, 0.5);
+          margin-bottom: 4px;
         }
-        .loader-brand-title span {
-          color: #C8FF2E;
+        .sm-title span {
+          color: #c8ff2e;
         }
-        .loader-status-sub {
-          color: #C8FF2E;
+        .sm-subtitle {
+          color: #10b981;
           font-size: 11px;
-          font-weight: 800;
-          letter-spacing: 2.5px;
+          font-weight: 700;
+          letter-spacing: 2px;
           text-transform: uppercase;
           margin-bottom: 18px;
           display: flex;
           align-items: center;
           gap: 6px;
         }
-        .cinema-progress-track {
-          width: 250px;
-          height: 6px;
+        .sm-progress-bar {
+          width: 200px;
+          height: 4px;
           background: rgba(255, 255, 255, 0.1);
-          border: 1px solid rgba(200, 255, 46, 0.4);
           border-radius: 99px;
           overflow: hidden;
-          box-shadow: 0 0 15px rgba(22, 163, 74, 0.4);
+          position: relative;
         }
-        .cinema-progress-fill {
-          height: 100%;
-          background: linear-gradient(90deg, #16A34A 0%, #C8FF2E 100%);
+        .sm-progress-fill {
+          position: absolute;
+          inset: 0;
+          background: linear-gradient(90deg, #16a34a, #c8ff2e, #16a34a);
           border-radius: 99px;
-          animation: barProgressMotion 0.3s ease-out forwards;
+          animation: smProgressShimmer 1.2s infinite linear;
+          will-change: transform;
         }
       </style>
 
-      <div class="cinematic-preloader">
-        <!-- 21:9 Hyper-Realistic 4K Widescreen Viewport -->
-        <div class="cinema-viewport">
-          <div class="speed-streak-laser"></div>
-        </div>
-
-        <div class="loader-brand-title">SportMatrix<span>.</span></div>
-        <div class="loader-status-sub">🏏 CRICKET ARENA READY • INITIALIZING MATCH...</div>
-        <div class="cinema-progress-track">
-          <div class="cinema-progress-fill"></div>
+      <div class="sm-preloader">
+        <div class="sm-logo-box">SM</div>
+        <div class="sm-title">SportMatrix<span>.</span></div>
+        <div class="sm-subtitle">🏏 Initializing Arena...</div>
+        <div class="sm-progress-bar">
+          <div class="sm-progress-fill"></div>
         </div>
       </div>
     </div>
