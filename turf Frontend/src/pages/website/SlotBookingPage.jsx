@@ -212,6 +212,9 @@ export default function SlotBookingPage() {
         }
     }
 
+    const playerCount = Math.max(1, teammates.length || 6)
+    const perPlayerAmount = Math.round(totalRent / playerCount)
+
     const myShareAmount = paymentMode === 'full'
         ? totalRent
         : paymentMode === 'split-50'
@@ -220,7 +223,7 @@ export default function SlotBookingPage() {
                 ? customSplitMyShare
                 : paymentMode === 'dare'
                     ? 100
-                    : Math.round(totalRent / 6)
+                    : perPlayerAmount
 
     const opponentShareAmount = Math.max(0, totalRent - myShareAmount)
 
@@ -702,7 +705,7 @@ export default function SlotBookingPage() {
                                     id: 'per-player',
                                     icon: '👥',
                                     title: 'Per player split',
-                                    desc: `Each player pays their share. 6 players = ₹${Math.round(totalRent / 6).toLocaleString('en-IN')} each. Send payment links to teammates.`
+                                    desc: `Each player pays their share. ${playerCount} players = ₹${perPlayerAmount.toLocaleString('en-IN')} each. Send payment links to teammates.`
                                 },
                             ].map((opt) => {
                                 const isSelected = paymentMode === opt.id
@@ -868,12 +871,12 @@ export default function SlotBookingPage() {
                                     <div className="grid grid-cols-3 gap-2">
                                         <div className="bg-white border border-[#E5E7EB] rounded-lg p-2.5">
                                             <div className="text-[9px] font-black uppercase text-[#6B7280] mb-1">Per Player Share</div>
-                                            <div className="font-black text-[#16A34A] text-sm">₹{Math.round(totalRent / 6).toLocaleString('en-IN')}</div>
-                                            <div className="text-[9px] text-[#6B7280] mt-0.5">₹{totalRent.toLocaleString('en-IN')} ÷ 6 players</div>
+                                            <div className="font-black text-[#16A34A] text-sm">₹{perPlayerAmount.toLocaleString('en-IN')}</div>
+                                            <div className="text-[9px] text-[#6B7280] mt-0.5">₹{totalRent.toLocaleString('en-IN')} ÷ {playerCount} players</div>
                                         </div>
                                         <div className="bg-white border border-[#E5E7EB] rounded-lg p-2.5">
                                             <div className="text-[9px] font-black uppercase text-[#6B7280] mb-1">Teammates Pay</div>
-                                            <div className="font-black text-blue-600 text-sm">₹{Math.round(totalRent / 6).toLocaleString('en-IN')} each</div>
+                                            <div className="font-black text-blue-600 text-sm">₹{perPlayerAmount.toLocaleString('en-IN')} each</div>
                                             <div className="text-[9px] text-[#6B7280] mt-0.5">Individual SMS/WA links</div>
                                         </div>
                                         <div className="bg-white border border-[#E5E7EB] rounded-lg p-2.5">
