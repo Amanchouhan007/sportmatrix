@@ -5,6 +5,7 @@ import Badge from '../../components/ui/Badge'
 import Modal from '../../components/ui/Modal'
 import Card from '../../components/ui/Card'
 import { useToast } from '../../components/ui/Toast'
+import { useAuth } from '../../context/AuthContext'
 import { 
     HiTicket, HiCalendar, HiCurrencyRupee, HiSearch, HiCheckCircle, 
     HiBan, HiUser, HiChevronLeft, HiChevronRight, HiClock, HiLocationMarker,
@@ -12,17 +13,14 @@ import {
 } from 'react-icons/hi'
 
 const initialBookings = [
-    { id: 'BK-001', customer: 'Rahul Kumar', phone: '+91 98765 00001', email: 'rahul@gmail.com', sport: 'Cricket', court: 'Court A', date: '2026-03-16', dayOfWeek: 'Mon', time: '10:00 AM', slotRange: '10:00–11:00 AM', amount: '₹800', type: 'Online', status: 'Confirmed', notes: 'Advance paid via UPI' },
-    { id: 'BK-002', customer: 'Priya Sharma', phone: '+91 98765 00002', email: 'priya@gmail.com', sport: 'Football', court: 'Turf 2', date: '2026-03-17', dayOfWeek: 'Tue', time: '11:30 AM', slotRange: '11:30–12:30 PM', amount: '₹900', type: 'Online', status: 'Confirmed', notes: 'Full payment received' },
-    { id: 'BK-003', customer: 'Arjun Mehta', phone: '+91 98765 00003', email: 'arjun@gmail.com', sport: 'Football', court: 'Court 1', date: '2026-03-18', dayOfWeek: 'Wed', time: '02:00 PM', slotRange: '02:00–03:00 PM', amount: '₹400', type: 'Walk-in', status: 'Pending', notes: 'Cash payment pending' },
-    { id: 'BK-004', customer: 'Sneha Reddy', phone: '+91 98765 00004', email: 'sneha@gmail.com', sport: 'Cricket', court: 'Court B', date: '2026-03-19', dayOfWeek: 'Thu', time: '04:30 PM', slotRange: '04:30–05:30 PM', amount: '₹1,200', type: 'Online', status: 'Cancelled', notes: 'Requested refund' },
-    { id: 'BK-005', customer: 'Vikram Singh', phone: '+91 98765 00005', email: 'vikram@gmail.com', sport: 'Cricket', court: 'Court 3', date: '2026-03-20', dayOfWeek: 'Fri', time: '06:00 PM', slotRange: '06:00–07:00 PM', amount: '₹700', type: 'Walk-in', status: 'Confirmed', notes: 'Walk-in guest' },
-    { id: 'BK-006', customer: 'Amit Verma', phone: '+91 98111 22334', email: 'amit@gmail.com', sport: 'Football', court: 'Turf 1', date: '2026-03-21', dayOfWeek: 'Sat', time: '08:00 AM', slotRange: '08:00–09:00 AM', amount: '₹1,500', type: 'Online', status: 'Confirmed', notes: 'Weekend league match' },
-    { id: 'BK-007', customer: 'Rohan Shah', phone: '+91 99223 34455', email: 'rohan@gmail.com', sport: 'Cricket', court: 'Court A', date: '2026-03-22', dayOfWeek: 'Sun', time: '06:00 PM', slotRange: '06:00–07:00 PM', amount: '₹1,100', type: 'Online', status: 'Confirmed', notes: 'Evening prime slot' }
+    { id: 'BK-001', customer: 'Rahul Kumar', phone: '+91 98765 00001', email: 'rahul@gmail.com', sport: 'Cricket', court: 'Champions Turf Arena', venue: 'Champions Turf Arena', date: '2026-03-16', dayOfWeek: 'Mon', time: '10:00 AM', slotRange: '10:00–11:00 AM', amount: '₹800', type: 'Online', status: 'Confirmed', notes: 'Advance paid via UPI' },
+    { id: 'BK-002', customer: 'Priya Sharma', phone: '+91 98765 00002', email: 'priya@gmail.com', sport: 'Football', court: 'Champions Turf Arena', venue: 'Champions Turf Arena', date: '2026-03-17', dayOfWeek: 'Tue', time: '11:30 AM', slotRange: '11:30–12:30 PM', amount: '₹900', type: 'Online', status: 'Confirmed', notes: 'Full payment received' },
+    { id: 'BK-003', customer: 'Arjun Mehta', phone: '+91 98765 00003', email: 'arjun@gmail.com', sport: 'Football', court: 'Champions Turf Arena', venue: 'Champions Turf Arena', date: '2026-03-18', dayOfWeek: 'Wed', time: '02:00 PM', slotRange: '02:00–03:00 PM', amount: '₹400', type: 'Walk-in', status: 'Pending', notes: 'Cash payment pending' },
 ]
 
 export default function BookingManagement() {
     const { addToast } = useToast()
+    const { user } = useAuth()
     const [bookings, setBookings] = useState(initialBookings)
     const [summary, setSummary] = useState({ todayCount: 12, weekCount: 64, monthCount: 248, totalRevenue: 184500 })
     const [filterStatus, setFilterStatus] = useState('All')
@@ -48,10 +46,16 @@ export default function BookingManagement() {
                 setSummary(summaryData.data);
             }
 
-            const res = await fetch('http://localhost:5000/api/v1/bookings/history');
+            const queryParams = new URLSearchParams()
+            if (user?.id) queryParams.append('userId', user.id)
+            if (user?.email) queryParams.append('userEmail', user.email)
+            if (user?.role) queryParams.append('role', user.role || 'OWNER')
+
+            const res = await fetch(`http://localhost:5000/api/v1/bookings/history?${queryParams.toString()}`);
             const data = await res.json();
+            let formatted = []
             if (data.success && Array.isArray(data.data) && data.data.length > 0) {
-                const formatted = data.data.map(r => {
+                formatted = data.data.map(r => {
                     const d = new Date(r.slot_date || r.booked_on || Date.now());
                     const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
                     const formatTime = (tStr) => {
@@ -70,9 +74,11 @@ export default function BookingManagement() {
                         id: String(r.booking_id || r.id || 'BK-001'),
                         customer: r.customer_name || 'Rahul Kumar',
                         phone: r.mobile_number || '+91 98765 00001',
-                        email: 'customer@gmail.com',
+                        email: r.booking_notes?.includes('@') ? r.booking_notes : 'customer@gmail.com',
                         sport: r.sport_name || 'Turf Match',
-                        court: r.court_name || 'Super Strikers Turf',
+                        court: r.court_name || 'Champions Turf Arena',
+                        venue: r.court_name || 'Champions Turf Arena',
+                        turfId: r.branch_id || 'turf-1',
                         date: r.slot_date ? new Date(r.slot_date).toISOString().split('T')[0] : '2026-08-09',
                         dayOfWeek: dayNames[d.getDay()],
                         time: formattedTime,
@@ -83,34 +89,55 @@ export default function BookingManagement() {
                         notes: r.booking_notes || 'Booking confirmed'
                     };
                 });
-                
-                // Merge with locally booked entries
-                const localSaved = JSON.parse(localStorage.getItem('customer_bookings') || '[]');
-                const mappedLocal = localSaved.map(l => ({
-                    id: l.id,
-                    customer: 'You (Current User)',
-                    phone: '+91 98765 43210',
-                    email: 'captain@gmail.com',
-                    sport: l.sport || 'Cricket',
-                    court: l.venue || 'Super Strikers Turf',
-                    date: l.date || '2026-08-09',
-                    dayOfWeek: 'Sat',
-                    time: l.time || '06:00 PM',
-                    slotRange: `${l.time || '06:00 PM'}–07:00 PM`,
-                    amount: l.amount || '₹1,800',
-                    type: 'Online',
-                    status: l.status || 'Confirmed',
-                    notes: 'Advance paid online'
-                }));
-                
-                const combined = [...mappedLocal];
-                formatted.forEach(f => {
-                    if (!combined.some(c => c.id === f.id)) {
-                        combined.push(f);
-                    }
-                });
-                setBookings(combined.length > 0 ? combined : formatted);
             }
+
+            // Merge with locally booked entries, scoped strictly to this turf / owner
+            const localSaved = JSON.parse(localStorage.getItem('customer_bookings') || '[]');
+            const isSuperAdmin = user?.role === 'SUPER_ADMIN';
+            
+            // Filter local entries to this owner's turf
+            const filteredLocal = localSaved.filter(l => {
+                if (isSuperAdmin) return true;
+                // If owner, check if booking was made at their turf
+                const ownerKeywords = [
+                    user?.businessName,
+                    user?.turfName,
+                    user?.name?.toLowerCase().includes('rajesh') ? 'champions' : null,
+                    user?.email?.toLowerCase().includes('owner') ? 'champions' : null,
+                    'champions', 'super strikers'
+                ].filter(Boolean).map(k => k.toLowerCase());
+
+                const bookingVenue = (l.venue || l.court || '').toLowerCase();
+                return ownerKeywords.some(kw => bookingVenue.includes(kw));
+            });
+
+            const mappedLocal = filteredLocal.map(l => ({
+                id: l.id,
+                customer: l.customerName || 'Online Customer',
+                phone: l.customerPhone || '+91 98765 43210',
+                email: l.userEmail || 'customer@gmail.com',
+                sport: l.sport || 'Cricket',
+                court: l.venue || 'Champions Turf Arena',
+                venue: l.venue || 'Champions Turf Arena',
+                turfId: l.turfId || 'turf-1',
+                date: l.date || '2026-08-09',
+                dayOfWeek: 'Sat',
+                time: l.time || '06:00 PM',
+                slotRange: `${l.time || '06:00 PM'}–07:00 PM`,
+                amount: l.amount || '₹1,800',
+                type: 'Online',
+                status: l.status || 'Confirmed',
+                notes: 'Advance paid online'
+            }));
+            
+            const combined = [...mappedLocal];
+            formatted.forEach(f => {
+                if (!combined.some(c => c.id === f.id)) {
+                    combined.push(f);
+                }
+            });
+
+            setBookings(combined.length > 0 ? combined : initialBookings);
         } catch (err) {
             console.warn('Error fetching live bookings, using defaults:', err.message);
         }

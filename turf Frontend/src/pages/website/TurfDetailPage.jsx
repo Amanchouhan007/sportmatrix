@@ -378,14 +378,26 @@ export default function TurfDetailPage() {
             }
 
             const existing = JSON.parse(localStorage.getItem('customer_bookings') || '[]');
+            const currentUserId = user?.id || (user?.email ? `usr_${user.email}` : `usr_cust_${Date.now()}`);
+            const currentUserEmail = user?.email || 'customer@gmail.com';
+            const currentCustomerName = user?.name || 'Customer';
+            const currentCustomerPhone = user?.phone || user?.mobile || '+91 98765 43210';
+
             const newEntry = {
                 id: generatedBookingId,
-                sport: 'Turf Match',
+                userId: currentUserId,
+                userEmail: currentUserEmail,
+                customerName: currentCustomerName,
+                customerPhone: currentCustomerPhone,
+                turfId: `turf_${turfData.id}`,
+                venueId: turfData.id,
                 venue: `${turfData.name}, ${turfData.location}`,
+                sport: selectedSport || 'Turf Match',
                 date: selectedDateObj.fullDateString,
                 time: currentSlot?.time || '6:00 PM',
                 amount: `₹${myShare.toLocaleString('en-IN')}`,
-                status: 'Confirmed'
+                status: 'Confirmed',
+                createdAt: new Date().toISOString()
             };
             localStorage.setItem('customer_bookings', JSON.stringify([newEntry, ...existing]));
         } catch (e) {

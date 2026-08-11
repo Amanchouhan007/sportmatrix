@@ -204,6 +204,65 @@ export default function TurfCalendarPage() {
         return () => document.removeEventListener('mousedown', handleClickOutside)
     }, [])
 
+    // Synchronize and isolate customer bookings strictly for the selected turf
+    useEffect(() => {
+        try {
+            const raw = localStorage.getItem('customer_bookings')
+            if (raw) {
+                const parsed = JSON.parse(raw)
+                if (Array.isArray(parsed) && parsed.length > 0) {
+                    const turfKeywords = [
+                        activeTurf?.name,
+                        activeTurf?.id,
+                        selectedTurfId === 'turf-1' ? 'champions' : null,
+                        selectedTurfId === 'turf-2' ? 'skyline' : null,
+                        selectedTurfId === 'turf-3' ? 'velocity' : null,
+                    ].filter(Boolean).map(k => k.toLowerCase())
+
+                    // Only filter bookings for this active turf
+                    const turfBookings = parsed.filter(b => {
+                        const venueStr = (b.venue || b.court || b.turfId || '').toLowerCase()
+                        return turfKeywords.some(kw => venueStr.includes(kw))
+                    })
+
+                    if (turfBookings.length > 0) {
+                        setSlotsData(prev => {
+                            const updated = [...prev]
+                            turfBookings.forEach(bk => {
+                                const bkTime = bk.time ? (bk.time.includes(':') ? bk.time.split(' ')[0] : '18:00') : '18:00'
+                                const timeId = bkTime.length === 4 ? `0${bkTime}` : bkTime.substring(0, 5)
+                                const slotDate = bk.date || currentDate
+
+                                const existingIndex = updated.findIndex(s => s.turfId === selectedTurfId && s.date === slotDate && s.timeId?.startsWith(timeId.substring(0, 2)))
+                                if (existingIndex >= 0) {
+                                    updated[existingIndex] = {
+                                        ...updated[existingIndex],
+                                        status: bk.status === 'Cancelled' ? 'Cancelled' : 'Booked',
+                                        bookedSportId: bk.sport?.toLowerCase().includes('cricket') ? 'sp-cricket' : 'sp-football',
+                                        booking: {
+                                            id: bk.id,
+                                            customerName: bk.customerName || 'Online Customer',
+                                            phone: bk.customerPhone || '+91 98765 43210',
+                                            email: bk.userEmail || 'customer@gmail.com',
+                                            sportName: bk.sport || 'Cricket 🏏',
+                                            amount: bk.amount ? parseInt(String(bk.amount).replace(/[^0-9]/g, '')) || 1000 : 1000,
+                                            paidAmount: bk.amount ? parseInt(String(bk.amount).replace(/[^0-9]/g, '')) || 1000 : 1000,
+                                            paymentStatus: 'Paid',
+                                            paymentMethod: 'UPI',
+                                            status: bk.status || 'Confirmed',
+                                            invoiceNo: `INV-${bk.id}`
+                                        }
+                                    }
+                                }
+                            })
+                            return updated
+                        })
+                    }
+                }
+            }
+        } catch (e) {}
+    }, [selectedTurfId, currentDate, activeTurf])
+
     // ── Bulk Day Slot Generator State ──
     const [slotCreateMode, setSlotCreateMode] = useState('BULK') // 'BULK' | 'SINGLE'
     const [customTimeSlots, setCustomTimeSlots] = useState([])

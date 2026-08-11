@@ -169,14 +169,16 @@ const cancelBooking = async (req, res) => {
  * Get upcoming bookings (Scheduled for today or future dates)
  */
 const getUpcomingBookings = async (req, res) => {
-    const { branchId } = req.query;
-    const userRole = req.user ? req.user.role : 'OWNER';
-    const userId = req.user ? req.user.id : null;
+    const { branchId, userId: queryUserId, userEmail: queryUserEmail } = req.query;
+    const userRole = req.user ? req.user.role : (req.query.role || 'CUSTOMER');
+    const userId = req.user ? req.user.id : queryUserId;
+    const userEmail = req.user ? req.user.email : queryUserEmail;
 
     try {
         let sql = `
             SELECT 
                 b.id as booking_id,
+                b.user_id,
                 b.customer_name,
                 b.mobile_number,
                 b.amount,
@@ -184,6 +186,7 @@ const getUpcomingBookings = async (req, res) => {
                 b.notes as booking_notes,
                 b.status as booking_status,
                 b.created_at as booked_on,
+                sl.branch_id,
                 sl.slot_date,
                 sl.start_time,
                 sl.end_time,
@@ -197,17 +200,29 @@ const getUpcomingBookings = async (req, res) => {
         `;
         const params = [];
 
-        // Apply filters based on roles
-        if (userRole === 'CUSTOMER' && userId) {
-            sql += ' AND b.user_id = ?';
-            params.push(userId);
-        } else {
-            // Owner/Staff must specify active branch
+        // Apply multi-tenant data isolation based on role
+        if (userRole === 'CUSTOMER') {
+            if (userId || userEmail) {
+                sql += ' AND (b.user_id = ? OR b.user_id = ? OR b.customer_name = ? OR b.notes LIKE ?)';
+                params.push(userId || '', userEmail || '', req.user?.name || '', `%${userEmail || userId}%`);
+            } else {
+                // If unauthenticated or no identity provided, isolate completely
+                sql += ' AND 1=0';
+            }
+        } else if (userRole === 'OWNER' || userRole === 'STAFF') {
             if (branchId) {
                 sql += ' AND sl.branch_id = ?';
                 params.push(branchId);
+            } else if (userId || userEmail) {
+                sql += ` AND (
+                    sl.branch_id IN (SELECT id FROM branches WHERE owner_id = ? OR email = ?)
+                    OR sl.branch_id IN (SELECT b2.id FROM branches b2 JOIN owners o ON o.email = ? WHERE b2.owner_id = o.id)
+                    OR b.notes LIKE ?
+                )`;
+                params.push(userId || '', userEmail || '', userEmail || '', `%${userEmail || ''}%`);
             }
         }
+        // SUPER_ADMIN sees all records
 
         sql += ' ORDER BY sl.slot_date ASC, sl.start_time ASC';
 
@@ -227,17 +242,19 @@ const getUpcomingBookings = async (req, res) => {
 };
 
 /**
- * Get full booking ledger history
+ * Get full booking ledger history with role-based data isolation
  */
 const getBookingHistory = async (req, res) => {
-    const { branchId } = req.query;
-    const userRole = req.user ? req.user.role : 'OWNER';
-    const userId = req.user ? req.user.id : null;
+    const { branchId, userId: queryUserId, userEmail: queryUserEmail } = req.query;
+    const userRole = req.user ? req.user.role : (req.query.role || 'CUSTOMER');
+    const userId = req.user ? req.user.id : queryUserId;
+    const userEmail = req.user ? req.user.email : queryUserEmail;
 
     try {
         let sql = `
             SELECT 
                 b.id as booking_id,
+                b.user_id,
                 b.customer_name,
                 b.mobile_number,
                 b.amount,
@@ -245,6 +262,7 @@ const getBookingHistory = async (req, res) => {
                 b.notes as booking_notes,
                 b.status as booking_status,
                 b.created_at as booked_on,
+                sl.branch_id,
                 sl.slot_date,
                 sl.start_time,
                 sl.end_time,
@@ -258,15 +276,29 @@ const getBookingHistory = async (req, res) => {
         `;
         const params = [];
 
+        // Apply multi-tenant data isolation based on role
         if (userRole === 'CUSTOMER') {
-            sql += ' AND b.user_id = ?';
-            params.push(userId);
-        } else {
+            if (userId || userEmail) {
+                sql += ' AND (b.user_id = ? OR b.user_id = ? OR b.customer_name = ? OR b.notes LIKE ?)';
+                params.push(userId || '', userEmail || '', req.user?.name || '', `%${userEmail || userId}%`);
+            } else {
+                // Return empty if customer has no active token/ID
+                sql += ' AND 1=0';
+            }
+        } else if (userRole === 'OWNER' || userRole === 'STAFF') {
             if (branchId) {
                 sql += ' AND sl.branch_id = ?';
                 params.push(branchId);
+            } else if (userId || userEmail) {
+                sql += ` AND (
+                    sl.branch_id IN (SELECT id FROM branches WHERE owner_id = ? OR email = ?)
+                    OR sl.branch_id IN (SELECT b2.id FROM branches b2 JOIN owners o ON o.email = ? WHERE b2.owner_id = o.id)
+                    OR b.notes LIKE ?
+                )`;
+                params.push(userId || '', userEmail || '', userEmail || '', `%${userEmail || ''}%`);
             }
         }
+        // SUPER_ADMIN sees all records
 
         sql += ' ORDER BY sl.slot_date DESC, sl.start_time DESC';
 

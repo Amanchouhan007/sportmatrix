@@ -1,39 +1,76 @@
 import { useState, useEffect, useMemo } from 'react'
+import { useNavigate } from 'react-router-dom'
 import DataTable from '../../components/ui/DataTable'
 import Badge from '../../components/ui/Badge'
 import Button from '../../components/ui/Button'
 import Modal from '../../components/ui/Modal'
 import Input from '../../components/ui/Input'
 import ConfirmDialog from '../../components/ui/ConfirmDialog'
-
-const initialBookings = [
-    { id: 'BK-001', sport: 'Cricket', venue: 'SportZone Arena', date: '2026-03-15', time: '10:00 AM', amount: '₹1,200', status: 'Confirmed' },
-    { id: 'BK-002', sport: 'Football', venue: 'ProKick Stadium', date: '2026-03-18', time: '04:30 PM', amount: '₹1,400', status: 'Pending' },
-    { id: 'BK-003', sport: 'Football', venue: 'GameVault Center', date: '2026-03-12', time: '11:00 AM', amount: '₹1,200', status: 'Completed' },
-    { id: 'BK-004', sport: 'Cricket', venue: 'Champion Cricket Ground', date: '2026-03-05', time: '06:00 PM', amount: '₹1,500', status: 'Cancelled' },
-]
+import { useAuth } from '../../context/AuthContext'
 
 export default function CustomerBookings() {
-    const [bookingsList, setBookingsList] = useState(() => {
-        const saved = localStorage.getItem('customer_bookings')
-        return saved ? JSON.parse(saved) : initialBookings
-    })
+    const { user } = useAuth()
+    const navigate = useNavigate()
 
+    // Helper: Filter bookings strictly belonging to the currently logged in customer
+    const getMyBookingsFromStorage = () => {
+        try {
+            const raw = localStorage.getItem('customer_bookings')
+            if (!raw) return []
+            const parsed = JSON.parse(raw)
+            if (!Array.isArray(parsed)) return []
+            
+            const currentEmail = (user?.email || '').toLowerCase()
+            const currentUserId = user?.id || ''
+            const currentPhone = user?.phone || user?.mobile || ''
+
+            return parsed.filter(b => {
+                const bEmail = (b.userEmail || '').toLowerCase()
+                const bUserId = b.userId || ''
+                const bPhone = b.customerPhone || b.phone || ''
+
+                // Check exact email match
+                if (currentEmail && bEmail && bEmail === currentEmail) return true
+                // Check exact user ID match
+                if (currentUserId && bUserId && bUserId === currentUserId) return true
+                // Check phone match
+                if (currentPhone && bPhone && bPhone === currentPhone) return true
+                // If the booking has no user attached and current user is default demo customer
+                if (!bEmail && !bUserId && currentEmail === 'customer@gmail.com') return true
+
+                return false
+            })
+        } catch (e) {
+            return []
+        }
+    }
+
+    const [bookingsList, setBookingsList] = useState(getMyBookingsFromStorage)
     const [filterStatus, setFilterStatus] = useState('All')
     const [searchQuery, setSearchQuery] = useState('')
     const [rescheduleModal, setRescheduleModal] = useState({ open: false, booking: null })
     const [cancelConfirm, setCancelConfirm] = useState({ open: false, id: null })
     const [formData, setFormData] = useState({ date: '', time: '' })
 
+    // Reload when user switches/logs in
+    useEffect(() => {
+        setBookingsList(getMyBookingsFromStorage())
+    }, [user?.email, user?.id])
+
     useEffect(() => {
         const fetchBookings = async () => {
             try {
-                const token = localStorage.getItem('token');
-                const res = await fetch('http://localhost:5000/api/v1/bookings/history', {
+                const token = localStorage.getItem('token')
+                const queryParams = new URLSearchParams()
+                if (user?.id) queryParams.append('userId', user.id)
+                if (user?.email) queryParams.append('userEmail', user.email)
+                if (user?.role) queryParams.append('role', user.role)
+
+                const res = await fetch(`http://localhost:5000/api/v1/bookings/history?${queryParams.toString()}`, {
                     headers: token ? { 'Authorization': `Bearer ${token}` } : {}
-                });
-                const data = await res.json();
-                if (data.success && Array.isArray(data.data) && data.data.length > 0) {
+                })
+                const data = await res.json()
+                if (data.success && Array.isArray(data.data)) {
                     const mapped = data.data.map(b => ({
                         id: `BK-${b.booking_id}`,
                         sport: b.sport_name || 'Turf Match',
@@ -41,35 +78,48 @@ export default function CustomerBookings() {
                         date: b.slot_date ? b.slot_date.substring(0, 10) : '2026-08-09',
                         time: b.start_time ? b.start_time.substring(0, 5) : '06:00 PM',
                         amount: `₹${b.amount || 1200}`,
-                        status: b.booking_status === 'CONFIRMED' ? 'Confirmed' : b.booking_status === 'CANCELLED' ? 'Cancelled' : 'Completed'
-                    }));
+                        status: b.booking_status === 'CONFIRMED' ? 'Confirmed' : b.booking_status === 'CANCELLED' ? 'Cancelled' : 'Completed',
+                        userEmail: b.booking_notes?.includes('@') ? b.booking_notes : user?.email,
+                        userId: b.user_id || user?.id
+                    }))
                     
-                    const localSaved = JSON.parse(localStorage.getItem('customer_bookings') || '[]');
-                    const combined = [...localSaved];
+                    const localSaved = getMyBookingsFromStorage()
+                    const combined = [...localSaved]
                     mapped.forEach(m => {
                         if (!combined.some(c => c.id === m.id)) {
-                            combined.push(m);
+                            combined.push(m)
                         }
-                    });
-                    setBookingsList(combined.length > 0 ? combined : mapped);
+                    })
+                    setBookingsList(combined)
                 }
             } catch (err) {
-                console.warn('Error fetching live customer bookings, using stored:', err.message);
+                console.warn('Error fetching live customer bookings, using storage:', err.message)
             }
-        };
-        fetchBookings();
-    }, []);
+        }
+        fetchBookings()
+    }, [user?.email, user?.id])
 
-    useEffect(() => {
-        localStorage.setItem('customer_bookings', JSON.stringify(bookingsList))
-    }, [bookingsList])
+    const updateStorageForBooking = (updatedBooking) => {
+        try {
+            const allSaved = JSON.parse(localStorage.getItem('customer_bookings') || '[]')
+            const updatedAll = allSaved.map(item => item.id === updatedBooking.id ? { ...item, ...updatedBooking } : item)
+            localStorage.setItem('customer_bookings', JSON.stringify(updatedAll))
+        } catch (e) {}
+    }
 
     const handleCancelClick = (id) => {
         setCancelConfirm({ open: true, id })
     }
 
     const confirmCancel = () => {
-        setBookingsList(prev => prev.map(bk => bk.id === cancelConfirm.id ? { ...bk, status: 'Cancelled' } : bk))
+        setBookingsList(prev => prev.map(bk => {
+            if (bk.id === cancelConfirm.id) {
+                const updated = { ...bk, status: 'Cancelled' }
+                updateStorageForBooking(updated)
+                return updated
+            }
+            return bk
+        }))
         setCancelConfirm({ open: false, id: null })
     }
 
@@ -79,17 +129,28 @@ export default function CustomerBookings() {
     }
 
     const saveReschedule = () => {
-        setBookingsList(prev => prev.map(bk => bk.id === rescheduleModal.booking.id ? { ...bk, date: formData.date, time: formData.time } : bk))
+        setBookingsList(prev => prev.map(bk => {
+            if (bk.id === rescheduleModal.booking.id) {
+                const updated = { ...bk, date: formData.date, time: formData.time }
+                updateStorageForBooking(updated)
+                return updated
+            }
+            return bk
+        }))
         setRescheduleModal({ open: false, booking: null })
     }
 
     const handleRebook = (bk) => {
         const newBk = {
             ...bk,
-            id: `BK-${String(bookingsList.length + 1).padStart(3, '0')}`,
+            id: `BK-${String(Date.now()).slice(-4)}`,
             status: 'Confirmed',
-            date: new Date().toISOString().split('T')[0]
+            date: new Date().toISOString().split('T')[0],
+            userId: user?.id,
+            userEmail: user?.email
         }
+        const allSaved = JSON.parse(localStorage.getItem('customer_bookings') || '[]')
+        localStorage.setItem('customer_bookings', JSON.stringify([newBk, ...allSaved]))
         setBookingsList([newBk, ...bookingsList])
     }
 
@@ -180,7 +241,24 @@ export default function CustomerBookings() {
                 ))}
             </div>
 
-            <DataTable columns={columns} data={filteredBookings} />
+            {bookingsList.length === 0 ? (
+                <div className="bg-surface-50 border border-surface-200 rounded-3xl p-10 text-center space-y-4">
+                    <div className="w-16 h-16 rounded-full bg-emerald-100 text-[#16A34A] flex items-center justify-center text-3xl mx-auto">
+                        🏟️
+                    </div>
+                    <div className="max-w-md mx-auto">
+                        <h3 className="text-lg font-bold text-surface-900">No Bookings Yet</h3>
+                        <p className="text-surface-500 text-xs mt-1">
+                            You haven't made any turf reservations yet. Book your favorite sport slot now and challenge your friends!
+                        </p>
+                    </div>
+                    <Button onClick={() => navigate('/turfs')} className="bg-[#16A34A] hover:bg-emerald-700 text-white font-bold text-xs px-6 py-2.5 rounded-xl shadow-md">
+                        Explore Turfs & Book Slot →
+                    </Button>
+                </div>
+            ) : (
+                <DataTable columns={columns} data={filteredBookings} />
+            )}
 
             {/* Reschedule Modal */}
             <Modal 

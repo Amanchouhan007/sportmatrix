@@ -110,9 +110,9 @@ export default function WebsiteLayout({ children }) {
                 )}
             </nav>
 
-            <main className="relative z-10">{children}</main>
+            <main className="relative">{children}</main>
 
-            <footer className="bg-gradient-to-b from-white via-[#F8FFF9] to-[#F3FFF5] border-t border-[#00A651]/12 text-[#111827] relative z-10">
+            <footer className="bg-gradient-to-b from-white via-[#F8FFF9] to-[#F3FFF5] border-t border-[#00A651]/12 text-[#111827] relative">
                 <div className="max-w-7xl mx-auto px-6 py-12">
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-8">
                         <div className="lg:col-span-2 space-y-3">

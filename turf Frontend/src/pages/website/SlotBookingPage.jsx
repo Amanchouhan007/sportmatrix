@@ -383,14 +383,26 @@ export default function SlotBookingPage() {
             }
 
             const existing = JSON.parse(localStorage.getItem('customer_bookings') || '[]')
+            const currentUserId = user?.id || (user?.email ? `usr_${user.email}` : `usr_cust_${Date.now()}`)
+            const currentUserEmail = user?.email || authEmail || 'customer@gmail.com'
+            const currentCustomerName = captainName || user?.name || 'Customer'
+            const currentCustomerPhone = captainPhone || user?.phone || user?.mobile || '+91 98765 43210'
+
             const newEntry = {
                 id: generatedId,
-                sport: selectedSport,
+                userId: currentUserId,
+                userEmail: currentUserEmail,
+                customerName: currentCustomerName,
+                customerPhone: currentCustomerPhone,
+                turfId: `turf_${selectedVenue.id}`,
+                venueId: selectedVenue.id,
                 venue: selectedVenue.name,
+                sport: selectedSport,
                 date: selectedDateObj.fullDateString,
                 time: '6:00 PM',
                 amount: `₹${myShareAmount.toLocaleString('en-IN')}`,
-                status: 'Confirmed'
+                status: 'Confirmed',
+                createdAt: new Date().toISOString()
             }
             localStorage.setItem('customer_bookings', JSON.stringify([newEntry, ...existing]))
         } catch (e) {
@@ -1528,8 +1540,8 @@ export default function SlotBookingPage() {
                     SWITCH TURF MODAL (Quick Selection Modal)
                 ═══════════════════════════════════════════════════ */}
                 {isVenueModalOpen && (
-                    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in">
-                        <div className="bg-white border border-[#E5E7EB] rounded-2xl p-6 max-w-lg w-full shadow-2xl relative">
+                    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in overflow-y-auto">
+                        <div className="bg-white border border-[#E5E7EB] rounded-2xl p-6 max-w-lg w-full shadow-2xl relative my-auto max-h-[90vh] overflow-y-auto">
                             <button
                                 onClick={() => setIsVenueModalOpen(false)}
                                 className="absolute top-4 right-4 text-slate-400 hover:text-black cursor-pointer"
@@ -1597,8 +1609,8 @@ export default function SlotBookingPage() {
                     LOGIN / SIGN IN POPUP MODAL
                 ═══════════════════════════════════════════════════ */}
                 {isAuthModalOpen && (
-                    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-md p-4 animate-in fade-in duration-200">
-                        <div className="bg-white border border-[#E5E7EB] rounded-3xl p-6 sm:p-7 max-w-lg w-full shadow-2xl relative space-y-5">
+                    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/80 backdrop-blur-md p-4 animate-in fade-in duration-200 overflow-y-auto">
+                        <div className="bg-white border border-[#E5E7EB] rounded-3xl p-6 sm:p-7 max-w-lg w-full shadow-2xl relative space-y-5 my-auto max-h-[90vh] overflow-y-auto">
                             {/* Close Button */}
                             <button
                                 onClick={() => setIsAuthModalOpen(false)}
