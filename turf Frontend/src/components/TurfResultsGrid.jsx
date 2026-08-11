@@ -90,7 +90,6 @@ export default function TurfResultsGrid({ turfs, searchValues, recentSearches = 
     const [viewMode, setViewMode] = useState('list') // 'list' | 'split'
     const [hoveredTurfId, setHoveredTurfId] = useState(null)
     const [isSortOpen, setIsSortOpen] = useState(false)
-    const [hoveredTurfId, setHoveredTurfId] = useState(null)
 
     const { location, sport } = searchValues || {}
 

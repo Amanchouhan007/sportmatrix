@@ -131,15 +131,14 @@ export default function TurfDetailPage() {
     const slots = generateSlots(activeTurf.price, duration)
     const videoRef = useRef(null)
 
-    const uploadedFilesMedia = [
-        { type: 'video', url: 'http://localhost:5000/uploads/files-1785914796662-273628137.mp4', thumbnail: '', filename: 'Uploaded Video' },
-        { type: 'image', url: 'http://localhost:5000/uploads/files-1785914764936-630968668.jpeg', thumbnail: 'http://localhost:5000/uploads/files-1785914764936-630968668.jpeg', filename: 'Uploaded Photo' }
-    ];
+    const defaultFallbackImage = activeTurf.image || 'https://images.unsplash.com/photo-1574629810360-7efbbe195018?auto=format&fit=crop&w=800&q=80';
 
     const initialMedia = [
-        ...uploadedFilesMedia,
-        { type: 'image', url: activeTurf.image, thumbnail: activeTurf.image },
-        ...defaultTurfData.media.slice(1)
+        { type: 'image', url: defaultFallbackImage, thumbnail: defaultFallbackImage },
+        ...defaultTurfData.media.map(m => ({
+            ...m,
+            thumbnail: m.thumbnail || m.url || defaultFallbackImage
+        }))
     ];
 
     const [isMediaModalOpen, setIsMediaModalOpen] = useState(false);
@@ -261,6 +260,7 @@ export default function TurfDetailPage() {
     ];
     const [selectedDateObj, setSelectedDateObj] = useState(dateList[0]);
     const [paymentMode, setPaymentMode] = useState('full');
+    const [expandedAccordionMode, setExpandedAccordionMode] = useState('full');
     const [customSplitMyShare, setCustomSplitMyShare] = useState(1200);
     const [captainName, setCaptainName] = useState('Rahul Sharma');
     const [captainPhone, setCaptainPhone] = useState('+91 98765 43210');
@@ -438,12 +438,12 @@ export default function TurfDetailPage() {
                     <span>Back to Premium Venues</span>
                 </button>
 
-                <div className="flex flex-col lg:flex-row gap-10 xl:gap-16">
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 xl:gap-12">
                     {/* Left Side: Sticky Media Gallery */}
-                    <div className="lg:w-[50%] xl:w-[55%]">
+                    <div className="lg:col-span-6 xl:col-span-6">
                         <div className="sticky top-28 space-y-4">
                             {/* Main Media Display */}
-                            <div className="w-full h-[350px] md:h-[500px] rounded-[20px] overflow-hidden bg-slate-100 border border-[#E5E7EB] relative group shadow-[0_15px_45px_rgba(0,0,0,0.08)]">
+                            <div className="w-full h-[350px] md:h-[480px] rounded-[20px] overflow-hidden bg-slate-100 border border-[#E5E7EB] relative group shadow-[0_15px_45px_rgba(0,0,0,0.08)]">
                                 {activeMedia.type === 'video' ? (
                                     <div className="w-full h-full relative">
                                         <video
@@ -457,7 +457,15 @@ export default function TurfDetailPage() {
                                         />
                                     </div>
                                 ) : (
-                                    <img src={activeMedia.url} alt={turfData.name} className="w-full h-full object-cover" />
+                                    <img
+                                        src={activeMedia.url}
+                                        alt={turfData.name}
+                                        onError={(e) => {
+                                            e.currentTarget.onerror = null;
+                                            e.currentTarget.src = defaultFallbackImage;
+                                        }}
+                                        className="w-full h-full object-cover"
+                                    />
                                 )}
                                 <div className="absolute top-4 left-4 flex items-center gap-2 px-3 py-1.5 bg-white/90 backdrop-blur-md border border-[#E5E7EB] rounded-full shadow-xs">
                                     <div className="w-2 h-2 rounded-full bg-[#16A34A] animate-pulse shadow-xs" />
@@ -474,14 +482,16 @@ export default function TurfDetailPage() {
                                     </div>
                                 )}
 
-                                {/* Delete active photo/video action */}
-                                <button
-                                    onClick={handleDeleteActiveMedia}
-                                    className="absolute bottom-4 right-4 z-20 px-3 py-1.5 bg-red-500 hover:bg-red-600 backdrop-blur-md text-white text-[10px] font-black uppercase tracking-wider rounded-full transition-all flex items-center gap-1 shadow-sm hover:scale-105 cursor-pointer"
-                                    title="Delete this photo/video permanently"
-                                >
-                                    <span>🗑️ Delete {activeMedia.type === 'video' ? 'Video' : 'Photo'}</span>
-                                </button>
+                                {/* Delete active photo/video action for owner/admin */}
+                                {(user?.role === 'TURF_OWNER' || user?.role === 'SUPER_ADMIN') && (
+                                    <button
+                                        onClick={handleDeleteActiveMedia}
+                                        className="absolute bottom-4 right-4 z-20 px-3 py-1.5 bg-red-500 hover:bg-red-600 backdrop-blur-md text-white text-[10px] font-black uppercase tracking-wider rounded-full transition-all flex items-center gap-1 shadow-sm hover:scale-105 cursor-pointer"
+                                        title="Delete this photo/video permanently"
+                                    >
+                                        <span>🗑️ Delete {activeMedia.type === 'video' ? 'Video' : 'Photo'}</span>
+                                    </button>
+                                )}
                             </div>
 
                              {/* Thumbnails */}
@@ -501,7 +511,15 @@ export default function TurfDetailPage() {
                                                 </div>
                                             </div>
                                         ) : (
-                                            <img src={media.thumbnail || media.url} alt={`Thumbnail ${i}`} className="w-full h-full object-cover" />
+                                            <img
+                                                src={media.thumbnail || media.url || defaultFallbackImage}
+                                                alt={`Thumbnail ${i + 1}`}
+                                                onError={(e) => {
+                                                    e.currentTarget.onerror = null;
+                                                    e.currentTarget.src = defaultFallbackImage;
+                                                }}
+                                                className="w-full h-full object-cover"
+                                            />
                                         )}
                                     </button>
                                 ))}
@@ -524,7 +542,7 @@ export default function TurfDetailPage() {
                     </div>
 
                     {/* Right Side: Information & Booking */}
-                    <div className="lg:w-[50%] xl:w-[45%] pb-20">
+                    <div className="lg:col-span-6 xl:col-span-6 pb-20">
                         {/* Header Info */}
                         <div className="mb-6">
                             <div className="flex items-start justify-between mb-4">
@@ -608,7 +626,7 @@ export default function TurfDetailPage() {
                             <div className="relative bg-white border border-[#E5E7EB] rounded-[20px] p-6 sm:p-8 shadow-[0_15px_45px_rgba(0,0,0,0.08)] space-y-6">
                                 
                                 {/* Top 4-Step Tab Navigation */}
-                                <div className="flex items-center gap-1.5 sm:gap-2 overflow-x-auto pb-2 no-scrollbar border-b border-[#E5E7EB]">
+                                <div className="flex items-center gap-2 sm:gap-3 overflow-x-auto pb-4 pt-1 no-scrollbar border-b border-[#E2E8F0] mb-6">
                                     {[
                                         { num: 1, label: '1. Date & Time' },
                                         { num: 2, label: '2. Payment Mode' },
@@ -621,12 +639,12 @@ export default function TurfDetailPage() {
                                             <button
                                                 key={st.num}
                                                 onClick={() => setBookingStep(st.num)}
-                                                className={`px-3.5 py-1.5 rounded-full text-[10px] font-black uppercase tracking-wider whitespace-nowrap transition-all cursor-pointer flex items-center gap-1.5 ${
+                                                className={`px-5 py-2.5 rounded-full text-xs font-black uppercase tracking-wider whitespace-nowrap transition-all duration-200 cursor-pointer flex items-center gap-2 shadow-xs ${
                                                     isActive
-                                                        ? 'bg-[#C8FF2E] text-[#111827] border border-[#B5F000] shadow-sm'
+                                                        ? 'bg-[#111827] text-white border border-[#111827] shadow-md'
                                                         : isPast
-                                                            ? 'bg-green-50 text-[#16A34A] border border-green-200'
-                                                            : 'bg-[#F7F9FC] text-[#6B7280] border border-[#E5E7EB] hover:text-[#111827]'
+                                                        ? 'bg-white text-[#10B981] border border-emerald-300'
+                                                        : 'bg-white text-slate-500 border border-[#E2E8F0] hover:text-[#111827] hover:border-slate-400'
                                                 }`}
                                             >
                                                 {isPast && <span>✓</span>}
@@ -641,14 +659,24 @@ export default function TurfDetailPage() {
                                     <div className="space-y-6 animate-in fade-in">
                                         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                                             <div>
-                                                <h2 className="text-xl sm:text-2xl font-black italic tracking-tight uppercase text-[#111827]">Pick date & time slot</h2>
-                                                <p className="text-xs text-[#6B7280] font-semibold mt-0.5">{turfData.name} — {turfData.location} · ₹{(activeTurf.price || 1200).toLocaleString('en-IN')}/hr</p>
+                                                <h1 className="text-3xl sm:text-4xl font-black tracking-tight text-[#111827] mb-1">
+                                                    Pick date & time slot
+                                                </h1>
+                                                <div className="flex flex-wrap items-center gap-2 text-xs font-semibold text-slate-500">
+                                                    <span>{turfData.name} — {turfData.location} · ₹{(activeTurf.price || 1500).toLocaleString('en-IN')}/hr</span>
+                                                    <button
+                                                        onClick={() => navigate('/turfs')}
+                                                        className="text-[11px] font-extrabold text-[#065F46] bg-[#ECFDF5] border border-emerald-300 px-2.5 py-0.5 rounded-md hover:bg-emerald-100 cursor-pointer transition-colors"
+                                                    >
+                                                        Switch Turf ▾
+                                                    </button>
+                                                </div>
                                             </div>
 
                                             {/* Duration Selector */}
-                                            <div className="flex items-center gap-2">
-                                                <span className="text-[10px] font-black tracking-widest text-[#6B7280] uppercase">Duration:</span>
-                                                <div className="flex items-center bg-[#F7F9FC] border border-[#E5E7EB] rounded-full p-1 shadow-xs">
+                                            <div className="flex items-center gap-2.5">
+                                                <span className="text-xs font-black tracking-wider text-slate-500 uppercase">DURATION:</span>
+                                                <div className="flex items-center bg-[#F1F5F9] border border-slate-200 rounded-full p-1 shadow-xs">
                                                     {[1, 2, 3].map(hr => (
                                                         <button
                                                             key={hr}
@@ -656,13 +684,13 @@ export default function TurfDetailPage() {
                                                                 setDuration(hr)
                                                                 setSelectedSlot(null)
                                                             }}
-                                                            className={`px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider transition-all cursor-pointer ${
+                                                            className={`px-4 py-2 rounded-full text-xs font-black uppercase tracking-wider transition-all cursor-pointer ${
                                                                 duration === hr
-                                                                    ? 'bg-[#C8FF2E] text-[#111827] border border-[#B5F000] shadow-xs'
-                                                                    : 'text-[#6B7280] hover:text-[#111827]'
+                                                                    ? 'bg-[#111827] text-white shadow-xs'
+                                                                    : 'text-slate-500 hover:text-[#111827]'
                                                             }`}
                                                         >
-                                                            {hr} {hr === 1 ? 'Hour' : 'Hours'}
+                                                            {hr} {hr === 1 ? 'HOUR' : 'HOURS'}
                                                         </button>
                                                     ))}
                                                 </div>
@@ -671,8 +699,8 @@ export default function TurfDetailPage() {
 
                                         {/* Horizontal Date Selector */}
                                         <div>
-                                            <label className="text-[10px] font-black tracking-widest text-[#6B7280] uppercase block mb-3">SELECT DATE</label>
-                                            <div className="flex gap-2.5 overflow-x-auto pb-2 no-scrollbar">
+                                            <label className="text-xs font-black tracking-widest text-slate-400 uppercase block mb-3">SELECT DATE</label>
+                                            <div className="flex gap-3 overflow-x-auto pb-3 pt-1 no-scrollbar">
                                                 {dateList.map(d => {
                                                     const isSel = selectedDateObj.id === d.id
                                                     return (
@@ -682,15 +710,15 @@ export default function TurfDetailPage() {
                                                                 setSelectedDateObj(d)
                                                                 setSelectedDate(d.fullDateString)
                                                             }}
-                                                            className={`flex-shrink-0 w-18 py-3 px-2 rounded-2xl flex flex-col items-center justify-center transition-all cursor-pointer ${
+                                                            className={`flex-shrink-0 w-20 py-4 px-2 rounded-[20px] flex flex-col items-center justify-center transition-all duration-200 cursor-pointer ${
                                                                 isSel
-                                                                    ? 'bg-[#C8FF2E] border-2 border-[#B5F000] text-[#111827] font-black shadow-sm'
-                                                                    : 'bg-[#F7F9FC] border border-[#E5E7EB] text-[#6B7280] hover:border-[#16A34A] hover:text-[#111827]'
+                                                                    ? 'bg-[#111827] text-white border-2 border-[#10B981] shadow-md scale-[1.02]'
+                                                                    : 'bg-white border border-[#E2E8F0] text-slate-500 hover:border-slate-400 shadow-xs'
                                                             }`}
                                                         >
-                                                            <span className="text-[10px] font-bold mb-0.5">{d.dayShort}</span>
-                                                            <span className={`text-xl font-black my-0.5 ${isSel ? 'text-[#111827]' : 'text-[#111827]'}`}>{d.dateNum}</span>
-                                                            <span className="text-[10px] font-medium mt-0.5">{d.monthShort}</span>
+                                                            <span className={`text-xs font-bold mb-1 ${isSel ? 'text-slate-300' : 'text-slate-500'}`}>{d.dayShort}</span>
+                                                            <span className={`text-3xl font-black my-0.5 ${isSel ? 'text-white' : 'text-[#111827]'}`}>{d.dateNum}</span>
+                                                            <span className={`text-xs font-bold mt-1 ${isSel ? 'text-slate-300' : 'text-slate-500'}`}>{d.monthShort}</span>
                                                         </button>
                                                     )
                                                 })}
@@ -699,44 +727,85 @@ export default function TurfDetailPage() {
 
                                         {/* Slot Grid */}
                                         <div>
-                                            <div className="flex items-center justify-between mb-3">
-                                                <label className="text-[10px] font-black tracking-widest text-[#6B7280] uppercase">AVAILABLE SLOTS — {selectedDateObj.formattedLabel}</label>
-                                                <div className="flex items-center gap-4 text-[9px] uppercase tracking-wider font-bold">
-                                                    <span className="flex items-center gap-1 text-[#6B7280]"><span className="w-2 h-2 rounded-sm bg-white border border-[#E5E7EB]" /> Available</span>
-                                                    <span className="flex items-center gap-1 text-[#111827]"><span className="w-2 h-2 rounded-sm bg-[#C8FF2E] border border-[#B5F000]" /> Selected</span>
-                                                    <span className="flex items-center gap-1 text-[#9CA3AF]"><span className="w-2 h-2 rounded-sm bg-slate-100 border border-[#E5E7EB]" /> Booked</span>
+                                            <div className="flex items-center justify-between mb-4">
+                                                <label className="text-xs font-black tracking-wider text-slate-500 uppercase">AVAILABLE SLOTS — {selectedDateObj.formattedLabel}</label>
+                                                <div className="flex items-center gap-4 text-xs uppercase tracking-wider font-extrabold">
+                                                    <span className="flex items-center gap-1.5 text-slate-500"><span className="w-3 h-3 rounded-full border border-slate-300 bg-white" /> AVAILABLE</span>
+                                                    <span className="flex items-center gap-1.5 text-[#10B981] font-black"><span className="w-3 h-3 rounded-full bg-[#10B981]" /> SELECTED</span>
+                                                    <span className="flex items-center gap-1.5 text-slate-400"><span className="w-3 h-3 rounded-full bg-slate-300" /> BOOKED</span>
                                                 </div>
                                             </div>
 
-                                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+                                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
                                                 {slots.map(s => {
-                                                    const isSel = selectedSlot === s.id
-                                                    const isBooked = s.status === 'booked' || s.status === 'blocked'
+                                                    const isSel = selectedSlot === s.id || (selectedSlot === null && s.time === '18:00')
+                                                    const isBooked = s.status === 'booked'
+                                                    const isMaintenance = s.status === 'maintenance' || s.id === 6
+                                                    const isStaffUnavail = s.status === 'blocked' || s.id === 2
+                                                    const isDisabled = isBooked || isMaintenance || isStaffUnavail
+
+                                                    const formattedTime = (t) => {
+                                                        const [hStr, mStr] = t.split(':')
+                                                        let h = parseInt(hStr, 10) || 18
+                                                        const ampm = h >= 12 ? 'PM' : 'AM'
+                                                        h = h % 12
+                                                        if (h === 0) h = 12
+                                                        return `${h}:${mStr || '00'} ${ampm}`
+                                                    }
+
                                                     return (
                                                         <button
                                                             key={s.id}
-                                                            disabled={isBooked}
+                                                            disabled={isDisabled}
                                                             onClick={() => handleSelectSlot(s.id)}
-                                                            className={`py-3 px-3 rounded-xl text-xs font-bold tracking-wider transition-all text-center ${
+                                                            className={`py-3.5 px-3 rounded-[22px] text-center flex flex-col items-center justify-center gap-1 min-h-[72px] transition-all duration-200 ${
                                                                 isSel
-                                                                    ? 'bg-[#C8FF2E] text-[#111827] font-black shadow-sm border-2 border-[#B5F000] cursor-pointer'
+                                                                    ? 'bg-[#10B981] text-white border-2 border-[#059669] shadow-lg shadow-emerald-500/20 scale-[1.02] cursor-pointer'
                                                                     : isBooked
-                                                                        ? 'bg-slate-100 text-[#9CA3AF] border border-[#E5E7EB] line-through opacity-50 cursor-not-allowed'
-                                                                        : 'bg-white text-[#111827] border border-[#E5E7EB] hover:border-[#16A34A] hover:bg-green-50/50 cursor-pointer'
+                                                                    ? 'bg-[#F8FAFC] text-slate-300 border border-slate-100 opacity-75 cursor-not-allowed'
+                                                                    : isMaintenance
+                                                                    ? 'bg-[#FEFCE8] text-[#854D0E] border-2 border-[#FDE047] cursor-not-allowed'
+                                                                    : isStaffUnavail
+                                                                    ? 'bg-[#F1F5F9] text-slate-600 border-2 border-slate-200 cursor-not-allowed'
+                                                                    : 'bg-[#ECFDF5] border-2 border-[#10B981] hover:bg-emerald-100/60 text-slate-900 cursor-pointer shadow-xs'
                                                             }`}
                                                         >
-                                                            <span>{s.time}</span>
+                                                            <span className={`text-sm sm:text-base font-black tracking-tight ${isSel ? 'text-white' : isBooked ? 'text-slate-300 line-through' : isMaintenance ? 'text-[#854D0E]' : isStaffUnavail ? 'text-slate-700' : 'text-[#111827]'}`}>
+                                                                {formattedTime(s.time)}
+                                                            </span>
+
+                                                            {isMaintenance ? (
+                                                                <span className="text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full bg-[#FEF08A] text-[#854D0E] border border-[#FACC15] flex items-center gap-1">
+                                                                    🛠️ MAINTENANCE
+                                                                </span>
+                                                            ) : isStaffUnavail ? (
+                                                                <span className="text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full bg-[#E2E8F0] text-slate-700 border border-slate-300 flex items-center gap-1">
+                                                                    🚫 STAFF UNAVAIL
+                                                                </span>
+                                                            ) : isBooked ? (
+                                                                <span className="text-[11px] font-bold text-slate-400">Booked</span>
+                                                            ) : (
+                                                                <span className={`text-[11px] font-black px-2.5 py-0.5 rounded-full font-mono ${isSel ? 'bg-white/20 text-white' : 'bg-[#D1FAE5] text-[#065F46]'}`}>
+                                                                    ₹{s.price}/hr
+                                                                </span>
+                                                            )}
                                                         </button>
                                                     )
                                                 })}
                                             </div>
 
                                             {/* Live Selected Summary */}
-                                            <div className="mt-4 text-xs font-semibold text-[#6B7280] flex items-center gap-2">
-                                                <span>Selected: </span>
-                                                <span className="text-[#111827] font-black">{currentSlot?.time || '18:00'} ({duration} {duration > 1 ? 'Hours' : 'Hour'})</span>
-                                                <span className="text-[#E5E7EB]">·</span>
-                                                <span className="text-[#16A34A] font-black">₹{totalRent.toLocaleString('en-IN')} total</span>
+                                            <div className="mt-6 bg-[#F8FAFC] border border-[#E2E8F0] p-4 sm:p-5 rounded-[20px] shadow-xs flex flex-wrap items-center gap-2 text-xs sm:text-sm font-semibold text-slate-600">
+                                                <span>Selected Slot: </span>
+                                                <strong className="text-[#111827] font-black text-sm sm:text-base">
+                                                    {(currentSlot?.time ? (parseInt(currentSlot.time) >= 12 ? `${parseInt(currentSlot.time) % 12 || 12}:00 PM` : `${parseInt(currentSlot.time)}:00 AM`) : '6:00 PM')} ({duration} {duration > 1 ? 'Hours' : 'Hour'})
+                                                </strong>
+                                                <span className="text-slate-300 mx-1">·</span>
+                                                <span>Slot Rate: </span>
+                                                <span className="text-[#10B981] font-black text-sm sm:text-base font-mono">₹{(currentSlot?.price || 1500).toLocaleString('en-IN')}/hr</span>
+                                                <span className="text-slate-300 mx-1">·</span>
+                                                <span>Total Rent: </span>
+                                                <span className="text-[#10B981] font-black text-base sm:text-lg font-mono">₹{totalRent.toLocaleString('en-IN')}</span>
                                             </div>
                                         </div>
 
@@ -761,83 +830,210 @@ export default function TurfDetailPage() {
 
                                 {/* STEP 2: PAYMENT MODE */}
                                 {bookingStep === 2 && (
-                                    <div className="space-y-5 animate-in fade-in">
+                                    <div className="space-y-6 animate-in fade-in duration-200">
                                         <div>
-                                            <h2 className="text-xl sm:text-2xl font-black italic tracking-tight uppercase text-[#111827]">How do you want to pay?</h2>
-                                            <p className="text-xs text-[#6B7280] font-semibold mt-0.5">Turf: {turfData.name} · {selectedDateObj.dayShort} {selectedDateObj.dateNum} {selectedDateObj.monthShort} · 6:00 PM · ₹{totalRent.toLocaleString('en-IN')}</p>
+                                            <h1 className="text-3xl sm:text-4xl font-black text-[#111827] tracking-tight mb-2">
+                                                How do you want to pay?
+                                            </h1>
+                                            <p className="text-slate-500 text-sm font-semibold">
+                                                Match: Cricket at {turfData.name} · {selectedDateObj.dayShort} {selectedDateObj.dateNum} {selectedDateObj.monthShort} · 6:00 PM · ₹{totalRent.toLocaleString('en-IN')}
+                                            </p>
                                         </div>
 
-                                        {/* Green Dashed Banner */}
-                                        <div className="border border-dashed border-[#16A34A] bg-green-50/80 rounded-2xl p-3.5 flex items-center gap-2.5 text-xs text-[#111827]">
-                                            <span className="text-base">🎯</span>
-                                            <p><span className="font-black text-[#16A34A]">New on BookMyTurf:</span> Split with opponent, dare them to play, or make loser pay!</p>
-                                        </div>
-
-                                        {/* 5 Payment Modes */}
-                                        <div className="space-y-2.5">
+                                        {/* Payment Options List with Collapsible Accordion Conditions */}
+                                        <div className="space-y-4">
                                             {[
-                                                { id: 'full', icon: '💳', title: 'Mode A: I pay full amount (Baseline)', desc: `Captain pays ₹${totalRent.toLocaleString('en-IN')} upfront. Slot is locked immediately. Opponent is invited for free.` },
-                                                { id: 'split-50', icon: '⚖️', title: 'Mode B: Split 50-50 with opponent (Main Request)', desc: `You pay ₹${(totalRent / 2).toLocaleString('en-IN')} now. System sends payment link to opponent captain (2 hr timer to pay or full refund).` },
-                                                { id: 'custom', icon: '🎴', title: 'Mode C: Custom split', desc: `You set custom ratio. You pay ₹${myShare.toLocaleString('en-IN')}, Opponent pays ₹${opponentShare.toLocaleString('en-IN')}.` },
-                                                { id: 'dare', icon: '🔥', title: 'Mode D: Dare to play — Loser pays all (Gamification)', desc: `Both teams deposit ₹100. Match winner gets full refund. Losing team pays full ₹${totalRent.toLocaleString('en-IN')}. (Draw = split 50-50).` },
-                                                { id: 'per-player', icon: '👥', title: 'Mode E: Per player split', desc: `Each player pays individually. E.g. ₹${totalRent.toLocaleString('en-IN')} ÷ 6 players = ₹${Math.round(totalRent / 6).toLocaleString('en-IN')} each.` },
-                                            ].map(opt => {
-                                                const isSel = paymentMode === opt.id
+                                                {
+                                                    id: 'full',
+                                                    icon: '💳',
+                                                    title: 'I pay full amount',
+                                                    desc: `You pay ₹${totalRent.toLocaleString('en-IN')} now. Collect from your team later offline.`,
+                                                    details: {
+                                                        youPay: `₹${totalRent.toLocaleString('en-IN')}`,
+                                                        youPaySub: 'Your Initial Share',
+                                                        opponentPay: '₹0 (Free Invite)',
+                                                        opponentPaySub: 'Opponent Required Share',
+                                                        ruleTitle: 'CONDITION RULE',
+                                                        rule: 'Slot 100% Locked immediately. No opponent payment required.'
+                                                    }
+                                                },
+                                                {
+                                                    id: 'dare',
+                                                    icon: '🔥',
+                                                    title: 'Dare to play — Loser pays all',
+                                                    desc: `Both teams pay ₹100 deposit. Winner gets full refund. Loser pays ₹${totalRent.toLocaleString('en-IN')}. Draw = split ₹${(totalRent / 2).toLocaleString('en-IN')} each.`,
+                                                    badge: '🔥 POPULAR MATCH CHALLENGE',
+                                                    details: {
+                                                        youPay: '₹100 Deposit',
+                                                        youPaySub: 'Your Initial Share',
+                                                        opponentPay: '₹100 Deposit',
+                                                        opponentPaySub: 'Opponent Required Share',
+                                                        ruleTitle: 'CONDITION RULE',
+                                                        rule: `Winner gets deposit refunded. Losing team pays full ₹${totalRent.toLocaleString('en-IN')}. Draw = split ₹${(totalRent / 2).toLocaleString('en-IN')} each.`
+                                                    }
+                                                },
+                                                {
+                                                    id: 'split-50',
+                                                    icon: '⚖️',
+                                                    title: 'Split 50-50 with opponent',
+                                                    desc: `You pay ₹${(totalRent / 2).toLocaleString('en-IN')} now. Opponent team pays ₹${(totalRent / 2).toLocaleString('en-IN')} to confirm the booking.`,
+                                                    details: {
+                                                        youPay: `₹${(totalRent / 2).toLocaleString('en-IN')}`,
+                                                        youPaySub: '50% Initial Share',
+                                                        opponentPay: `₹${(totalRent / 2).toLocaleString('en-IN')}`,
+                                                        opponentPaySub: 'Opponent Required Share',
+                                                        ruleTitle: 'CONDITION RULE',
+                                                        rule: 'Opponent team gets 2 hours to pay via WhatsApp/SMS link. Unpaid in 2h → Full refund to you.'
+                                                    }
+                                                },
+                                                {
+                                                    id: 'per-player',
+                                                    icon: '👥',
+                                                    title: 'Per player split',
+                                                    desc: `Each player pays their share. 2 players = ₹${(totalRent / 2).toLocaleString('en-IN')} each. Send payment links to teammates.`,
+                                                    details: {
+                                                        youPay: `₹${Math.round(totalRent / 2).toLocaleString('en-IN')} / player`,
+                                                        youPaySub: 'Your Player Share',
+                                                        opponentPay: `₹${Math.round(totalRent / 2).toLocaleString('en-IN')} / player`,
+                                                        opponentPaySub: 'Teammate Required Share',
+                                                        ruleTitle: 'CONDITION RULE',
+                                                        rule: 'Minimum 4 players must complete payment before match is confirmed.'
+                                                    }
+                                                },
+                                            ].map((opt) => {
+                                                const isSelected = paymentMode === opt.id
+                                                const isExpanded = expandedAccordionMode === opt.id
+
                                                 return (
                                                     <div
                                                         key={opt.id}
-                                                        onClick={() => setPaymentMode(opt.id)}
-                                                        className={`p-3.5 rounded-2xl border transition-all cursor-pointer flex items-center justify-between ${
-                                                            isSel
-                                                                ? 'bg-white border-2 border-[#16A34A] shadow-md ring-1 ring-[#16A34A]'
-                                                                : 'bg-[#F7F9FC] border-[#E5E7EB] hover:border-[#16A34A]'
+                                                        className={`rounded-[22px] border transition-all duration-200 overflow-hidden ${
+                                                            isSelected
+                                                                ? 'bg-emerald-50/60 border-2 border-[#10B981] shadow-md ring-2 ring-[#10B981]/20'
+                                                                : 'bg-white border-[#E2E8F0] hover:border-[#10B981]/50 hover:shadow-xs'
                                                         }`}
                                                     >
-                                                        <div className="flex items-center gap-3">
-                                                            <div className="w-8 h-8 rounded-xl bg-green-50 flex items-center justify-center text-sm border border-green-200">{opt.icon}</div>
-                                                            <div>
-                                                                <h4 className="text-xs font-black text-[#111827] uppercase tracking-wider">{opt.title}</h4>
-                                                                <p className="text-[10px] text-[#6B7280] font-semibold mt-0.5">{opt.desc}</p>
+                                                        {/* Card Header Bar */}
+                                                        <div
+                                                            onClick={() => {
+                                                                setPaymentMode(opt.id)
+                                                                setExpandedAccordionMode(isExpanded ? null : opt.id)
+                                                            }}
+                                                            className="p-4 sm:p-5 flex items-center justify-between cursor-pointer select-none"
+                                                        >
+                                                            <div className="flex items-center gap-3.5 sm:gap-4">
+                                                                <div className={`w-11 h-11 rounded-xl border flex items-center justify-center text-xl flex-shrink-0 ${isSelected ? 'bg-[#111827] text-white border-[#10B981]' : 'bg-slate-100 border-[#E2E8F0]'}`}>
+                                                                    {opt.icon}
+                                                                </div>
+                                                                <div>
+                                                                    <div className="flex flex-wrap items-center gap-2">
+                                                                        <h3 className="text-sm sm:text-base font-black text-[#111827] leading-tight">
+                                                                            {opt.title}
+                                                                        </h3>
+                                                                        {opt.badge && (
+                                                                            <span className="text-[9px] font-black uppercase tracking-wider bg-[#C8FF2E] text-[#111827] px-2.5 py-0.5 rounded-full border border-[#B5F000] shadow-xs">
+                                                                                {opt.badge}
+                                                                            </span>
+                                                                        )}
+                                                                    </div>
+                                                                    <p className="text-xs text-slate-500 font-medium mt-1 leading-relaxed">
+                                                                        {opt.desc}
+                                                                    </p>
+                                                                </div>
+                                                            </div>
+
+                                                            {/* Radio & Arrow Accordion Toggle */}
+                                                            <div className="flex items-center gap-3 flex-shrink-0 ml-3">
+                                                                <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${isSelected ? 'border-[#10B981] bg-[#10B981]' : 'border-slate-300'}`}>
+                                                                    {isSelected && <div className="w-2 h-2 rounded-full bg-white" />}
+                                                                </div>
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation()
+                                                                        setExpandedAccordionMode(isExpanded ? null : opt.id)
+                                                                    }}
+                                                                    className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-[#111827] flex items-center justify-center transition-all cursor-pointer"
+                                                                >
+                                                                    <span className={`text-[10px] font-bold transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`}>▼</span>
+                                                                </button>
                                                             </div>
                                                         </div>
-                                                        <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${isSel ? 'border-[#16A34A] bg-[#16A34A]' : 'border-[#9CA3AF]'}`}>
-                                                            {isSel && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
-                                                        </div>
+
+                                                        {/* COLLAPSIBLE ACCORDION BREAKDOWN BOX */}
+                                                        {isExpanded && (
+                                                            <div className="border-t border-[#E2E8F0] bg-white p-4 sm:p-5 animate-in fade-in duration-200 space-y-4">
+                                                                <div className="flex items-center justify-between">
+                                                                    <span className="text-xs font-black uppercase tracking-wider text-[#10B981] flex items-center gap-1.5">
+                                                                        <span>📋</span> STEP-BY-STEP CONDITIONS & RULES
+                                                                    </span>
+                                                                    <span className="text-[10px] font-bold text-slate-600 bg-slate-100 px-3 py-1 rounded-lg border border-slate-200">
+                                                                        {opt.title}
+                                                                    </span>
+                                                                </div>
+
+                                                                <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5">
+                                                                    {/* Column 1: You Pay */}
+                                                                    <div className="bg-white border border-[#E2E8F0] rounded-2xl p-4 shadow-xs flex flex-col justify-between">
+                                                                        <div>
+                                                                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider block">
+                                                                                YOU PAY NOW
+                                                                            </span>
+                                                                            <span className="text-xl font-black text-[#10B981] font-mono block mt-1">
+                                                                                {opt.details.youPay}
+                                                                            </span>
+                                                                        </div>
+                                                                        <span className="text-[10px] font-medium text-slate-400 mt-2 block">
+                                                                            {opt.details.youPaySub}
+                                                                        </span>
+                                                                    </div>
+
+                                                                    {/* Column 2: Opponent Share */}
+                                                                    <div className="bg-white border border-[#E2E8F0] rounded-2xl p-4 shadow-xs flex flex-col justify-between">
+                                                                        <div>
+                                                                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider block">
+                                                                                OPPONENT SHARE
+                                                                            </span>
+                                                                            <span className="text-xl font-black text-[#10B981] font-mono block mt-1">
+                                                                                {opt.details.opponentPay}
+                                                                            </span>
+                                                                        </div>
+                                                                        <span className="text-[10px] font-medium text-slate-400 mt-2 block">
+                                                                            {opt.details.opponentPaySub}
+                                                                        </span>
+                                                                    </div>
+
+                                                                    {/* Column 3: Rule */}
+                                                                    <div className="bg-[#FEFCE8] border border-[#FDE047] rounded-2xl p-4 shadow-xs flex flex-col justify-between">
+                                                                        <div>
+                                                                            <span className="text-[10px] font-black text-[#B45309] uppercase tracking-wider block">
+                                                                                {opt.details.ruleTitle}
+                                                                            </span>
+                                                                            <p className="text-xs font-bold text-amber-950 mt-1 leading-relaxed">
+                                                                                {opt.details.rule}
+                                                                            </p>
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        )}
                                                     </div>
                                                 )
                                             })}
                                         </div>
 
-                                        {/* Custom Split Slider if Custom Selected */}
-                                        {paymentMode === 'custom' && (
-                                            <div className="bg-[#F7F9FC] border border-[#E5E7EB] rounded-2xl p-4 space-y-3">
-                                                <div className="flex justify-between text-xs font-bold text-[#111827]">
-                                                    <span>Your Share: ₹{customSplitMyShare}</span>
-                                                    <span className="text-[#6B7280]">Opponent Share: ₹{totalRent - customSplitMyShare}</span>
-                                                </div>
-                                                <input
-                                                    type="range"
-                                                    min={100}
-                                                    max={totalRent - 100}
-                                                    step={50}
-                                                    value={customSplitMyShare}
-                                                    onChange={(e) => setCustomSplitMyShare(Number(e.target.value))}
-                                                    className="w-full accent-[#16A34A] cursor-pointer"
-                                                />
-                                            </div>
-                                        )}
-
-                                        <div className="pt-6 border-t border-[#E5E7EB] flex items-center justify-between">
+                                        {/* Bottom Action Bar */}
+                                        <div className="pt-6 border-t border-[#E2E8F0] flex items-center justify-between">
                                             <button
                                                 onClick={() => setBookingStep(1)}
-                                                className="px-5 py-2.5 bg-white hover:bg-slate-50 border border-[#E5E7EB] text-[#111827] font-bold text-xs uppercase tracking-wider rounded-full transition-colors cursor-pointer"
+                                                className="px-6 py-3 rounded-full bg-white hover:bg-slate-50 border border-[#E2E8F0] text-[#111827] font-bold text-xs uppercase tracking-wider transition-all shadow-xs cursor-pointer"
                                             >
                                                 ← Back
                                             </button>
 
                                             <button
                                                 onClick={() => setBookingStep(3)}
-                                                className="px-7 py-3 bg-[#C8FF2E] hover:bg-[#B5F000] text-[#111827] font-black text-xs uppercase tracking-widest rounded-full transition-all cursor-pointer shadow-sm border border-[#B5F000]"
+                                                className="px-8 py-3.5 rounded-full bg-[#C8FF2E] hover:bg-[#B5F000] text-[#111827] font-black text-xs uppercase tracking-widest transition-all cursor-pointer shadow-md border border-[#B5F000]"
                                             >
                                                 Next: Team details →
                                             </button>
