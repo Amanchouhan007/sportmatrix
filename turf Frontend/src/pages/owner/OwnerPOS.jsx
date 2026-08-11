@@ -607,32 +607,21 @@ export default function OwnerPOS() {
 
                                 {/* 1. SPORT & COURT SELECTION */}
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                    <div>
-                                        <label className="block text-xs font-bold text-surface-700 mb-1.5 uppercase tracking-wider">Sport</label>
-                                        <select
-                                            value={booking.sport}
-                                            onChange={(e) => handleSportChange(e.target.value)}
-                                            className="w-full p-2.5 text-xs font-extrabold bg-white border border-surface-200 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none text-surface-900 cursor-pointer shadow-sm"
-                                        >
-                                            {sportsList.map(s => (
-                                                <option key={s.id} value={s.name}>{s.icon} {s.name}</option>
-                                            ))}
-                                        </select>
-                                    </div>
-                                    <div>
-                                        <label className="block text-xs font-bold text-surface-700 mb-1.5 uppercase tracking-wider">Court / Turf</label>
-                                        <select
-                                            value={booking.court}
-                                            onChange={(e) => setBooking({ ...booking, court: e.target.value })}
-                                            className="w-full p-2.5 text-xs font-extrabold bg-white border border-surface-200 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none text-surface-900 cursor-pointer shadow-sm"
-                                        >
-                                            {availableCourts.map(c => (
-                                                <option key={c.id} value={c.name} disabled={c.status === 'Maintenance'}>
-                                                    {c.name} {c.status === 'Maintenance' ? '(Under Maintenance)' : ''}
-                                                </option>
-                                            ))}
-                                        </select>
-                                    </div>
+                                    <Select
+                                        label="Sport"
+                                        value={booking.sport}
+                                        onChange={(e) => handleSportChange(e.target.value)}
+                                        options={sportsList.map(s => ({ value: s.name, label: `${s.icon} ${s.name}` }))}
+                                    />
+                                    <Select
+                                        label="Court / Turf"
+                                        value={booking.court}
+                                        onChange={(e) => setBooking({ ...booking, court: e.target.value })}
+                                        options={availableCourts.map(c => ({
+                                            value: c.name,
+                                            label: `${c.name} ${c.status === 'Maintenance' ? '(Under Maintenance)' : ''}`
+                                        }))}
+                                    />
                                 </div>
 
                                 {/* BOOKING DATE & BOOKING TYPE */}
@@ -643,20 +632,18 @@ export default function OwnerPOS() {
                                         value={booking.date}
                                         onChange={(e) => setBooking({ ...booking, date: e.target.value })}
                                     />
-                                    <div>
-                                        <label className="block text-xs font-bold text-surface-700 mb-1.5 uppercase tracking-wider">Booking Type</label>
-                                        <select
-                                            value={booking.bookingType}
-                                            onChange={(e) => setBooking({ ...booking, bookingType: e.target.value })}
-                                            className="w-full p-2.5 text-xs font-extrabold bg-white border border-surface-200 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none text-surface-900 cursor-pointer shadow-sm"
-                                        >
-                                            <option value="Walk-In">🚶 Walk-In</option>
-                                            <option value="Online">🌐 Online</option>
-                                            <option value="Phone Booking">📞 Phone Booking</option>
-                                            <option value="Corporate">🏢 Corporate</option>
-                                            <option value="Membership">👑 Membership</option>
-                                        </select>
-                                    </div>
+                                    <Select
+                                        label="Booking Type"
+                                        value={booking.bookingType}
+                                        onChange={(e) => setBooking({ ...booking, bookingType: e.target.value })}
+                                        options={[
+                                            { value: 'Walk-In', label: '🚶 Walk-In' },
+                                            { value: 'Online', label: '🌐 Online' },
+                                            { value: 'Phone Booking', label: '📞 Phone Booking' },
+                                            { value: 'Corporate', label: '🏢 Corporate' },
+                                            { value: 'Membership', label: '👑 Membership' }
+                                        ]}
+                                    />
                                 </div>
 
                                 {/* 2. SLOT SELECTION (Modern Card Grid) */}
@@ -726,20 +713,18 @@ export default function OwnerPOS() {
 
                                 {/* 3. BOOKING DURATION & 4. NUMBER OF PLAYERS */}
                                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                                    <div>
-                                        <label className="block text-xs font-bold text-surface-700 mb-1.5 uppercase tracking-wider">Booking Time (Hours)</label>
-                                        <select
-                                            value={booking.duration}
-                                            onChange={(e) => setBooking({ ...booking, duration: Number(e.target.value) })}
-                                            className="w-full p-2.5 text-xs font-extrabold bg-white border border-surface-200 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none text-surface-900 cursor-pointer shadow-sm"
-                                        >
-                                            <option value={60}>⏰ 1 Hour</option>
-                                            <option value={120}>⏰ 2 Hours</option>
-                                            <option value={180}>⏰ 3 Hours</option>
-                                            <option value={240}>⏰ 4 Hours</option>
-                                            <option value={300}>⏰ 5 Hours</option>
-                                        </select>
-                                    </div>
+                                    <Select
+                                        label="Booking Time (Hours)"
+                                        value={booking.duration}
+                                        onChange={(e) => setBooking({ ...booking, duration: Number(e.target.value) })}
+                                        options={[
+                                            { value: 60, label: '⏰ 1 Hour' },
+                                            { value: 120, label: '⏰ 2 Hours' },
+                                            { value: 180, label: '⏰ 3 Hours' },
+                                            { value: 240, label: '⏰ 4 Hours' },
+                                            { value: 300, label: '⏰ 5 Hours' }
+                                        ]}
+                                    />
                                     <div>
                                         <Input
                                             label="Players"
@@ -766,19 +751,17 @@ export default function OwnerPOS() {
                                         <HiTag className="text-emerald-600" /> Apply Discount & Promo Code
                                     </div>
                                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                                        <div>
-                                            <label className="block text-[10px] font-bold text-surface-500 mb-1 uppercase">Discount Type</label>
-                                            <select
-                                                value={booking.discountType}
-                                                onChange={(e) => setBooking({ ...booking, discountType: e.target.value })}
-                                                className="w-full p-2 text-xs font-extrabold bg-white border border-surface-200 rounded-xl focus:ring-1 focus:ring-emerald-500 outline-none text-surface-900 cursor-pointer"
-                                            >
-                                                <option value="None">None</option>
-                                                <option value="Flat">Flat Discount (₹)</option>
-                                                <option value="Percentage">Percentage (%)</option>
-                                                <option value="Promo Code">Promo Code</option>
-                                            </select>
-                                        </div>
+                                        <Select
+                                            label="Discount Type"
+                                            value={booking.discountType}
+                                            onChange={(e) => setBooking({ ...booking, discountType: e.target.value })}
+                                            options={[
+                                                { value: 'None', label: 'None' },
+                                                { value: 'Flat', label: 'Flat Discount (₹)' },
+                                                { value: 'Percentage', label: 'Percentage (%)' },
+                                                { value: 'Promo Code', label: 'Promo Code' }
+                                            ]}
+                                        />
 
                                         {booking.discountType === 'Promo Code' ? (
                                             <div className="sm:col-span-2">
@@ -946,19 +929,17 @@ export default function OwnerPOS() {
                                 />
 
                                 <div className="grid grid-cols-2 gap-2">
-                                    <div>
-                                        <label className="block text-[9px] font-bold text-surface-500 mb-1 uppercase">Customer Type</label>
-                                        <select
-                                            value={customer.type}
-                                            onChange={(e) => setCustomer({ ...customer, type: e.target.value })}
-                                            className="w-full p-2 text-xs font-extrabold bg-white border border-surface-200 rounded-xl focus:ring-1 focus:ring-emerald-500 outline-none text-surface-900 cursor-pointer"
-                                        >
-                                            <option value="Regular">Regular</option>
-                                            <option value="Member">Member</option>
-                                            <option value="Corporate">Corporate</option>
-                                            <option value="Guest">Guest</option>
-                                        </select>
-                                    </div>
+                                    <Select
+                                        label="Customer Type"
+                                        value={customer.type}
+                                        onChange={(e) => setCustomer({ ...customer, type: e.target.value })}
+                                        options={[
+                                            { value: 'Regular', label: 'Regular' },
+                                            { value: 'Member', label: 'Member' },
+                                            { value: 'Corporate', label: 'Corporate' },
+                                            { value: 'Guest', label: 'Guest' }
+                                        ]}
+                                    />
                                     <Input
                                         label="Membership ID"
                                         placeholder="MEM-ID"
@@ -1073,33 +1054,29 @@ export default function OwnerPOS() {
                                 {/* PAYMENT SETTLEMENT SECTION */}
                                 <div className="space-y-3">
                                     <div className="grid grid-cols-2 gap-2">
-                                        <div>
-                                            <label className="block text-[9px] font-black text-surface-400 uppercase mb-1">Payment Status</label>
-                                            <select
-                                                value={paymentStatus}
-                                                onChange={(e) => setPaymentStatus(e.target.value)}
-                                                className="w-full p-2 text-xs font-extrabold bg-white border border-surface-200 rounded-xl focus:ring-1 focus:ring-emerald-500 outline-none text-surface-900 cursor-pointer"
-                                            >
-                                                <option value="Paid">✅ Paid</option>
-                                                <option value="Partial">⏳ Partial</option>
-                                                <option value="Pending">❌ Pending</option>
-                                            </select>
-                                        </div>
-                                        <div>
-                                            <label className="block text-[9px] font-black text-surface-400 uppercase mb-1">Payment Method</label>
-                                            <select
-                                                value={paymentMethod}
-                                                onChange={(e) => setPaymentMethod(e.target.value)}
-                                                className="w-full p-2 text-xs font-extrabold bg-white border border-surface-200 rounded-xl focus:ring-1 focus:ring-emerald-500 outline-none text-surface-900 cursor-pointer"
-                                            >
-                                                <option value="UPI">📱 UPI</option>
-                                                <option value="Cash">💵 Cash</option>
-                                                <option value="Card">💳 Card</option>
-                                                <option value="Wallet">👛 Wallet</option>
-                                                <option value="Bank Transfer">🏦 Bank Transfer</option>
-                                                <option value="Split Payment">🔀 Split Payment</option>
-                                            </select>
-                                        </div>
+                                        <Select
+                                            label="Payment Status"
+                                            value={paymentStatus}
+                                            onChange={(e) => setPaymentStatus(e.target.value)}
+                                            options={[
+                                                { value: 'Paid', label: '✅ Paid' },
+                                                { value: 'Partial', label: '⏳ Partial' },
+                                                { value: 'Pending', label: '❌ Pending' }
+                                            ]}
+                                        />
+                                        <Select
+                                            label="Payment Method"
+                                            value={paymentMethod}
+                                            onChange={(e) => setPaymentMethod(e.target.value)}
+                                            options={[
+                                                { value: 'UPI', label: '📱 UPI' },
+                                                { value: 'Cash', label: '💵 Cash' },
+                                                { value: 'Card', label: '💳 Card' },
+                                                { value: 'Wallet', label: '👛 Wallet' },
+                                                { value: 'Bank Transfer', label: '🏦 Bank Transfer' },
+                                                { value: 'Split Payment', label: '🔀 Split Payment' }
+                                            ]}
+                                        />
                                     </div>
 
                                     {paymentStatus === 'Partial' && (

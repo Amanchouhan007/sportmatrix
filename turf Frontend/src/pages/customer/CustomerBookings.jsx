@@ -51,6 +51,42 @@ export default function CustomerBookings() {
     const [rescheduleModal, setRescheduleModal] = useState({ open: false, booking: null })
     const [cancelConfirm, setCancelConfirm] = useState({ open: false, id: null })
     const [formData, setFormData] = useState({ date: '', time: '' })
+    const [calendarMonthDate, setCalendarMonthDate] = useState({ year: 2026, month: 7 })
+
+    const timeSlotsList = [
+        '06:00 AM', '07:00 AM', '08:00 AM', '09:00 AM',
+        '10:00 AM', '11:00 AM', '12:00 PM', '01:00 PM',
+        '02:00 PM', '03:00 PM', '04:00 PM', '05:00 PM',
+        '06:00 PM', '07:00 PM', '08:00 PM', '09:00 PM'
+    ]
+
+    const monthNames = [
+        'January', 'February', 'March', 'April', 'May', 'June',
+        'July', 'August', 'September', 'October', 'November', 'December'
+    ]
+
+    const calendarGrid = useMemo(() => {
+        const { year, month } = calendarMonthDate
+        const firstDay = new Date(year, month, 1).getDay()
+        const totalDays = new Date(year, month + 1, 0).getDate()
+        const days = []
+
+        for (let i = 0; i < firstDay; i++) {
+            days.push({ id: `blank-${i}`, dayNum: null, isCurrentMonth: false })
+        }
+
+        for (let d = 1; d <= totalDays; d++) {
+            const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`
+            days.push({
+                id: `d-${d}`,
+                dayNum: d,
+                dateStr,
+                isCurrentMonth: true
+            })
+        }
+
+        return days
+    }, [calendarMonthDate])
 
     // Reload when user switches/logs in
     useEffect(() => {
@@ -125,7 +161,20 @@ export default function CustomerBookings() {
 
     const handleRescheduleClick = (bk) => {
         setRescheduleModal({ open: true, booking: bk })
-        setFormData({ date: bk.date, time: bk.time })
+        const dateVal = bk.date || '2026-08-09'
+        const timeVal = bk.time || '06:00 PM'
+        setFormData({ date: dateVal, time: timeVal })
+        
+        try {
+            const parts = dateVal.split('-')
+            if (parts.length === 3) {
+                const y = parseInt(parts[0], 10)
+                const m = parseInt(parts[1], 10) - 1
+                if (!isNaN(y) && !isNaN(m)) {
+                    setCalendarMonthDate({ year: y, month: m })
+                }
+            }
+        } catch (e) {}
     }
 
     const saveReschedule = () => {
@@ -272,30 +321,128 @@ export default function CustomerBookings() {
                 <DataTable columns={columns} data={filteredBookings} />
             )}
 
-            {/* Reschedule Modal */}
+            {/* Custom UI Reschedule Modal */}
             <Modal 
                 isOpen={rescheduleModal.open} 
                 onClose={() => setRescheduleModal({ open: false, booking: null })} 
                 title="Reschedule Booking"
             >
-                <div className="space-y-4">
-                    <div className="grid grid-cols-2 gap-4">
-                        <Input 
-                            label="New Date" 
-                            type="date" 
-                            value={formData.date} 
-                            onChange={e => setFormData({ ...formData, date: e.target.value })} 
-                        />
-                        <Input 
-                            label="New Time" 
-                            type="time" 
-                            value={formData.time} 
-                            onChange={e => setFormData({ ...formData, time: e.target.value })} 
-                        />
+                <div className="space-y-5 animate-in fade-in duration-200">
+                    {/* Booking Context Banner */}
+                    <div className="bg-slate-50 border border-[#E2E8F0] p-3.5 rounded-2xl flex flex-wrap items-center justify-between gap-2">
+                        <div>
+                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">TARGET BOOKING</span>
+                            <span className="text-xs font-black text-[#111827]">{rescheduleModal.booking?.id} · {rescheduleModal.booking?.venue}</span>
+                        </div>
+                        <span className="text-[11px] font-extrabold text-[#065F46] bg-[#ECFDF5] border border-emerald-300 px-2.5 py-1 rounded-full">
+                            Current: {rescheduleModal.booking?.date} ({rescheduleModal.booking?.time})
+                        </span>
                     </div>
-                    <div className="flex gap-3 justify-end pt-2">
-                        <Button variant="secondary" onClick={() => setRescheduleModal({ open: false, booking: null })}>Cancel</Button>
-                        <Button onClick={saveReschedule}>Confirm Reschedule</Button>
+
+                    {/* CUSTOM CALENDAR PICKER */}
+                    <div className="bg-white border border-[#E2E8F0] rounded-[22px] p-4 shadow-xs">
+                        {/* Month & Year Navigation Header */}
+                        <div className="flex items-center justify-between mb-3 px-1">
+                            <span className="text-sm font-black text-[#111827] flex items-center gap-1.5">
+                                📅 {monthNames[calendarMonthDate.month]} {calendarMonthDate.year}
+                            </span>
+
+                            <div className="flex items-center gap-1">
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        setCalendarMonthDate(prev => prev.month === 0 ? { year: prev.year - 1, month: 11 } : { ...prev, month: prev.month - 1 })
+                                    }}
+                                    className="w-8 h-8 rounded-xl bg-slate-100 hover:bg-emerald-50 hover:text-[#10B981] text-[#111827] font-bold text-sm flex items-center justify-center transition-colors cursor-pointer"
+                                >
+                                    ‹
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        setCalendarMonthDate(prev => prev.month === 11 ? { year: prev.year + 1, month: 0 } : { ...prev, month: prev.month + 1 })
+                                    }}
+                                    className="w-8 h-8 rounded-xl bg-slate-100 hover:bg-emerald-50 hover:text-[#10B981] text-[#111827] font-bold text-sm flex items-center justify-center transition-colors cursor-pointer"
+                                >
+                                    ›
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* Days of Week Header */}
+                        <div className="grid grid-cols-7 gap-1 text-center mb-2">
+                            {['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'].map(day => (
+                                <span key={day} className="text-[10px] font-black uppercase text-slate-400 tracking-wider">
+                                    {day}
+                                </span>
+                            ))}
+                        </div>
+
+                        {/* Calendar Days Grid */}
+                        <div className="grid grid-cols-7 gap-1.5 text-center">
+                            {calendarGrid.map(cell => {
+                                if (!cell.isCurrentMonth) {
+                                    return <div key={cell.id} className="h-8" />
+                                }
+                                const isSelected = formData.date === cell.dateStr
+                                return (
+                                    <button
+                                        key={cell.id}
+                                        type="button"
+                                        onClick={() => setFormData(prev => ({ ...prev, date: cell.dateStr }))}
+                                        className={`h-8 rounded-xl text-xs font-black transition-all cursor-pointer flex items-center justify-center ${
+                                            isSelected
+                                                ? 'bg-[#10B981] text-white border-2 border-[#059669] shadow-md scale-105'
+                                                : 'bg-slate-50 hover:bg-emerald-50 hover:border-[#10B981] text-[#111827] border border-[#E2E8F0]'
+                                        }`}
+                                    >
+                                        {cell.dayNum}
+                                    </button>
+                                )
+                            })}
+                        </div>
+                    </div>
+
+                    {/* CUSTOM TIME SLOT PICKER */}
+                    <div>
+                        <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 block mb-2 px-1">
+                            SELECT NEW TIME SLOT
+                        </label>
+                        <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
+                            {timeSlotsList.map(t => {
+                                const isSelected = formData.time === t
+                                return (
+                                    <button
+                                        key={t}
+                                        type="button"
+                                        onClick={() => setFormData(prev => ({ ...prev, time: t }))}
+                                        className={`py-2 px-2.5 rounded-xl text-xs font-black transition-all cursor-pointer text-center ${
+                                            isSelected
+                                                ? 'bg-[#10B981] text-white border-2 border-[#059669] shadow-md scale-[1.02]'
+                                                : 'bg-[#ECFDF5] border border-[#10B981] text-[#111827] hover:bg-emerald-100 shadow-xs'
+                                        }`}
+                                    >
+                                        {t}
+                                    </button>
+                                )
+                            })}
+                        </div>
+                    </div>
+
+                    {/* Live Selected Summary */}
+                    <div className="bg-[#ECFDF5] border border-emerald-300 p-3.5 rounded-xl flex items-center justify-between text-xs font-semibold text-emerald-950">
+                        <span>New Selected Slot:</span>
+                        <span className="font-black text-[#065F46]">{formData.date || '2026-08-09'} at {formData.time || '06:00 PM'}</span>
+                    </div>
+
+                    {/* Modal Bottom Actions */}
+                    <div className="flex gap-3 justify-end pt-3 border-t border-[#E2E8F0]">
+                        <Button variant="secondary" onClick={() => setRescheduleModal({ open: false, booking: null })} className="px-5 py-2.5 rounded-full text-xs font-bold">
+                            Cancel
+                        </Button>
+                        <Button onClick={saveReschedule} className="bg-[#10B981] hover:bg-emerald-700 text-white font-black px-6 py-2.5 rounded-full text-xs uppercase tracking-wider shadow-md">
+                            Confirm Reschedule
+                        </Button>
                     </div>
                 </div>
             </Modal>

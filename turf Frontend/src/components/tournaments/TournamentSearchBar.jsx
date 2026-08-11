@@ -152,20 +152,49 @@ export default function TournamentSearchBar() {
                         <svg className="w-3.5 h-3.5 text-[#6B7280]" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
                     </div>
                     {locOpen && (
-                        <div className="absolute top-full left-0 w-full md:w-[250px] bg-white border border-[#E5E7EB] text-[#111827] rounded-xl mt-2 overflow-hidden shadow-2xl z-[9999]">
+                        <div className="absolute top-full left-0 w-full md:w-[250px] bg-white border border-[#E2E8F0] text-[#111827] rounded-[20px] mt-2 p-2 shadow-[0_20px_45px_rgba(0,0,0,0.14)] z-[9999] max-h-72 overflow-y-auto custom-scrollbar">
+                            <div className="px-3 py-2 text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center justify-between border-b border-slate-100 mb-1">
+                                <span>SELECT CITY / AREA</span>
+                                <span className="text-[9px] bg-emerald-100 text-[#065F46] font-bold px-2 py-0.5 rounded-full">{filteredLocations.length} Available</span>
+                            </div>
                             {filteredLocations.length === 0 ? (
-                                <div className="p-3 text-center text-[#6B7280] text-xs">No locations found</div>
+                                <div className="p-3 text-center text-slate-400 text-xs font-semibold">No locations found</div>
                             ) : (
-                                filteredLocations.map((loc, i) => (
-                                    <div
-                                        key={loc}
-                                        className={`flex items-center gap-2.5 px-4 py-3 cursor-pointer transition-all ${i === locHighlight ? 'bg-[#C8FF2E] text-[#111827] font-black' : 'hover:bg-[#F7F9FC]'}`}
-                                        onClick={() => selectLocation(loc)}
-                                        onMouseEnter={() => setLocHighlight(i)}
-                                    >
-                                        <span className="text-xs font-bold">{loc}</span>
-                                    </div>
-                                ))
+                                filteredLocations.map((loc, i) => {
+                                    const isSel = location && loc.toLowerCase().startsWith(location.toLowerCase())
+                                    const isHighlighted = i === locHighlight
+                                    return (
+                                        <div
+                                            key={loc}
+                                            className={`flex items-center justify-between px-3 py-2.5 rounded-xl cursor-pointer transition-all duration-150 group ${
+                                                isSel
+                                                    ? 'bg-[#ECFDF5] border-l-4 border-[#10B981] text-[#065F46] font-black shadow-xs'
+                                                    : isHighlighted
+                                                    ? 'bg-slate-50 text-[#111827] font-bold'
+                                                    : 'text-[#374151] font-semibold hover:bg-slate-50 hover:text-[#10B981]'
+                                            }`}
+                                            onClick={() => selectLocation(loc)}
+                                            onMouseEnter={() => setLocHighlight(i)}
+                                        >
+                                            <div className="flex items-center gap-2.5 min-w-0">
+                                                <div className={`w-7 h-7 rounded-xl flex items-center justify-center text-xs shrink-0 transition-colors ${
+                                                    isSel
+                                                        ? 'bg-[#10B981] text-white shadow-xs'
+                                                        : 'bg-emerald-50 text-[#10B981] group-hover:bg-[#10B981] group-hover:text-white'
+                                                }`}>
+                                                    <IoLocationOutline className="w-4 h-4" />
+                                                </div>
+                                                <span className="text-xs truncate">{loc}</span>
+                                            </div>
+
+                                            {isSel && (
+                                                <span className="w-4 h-4 rounded-full bg-[#10B981] text-white text-[10px] font-black flex items-center justify-center shrink-0">
+                                                    ✓
+                                                </span>
+                                            )}
+                                        </div>
+                                    )
+                                })
                             )}
                         </div>
                     )}

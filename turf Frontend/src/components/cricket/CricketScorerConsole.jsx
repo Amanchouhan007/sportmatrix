@@ -498,39 +498,43 @@ export default function CricketScorerConsole({ match, onClose }) {
     }
 
     return createPortal(
-        <div className="fixed inset-0 top-0 left-0 w-screen h-screen z-[999999] bg-[#0B0F17] text-white flex flex-col font-sans overflow-hidden select-none animate-in fade-in duration-300">
+        <div className="fixed inset-0 top-0 left-0 w-screen h-screen z-[999999] bg-gradient-to-br from-slate-100 via-slate-50 to-emerald-50/30 text-slate-900 flex flex-col font-sans overflow-hidden select-none animate-in fade-in duration-300">
+            {/* Ambient Background Glow Effects */}
+            <div className="absolute top-0 left-1/4 w-96 h-96 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none"></div>
+            <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none"></div>
+
             {/* ---------------------------------------------------- */}
             {/* TOP HEADER */}
             {/* ---------------------------------------------------- */}
-            <div className="bg-[#121824]/90 backdrop-blur-md border-b border-slate-800 px-4 py-2 flex flex-col lg:flex-row items-center justify-between gap-2 shrink-0 shadow-lg">
-                <div className="flex items-center gap-2.5">
-                    <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-emerald-500 to-teal-400 text-slate-950 flex items-center justify-center font-black text-lg shadow-md shadow-emerald-500/20">
+            <div className="bg-white/80 backdrop-blur-xl border-b border-slate-200/80 px-5 py-3 flex flex-col lg:flex-row items-center justify-between gap-3 shrink-0 shadow-sm z-10">
+                <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-emerald-500 via-teal-400 to-cyan-500 text-white flex items-center justify-center font-black text-xl shadow-md shadow-emerald-500/20">
                         🏏
                     </div>
                     <div>
-                        <div className="flex items-center gap-2">
-                            <span className="font-black text-sm tracking-tight text-white">{matchInfo.tournamentName}</span>
-                            <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-[9px] font-extrabold uppercase tracking-wider flex items-center gap-1">
-                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping"></span> LIVE OPERATOR CONSOLE
+                        <div className="flex items-center gap-2.5">
+                            <span className="font-black text-lg tracking-tight text-slate-900">{matchInfo.tournamentName}</span>
+                            <span className="px-3 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300 text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5 shadow-sm">
+                                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping"></span> LIVE OPERATOR CONSOLE
                             </span>
                         </div>
-                        <div className="text-[11px] text-slate-400 font-medium">
+                        <div className="text-xs text-slate-500 font-medium mt-0.5">
                             Match #{matchInfo.matchNumber} • {matchInfo.roundName} • {matchInfo.venue}
                         </div>
                     </div>
                 </div>
 
                 {/* Match Status Controls */}
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2.5">
                     <button
                         onClick={() => {
                             setLiveModalTab('scorecard')
                             setLiveScoreModalOpen(true)
                         }}
-                        className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg border font-extrabold text-[11px] transition-all cursor-pointer shadow-sm hover:scale-105 ${
+                        className={`flex items-center gap-1.5 px-3.5 py-2 rounded-2xl border font-extrabold text-xs transition-all cursor-pointer shadow-sm hover:scale-105 ${
                             liveScoreModalOpen && liveModalTab === 'scorecard'
-                                ? 'bg-emerald-500 text-slate-950 border-emerald-400 font-black'
-                                : 'bg-slate-900/80 hover:bg-slate-800 text-emerald-400 border-slate-800'
+                                ? 'bg-gradient-to-r from-emerald-500 to-teal-500 text-white border-emerald-400 font-black shadow-emerald-500/20'
+                                : 'bg-slate-100 hover:bg-slate-200 text-slate-800 border-slate-200'
                         }`}
                     >
                         <span>📱</span> Live Score
@@ -538,39 +542,39 @@ export default function CricketScorerConsole({ match, onClose }) {
 
                     <button
                         onClick={() => startNewControllerSession()}
-                        className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-black text-[11px] transition-all cursor-pointer shadow-md hover:scale-105"
+                        className="flex items-center gap-1.5 px-3.5 py-2 rounded-2xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-black text-xs transition-all cursor-pointer shadow-md shadow-indigo-600/20 hover:scale-105"
                     >
                         <span>🎮</span> Mobile Controller
                     </button>
 
                     {ctrlSession.status === 'connected' && (
-                        <div className="flex items-center gap-1.5 bg-emerald-950/90 border border-emerald-500/60 px-2.5 py-1 rounded-lg text-[11px] font-black text-emerald-400 shadow-md animate-in fade-in">
-                            <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping"></span>
+                        <div className="flex items-center gap-2 bg-emerald-50 border border-emerald-300 px-3 py-1.5 rounded-2xl text-xs font-black text-emerald-800 shadow-sm animate-in fade-in">
+                            <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-ping"></span>
                             <span>🟢 Connected to Mobile {ctrlSession.deviceInfo?.platform ? `(${ctrlSession.deviceInfo.platform})` : ''}</span>
                             <button
                                 onClick={handleDisconnectMobile}
                                 title="Disconnect Mobile Session"
-                                className="ml-1 px-2 py-0.5 rounded-md bg-rose-600 hover:bg-rose-500 text-white font-black text-[10px] transition-all cursor-pointer shadow-sm"
+                                className="ml-1 px-2.5 py-0.5 rounded-lg bg-rose-600 hover:bg-rose-500 text-white font-black text-[10px] transition-all cursor-pointer shadow-sm"
                             >
                                 🔌 Disconnect
                             </button>
                         </div>
                     )}
 
-                    <div className="flex items-center gap-1.5 bg-slate-900/80 px-2.5 py-1 rounded-lg border border-slate-800 text-[11px] font-mono text-emerald-400">
-                        <FiClock className="animate-spin text-emerald-500" />
+                    <div className="flex items-center gap-1.5 bg-slate-100 px-3.5 py-2 rounded-2xl border border-slate-200 text-xs font-mono text-emerald-700 font-bold shadow-inner">
+                        <FiClock className="animate-spin text-emerald-600" />
                         <span>TIMER: {formatTimer(matchInfo.timerSeconds)}</span>
                     </div>
 
-                    <div className="flex items-center gap-1 bg-slate-900/80 p-0.5 rounded-lg border border-slate-800">
+                    <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-2xl border border-slate-200">
                         {['Scheduled', 'Live', 'Innings Break', 'Completed'].map(st => (
                             <button
                                 key={st}
                                 onClick={() => setMatchInfo(prev => ({ ...prev, status: st }))}
-                                className={`px-2.5 py-0.5 rounded-md text-[11px] font-bold transition-all ${
+                                className={`px-3 py-1 rounded-xl text-xs font-bold transition-all ${
                                     matchInfo.status === st
-                                        ? 'bg-emerald-500 text-slate-950 shadow-md font-black'
-                                        : 'text-slate-400 hover:text-white'
+                                        ? 'bg-emerald-600 text-white shadow-md font-black'
+                                        : 'text-slate-600 hover:text-slate-900'
                                 }`}
                             >
                                 {st}
@@ -580,14 +584,14 @@ export default function CricketScorerConsole({ match, onClose }) {
 
                     <button
                         onClick={() => addToast({ message: 'Match data synced with cloud & live broadcast server!', type: 'success' })}
-                        className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-extrabold text-[11px] transition-all shadow-md shadow-indigo-600/30 cursor-pointer"
+                        className="flex items-center gap-1.5 px-3.5 py-2 rounded-2xl bg-indigo-600 hover:bg-indigo-500 text-white font-extrabold text-xs transition-all shadow-md shadow-indigo-600/20 cursor-pointer hover:scale-105"
                     >
                         <FiRefreshCw className="animate-spin" /> Sync Live
                     </button>
 
                     <button
                         onClick={onClose}
-                        className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white transition-colors cursor-pointer"
+                        className="p-2 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-slate-900 transition-colors cursor-pointer border border-slate-200"
                     >
                         <FiX className="w-4 h-4" />
                     </button>
@@ -597,90 +601,87 @@ export default function CricketScorerConsole({ match, onClose }) {
             {/* ---------------------------------------------------- */}
             {/* MAIN 4-PANEL BODY */}
             {/* ---------------------------------------------------- */}
-            <div className="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-3 p-3 overflow-hidden min-h-0 bg-[#0B0F17]">
+            <div className="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-4 p-4 overflow-hidden min-h-0 z-10">
                 
                 {/* ---------------------------------------------------- */}
                 {/* LEFT PANEL: LIVE MATCH INFO & STATS (3 cols) */}
                 {/* ---------------------------------------------------- */}
-                {/* ---------------------------------------------------- */}
-                {/* LEFT PANEL: LIVE MATCH INFO & STATS (3 cols) */}
-                {/* ---------------------------------------------------- */}
-                <div className="lg:col-span-3 bg-[#121824] rounded-2xl border border-slate-800 p-3.5 shadow-xl flex flex-col justify-between overflow-y-auto">
-                    <div className="flex-1 flex flex-col justify-between space-y-2">
-                        <div className="flex items-center justify-between border-b border-slate-800 pb-1.5">
-                            <span className="text-[11px] font-extrabold text-slate-400 uppercase tracking-wider">LIVE INNINGS 1</span>
-                            <span className="text-[10px] font-black text-emerald-400 bg-emerald-500/10 px-2.5 py-0.5 rounded border border-emerald-500/20">
+                <div className="lg:col-span-3 bg-white/90 backdrop-blur-xl rounded-3xl border border-slate-200/80 p-4 shadow-sm flex flex-col justify-between overflow-y-auto">
+                    <div className="flex-1 flex flex-col justify-between space-y-3">
+                        <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+                            <span className="text-xs font-black text-slate-500 uppercase tracking-wider">LIVE INNINGS 1</span>
+                            <span className="text-xs font-black text-emerald-700 bg-emerald-50 px-3 py-0.5 rounded-full border border-emerald-200">
                                 {matchInfo.battingTeam}
                             </span>
                         </div>
 
-                        {/* BIG SCORE DISPLAY */}
-                        <div className="bg-gradient-to-br from-slate-900 to-slate-950 p-3.5 rounded-xl border border-slate-800/80 text-center space-y-1 relative overflow-hidden shadow-inner">
-                            <div className="absolute -top-10 -right-10 w-24 h-24 bg-emerald-500/10 rounded-full blur-xl"></div>
-                            <div className="text-[10px] text-slate-400 font-extrabold uppercase tracking-widest">CURRENT SCORE</div>
-                            <div className="text-5xl font-black tracking-tight text-white flex items-center justify-center gap-1.5 my-0.5">
-                                <span className="text-emerald-400">{matchState.totalRuns}</span>
-                                <span className="text-slate-600">/</span>
-                                <span className="text-rose-500">{matchState.wickets}</span>
+                        {/* BIG SCORE DISPLAY CARD */}
+                        <div className="bg-gradient-to-br from-slate-900 via-slate-800 to-emerald-950 p-4 rounded-2xl text-center space-y-1 relative overflow-hidden shadow-xl text-white">
+                            <div className="absolute -top-12 -right-12 w-32 h-32 bg-emerald-500/20 rounded-full blur-2xl pointer-events-none"></div>
+                            <div className="text-[10px] text-slate-300 font-black uppercase tracking-widest">CURRENT SCORE</div>
+                            <div className="text-5xl font-black tracking-tight flex items-center justify-center gap-1.5 my-1">
+                                <span className="text-emerald-400 drop-shadow-md">{matchState.totalRuns}</span>
+                                <span className="text-slate-500">/</span>
+                                <span className="text-rose-400 drop-shadow-md">{matchState.wickets}</span>
                             </div>
-                            <div className="text-xs font-extrabold text-slate-300">
-                                OVERS: <span className="text-white text-sm">{matchState.overs}.{matchState.balls}</span> <span className="text-slate-500 text-[10px]">(20.0 Max)</span>
+                            <div className="text-xs font-extrabold text-slate-200">
+                                OVERS: <span className="text-white text-base font-black">{matchState.overs}.{matchState.balls}</span> <span className="text-slate-400 text-[10px]">(20.0 Max)</span>
                             </div>
                         </div>
 
                         {/* RUN RATES & TARGET */}
-                        <div className="grid grid-cols-2 gap-2">
-                            <div className="bg-slate-900/80 p-2.5 rounded-xl border border-slate-800/80 text-center">
-                                <div className="text-[10px] font-extrabold text-slate-400 uppercase">Current Run Rate</div>
-                                <div className="text-lg font-black text-emerald-400 mt-0.5">{crr}</div>
+                        <div className="grid grid-cols-2 gap-2.5">
+                            <div className="bg-slate-50 p-3 rounded-2xl border border-slate-200/80 text-center">
+                                <div className="text-[10px] font-black text-slate-500 uppercase tracking-wider">Current Run Rate</div>
+                                <div className="text-xl font-black text-emerald-600 mt-0.5">{crr}</div>
                             </div>
-                            <div className="bg-slate-900/80 p-2.5 rounded-xl border border-slate-800/80 text-center">
-                                <div className="text-[10px] font-extrabold text-slate-400 uppercase">Target Score</div>
-                                <div className="text-lg font-black text-indigo-400 mt-0.5">{matchInfo.target}</div>
+                            <div className="bg-slate-50 p-3 rounded-2xl border border-slate-200/80 text-center">
+                                <div className="text-[10px] font-black text-slate-500 uppercase tracking-wider">Target Score</div>
+                                <div className="text-xl font-black text-indigo-600 mt-0.5">{matchInfo.target}</div>
                             </div>
                         </div>
 
                         {/* EXTRAS BREAKDOWN */}
-                        <div className="bg-slate-900/80 p-2.5 rounded-xl border border-slate-800/80 space-y-1.5 text-xs">
-                            <div className="flex justify-between font-bold text-slate-400 text-[11px]">
+                        <div className="bg-slate-50 p-3 rounded-2xl border border-slate-200/80 space-y-2 text-xs">
+                            <div className="flex justify-between font-extrabold text-slate-700 text-xs">
                                 <span>EXTRAS TOTAL</span>
-                                <span className="text-amber-400 font-black">{matchState.extras.total} Runs</span>
+                                <span className="text-amber-700 font-black">{matchState.extras.total} Runs</span>
                             </div>
-                            <div className="grid grid-cols-4 gap-1 text-[10px] font-mono text-center text-slate-300 font-bold">
-                                <div className="bg-slate-950 p-1 rounded">WD: {matchState.extras.wides}</div>
-                                <div className="bg-slate-950 p-1 rounded">NB: {matchState.extras.noBalls}</div>
-                                <div className="bg-slate-950 p-1 rounded">B: {matchState.extras.byes}</div>
-                                <div className="bg-slate-950 p-1 rounded">LB: {matchState.extras.legByes}</div>
+                            <div className="grid grid-cols-4 gap-1.5 text-[11px] font-mono text-center text-slate-800 font-black">
+                                <div className="bg-white p-1.5 rounded-xl border border-slate-200 shadow-sm">WD: {matchState.extras.wides}</div>
+                                <div className="bg-white p-1.5 rounded-xl border border-slate-200 shadow-sm">NB: {matchState.extras.noBalls}</div>
+                                <div className="bg-white p-1.5 rounded-xl border border-slate-200 shadow-sm">B: {matchState.extras.byes}</div>
+                                <div className="bg-white p-1.5 rounded-xl border border-slate-200 shadow-sm">LB: {matchState.extras.legByes}</div>
                             </div>
                         </div>
 
                         {/* PARTNERSHIP & LAST WICKET */}
-                        <div className="space-y-1.5 bg-slate-900/80 p-2.5 rounded-xl border border-slate-800/80 text-xs">
+                        <div className="space-y-2 bg-slate-50 p-3 rounded-2xl border border-slate-200/80 text-xs">
                             <div>
-                                <div className="text-[10px] text-slate-400 font-extrabold uppercase">Current Partnership</div>
-                                <div className="font-extrabold text-slate-100 text-xs">
+                                <div className="text-[10px] text-slate-500 font-black uppercase tracking-wider">Current Partnership</div>
+                                <div className="font-extrabold text-slate-900 text-xs mt-0.5">
                                     {matchState.currentPartnership.runs} Runs off {matchState.currentPartnership.balls} Balls
                                 </div>
                             </div>
-                            <div className="pt-1.5 border-t border-slate-800">
-                                <div className="text-[10px] text-slate-400 font-extrabold uppercase">Last Wicket</div>
-                                <div className="font-extrabold text-rose-400 truncate text-xs">{matchState.lastWicket}</div>
+                            <div className="pt-2 border-t border-slate-200">
+                                <div className="text-[10px] text-slate-500 font-black uppercase tracking-wider">Last Wicket</div>
+                                <div className="font-extrabold text-rose-600 truncate text-xs mt-0.5">{matchState.lastWicket}</div>
                             </div>
                         </div>
 
                         {/* LAST 6 BALLS TICKER */}
-                        <div className="space-y-1">
-                            <div className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider">CURRENT OVER BALLS</div>
-                            <div className="flex items-center gap-1.5">
+                        <div className="space-y-1.5">
+                            <div className="text-[10px] font-black text-slate-500 uppercase tracking-widest">CURRENT OVER BALLS</div>
+                            <div className="flex items-center gap-2">
                                 {matchState.currentOverBalls.map((b, idx) => (
                                     <span
                                         key={idx}
-                                        className={`w-7 h-7 rounded-lg flex items-center justify-center font-black text-xs shadow-md ${
+                                        className={`w-8 h-8 rounded-xl flex items-center justify-center font-black text-xs shadow-sm transition-all ${
                                             b.label === 'W'
-                                                ? 'bg-rose-600 text-white'
+                                                ? 'bg-rose-600 text-white shadow-rose-500/20'
                                                 : b.label === '6' || b.label === '4'
-                                                ? 'bg-emerald-500 text-slate-950'
-                                                : 'bg-slate-800 text-slate-200'
+                                                ? 'bg-emerald-500 text-white shadow-emerald-500/20'
+                                                : 'bg-slate-100 text-slate-800 border border-slate-200'
                                         }`}
                                     >
                                         {b.label}
@@ -690,14 +691,14 @@ export default function CricketScorerConsole({ match, onClose }) {
                         </div>
 
                         {/* PROJECTED SCORES */}
-                        <div className="bg-emerald-950/30 p-2 rounded-xl border border-emerald-500/20 text-[11px] space-y-0.5 mt-1">
-                            <div className="font-extrabold text-emerald-400 flex items-center justify-between text-[10px]">
+                        <div className="bg-emerald-50/80 p-3 rounded-2xl border border-emerald-200 text-xs space-y-1 mt-1">
+                            <div className="font-black text-emerald-800 flex items-center justify-between text-[10px] uppercase tracking-wider">
                                 <span>PROJECTED SCORE</span>
                                 <span>@ Current RPO</span>
                             </div>
-                            <div className="flex justify-between font-mono text-slate-300 text-xs">
-                                <span>@ 8 RPO: <strong className="text-white text-xs">{projectedScore8}</strong></span>
-                                <span>@ 10 RPO: <strong className="text-white text-xs">{projectedScore10}</strong></span>
+                            <div className="flex justify-between font-mono text-slate-700 text-xs font-bold">
+                                <span>@ 8 RPO: <strong className="text-slate-900 text-xs font-black">{projectedScore8}</strong></span>
+                                <span>@ 10 RPO: <strong className="text-slate-900 text-xs font-black">{projectedScore10}</strong></span>
                             </div>
                         </div>
                     </div>
@@ -706,31 +707,33 @@ export default function CricketScorerConsole({ match, onClose }) {
                 {/* ---------------------------------------------------- */}
                 {/* CENTER PANEL: TOUCH SCORING CONSOLE (6 cols) */}
                 {/* ---------------------------------------------------- */}
-                <div className="lg:col-span-6 bg-[#121824] rounded-2xl border border-slate-800 p-3.5 shadow-xl flex flex-col justify-between overflow-y-auto">
+                <div className="lg:col-span-6 bg-white/90 backdrop-blur-xl rounded-3xl border border-slate-200/80 p-4 shadow-sm flex flex-col justify-between overflow-y-auto">
                     <div className="flex-1 flex flex-col justify-between">
-                        <div className="flex items-center justify-between border-b border-slate-800 pb-2 mb-2">
-                            <span className="text-xs font-black text-emerald-400 tracking-wider flex items-center gap-1.5">
+                        <div className="flex items-center justify-between border-b border-slate-100 pb-2.5 mb-3">
+                            <span className="text-xs font-black text-emerald-700 tracking-wider flex items-center gap-2 uppercase">
                                 🎮 OPERATOR TOUCH CONSOLE
                             </span>
-                            <span className="text-[10px] text-slate-500 font-bold">1-CLICK INSTANT RECORDING</span>
+                            <span className="text-[10px] text-slate-500 font-extrabold bg-slate-100 px-3 py-1 rounded-full border border-slate-200">
+                                1-CLICK INSTANT RECORDING
+                            </span>
                         </div>
 
                         {/* SCORING BUTTONS GRID */}
-                        <div className="flex-1 flex flex-col justify-between py-1 space-y-3">
+                        <div className="flex-1 flex flex-col justify-between py-1 space-y-4">
                             {/* ROW 1: RUN BUTTONS (0, 1, 2, 3, 4, 6) */}
-                            <div className="space-y-1.5">
-                                <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest">RUNS</span>
-                                <div className="grid grid-cols-6 gap-2.5">
+                            <div className="space-y-2">
+                                <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">RUNS</span>
+                                <div className="grid grid-cols-6 gap-3">
                                     {[0, 1, 2, 3, 4, 6].map(runs => (
                                         <button
                                             key={runs}
                                             onClick={() => recordBall({ type: 'run', runs, label: String(runs), isLegal: true })}
-                                            className={`h-16 lg:h-20 rounded-2xl font-black text-2xl lg:text-3xl transition-all active:scale-95 shadow-md cursor-pointer flex items-center justify-center ${
+                                            className={`h-16 lg:h-20 rounded-2xl font-black text-2xl lg:text-3xl transition-all hover:scale-105 active:scale-95 shadow-sm hover:shadow-md cursor-pointer flex items-center justify-center border ${
                                                 runs === 6
-                                                    ? 'bg-gradient-to-tr from-emerald-600 to-teal-500 text-slate-950 shadow-emerald-600/30 hover:brightness-110'
+                                                    ? 'bg-gradient-to-tr from-emerald-500 via-teal-500 to-cyan-500 text-white shadow-emerald-500/30 border-emerald-400/40'
                                                     : runs === 4
-                                                    ? 'bg-gradient-to-tr from-indigo-600 to-blue-500 text-white shadow-indigo-600/30 hover:brightness-110'
-                                                    : 'bg-slate-800 hover:bg-slate-700 text-white border border-slate-700'
+                                                    ? 'bg-gradient-to-tr from-indigo-600 via-blue-600 to-indigo-500 text-white shadow-indigo-600/30 border-indigo-400/40'
+                                                    : 'bg-white hover:bg-emerald-600 hover:text-white text-slate-900 border-slate-200 hover:border-emerald-500'
                                             }`}
                                         >
                                             {runs}
@@ -740,30 +743,30 @@ export default function CricketScorerConsole({ match, onClose }) {
                             </div>
 
                             {/* ROW 2: EXTRAS (WD, NB, BYE, LEG BYE) */}
-                            <div className="space-y-1.5">
-                                <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest">EXTRAS</span>
-                                <div className="grid grid-cols-4 gap-2.5">
+                            <div className="space-y-2">
+                                <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">EXTRAS</span>
+                                <div className="grid grid-cols-4 gap-3">
                                     <button
                                         onClick={() => setWideModalOpen(true)}
-                                        className="h-14 lg:h-16 rounded-xl bg-amber-600/20 hover:bg-amber-600/30 text-amber-400 border border-amber-500/40 font-black text-sm lg:text-base transition-all active:scale-95 cursor-pointer shadow-sm"
+                                        className="h-14 lg:h-16 rounded-2xl bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 font-black text-sm lg:text-base transition-all hover:scale-105 active:scale-95 cursor-pointer shadow-sm"
                                     >
                                         Wide (WD)
                                     </button>
                                     <button
                                         onClick={() => setNoBallModalOpen(true)}
-                                        className="h-14 lg:h-16 rounded-xl bg-amber-600/20 hover:bg-amber-600/30 text-amber-400 border border-amber-500/40 font-black text-sm lg:text-base transition-all active:scale-95 cursor-pointer shadow-sm"
+                                        className="h-14 lg:h-16 rounded-2xl bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 font-black text-sm lg:text-base transition-all hover:scale-105 active:scale-95 cursor-pointer shadow-sm"
                                     >
                                         No Ball (NB)
                                     </button>
                                     <button
                                         onClick={() => setByeModalOpen(true)}
-                                        className="h-14 lg:h-16 rounded-xl bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-400 border border-indigo-500/40 font-black text-sm lg:text-base transition-all active:scale-95 cursor-pointer shadow-sm"
+                                        className="h-14 lg:h-16 rounded-2xl bg-indigo-50 hover:bg-indigo-100 text-indigo-900 border border-indigo-300 font-black text-sm lg:text-base transition-all hover:scale-105 active:scale-95 cursor-pointer shadow-sm"
                                     >
                                         Bye (B)
                                     </button>
                                     <button
                                         onClick={() => setLegByeModalOpen(true)}
-                                        className="h-14 lg:h-16 rounded-xl bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-400 border border-indigo-500/40 font-black text-sm lg:text-base transition-all active:scale-95 cursor-pointer shadow-sm"
+                                        className="h-14 lg:h-16 rounded-2xl bg-indigo-50 hover:bg-indigo-100 text-indigo-900 border border-indigo-300 font-black text-sm lg:text-base transition-all hover:scale-105 active:scale-95 cursor-pointer shadow-sm"
                                     >
                                         Leg Bye (LB)
                                     </button>
@@ -771,24 +774,24 @@ export default function CricketScorerConsole({ match, onClose }) {
                             </div>
 
                             {/* ROW 3: WICKET, UNDO, DOT */}
-                            <div className="space-y-1.5">
-                                <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest">DISMISSALS & CONTROLS</span>
-                                <div className="grid grid-cols-4 gap-2.5">
+                            <div className="space-y-2">
+                                <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">DISMISSALS & CONTROLS</span>
+                                <div className="grid grid-cols-4 gap-3">
                                     <button
                                         onClick={() => setWicketModalOpen(true)}
-                                        className="h-14 lg:h-16 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-black text-sm lg:text-base transition-all active:scale-95 shadow-md shadow-rose-600/30 cursor-pointer col-span-2 flex items-center justify-center gap-1.5"
+                                        className="h-14 lg:h-16 rounded-2xl bg-gradient-to-r from-rose-600 via-red-600 to-rose-700 hover:from-rose-500 hover:to-red-500 text-white font-black text-sm lg:text-base transition-all hover:scale-105 active:scale-95 shadow-lg shadow-rose-600/30 border border-rose-400/30 cursor-pointer col-span-2 flex items-center justify-center gap-2"
                                     >
                                         🚨 WICKET OUT (W)
                                     </button>
                                     <button
                                         onClick={handleUndo}
-                                        className="h-14 lg:h-16 rounded-xl bg-slate-800 hover:bg-slate-700 text-amber-400 border border-slate-700 font-black text-sm lg:text-base transition-all active:scale-95 cursor-pointer flex items-center justify-center gap-1"
+                                        className="h-14 lg:h-16 rounded-2xl bg-amber-100 hover:bg-amber-200 text-amber-900 border border-amber-300 font-black text-sm lg:text-base transition-all hover:scale-105 active:scale-95 cursor-pointer flex items-center justify-center gap-1.5 shadow-sm"
                                     >
                                         <FiRotateCcw /> Undo
                                     </button>
                                     <button
                                         onClick={() => recordBall({ type: 'run', runs: 0, label: '0', isLegal: true })}
-                                        className="h-14 lg:h-16 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 font-black text-sm lg:text-base transition-all active:scale-95 cursor-pointer"
+                                        className="h-14 lg:h-16 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-800 border border-slate-200 font-black text-sm lg:text-base transition-all hover:scale-105 active:scale-95 cursor-pointer shadow-sm"
                                     >
                                         Dot Ball
                                     </button>
@@ -796,30 +799,30 @@ export default function CricketScorerConsole({ match, onClose }) {
                             </div>
 
                             {/* ROW 4: INNINGS CONTROLS */}
-                            <div className="space-y-1.5 pt-2 border-t border-slate-800">
-                                <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest">TACTICAL ACTIONS</span>
-                                <div className="grid grid-cols-4 gap-2.5">
+                            <div className="space-y-2 pt-3 border-t border-slate-100">
+                                <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">TACTICAL ACTIONS</span>
+                                <div className="grid grid-cols-4 gap-3">
                                     <button
                                         onClick={handleSwapStrike}
-                                        className="h-12 lg:h-14 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-slate-300 text-xs sm:text-sm font-extrabold border border-slate-700 transition-all cursor-pointer"
+                                        className="h-12 lg:h-14 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs sm:text-sm font-extrabold border border-slate-200 transition-all cursor-pointer hover:scale-105 active:scale-95 shadow-sm"
                                     >
                                         Swap Strike ⇄
                                     </button>
                                     <button
                                         onClick={() => setChangeBowlerModalOpen(true)}
-                                        className="h-12 lg:h-14 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-slate-300 text-xs sm:text-sm font-extrabold border border-slate-700 transition-all cursor-pointer"
+                                        className="h-12 lg:h-14 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs sm:text-sm font-extrabold border border-slate-200 transition-all cursor-pointer hover:scale-105 active:scale-95 shadow-sm"
                                     >
                                         Change Bowler
                                     </button>
                                     <button
                                         onClick={() => setNewBatsmanModalOpen(true)}
-                                        className="h-12 lg:h-14 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-slate-300 text-xs sm:text-sm font-extrabold border border-slate-700 transition-all cursor-pointer"
+                                        className="h-12 lg:h-14 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs sm:text-sm font-extrabold border border-slate-200 transition-all cursor-pointer hover:scale-105 active:scale-95 shadow-sm"
                                     >
                                         New Batsman
                                     </button>
                                     <button
                                         onClick={() => addToast({ message: 'Batsman retired hurt logged.', type: 'warning' })}
-                                        className="h-12 lg:h-14 rounded-xl bg-rose-950/40 hover:bg-rose-900/60 text-rose-300 text-xs sm:text-sm font-extrabold border border-rose-800/50 transition-all cursor-pointer"
+                                        className="h-12 lg:h-14 rounded-2xl bg-rose-50 hover:bg-rose-100 text-rose-800 text-xs sm:text-sm font-extrabold border border-rose-200 transition-all cursor-pointer hover:scale-105 active:scale-95 shadow-sm"
                                     >
                                         Retire Hurt
                                     </button>
@@ -829,12 +832,12 @@ export default function CricketScorerConsole({ match, onClose }) {
                     </div>
 
                     {/* KEYBOARD SHORTCUTS FOOTER */}
-                    <div className="bg-slate-900/60 p-2.5 rounded-xl border border-slate-800 text-[10px] text-slate-400 flex items-center justify-between mt-2">
-                        <div className="flex items-center gap-2">
-                            <span className="font-extrabold text-white">⌨️ SHORTCUTS:</span>
-                            <span className="bg-slate-800 px-2 py-0.5 rounded text-slate-300 font-mono text-[9px]">0, 1, 2, 3, 4, 6</span>
-                            <span className="bg-slate-800 px-2 py-0.5 rounded text-slate-300 font-mono text-[9px]">W = Wicket</span>
-                            <span className="bg-slate-800 px-2 py-0.5 rounded text-slate-300 font-mono text-[9px]">Ctrl+Z = Undo</span>
+                    <div className="bg-slate-50 p-3 rounded-2xl border border-slate-200 text-[10px] text-slate-600 flex items-center justify-between mt-3">
+                        <div className="flex items-center gap-2 flex-wrap">
+                            <span className="font-black text-slate-900">⌨️ SHORTCUTS:</span>
+                            <span className="bg-white px-2.5 py-0.5 rounded-lg text-slate-800 border border-slate-200 font-mono text-[9px] font-bold shadow-xs">0, 1, 2, 3, 4, 6</span>
+                            <span className="bg-white px-2.5 py-0.5 rounded-lg text-slate-800 border border-slate-200 font-mono text-[9px] font-bold shadow-xs">W = Wicket</span>
+                            <span className="bg-white px-2.5 py-0.5 rounded-lg text-slate-800 border border-slate-200 font-mono text-[9px] font-bold shadow-xs">Ctrl+Z = Undo</span>
                         </div>
                     </div>
                 </div>
@@ -842,87 +845,88 @@ export default function CricketScorerConsole({ match, onClose }) {
                 {/* ---------------------------------------------------- */}
                 {/* RIGHT PANEL: PLAYERS & MOBILE LIVE PREVIEW (3 cols) */}
                 {/* ---------------------------------------------------- */}
-                <div className="lg:col-span-3 overflow-y-auto flex flex-col justify-between space-y-3">
+                <div className="lg:col-span-3 overflow-y-auto flex flex-col justify-between space-y-4">
                     
                     {/* CURRENT BATSMEN CARD */}
-                    <div className="bg-[#121824] rounded-2xl border border-slate-800 p-3 space-y-2 shadow-xl flex-1 flex flex-col justify-between">
-                        <div className="flex items-center justify-between border-b border-slate-800 pb-1.5">
-                            <span className="text-[11px] font-extrabold text-slate-400 uppercase tracking-wider">CURRENT BATSMEN</span>
-                            <span className="text-[10px] font-black text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">ON CREASE</span>
+                    <div className="bg-white/90 backdrop-blur-xl rounded-3xl border border-slate-200/80 p-4 space-y-3 shadow-sm flex-1 flex flex-col justify-between">
+                        <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+                            <span className="text-xs font-black text-slate-500 uppercase tracking-wider">CURRENT BATSMEN</span>
+                            <span className="text-[10px] font-black text-emerald-800 bg-emerald-100 px-2.5 py-0.5 rounded-full border border-emerald-300">ON CREASE</span>
                         </div>
 
                         {/* STRIKER */}
-                        <div className="bg-slate-900/90 p-2.5 rounded-xl border border-emerald-500/40 space-y-0.5">
+                        <div className="bg-emerald-50/80 p-3 rounded-2xl border border-emerald-200 space-y-1 shadow-sm">
                             <div className="flex justify-between items-center text-xs">
-                                <span className="font-black text-emerald-400 flex items-center gap-1">
-                                    ★ {striker.name} <span className="text-[10px] text-emerald-500 font-bold">(Striker)</span>
+                                <span className="font-black text-emerald-900 flex items-center gap-1.5">
+                                    ★ {striker.name} <span className="text-[10px] text-emerald-700 font-extrabold">(Striker)</span>
                                 </span>
-                                <span className="font-mono text-slate-300 text-xs font-bold">SR: {strikerSR}</span>
+                                <span className="font-mono text-slate-800 text-xs font-black bg-white px-2 py-0.5 rounded-md border border-emerald-200 shadow-xs">SR: {strikerSR}</span>
                             </div>
-                            <div className="flex justify-between items-baseline pt-0.5">
-                                <span className="text-2xl font-black text-white">{striker.runs} <span className="text-xs text-slate-400 font-bold">({striker.balls})</span></span>
-                                <span className="text-xs text-slate-300 font-extrabold">{striker.fours}x4 • {striker.sixes}x6</span>
+                            <div className="flex justify-between items-baseline pt-1">
+                                <span className="text-3xl font-black text-slate-900">{striker.runs} <span className="text-xs text-slate-500 font-bold">({striker.balls})</span></span>
+                                <span className="text-xs text-slate-700 font-black">{striker.fours}×4 • {striker.sixes}×6</span>
                             </div>
                         </div>
 
                         {/* NON-STRIKER */}
-                        <div className="bg-slate-900/60 p-2.5 rounded-xl border border-slate-800 space-y-0.5">
+                        <div className="bg-slate-50 p-3 rounded-2xl border border-slate-200 space-y-1">
                             <div className="flex justify-between items-center text-xs">
-                                <span className="font-extrabold text-slate-200">{nonStriker.name}</span>
-                                <span className="font-mono text-slate-400 text-xs">SR: {nonStrikerSR}</span>
+                                <span className="font-extrabold text-slate-800">{nonStriker.name}</span>
+                                <span className="font-mono text-slate-500 text-xs font-bold">SR: {nonStrikerSR}</span>
                             </div>
-                            <div className="flex justify-between items-baseline pt-0.5">
-                                <span className="text-xl font-extrabold text-slate-100">{nonStriker.runs} <span className="text-xs text-slate-400 font-normal">({nonStriker.balls})</span></span>
-                                <span className="text-xs text-slate-400 font-medium">{nonStriker.fours}x4 • {nonStriker.sixes}x6</span>
+                            <div className="flex justify-between items-baseline pt-1">
+                                <span className="text-2xl font-extrabold text-slate-800">{nonStriker.runs} <span className="text-xs text-slate-500 font-normal">({nonStriker.balls})</span></span>
+                                <span className="text-xs text-slate-600 font-medium">{nonStriker.fours}×4 • {nonStriker.sixes}×6</span>
                             </div>
                         </div>
                     </div>
 
                     {/* CURRENT BOWLER CARD */}
-                    <div className="bg-[#121824] rounded-2xl border border-slate-800 p-3 space-y-2 shadow-xl">
-                        <div className="flex items-center justify-between border-b border-slate-800 pb-1.5">
-                            <span className="text-[11px] font-extrabold text-slate-400 uppercase tracking-wider">CURRENT BOWLER</span>
-                            <button onClick={() => setChangeBowlerModalOpen(true)} className="text-[10px] font-extrabold text-indigo-400 hover:underline">Change</button>
+                    <div className="bg-white/90 backdrop-blur-xl rounded-3xl border border-slate-200/80 p-4 space-y-3 shadow-sm">
+                        <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+                            <span className="text-xs font-black text-slate-500 uppercase tracking-wider">CURRENT BOWLER</span>
+                            <button onClick={() => setChangeBowlerModalOpen(true)} className="text-[10px] font-black text-indigo-600 hover:underline uppercase tracking-wider">Change</button>
                         </div>
 
-                        <div className="bg-slate-900/90 p-2.5 rounded-xl border border-indigo-500/40 space-y-1">
+                        <div className="bg-indigo-50/80 p-3 rounded-2xl border border-indigo-200 space-y-1.5 shadow-sm">
                             <div className="flex justify-between items-center text-xs">
-                                <span className="font-black text-indigo-400 text-sm">⚡ {bowler.name}</span>
-                                <span className="font-mono text-slate-300 text-xs font-bold">ECO: {bowlerEco}</span>
+                                <span className="font-black text-indigo-900 text-sm flex items-center gap-1">⚡ {bowler.name}</span>
+                                <span className="font-mono text-slate-800 text-xs font-black bg-white px-2 py-0.5 rounded-md border border-indigo-200 shadow-xs">ECO: {bowlerEco}</span>
                             </div>
-                            <div className="flex justify-between items-baseline pt-0.5 text-xs font-extrabold text-slate-300">
-                                <span>Overs: <strong className="text-white text-sm">{bowler.overs}</strong></span>
-                                <span>Runs: <strong className="text-white text-sm">{bowler.runs}</strong></span>
-                                <span>Wkts: <strong className="text-rose-400 text-sm">{bowler.wickets}</strong></span>
+                            <div className="flex justify-between items-baseline pt-1 text-xs font-black text-slate-700">
+                                <span>Overs: <strong className="text-slate-900 text-base font-black">{bowler.overs}</strong></span>
+                                <span>Runs: <strong className="text-slate-900 text-base font-black">{bowler.runs}</strong></span>
+                                <span>Wkts: <strong className="text-rose-600 text-base font-black">{bowler.wickets}</strong></span>
                             </div>
                         </div>
                     </div>
 
                     {/* MOBILE LIVE CARD PREVIEW */}
-                    <div className="bg-[#121824] rounded-2xl border border-slate-800 p-3 space-y-1.5 shadow-xl">
-                        <div className="flex items-center justify-between border-b border-slate-800 pb-1.5">
-                            <span className="text-[11px] font-black text-slate-300 tracking-wider flex items-center gap-1.5">
-                                <FiSmartphone className="text-emerald-400" /> MOBILE SCORECARD PREVIEW
+                    <div className="bg-white/90 backdrop-blur-xl rounded-3xl border border-slate-200/80 p-4 space-y-2 shadow-sm">
+                        <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+                            <span className="text-xs font-black text-slate-800 tracking-wider flex items-center gap-2">
+                                <FiSmartphone className="text-emerald-600" /> MOBILE SCORECARD PREVIEW
                             </span>
                         </div>
 
-                        <div className="bg-slate-950 p-2.5 rounded-xl border border-emerald-500/30 space-y-1.5 font-mono text-xs">
-                            <div className="flex justify-between items-center border-b border-slate-800 pb-1">
+                        <div className="bg-slate-900 text-white p-3 rounded-2xl border border-slate-800 space-y-2 font-mono text-xs shadow-md">
+                            <div className="flex justify-between items-center border-b border-slate-800 pb-1.5">
                                 <span className="font-black text-white text-xs">{matchInfo.battingTeam}</span>
                                 <span className="font-black text-emerald-400 text-sm">{matchState.totalRuns}/{matchState.wickets} ({matchState.overs}.{matchState.balls})</span>
                             </div>
-                            <div className="space-y-0.5 text-xs text-slate-200">
+                            <div className="space-y-1 text-xs text-slate-200">
                                 <div className="flex justify-between">
-                                    <span>* {striker.name}</span>
-                                    <span className="font-bold text-white">{striker.runs} ({striker.balls})</span>
+                                    <span className="font-bold text-emerald-300">* {striker.name}</span>
+                                    <span className="font-black text-white">{striker.runs} ({striker.balls})</span>
                                 </div>
                                 <div className="flex justify-between text-slate-400">
                                     <span>{nonStriker.name}</span>
                                     <span>{nonStriker.runs} ({nonStriker.balls})</span>
                                 </div>
                             </div>
-                            <div className="pt-1 border-t border-slate-800 text-[10px] text-slate-400 text-center font-bold">
-                                Live Broadcast Sync Active ⚡
+                            <div className="pt-1.5 border-t border-slate-800 text-[10px] text-emerald-400 text-center font-black tracking-wider flex items-center justify-center gap-1">
+                                <span>Live Broadcast Sync Active</span>
+                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping"></span>
                             </div>
                         </div>
                     </div>
@@ -932,11 +936,11 @@ export default function CricketScorerConsole({ match, onClose }) {
             {/* ---------------------------------------------------- */}
             {/* BOTTOM PANEL: LIVE COMMENTARY & BALL HISTORY */}
             {/* ---------------------------------------------------- */}
-            <div className="bg-[#121824] border-t border-slate-800 px-4 py-2 shrink-0 shadow-2xl">
+            <div className="bg-white/90 backdrop-blur-xl border-t border-slate-200/80 px-5 py-3 shrink-0 shadow-sm z-10">
                 <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-3">
-                    <div className="flex items-center gap-2 w-full md:w-auto">
-                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest shrink-0">LIVE COMMENTARY LOG:</span>
-                        <div className="bg-slate-950 px-3 py-1.5 rounded-lg border border-slate-800 text-[11px] font-mono text-emerald-400 truncate w-full md:w-[600px]">
+                    <div className="flex items-center gap-3 w-full md:w-auto">
+                        <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest shrink-0">LIVE COMMENTARY LOG:</span>
+                        <div className="bg-slate-50 px-4 py-2 rounded-xl border border-slate-200 text-xs font-mono text-emerald-700 font-bold truncate w-full md:w-[650px] shadow-inner">
                             {matchState.ballHistory[0]?.text || 'Match in progress...'}
                         </div>
                     </div>
@@ -944,7 +948,7 @@ export default function CricketScorerConsole({ match, onClose }) {
                     <div className="flex items-center gap-2">
                         <button
                             onClick={() => addToast({ message: 'Match scorecard saved to database!', type: 'success' })}
-                            className="px-3.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-black text-xs transition-all shadow-md cursor-pointer"
+                            className="px-4 py-2 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-500 text-white font-black text-xs transition-all shadow-md shadow-emerald-600/20 cursor-pointer hover:scale-105"
                         >
                             Save Match State ✓
                         </button>
@@ -953,33 +957,34 @@ export default function CricketScorerConsole({ match, onClose }) {
             </div>
 
             {/* ==================================================== */}
+            {/* ==================================================== */}
             {/* WICKET POPUP MODAL */}
             {/* ==================================================== */}
             {wicketModalOpen && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-in fade-in duration-200">
-                    <div className="bg-[#121824] border border-slate-800 rounded-3xl max-w-md w-full p-6 space-y-5 shadow-2xl">
-                        <div className="flex justify-between items-center border-b border-slate-800 pb-3">
-                            <h3 className="text-lg font-black text-rose-500 flex items-center gap-2">
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-md animate-in fade-in duration-200">
+                    <div className="bg-white/95 backdrop-blur-2xl border border-slate-200 rounded-3xl max-w-md w-full p-6 space-y-5 shadow-2xl text-slate-900">
+                        <div className="flex justify-between items-center border-b border-slate-100 pb-3">
+                            <h3 className="text-lg font-black text-rose-600 flex items-center gap-2">
                                 🚨 RECORD WICKET DISMISSAL
                             </h3>
-                            <button onClick={() => setWicketModalOpen(false)} className="text-slate-400 hover:text-white">✕</button>
+                            <button onClick={() => setWicketModalOpen(false)} className="text-slate-400 hover:text-slate-900 text-lg">✕</button>
                         </div>
 
-                        <div className="space-y-4 text-xs font-bold text-slate-300">
+                        <div className="space-y-4 text-xs font-bold text-slate-700">
                             <div>
-                                <label className="block text-slate-400 mb-1">PLAYER OUT *</label>
-                                <div className="grid grid-cols-2 gap-2">
+                                <label className="block text-slate-500 mb-1.5 uppercase text-[10px] tracking-wider font-black">PLAYER OUT *</label>
+                                <div className="grid grid-cols-2 gap-2.5">
                                     <button
                                         type="button"
                                         onClick={() => setWicketForm({ ...wicketForm, outPlayer: 'striker' })}
-                                        className={`p-3 rounded-xl border font-bold ${wicketForm.outPlayer === 'striker' ? 'bg-rose-600 text-white border-rose-500' : 'bg-slate-900 border-slate-800 text-slate-400'}`}
+                                        className={`p-3 rounded-2xl border font-black transition-all ${wicketForm.outPlayer === 'striker' ? 'bg-gradient-to-r from-rose-600 to-red-600 text-white border-rose-500 shadow-md shadow-rose-600/20' : 'bg-slate-50 border-slate-200 text-slate-700 hover:text-slate-900'}`}
                                     >
                                         Striker ({striker.name})
                                     </button>
                                     <button
                                         type="button"
                                         onClick={() => setWicketForm({ ...wicketForm, outPlayer: 'nonStriker' })}
-                                        className={`p-3 rounded-xl border font-bold ${wicketForm.outPlayer === 'nonStriker' ? 'bg-rose-600 text-white border-rose-500' : 'bg-slate-900 border-slate-800 text-slate-400'}`}
+                                        className={`p-3 rounded-2xl border font-black transition-all ${wicketForm.outPlayer === 'nonStriker' ? 'bg-gradient-to-r from-rose-600 to-red-600 text-white border-rose-500 shadow-md shadow-rose-600/20' : 'bg-slate-50 border-slate-200 text-slate-700 hover:text-slate-900'}`}
                                     >
                                         Non-Striker ({nonStriker.name})
                                     </button>
@@ -987,11 +992,11 @@ export default function CricketScorerConsole({ match, onClose }) {
                             </div>
 
                             <div>
-                                <label className="block text-slate-400 mb-1">DISMISSAL TYPE *</label>
+                                <label className="block text-slate-500 mb-1.5 uppercase text-[10px] tracking-wider font-black">DISMISSAL TYPE *</label>
                                 <select
                                     value={wicketForm.dismissalType}
                                     onChange={(e) => setWicketForm({ ...wicketForm, dismissalType: e.target.value })}
-                                    className="w-full p-3 rounded-xl bg-slate-900 border border-slate-800 text-white font-bold outline-none"
+                                    className="w-full p-3 rounded-2xl bg-slate-50 border border-slate-200 text-slate-900 font-black outline-none focus:border-rose-500 transition-all cursor-pointer"
                                 >
                                     {['Bowled', 'LBW', 'Caught', 'Run Out', 'Stumped', 'Hit Wicket', 'Retired Out'].map(dt => (
                                         <option key={dt} value={dt}>{dt}</option>
@@ -1000,11 +1005,11 @@ export default function CricketScorerConsole({ match, onClose }) {
                             </div>
 
                             <div>
-                                <label className="block text-slate-400 mb-1">SELECT NEW BATSMAN *</label>
+                                <label className="block text-slate-500 mb-1.5 uppercase text-[10px] tracking-wider font-black">SELECT NEW BATSMAN *</label>
                                 <select
                                     value={wicketForm.newBatsman}
                                     onChange={(e) => setWicketForm({ ...wicketForm, newBatsman: e.target.value })}
-                                    className="w-full p-3 rounded-xl bg-slate-900 border border-slate-800 text-white font-bold outline-none"
+                                    className="w-full p-3 rounded-2xl bg-slate-50 border border-slate-200 text-slate-900 font-black outline-none focus:border-emerald-500 transition-all cursor-pointer"
                                 >
                                     {squadBatting.map(b => (
                                         <option key={b} value={b}>{b}</option>
@@ -1013,11 +1018,11 @@ export default function CricketScorerConsole({ match, onClose }) {
                             </div>
                         </div>
 
-                        <div className="flex justify-end gap-3 pt-3 border-t border-slate-800">
-                            <button onClick={() => setWicketModalOpen(false)} className="px-4 py-2 rounded-xl bg-slate-800 text-slate-400 font-bold text-xs">
+                        <div className="flex justify-end gap-3 pt-3 border-t border-slate-100">
+                            <button onClick={() => setWicketModalOpen(false)} className="px-4 py-2.5 rounded-xl bg-slate-100 text-slate-600 hover:text-slate-900 font-extrabold text-xs">
                                 Cancel
                             </button>
-                            <button onClick={handleConfirmWicket} className="px-5 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-black text-xs shadow-lg">
+                            <button onClick={handleConfirmWicket} className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-rose-600 to-red-600 hover:from-rose-500 hover:to-red-500 text-white font-black text-xs shadow-md shadow-rose-600/20">
                                 Confirm Wicket ✓
                             </button>
                         </div>
@@ -1029,23 +1034,23 @@ export default function CricketScorerConsole({ match, onClose }) {
             {/* WIDE POPUP MODAL */}
             {/* ==================================================== */}
             {wideModalOpen && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-in fade-in duration-200">
-                    <div className="bg-[#121824] border border-slate-800 rounded-3xl max-w-sm w-full p-6 space-y-4 shadow-2xl text-center">
-                        <h3 className="text-lg font-black text-amber-400">RECORD WIDE BALL</h3>
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-md animate-in fade-in duration-200">
+                    <div className="bg-white/95 backdrop-blur-2xl border border-slate-200 rounded-3xl max-w-sm w-full p-6 space-y-4 shadow-2xl text-center text-slate-900">
+                        <h3 className="text-lg font-black text-amber-600 tracking-wide">RECORD WIDE BALL</h3>
                         <div className="flex justify-center gap-2">
                             {[1, 2, 3, 4, 5].map(r => (
                                 <button
                                     key={r}
                                     onClick={() => setExtraValue(r)}
-                                    className={`w-12 h-12 rounded-xl font-black text-lg border ${extraValue === r ? 'bg-amber-500 text-slate-950 border-amber-400' : 'bg-slate-900 border-slate-800 text-slate-300'}`}
+                                    className={`w-12 h-12 rounded-2xl font-black text-lg border transition-all ${extraValue === r ? 'bg-amber-500 text-white border-amber-400 shadow-md shadow-amber-500/20 scale-105' : 'bg-slate-50 border-slate-200 text-slate-800 hover:border-amber-400'}`}
                                 >
                                     +{r}
                                 </button>
                             ))}
                         </div>
-                        <div className="flex justify-end gap-2 pt-2">
-                            <button onClick={() => setWideModalOpen(false)} className="px-4 py-2 rounded-xl bg-slate-800 text-xs font-bold">Cancel</button>
-                            <button onClick={handleConfirmWide} className="px-4 py-2 rounded-xl bg-amber-500 text-slate-950 font-black text-xs">Save Wide</button>
+                        <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
+                            <button onClick={() => setWideModalOpen(false)} className="px-4 py-2 rounded-xl bg-slate-100 text-xs font-extrabold text-slate-600">Cancel</button>
+                            <button onClick={handleConfirmWide} className="px-5 py-2 rounded-xl bg-amber-500 text-white font-black text-xs shadow-md">Save Wide</button>
                         </div>
                     </div>
                 </div>
@@ -1055,23 +1060,23 @@ export default function CricketScorerConsole({ match, onClose }) {
             {/* NO BALL POPUP MODAL */}
             {/* ==================================================== */}
             {noBallModalOpen && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-in fade-in duration-200">
-                    <div className="bg-[#121824] border border-slate-800 rounded-3xl max-w-sm w-full p-6 space-y-4 shadow-2xl text-center">
-                        <h3 className="text-lg font-black text-amber-400">RECORD NO BALL (FREE HIT)</h3>
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-md animate-in fade-in duration-200">
+                    <div className="bg-white/95 backdrop-blur-2xl border border-slate-200 rounded-3xl max-w-sm w-full p-6 space-y-4 shadow-2xl text-center text-slate-900">
+                        <h3 className="text-lg font-black text-amber-600 tracking-wide">RECORD NO BALL (FREE HIT)</h3>
                         <div className="flex justify-center gap-2">
                             {[1, 2, 3, 4, 5, 7].map(r => (
                                 <button
                                     key={r}
                                     onClick={() => setExtraValue(r)}
-                                    className={`w-12 h-12 rounded-xl font-black text-lg border ${extraValue === r ? 'bg-amber-500 text-slate-950 border-amber-400' : 'bg-slate-900 border-slate-800 text-slate-300'}`}
+                                    className={`w-12 h-12 rounded-2xl font-black text-lg border transition-all ${extraValue === r ? 'bg-amber-500 text-white border-amber-400 shadow-md shadow-amber-500/20 scale-105' : 'bg-slate-50 border-slate-200 text-slate-800 hover:border-amber-400'}`}
                                 >
                                     +{r}
                                 </button>
                             ))}
                         </div>
-                        <div className="flex justify-end gap-2 pt-2">
-                            <button onClick={() => setNoBallModalOpen(false)} className="px-4 py-2 rounded-xl bg-slate-800 text-xs font-bold">Cancel</button>
-                            <button onClick={handleConfirmNoBall} className="px-4 py-2 rounded-xl bg-amber-500 text-slate-950 font-black text-xs">Save No Ball</button>
+                        <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
+                            <button onClick={() => setNoBallModalOpen(false)} className="px-4 py-2 rounded-xl bg-slate-100 text-xs font-extrabold text-slate-600">Cancel</button>
+                            <button onClick={handleConfirmNoBall} className="px-5 py-2 rounded-xl bg-amber-500 text-white font-black text-xs shadow-md">Save No Ball</button>
                         </div>
                     </div>
                 </div>
@@ -1081,23 +1086,23 @@ export default function CricketScorerConsole({ match, onClose }) {
             {/* BYE POPUP MODAL */}
             {/* ==================================================== */}
             {byeModalOpen && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-in fade-in duration-200">
-                    <div className="bg-[#121824] border border-slate-800 rounded-3xl max-w-sm w-full p-6 space-y-4 shadow-2xl text-center">
-                        <h3 className="text-lg font-black text-indigo-400">RECORD BYE RUNS</h3>
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-md animate-in fade-in duration-200">
+                    <div className="bg-white/95 backdrop-blur-2xl border border-slate-200 rounded-3xl max-w-sm w-full p-6 space-y-4 shadow-2xl text-center text-slate-900">
+                        <h3 className="text-lg font-black text-indigo-600 tracking-wide">RECORD BYE RUNS</h3>
                         <div className="flex justify-center gap-2">
                             {[1, 2, 3, 4].map(r => (
                                 <button
                                     key={r}
                                     onClick={() => setExtraValue(r)}
-                                    className={`w-12 h-12 rounded-xl font-black text-lg border ${extraValue === r ? 'bg-indigo-600 text-white border-indigo-400' : 'bg-slate-900 border-slate-800 text-slate-300'}`}
+                                    className={`w-12 h-12 rounded-2xl font-black text-lg border transition-all ${extraValue === r ? 'bg-indigo-600 text-white border-indigo-500 shadow-md shadow-indigo-600/20 scale-105' : 'bg-slate-50 border-slate-200 text-slate-800 hover:border-indigo-400'}`}
                                 >
                                     {r}B
                                 </button>
                             ))}
                         </div>
-                        <div className="flex justify-end gap-2 pt-2">
-                            <button onClick={() => setByeModalOpen(false)} className="px-4 py-2 rounded-xl bg-slate-800 text-xs font-bold">Cancel</button>
-                            <button onClick={handleConfirmBye} className="px-4 py-2 rounded-xl bg-indigo-600 text-white font-black text-xs">Save Bye</button>
+                        <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
+                            <button onClick={() => setByeModalOpen(false)} className="px-4 py-2 rounded-xl bg-slate-100 text-xs font-extrabold text-slate-600">Cancel</button>
+                            <button onClick={handleConfirmBye} className="px-5 py-2 rounded-xl bg-indigo-600 text-white font-black text-xs shadow-md">Save Bye</button>
                         </div>
                     </div>
                 </div>
@@ -1107,23 +1112,23 @@ export default function CricketScorerConsole({ match, onClose }) {
             {/* LEG BYE POPUP MODAL */}
             {/* ==================================================== */}
             {legByeModalOpen && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-in fade-in duration-200">
-                    <div className="bg-[#121824] border border-slate-800 rounded-3xl max-w-sm w-full p-6 space-y-4 shadow-2xl text-center">
-                        <h3 className="text-lg font-black text-indigo-400">RECORD LEG BYE RUNS</h3>
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-md animate-in fade-in duration-200">
+                    <div className="bg-white/95 backdrop-blur-2xl border border-slate-200 rounded-3xl max-w-sm w-full p-6 space-y-4 shadow-2xl text-center text-slate-900">
+                        <h3 className="text-lg font-black text-indigo-600 tracking-wide">RECORD LEG BYE RUNS</h3>
                         <div className="flex justify-center gap-2">
                             {[1, 2, 3, 4].map(r => (
                                 <button
                                     key={r}
                                     onClick={() => setExtraValue(r)}
-                                    className={`w-12 h-12 rounded-xl font-black text-lg border ${extraValue === r ? 'bg-indigo-600 text-white border-indigo-400' : 'bg-slate-900 border-slate-800 text-slate-300'}`}
+                                    className={`w-12 h-12 rounded-2xl font-black text-lg border transition-all ${extraValue === r ? 'bg-indigo-600 text-white border-indigo-500 shadow-md shadow-indigo-600/20 scale-105' : 'bg-slate-50 border-slate-200 text-slate-800 hover:border-indigo-400'}`}
                                 >
                                     {r}LB
                                 </button>
                             ))}
                         </div>
-                        <div className="flex justify-end gap-2 pt-2">
-                            <button onClick={() => setLegByeModalOpen(false)} className="px-4 py-2 rounded-xl bg-slate-800 text-xs font-bold">Cancel</button>
-                            <button onClick={handleConfirmLegBye} className="px-4 py-2 rounded-xl bg-indigo-600 text-white font-black text-xs">Save Leg Bye</button>
+                        <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
+                            <button onClick={() => setLegByeModalOpen(false)} className="px-4 py-2 rounded-xl bg-slate-100 text-xs font-extrabold text-slate-600">Cancel</button>
+                            <button onClick={handleConfirmLegBye} className="px-5 py-2 rounded-xl bg-indigo-600 text-white font-black text-xs shadow-md">Save Leg Bye</button>
                         </div>
                     </div>
                 </div>
@@ -1133,10 +1138,10 @@ export default function CricketScorerConsole({ match, onClose }) {
             {/* CHANGE BOWLER MODAL */}
             {/* ==================================================== */}
             {changeBowlerModalOpen && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-in fade-in duration-200">
-                    <div className="bg-[#121824] border border-slate-800 rounded-3xl max-w-sm w-full p-6 space-y-4 shadow-2xl">
-                        <h3 className="text-lg font-black text-indigo-400">SELECT NEW BOWLER</h3>
-                        <div className="space-y-2 max-h-60 overflow-y-auto">
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-md animate-in fade-in duration-200">
+                    <div className="bg-white/95 backdrop-blur-2xl border border-slate-200 rounded-3xl max-w-sm w-full p-6 space-y-4 shadow-2xl text-slate-900">
+                        <h3 className="text-lg font-black text-indigo-600 tracking-wide">SELECT NEW BOWLER</h3>
+                        <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
                             {squadBowling.map(b => (
                                 <button
                                     key={b}
@@ -1145,14 +1150,14 @@ export default function CricketScorerConsole({ match, onClose }) {
                                         setChangeBowlerModalOpen(false)
                                         addToast({ message: `Bowler changed to ${b}`, type: 'info' })
                                     }}
-                                    className="w-full text-left p-3 rounded-xl bg-slate-900 hover:bg-indigo-900/50 border border-slate-800 text-xs font-bold text-slate-200 flex justify-between items-center"
+                                    className="w-full text-left p-3 rounded-2xl bg-slate-50 hover:bg-indigo-50 border border-slate-200 hover:border-indigo-300 text-xs font-bold text-slate-800 flex justify-between items-center transition-all"
                                 >
-                                    <span>⚡ {b}</span>
-                                    <span className="text-slate-500 font-normal">Select →</span>
+                                    <span className="font-black text-slate-900">⚡ {b}</span>
+                                    <span className="text-indigo-600 font-extrabold text-[10px]">Select →</span>
                                 </button>
                             ))}
                         </div>
-                        <button onClick={() => setChangeBowlerModalOpen(false)} className="w-full py-2 rounded-xl bg-slate-800 text-xs font-bold">Cancel</button>
+                        <button onClick={() => setChangeBowlerModalOpen(false)} className="w-full py-2.5 rounded-2xl bg-slate-100 text-xs font-extrabold text-slate-600 hover:text-slate-900">Cancel</button>
                     </div>
                 </div>
             )}
@@ -1161,10 +1166,10 @@ export default function CricketScorerConsole({ match, onClose }) {
             {/* NEW BATSMAN MODAL */}
             {/* ==================================================== */}
             {newBatsmanModalOpen && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-in fade-in duration-200">
-                    <div className="bg-[#121824] border border-slate-800 rounded-3xl max-w-sm w-full p-6 space-y-4 shadow-2xl">
-                        <h3 className="text-lg font-black text-emerald-400">SELECT NEW BATSMAN</h3>
-                        <div className="space-y-2 max-h-60 overflow-y-auto">
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-md animate-in fade-in duration-200">
+                    <div className="bg-white/95 backdrop-blur-2xl border border-slate-200 rounded-3xl max-w-sm w-full p-6 space-y-4 shadow-2xl text-slate-900">
+                        <h3 className="text-lg font-black text-emerald-600 tracking-wide">SELECT NEW BATSMAN</h3>
+                        <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
                             {squadBatting.map(b => (
                                 <button
                                     key={b}
@@ -1173,14 +1178,14 @@ export default function CricketScorerConsole({ match, onClose }) {
                                         setNewBatsmanModalOpen(false)
                                         addToast({ message: `New batsman ${b} came to crease`, type: 'info' })
                                     }}
-                                    className="w-full text-left p-3 rounded-xl bg-slate-900 hover:bg-emerald-900/50 border border-slate-800 text-xs font-bold text-slate-200 flex justify-between items-center"
+                                    className="w-full text-left p-3 rounded-2xl bg-slate-50 hover:bg-emerald-50 border border-slate-200 hover:border-emerald-300 text-xs font-bold text-slate-800 flex justify-between items-center transition-all"
                                 >
-                                    <span>🏏 {b}</span>
-                                    <span className="text-slate-500 font-normal">Select →</span>
+                                    <span className="font-black text-slate-900">🏏 {b}</span>
+                                    <span className="text-emerald-600 font-extrabold text-[10px]">Select →</span>
                                 </button>
                             ))}
                         </div>
-                        <button onClick={() => setNewBatsmanModalOpen(false)} className="w-full py-2 rounded-xl bg-slate-800 text-xs font-bold">Cancel</button>
+                        <button onClick={() => setNewBatsmanModalOpen(false)} className="w-full py-2.5 rounded-2xl bg-slate-100 text-xs font-extrabold text-slate-600 hover:text-slate-900">Cancel</button>
                     </div>
                 </div>
             )}
@@ -1194,7 +1199,7 @@ export default function CricketScorerConsole({ match, onClose }) {
                     {/* TOP ACTION BAR & ORIENTATION TOGGLE */}
                     <div className={`w-full flex items-center justify-between gap-2 mb-2 px-1 transition-all ${isLandscapeMode ? 'max-w-[880px]' : 'max-w-[420px]'}`}>
                         {/* PREVIEW LABEL */}
-                        <div className="flex items-center gap-1.5">
+                        <div className="flex items-center gap-2">
                             <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping"></span>
                             <h3 className="font-black text-white text-xs sm:text-sm tracking-wide">
                                 {liveModalTab === 'controller' 
@@ -1210,9 +1215,9 @@ export default function CricketScorerConsole({ match, onClose }) {
                             <button
                                 onClick={() => setIsLandscapeMode(!isLandscapeMode)}
                                 title="Toggle Landscape/Portrait Mode"
-                                className={`px-2.5 py-1 rounded-xl text-[10px] font-black border transition-all cursor-pointer flex items-center gap-1 ${
+                                className={`px-3 py-1.5 rounded-xl text-[10px] font-black border transition-all cursor-pointer flex items-center gap-1 ${
                                     isLandscapeMode
-                                        ? 'bg-indigo-600 text-white border-indigo-400 shadow-md'
+                                        ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white border-indigo-400 shadow-md'
                                         : 'bg-slate-900 text-slate-300 border-slate-800 hover:text-white'
                                 }`}
                             >
@@ -1223,7 +1228,7 @@ export default function CricketScorerConsole({ match, onClose }) {
                             <div className="bg-slate-900 p-0.5 rounded-xl border border-slate-800 flex items-center gap-0.5">
                                 <button
                                     onClick={() => setLiveModalTab('scorecard')}
-                                    className={`px-2 py-1 rounded-lg text-[10px] font-black transition-all cursor-pointer ${
+                                    className={`px-2.5 py-1 rounded-lg text-[10px] font-black transition-all cursor-pointer ${
                                         liveModalTab === 'scorecard'
                                             ? 'bg-emerald-500 text-slate-950 shadow-sm'
                                             : 'text-slate-400 hover:text-white'
@@ -1233,7 +1238,7 @@ export default function CricketScorerConsole({ match, onClose }) {
                                 </button>
                                 <button
                                     onClick={() => setLiveModalTab('controller')}
-                                    className={`px-2 py-1 rounded-lg text-[10px] font-black transition-all cursor-pointer ${
+                                    className={`px-2.5 py-1 rounded-lg text-[10px] font-black transition-all cursor-pointer ${
                                         liveModalTab === 'controller'
                                             ? 'bg-indigo-500 text-white shadow-sm'
                                             : 'text-slate-400 hover:text-white'
@@ -1249,7 +1254,7 @@ export default function CricketScorerConsole({ match, onClose }) {
                                     addToast({ message: 'Link copied to clipboard!', type: 'success' })
                                 }}
                                 title="Copy Share Link"
-                                className="p-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-emerald-400 border border-slate-800 text-xs font-extrabold transition-all cursor-pointer shadow-md"
+                                className="p-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-emerald-400 border border-slate-800 text-xs font-extrabold transition-all cursor-pointer shadow-md"
                             >
                                 🔗
                             </button>
@@ -1260,7 +1265,7 @@ export default function CricketScorerConsole({ match, onClose }) {
                                     addToast({ message: 'Opened in new tab!', type: 'info' })
                                 }}
                                 title="Open in New Tab"
-                                className="p-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-indigo-400 border border-slate-800 text-xs font-extrabold transition-all cursor-pointer shadow-md"
+                                className="p-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-indigo-400 border border-slate-800 text-xs font-extrabold transition-all cursor-pointer shadow-md"
                             >
                                 ↗️
                             </button>
@@ -1268,14 +1273,14 @@ export default function CricketScorerConsole({ match, onClose }) {
                             <button
                                 onClick={() => setQrModalOpen(true)}
                                 title="Generate QR Code"
-                                className="p-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-amber-400 border border-slate-800 text-xs font-extrabold transition-all cursor-pointer shadow-md"
+                                className="p-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-amber-400 border border-slate-800 text-xs font-extrabold transition-all cursor-pointer shadow-md"
                             >
                                 🔳
                             </button>
 
                             <button
                                 onClick={() => setLiveScoreModalOpen(false)}
-                                className="p-1.5 rounded-xl bg-slate-900 hover:bg-rose-950 text-slate-400 hover:text-white border border-slate-800 transition-all cursor-pointer"
+                                className="p-2 rounded-xl bg-slate-900 hover:bg-rose-950 text-slate-400 hover:text-white border border-slate-800 transition-all cursor-pointer"
                             >
                                 <FiX className="w-4 h-4" />
                             </button>
@@ -1296,28 +1301,28 @@ export default function CricketScorerConsole({ match, onClose }) {
                         </div>
 
                         {/* MOBILE VIEWPORT SCREEN CONTAINER */}
-                        <div className="w-full bg-[#0B0F17] rounded-[28px] overflow-y-auto max-h-[80vh] p-2 space-y-2 scrollbar-none border border-slate-800/80 text-white font-sans text-xs">
+                        <div className="w-full bg-slate-950 rounded-[28px] overflow-y-auto max-h-[80vh] p-2.5 space-y-2.5 scrollbar-none border border-slate-800/80 text-white font-sans text-xs">
                             
                             {/* IF LIVE SCORECARD TAB IS SELECTED */}
                             {liveModalTab === 'scorecard' ? (
                                 <>
                                     {/* 1. LIVE MATCH STATUS & CURRENT SCORE HERO CARD */}
-                                    <div className="bg-[#121824] rounded-2xl border border-slate-800 p-2.5 space-y-1.5 shadow-xl">
-                                        <div className="flex items-center justify-between border-b border-slate-800 pb-1">
+                                    <div className="bg-slate-900/90 rounded-2xl border border-slate-800 p-3 space-y-2 shadow-xl">
+                                        <div className="flex items-center justify-between border-b border-slate-800/80 pb-1.5">
                                             <div className="flex items-center gap-1.5">
                                                 <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
                                                 <span className="text-[10px] font-black text-emerald-400 uppercase tracking-wider">🟢 LIVE INNINGS 1</span>
                                             </div>
-                                            <span className="text-[10px] font-black text-slate-400 bg-slate-900 px-2 py-0.5 rounded border border-slate-800">
+                                            <span className="text-[10px] font-black text-slate-300 bg-slate-950 px-2.5 py-0.5 rounded-full border border-slate-800">
                                                 {matchInfo.battingTeam}
                                             </span>
                                         </div>
 
                                         {/* BIG SCORE DISPLAY */}
-                                        <div className="bg-gradient-to-br from-slate-900 via-slate-950 to-[#0B0F17] p-2 rounded-xl border border-slate-800/80 text-center relative overflow-hidden shadow-inner">
-                                            <div className="absolute -top-10 -right-10 w-20 h-20 bg-emerald-500/10 rounded-full blur-xl"></div>
+                                        <div className="bg-gradient-to-br from-slate-900 via-slate-950 to-slate-900 p-3 rounded-2xl border border-emerald-500/20 text-center relative overflow-hidden shadow-inner">
+                                            <div className="absolute -top-10 -right-10 w-24 h-24 bg-emerald-500/10 rounded-full blur-xl"></div>
                                             <div className="text-[9px] text-slate-400 font-black uppercase tracking-widest">CURRENT SCORE</div>
-                                            <div className="text-4xl font-black tracking-tight text-white flex items-center justify-center gap-1 my-0.5 drop-shadow-md">
+                                            <div className="text-4xl font-black tracking-tight text-white flex items-center justify-center gap-1 my-1 drop-shadow-md">
                                                 <span className="text-emerald-400">{matchState.totalRuns}</span>
                                                 <span className="text-slate-600">/</span>
                                                 <span className="text-rose-500">{matchState.wickets}</span>
@@ -1328,12 +1333,12 @@ export default function CricketScorerConsole({ match, onClose }) {
                                         </div>
 
                                         {/* MATCH PROGRESS BAR */}
-                                        <div className="space-y-0.5">
-                                            <div className="flex justify-between text-[8px] font-black text-slate-400 uppercase">
+                                        <div className="space-y-1">
+                                            <div className="flex justify-between text-[9px] font-black text-slate-400 uppercase">
                                                 <span>Progress</span>
                                                 <span className="text-emerald-400">{((matchState.overs * 6 + matchState.balls) / 120 * 100).toFixed(0)}%</span>
                                             </div>
-                                            <div className="w-full h-1 rounded-full bg-slate-900 border border-slate-800 overflow-hidden">
+                                            <div className="w-full h-1.5 rounded-full bg-slate-950 border border-slate-800 overflow-hidden">
                                                 <div 
                                                     className="h-full bg-gradient-to-r from-emerald-500 to-teal-400 rounded-full"
                                                     style={{ width: `${Math.min(100, ((matchState.overs * 6 + matchState.balls) / 120 * 100))}%` }}
@@ -1342,16 +1347,16 @@ export default function CricketScorerConsole({ match, onClose }) {
                                         </div>
 
                                         {/* CRR & TARGET & NEED */}
-                                        <div className="grid grid-cols-3 gap-1 text-center font-mono pt-0.5">
-                                            <div className="bg-slate-900 p-1 rounded-lg border border-slate-800">
+                                        <div className="grid grid-cols-3 gap-1.5 text-center font-mono pt-1">
+                                            <div className="bg-slate-950 p-1.5 rounded-xl border border-slate-800">
                                                 <div className="text-[8px] font-black text-slate-400">CRR</div>
                                                 <div className="text-xs font-black text-emerald-400 mt-0.5">{crr}</div>
                                             </div>
-                                            <div className="bg-slate-900 p-1 rounded-lg border border-slate-800">
+                                            <div className="bg-slate-950 p-1.5 rounded-xl border border-slate-800">
                                                 <div className="text-[8px] font-black text-slate-400">TARGET</div>
                                                 <div className="text-xs font-black text-indigo-400 mt-0.5">{matchInfo.target}</div>
                                             </div>
-                                            <div className="bg-slate-900 p-1 rounded-lg border border-slate-800">
+                                            <div className="bg-slate-950 p-1.5 rounded-xl border border-slate-800">
                                                 <div className="text-[8px] font-black text-slate-400">NEED</div>
                                                 <div className="text-[10px] font-black text-amber-400 mt-0.5">23 in 26b</div>
                                             </div>
@@ -1359,29 +1364,29 @@ export default function CricketScorerConsole({ match, onClose }) {
                                     </div>
 
                                     {/* CURRENT BATSMEN CARD */}
-                                    <div className="bg-[#121824] rounded-2xl border border-slate-800 p-2 space-y-1 shadow-xl">
-                                        <div className="text-[9px] font-black text-emerald-400 uppercase tracking-wider border-b border-slate-800 pb-0.5 flex justify-between">
+                                    <div className="bg-slate-900/90 rounded-2xl border border-slate-800 p-2.5 space-y-1.5 shadow-xl">
+                                        <div className="text-[9px] font-black text-emerald-400 uppercase tracking-wider border-b border-slate-800/80 pb-1 flex justify-between">
                                             <span>🏏 CURRENT BATSMEN</span>
                                             <span>SR</span>
                                         </div>
-                                        <div className="space-y-1">
-                                            <div className="flex justify-between items-center bg-slate-950 p-1.5 rounded-lg border border-emerald-500/30">
+                                        <div className="space-y-1.5">
+                                            <div className="flex justify-between items-center bg-slate-950 p-2 rounded-xl border border-emerald-500/30">
                                                 <div>
-                                                    <div className="font-black text-white text-[11px] flex items-center gap-1">⭐ {striker.name}</div>
-                                                    <div className="text-[8px] text-slate-400">{striker.fours}x4 • {striker.sixes}x6</div>
+                                                    <div className="font-black text-white text-xs flex items-center gap-1">⭐ {striker.name}</div>
+                                                    <div className="text-[8px] text-slate-400">{striker.fours}×4 • {striker.sixes}×6</div>
                                                 </div>
                                                 <div className="text-right font-mono">
-                                                    <div className="font-black text-emerald-400 text-[11px]">{striker.runs} <span className="text-slate-400 text-[9px]">({striker.balls})</span></div>
+                                                    <div className="font-black text-emerald-400 text-xs">{striker.runs} <span className="text-slate-400 text-[9px]">({striker.balls})</span></div>
                                                     <div className="text-[8px] text-slate-400">{((striker.runs / (striker.balls || 1)) * 100).toFixed(1)}</div>
                                                 </div>
                                             </div>
-                                            <div className="flex justify-between items-center bg-slate-950 p-1.5 rounded-lg border border-slate-800">
+                                            <div className="flex justify-between items-center bg-slate-950 p-2 rounded-xl border border-slate-800">
                                                 <div>
-                                                    <div className="font-bold text-slate-300 text-[11px]">{nonStriker.name}</div>
-                                                    <div className="text-[8px] text-slate-500">{nonStriker.fours}x4 • {nonStriker.sixes}x6</div>
+                                                    <div className="font-extrabold text-slate-300 text-xs">{nonStriker.name}</div>
+                                                    <div className="text-[8px] text-slate-500">{nonStriker.fours}×4 • {nonStriker.sixes}×6</div>
                                                 </div>
                                                 <div className="text-right font-mono">
-                                                    <div className="font-bold text-slate-200 text-[11px]">{nonStriker.runs} <span className="text-slate-500 text-[9px]">({nonStriker.balls})</span></div>
+                                                    <div className="font-bold text-slate-200 text-xs">{nonStriker.runs} <span className="text-slate-500 text-[9px]">({nonStriker.balls})</span></div>
                                                     <div className="text-[8px] text-slate-500">{((nonStriker.runs / (nonStriker.balls || 1)) * 100).toFixed(1)}</div>
                                                 </div>
                                             </div>
@@ -1389,35 +1394,35 @@ export default function CricketScorerConsole({ match, onClose }) {
                                     </div>
 
                                     {/* CURRENT BOWLER CARD */}
-                                    <div className="bg-[#121824] rounded-2xl border border-slate-800 p-2 space-y-1 shadow-xl">
-                                        <div className="text-[9px] font-black text-indigo-400 uppercase tracking-wider border-b border-slate-800 pb-0.5 flex justify-between">
+                                    <div className="bg-slate-900/90 rounded-2xl border border-slate-800 p-2.5 space-y-1.5 shadow-xl">
+                                        <div className="text-[9px] font-black text-indigo-400 uppercase tracking-wider border-b border-slate-800/80 pb-1 flex justify-between">
                                             <span>🎯 CURRENT BOWLER</span>
                                             <span>ECON</span>
                                         </div>
-                                        <div className="bg-slate-950 p-1.5 rounded-lg border border-indigo-500/30 space-y-0.5">
+                                        <div className="bg-slate-950 p-2 rounded-xl border border-indigo-500/30 space-y-1">
                                             <div className="flex justify-between items-center">
-                                                <span className="font-black text-white text-[11px]">{bowler.name}</span>
-                                                <span className="text-indigo-400 font-mono font-black text-[11px]">
+                                                <span className="font-black text-white text-xs">⚡ {bowler.name}</span>
+                                                <span className="text-indigo-400 font-mono font-black text-xs">
                                                     {(bowler.runs / (parseFloat(bowler.overs) || 1)).toFixed(2)}
                                                 </span>
                                             </div>
-                                            <div className="grid grid-cols-4 gap-1 text-center font-mono text-[8px] text-slate-300 pt-0.5 border-t border-slate-800">
+                                            <div className="grid grid-cols-4 gap-1 text-center font-mono text-[9px] text-slate-300 pt-1 border-t border-slate-800/80 font-bold">
                                                 <div><span className="text-slate-500">O:</span> {bowler.overs}</div>
                                                 <div><span className="text-slate-500">R:</span> {bowler.runs}</div>
-                                                <div><span className="text-emerald-400 font-bold">W:</span> {bowler.wickets}</div>
+                                                <div><span className="text-emerald-400 font-black">W:</span> {bowler.wickets}</div>
                                                 <div><span className="text-slate-500">M:</span> {bowler.maiden}</div>
                                             </div>
                                         </div>
                                     </div>
 
                                     {/* CURRENT OVER BALLS TICKER */}
-                                    <div className="bg-[#121824] rounded-2xl border border-slate-800 p-2 space-y-1 shadow-xl">
+                                    <div className="bg-slate-900/90 rounded-2xl border border-slate-800 p-2.5 space-y-1.5 shadow-xl">
                                         <div className="text-[9px] font-black text-slate-400 uppercase tracking-wider">CURRENT OVER BALLS</div>
-                                        <div className="flex items-center gap-1">
+                                        <div className="flex items-center gap-1.5">
                                             {matchState.currentOverBalls.map((b, idx) => (
                                                 <span
                                                     key={idx}
-                                                    className={`w-6 h-6 rounded-md flex items-center justify-center font-black text-[10px] shadow-md ${
+                                                    className={`w-7 h-7 rounded-lg flex items-center justify-center font-black text-xs shadow-md ${
                                                         b.label === 'W'
                                                             ? 'bg-rose-600 text-white'
                                                             : b.label === '6' || b.label === '4'
@@ -1440,7 +1445,7 @@ export default function CricketScorerConsole({ match, onClose }) {
                                     {/* LEFT PANEL (~28% / col-span-3) */}
                                     <div className="col-span-3 space-y-1.5">
                                         {/* CURRENT SCORE CARD */}
-                                        <div className="bg-[#121824] rounded-xl border border-slate-800 p-2 space-y-1 shadow-md text-center">
+                                        <div className="bg-slate-900/90 rounded-xl border border-slate-800 p-2 space-y-1 shadow-md text-center">
                                             <div className="text-[8px] font-black text-slate-400 uppercase">CURRENT SCORE</div>
                                             <div className="text-2xl font-black text-white flex items-center justify-center gap-0.5">
                                                 <span className="text-emerald-400">{matchState.totalRuns}</span>
@@ -1450,7 +1455,7 @@ export default function CricketScorerConsole({ match, onClose }) {
                                             <div className="text-[10px] font-bold text-slate-300">
                                                 OV: <span className="text-white font-black">{matchState.overs}.{matchState.balls}</span> <span className="text-slate-500 text-[8px]">(20.0)</span>
                                             </div>
-                                            <div className="w-full h-1 rounded-full bg-slate-900 overflow-hidden mt-1">
+                                            <div className="w-full h-1 rounded-full bg-slate-950 overflow-hidden mt-1">
                                                 <div className="h-full bg-emerald-500" style={{ width: `${Math.min(100, ((matchState.overs * 6 + matchState.balls) / 120 * 100))}%` }}></div>
                                             </div>
                                         </div>
@@ -1484,7 +1489,7 @@ export default function CricketScorerConsole({ match, onClose }) {
                                         </div>
 
                                         {/* CURRENT OVER BALLS TICKER */}
-                                        <div className="bg-[#121824] p-1.5 rounded-xl border border-slate-800 space-y-1">
+                                        <div className="bg-slate-900/90 p-1.5 rounded-xl border border-slate-800 space-y-1">
                                             <div className="text-[8px] font-black text-slate-400 uppercase">OVER BALLS</div>
                                             <div className="flex items-center gap-1 flex-wrap">
                                                 {matchState.currentOverBalls.map((b, idx) => (
@@ -1504,7 +1509,7 @@ export default function CricketScorerConsole({ match, onClose }) {
                                     {/* CENTER PANEL (~44% / col-span-6) */}
                                     <div className="col-span-6 space-y-1.5">
                                         {/* RUN BUTTONS (0 1 2 / 3 4 6) */}
-                                        <div className="bg-[#121824] rounded-xl border border-slate-800 p-1.5 space-y-1 shadow-md">
+                                        <div className="bg-slate-900/90 rounded-xl border border-slate-800 p-1.5 space-y-1 shadow-md">
                                             <div className="text-[8px] font-black text-slate-400 uppercase">RUN CONTROLS</div>
                                             <div className="grid grid-cols-3 gap-1">
                                                 {[0, 1, 2, 3, 4, 6].map(runs => (
@@ -1513,7 +1518,7 @@ export default function CricketScorerConsole({ match, onClose }) {
                                                         onClick={() => recordBall({ type: 'run', runs, label: String(runs), isLegal: true })}
                                                         className={`h-11 rounded-lg font-black text-lg transition-all active:scale-95 cursor-pointer flex items-center justify-center ${
                                                             runs === 6
-                                                                ? 'bg-gradient-to-tr from-emerald-600 to-teal-500 text-slate-950 shadow-sm'
+                                                                ? 'bg-gradient-to-tr from-emerald-500 to-teal-400 text-slate-950 shadow-sm'
                                                                 : runs === 4
                                                                 ? 'bg-gradient-to-tr from-indigo-600 to-blue-500 text-white shadow-sm'
                                                                 : 'bg-slate-800 hover:bg-slate-700 text-white border border-slate-700'
@@ -1553,13 +1558,13 @@ export default function CricketScorerConsole({ match, onClose }) {
 
                                         {/* BOTTOM ACTIONS */}
                                         <div className="grid grid-cols-4 gap-1 pt-0.5">
-                                            <button onClick={handleSwapStrike} className="py-1 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-300 font-bold text-[9px] border border-slate-800 cursor-pointer">
+                                            <button onClick={handleSwapStrike} className="py-1 rounded-lg bg-slate-950 hover:bg-slate-800 text-slate-300 font-bold text-[9px] border border-slate-800 cursor-pointer">
                                                 Swap ⇄
                                             </button>
-                                            <button onClick={() => setChangeBowlerModalOpen(true)} className="py-1 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-300 font-bold text-[9px] border border-slate-800 cursor-pointer">
+                                            <button onClick={() => setChangeBowlerModalOpen(true)} className="py-1 rounded-lg bg-slate-950 hover:bg-slate-800 text-slate-300 font-bold text-[9px] border border-slate-800 cursor-pointer">
                                                 Bowler
                                             </button>
-                                            <button onClick={() => setNewBatsmanModalOpen(true)} className="py-1 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-300 font-bold text-[9px] border border-slate-800 cursor-pointer">
+                                            <button onClick={() => setNewBatsmanModalOpen(true)} className="py-1 rounded-lg bg-slate-950 hover:bg-slate-800 text-slate-300 font-bold text-[9px] border border-slate-800 cursor-pointer">
                                                 Batsman
                                             </button>
                                             <button onClick={() => addToast({ message: 'Retired hurt logged', type: 'warning' })} className="py-1 rounded-lg bg-rose-950/40 hover:bg-rose-900 text-rose-300 font-bold text-[9px] border border-rose-800/40 cursor-pointer">
@@ -1571,26 +1576,26 @@ export default function CricketScorerConsole({ match, onClose }) {
                                     {/* RIGHT PANEL (~28% / col-span-3) */}
                                     <div className="col-span-3 space-y-1.5">
                                         {/* CURRENT BATSMEN */}
-                                        <div className="bg-[#121824] rounded-xl border border-slate-800 p-1.5 space-y-1 shadow-md">
+                                        <div className="bg-slate-900/90 rounded-xl border border-slate-800 p-1.5 space-y-1 shadow-md">
                                             <div className="text-[8px] font-black text-emerald-400 uppercase">BATSMEN</div>
                                             <div className="bg-slate-950 p-1 rounded border border-emerald-500/30 text-[9px] flex justify-between">
                                                 <div>
                                                     <div className="font-black text-white">⭐ {striker.name}</div>
-                                                    <div className="text-[7px] text-slate-400">{striker.fours}x4 • {striker.sixes}x6</div>
+                                                    <div className="text-[7px] text-slate-400">{striker.fours}×4 • {striker.sixes}×6</div>
                                                 </div>
                                                 <div className="text-right font-mono font-black text-emerald-400">{striker.runs} ({striker.balls})</div>
                                             </div>
                                             <div className="bg-slate-950 p-1 rounded border border-slate-800 text-[9px] flex justify-between">
                                                 <div>
                                                     <div className="font-bold text-slate-300">{nonStriker.name}</div>
-                                                    <div className="text-[7px] text-slate-500">{nonStriker.fours}x4 • {nonStriker.sixes}x6</div>
+                                                    <div className="text-[7px] text-slate-500">{nonStriker.fours}×4 • {nonStriker.sixes}×6</div>
                                                 </div>
                                                 <div className="text-right font-mono text-slate-300">{nonStriker.runs} ({nonStriker.balls})</div>
                                             </div>
                                         </div>
 
                                         {/* CURRENT BOWLER */}
-                                        <div className="bg-[#121824] rounded-xl border border-slate-800 p-1.5 space-y-1 shadow-md">
+                                        <div className="bg-slate-900/90 rounded-xl border border-slate-800 p-1.5 space-y-1 shadow-md">
                                             <div className="text-[8px] font-black text-indigo-400 uppercase">BOWLER</div>
                                             <div className="bg-slate-950 p-1 rounded border border-indigo-500/30 text-[9px] space-y-0.5">
                                                 <div className="flex justify-between font-black text-white">
