@@ -169,6 +169,18 @@ export default function CustomerBookings() {
         { key: 'id', label: 'ID' }, 
         { key: 'sport', label: 'Sport' }, 
         { key: 'venue', label: 'Venue' },
+        { 
+            key: 'paymentMode', 
+            label: 'Payment Mode',
+            render: (_, row) => {
+                const mode = (row.paymentMode || 'FULL').toUpperCase()
+                if (mode.includes('DARE')) return <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black bg-[#B8F52A] text-[#121614] border border-[#B8F52A]">🔥 DARE MATCH</span>
+                if (mode.includes('SPLIT_50') || mode.includes('SPLIT_50_50')) return <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black bg-sky-100 text-sky-900 border border-sky-300">⚖️ 50-50 SPLIT</span>
+                if (mode.includes('CUSTOM')) return <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black bg-purple-100 text-purple-900 border border-purple-300">🎴 CUSTOM SPLIT</span>
+                if (mode.includes('PER_PLAYER')) return <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black bg-amber-100 text-amber-900 border border-amber-300">👥 PER PLAYER</span>
+                return <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black bg-emerald-100 text-emerald-900 border border-emerald-300">💳 FULL PAID</span>
+            }
+        },
         { key: 'date', label: 'Date' }, 
         { key: 'time', label: 'Time' }, 
         { key: 'amount', label: 'Amount' },

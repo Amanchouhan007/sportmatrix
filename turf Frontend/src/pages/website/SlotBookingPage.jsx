@@ -3,6 +3,8 @@ import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { HiCheck, HiCreditCard, HiUsers, HiOutlineCheckCircle, HiShare, HiArrowRight, HiArrowLeft, HiLocationMarker, HiStar, HiX, HiUser } from 'react-icons/hi'
 import { useToast } from '../../components/ui/Toast'
 import { useAuth } from '../../context/AuthContext'
+import MatchPaymentProgress from '../../components/booking/MatchPaymentProgress'
+import DareRegistrationModal from '../../components/booking/DareRegistrationModal'
 
 // Available venues / turfs database lookup
 const allAvailableTurfs = [
@@ -1202,22 +1204,39 @@ export default function SlotBookingPage() {
                 )}
 
                 {/* ═══════════════════════════════════════════════════
-                    STEP 4: CONFIRMATION
+                    STEP 4: CONFIRMATION & MATCH PAYMENT TRACKER
                 ═══════════════════════════════════════════════════ */}
                 {activeStep === 4 && (
                     <div className="animate-in fade-in duration-200 space-y-6">
                         {/* Green Success Badge */}
-                        <div className="text-center space-y-3 py-4">
-                            <div className="w-16 h-16 rounded-full bg-emerald-100 text-[#16A34A] flex items-center justify-center mx-auto text-3xl shadow-sm">
+                        <div className="text-center space-y-2 py-2">
+                            <div className="w-14 h-14 rounded-full bg-emerald-100 text-[#16A34A] flex items-center justify-center mx-auto text-2xl shadow-sm">
                                 <HiCheck />
                             </div>
-                            <h1 className="text-3xl sm:text-4xl font-black text-[#111827] tracking-tight">
-                                Match invite dispatched!
+                            <h1 className="text-2xl sm:text-3xl font-black text-[#111827] tracking-tight">
+                                Match Invite Dispatched!
                             </h1>
-                            <p className="text-[#6B7280] text-sm font-semibold max-w-md mx-auto">
-                                Booking reference: <strong className="text-[#111827] font-mono">{bookingId}</strong>. We've sent SMS invites to your teammates and opponent captain.
+                            <p className="text-[#6B7280] text-xs font-semibold max-w-md mx-auto">
+                                Booking reference: <strong className="text-[#111827] font-mono">{bookingId}</strong>. We've sent SMS invites to your teammates & opponent captain.
                             </p>
                         </div>
+
+                        {/* Universal Match Payment Tracker Component */}
+                        <MatchPaymentProgress
+                            paymentMode={paymentMode}
+                            totalAmount={totalRent}
+                            collectedAmount={myShareAmount}
+                            teamAName={teamAName}
+                            teamAPaid={true}
+                            teamAAmount={myShareAmount}
+                            teamBName={hasOpponentTeam ? teamBName : 'Open Opponent'}
+                            teamBPaid={paymentMode === 'full'}
+                            teamBAmount={opponentShareAmount}
+                            players={teammates}
+                            matchDate={`${selectedDateObj.dayShort} ${selectedDateObj.dateNum} ${selectedDateObj.monthShort}`}
+                            matchTime={getSlotTimeRangeText(selectedSlotTime, durationHours)}
+                            turfName={selectedVenue.name}
+                        />
 
                         {/* Match Summary Box */}
                         <div className="bg-white border border-[#E5E7EB] rounded-2xl p-6 shadow-sm space-y-6">
