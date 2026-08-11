@@ -167,6 +167,20 @@ export default function TurfCalendarPage() {
     // ── Primary Context Filters ──
     const [turfs, setTurfs] = useState(INITIAL_TURFS)
     const [selectedTurfId, setSelectedTurfId] = useState('turf-1')
+
+    // Active Turf Object & Sports List
+    const activeTurf = useMemo(() => {
+        return turfs.find(t => t.id === selectedTurfId) || turfs[0] || {
+            id: 'turf-1',
+            name: 'Champions Turf Arena',
+            location: 'Mumbai, MH',
+            sports: [
+                { id: 'sp-cricket', name: 'Cricket', icon: '🏏', price: 1000 },
+                { id: 'sp-football', name: 'Football', icon: '⚽', price: 1200 }
+            ]
+        }
+    }, [turfs, selectedTurfId])
+
     const [selectedSportFilter, setSelectedSportFilter] = useState('ALL') // 'ALL' or sportId
     const [currentDate, setCurrentDate] = useState('2026-08-08')
     const [viewMode, setViewMode] = useState('Day') // 'Day' | 'Week' | 'Month'
@@ -319,19 +333,6 @@ export default function TurfCalendarPage() {
         cricketPrice: 1000,
         footballPrice: 1200
     })
-
-    // Active Turf Object & Sports List
-    const activeTurf = useMemo(() => {
-        return turfs.find(t => t.id === selectedTurfId) || turfs[0] || {
-            id: 'turf-1',
-            name: 'Champions Turf Arena',
-            location: 'Mumbai, MH',
-            sports: [
-                { id: 'sp-cricket', name: 'Cricket', icon: '🏏', price: 1000 },
-                { id: 'sp-football', name: 'Football', icon: '⚽', price: 1200 }
-            ]
-        }
-    }, [turfs, selectedTurfId])
 
     const activeSports = useMemo(() => {
         const sportsList = activeTurf?.sports || []

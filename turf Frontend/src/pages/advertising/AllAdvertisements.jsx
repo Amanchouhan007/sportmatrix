@@ -229,10 +229,10 @@ export default function AllAdvertisements() {
                 </div>
             </div>
 
-            {/* Merged Filter Toolbar & Data Table into 1 Card */}
-            <div className="bg-white/90 backdrop-blur-md border border-surface-200/80 rounded-3xl overflow-hidden shadow-soft">
+            {/* Filter Toolbar Card */}
+            <div className="bg-white/90 backdrop-blur-md border border-surface-200/80 rounded-3xl overflow-visible shadow-soft relative z-20">
                 {/* Filter & Search Bar Header */}
-                <div className="p-4.5 border-b border-surface-100 bg-surface-50/50">
+                <div className="p-4.5 border-b border-surface-100 bg-surface-50/50 rounded-3xl overflow-visible">
                     <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
                         <div className="col-span-1 sm:col-span-2">
                             <Input

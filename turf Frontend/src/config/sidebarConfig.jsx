@@ -53,7 +53,7 @@ const sidebarConfig = {
                 { label: 'Settings', icon: <HiAdjustments />, path: '/admin/tournaments/settings' },
             ]
         },
-        { label: 'Turf', icon: <HiBolt />, path: '/admin/sports' },
+        { label: 'Turf & Rates Setup', icon: <HiBolt />, path: '/admin/sports' },
         { label: 'Turf Calendar', icon: <HiCalendar />, path: '/admin/calendar' },
         { label: 'Bookings', icon: <HiTicket />, path: '/admin/bookings' },
         { label: 'POS Billing', icon: <HiCreditCard />, path: '/admin/pos' },

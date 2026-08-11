@@ -205,8 +205,8 @@ export default function OwnerMyAdvertisements() {
 
 
             {/* 3. Ultra-Clean Single-Line Toolbar */}
-            <div className="p-3 bg-white border border-surface-200/80 rounded-2xl shadow-soft">
-                <div className="flex flex-row items-center justify-between gap-2.5 overflow-x-auto hide-scrollbar whitespace-nowrap">
+            <div className="p-3 bg-white border border-surface-200/80 rounded-2xl shadow-soft relative overflow-visible z-20">
+                <div className="flex flex-col sm:flex-row items-center justify-between gap-2.5 overflow-visible">
                     {/* Search Input */}
                     <div className="relative flex-1 min-w-[240px] max-w-md">
                         <span className="absolute inset-y-0 left-0 flex items-center pl-3.5 pointer-events-none text-surface-400">
@@ -232,7 +232,7 @@ export default function OwnerMyAdvertisements() {
                                 { value: 'Discount Offer', label: '🟣 Discount' },
                                 { value: 'Impression Ad', label: '🟠 Impression' }
                             ]}
-                            className="w-36 text-xs font-semibold"
+                            className="w-40 text-xs font-semibold"
                         />
 
                         <Select
@@ -244,7 +244,7 @@ export default function OwnerMyAdvertisements() {
                                 { value: 'Pending', label: '🟡 Pending' },
                                 { value: 'Expired', label: '⚫ Expired' }
                             ]}
-                            className="w-32 text-xs font-semibold"
+                            className="w-36 text-xs font-semibold"
                         />
 
                         {/* View Switcher Buttons */}
