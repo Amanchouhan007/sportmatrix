@@ -88,6 +88,7 @@ export default function TurfResultsGrid({ turfs, searchValues, recentSearches = 
     const [activeFilter, setActiveFilter] = useState('')
     const [showFilters, setShowFilters] = useState(false)
     const [viewMode, setViewMode] = useState('list') // 'list' | 'split'
+    const [hoveredTurfId, setHoveredTurfId] = useState(null)
     const [isSortOpen, setIsSortOpen] = useState(false)
 
     const { location, sport } = searchValues || {}

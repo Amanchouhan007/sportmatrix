@@ -1475,90 +1475,55 @@ export default function TurfCalendarPage() {
 
                             {/* Form Row 2: Select Sport & Booking Amount */}
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <Select
+                                    label="Select Sport Played *"
+                                    value={bookingForm.sportId}
+                                    onChange={e => {
+                                        const val = e.target.value
+                                        const sp = activeTurf.sports.find(s => s.id === val)
+                                        const customP = targetSlotCtx?.customPrices?.[val] || sp?.price || 1000
+                                        setBookingForm({ ...bookingForm, sportId: val, amount: customP })
+                                    }}
+                                    options={activeTurf.sports.map(s => ({
+                                        value: s.id,
+                                        label: `${s.name} ${s.icon || ''} (₹${targetSlotCtx?.customPrices?.[s.id] || s.price})`
+                                    }))}
+                                />
                                 <div>
-                                    <label className="block text-xs font-black text-slate-800 uppercase tracking-tight mb-2">
-                                        Select Sport Played *
-                                    </label>
-                                    <div className="relative">
-                                        <select
-                                            value={bookingForm.sportId}
-                                            onChange={e => {
-                                                const sp = activeTurf.sports.find(s => s.id === e.target.value)
-                                                const customP = targetSlotCtx?.customPrices?.[e.target.value] || sp?.price || 1000
-                                                setBookingForm({ ...bookingForm, sportId: e.target.value, amount: customP })
-                                            }}
-                                            className="w-full h-12 px-4 pr-10 rounded-xl border border-slate-200 bg-white hover:border-emerald-300 focus:border-[#10B981] focus:ring-4 focus:ring-emerald-500/10 text-slate-900 text-sm font-semibold outline-none transition-all duration-200 cursor-pointer appearance-none"
-                                        >
-                                            {activeTurf.sports.map(s => (
-                                                <option key={s.id} value={s.id}>
-                                                    {s.name} {s.icon} (₹{targetSlotCtx?.customPrices?.[s.id] || s.price})
-                                                </option>
-                                            ))}
-                                        </select>
-                                        <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3.5 text-slate-400">
-                                            <svg className="fill-current h-4 w-4" viewBox="0 0 20 20">
-                                                <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/>
-                                            </svg>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div>
-                                    <label className="block text-xs font-black text-slate-800 uppercase tracking-tight mb-2">
+                                    <label className="block text-xs font-black text-slate-800 uppercase tracking-tight mb-1">
                                         Booking Amount (₹) [Editable]
                                     </label>
                                     <input
                                         type="number"
                                         value={bookingForm.amount}
                                         onChange={e => setBookingForm({ ...bookingForm, amount: e.target.value })}
-                                        className="w-full h-12 px-4 rounded-xl border border-slate-200 bg-white hover:border-emerald-300 focus:border-[#10B981] focus:ring-4 focus:ring-emerald-500/10 text-slate-900 text-sm font-extrabold outline-none transition-all duration-200"
+                                        className="w-full h-10 px-3.5 rounded-xl border border-slate-200 bg-white hover:border-emerald-300 focus:border-[#10B981] focus:ring-2 focus:ring-emerald-500/10 text-slate-900 text-xs font-extrabold outline-none transition-all duration-200"
                                     />
                                 </div>
                             </div>
 
                             {/* Form Row 3: Payment Status & Payment Method */}
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                <div>
-                                    <label className="block text-xs font-black text-slate-800 uppercase tracking-tight mb-2">
-                                        Payment Status
-                                    </label>
-                                    <div className="relative">
-                                        <select
-                                            value={bookingForm.paymentStatus}
-                                            onChange={e => setBookingForm({ ...bookingForm, paymentStatus: e.target.value })}
-                                            className="w-full h-12 px-4 pr-10 rounded-xl border border-slate-200 bg-white hover:border-emerald-300 focus:border-[#10B981] focus:ring-4 focus:ring-emerald-500/10 text-slate-900 text-sm font-semibold outline-none transition-all duration-200 cursor-pointer appearance-none"
-                                        >
-                                            <option value="Paid">Paid (Confirmed)</option>
-                                            <option value="Pending">Pending Payment</option>
-                                        </select>
-                                        <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3.5 text-slate-400">
-                                            <svg className="fill-current h-4 w-4" viewBox="0 0 20 20">
-                                                <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/>
-                                            </svg>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div>
-                                    <label className="block text-xs font-black text-slate-800 uppercase tracking-tight mb-2">
-                                        Payment Method
-                                    </label>
-                                    <div className="relative">
-                                        <select
-                                            value={bookingForm.paymentMethod}
-                                            onChange={e => setBookingForm({ ...bookingForm, paymentMethod: e.target.value })}
-                                            className="w-full h-12 px-4 pr-10 rounded-xl border border-slate-200 bg-white hover:border-emerald-300 focus:border-[#10B981] focus:ring-4 focus:ring-emerald-500/10 text-slate-900 text-sm font-semibold outline-none transition-all duration-200 cursor-pointer appearance-none"
-                                        >
-                                            <option value="UPI">UPI</option>
-                                            <option value="Cash">Cash (Walk-in)</option>
-                                            <option value="Card">Credit/Debit Card</option>
-                                            <option value="Wallet">Wallet</option>
-                                        </select>
-                                        <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3.5 text-slate-400">
-                                            <svg className="fill-current h-4 w-4" viewBox="0 0 20 20">
-                                                <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/>
-                                            </svg>
-                                        </div>
-                                    </div>
-                                </div>
+                                <Select
+                                    label="Payment Status"
+                                    value={bookingForm.paymentStatus}
+                                    onChange={e => setBookingForm({ ...bookingForm, paymentStatus: e.target.value })}
+                                    options={[
+                                        { value: 'Paid', label: '✅ Paid (Confirmed)' },
+                                        { value: 'Pending', label: '⏳ Pending Payment' }
+                                    ]}
+                                />
+                                <Select
+                                    label="Payment Method"
+                                    value={bookingForm.paymentMethod}
+                                    onChange={e => setBookingForm({ ...bookingForm, paymentMethod: e.target.value })}
+                                    options={[
+                                        { value: 'UPI', label: '📱 UPI' },
+                                        { value: 'Cash', label: '💵 Cash (Walk-in)' },
+                                        { value: 'Card', label: '💳 Credit/Debit Card' },
+                                        { value: 'Wallet', label: '👛 Wallet' }
+                                    ]}
+                                />
                             </div>
 
                             {/* Footer Buttons */}

@@ -111,7 +111,7 @@ export default function SlotBookingPage() {
     const [durationHours, setDurationHours] = useState(1)
 
     // Step 2: Payment Mode Options
-    const [paymentMode, setPaymentMode] = useState('full')
+    const [paymentMode, setPaymentMode] = useState(searchParams.get('mode') || 'full')
     const [customSplitMyShare, setCustomSplitMyShare] = useState(1200)
 
     // Step 3: Teams & Customer Details
@@ -1234,7 +1234,7 @@ export default function SlotBookingPage() {
                             teamBAmount={opponentShareAmount}
                             players={teammates}
                             matchDate={`${selectedDateObj.dayShort} ${selectedDateObj.dateNum} ${selectedDateObj.monthShort}`}
-                            matchTime={getSlotTimeRangeText(selectedSlotTime, durationHours)}
+                            matchTime={formatSlotTimeRange(selectedSlotTime, durationHours)}
                             turfName={selectedVenue.name}
                         />
 
