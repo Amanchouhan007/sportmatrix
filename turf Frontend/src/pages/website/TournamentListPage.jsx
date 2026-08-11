@@ -41,7 +41,7 @@ export default function TournamentListPage() {
     });
 
     return (
-        <div className="min-h-screen bg-white text-[#111827] pt-[72px] md:pt-[78px] pb-20 relative overflow-hidden">
+        <div className="min-h-screen bg-white text-[#111827] pt-4 md:pt-6 pb-20 relative overflow-hidden">
             {/* Ambient background glows */}
             <div className="fixed inset-0 z-0 overflow-hidden pointer-events-none">
                 <div className="absolute top-[-10%] left-[-10%] w-[50vw] h-[50vw] bg-[#C8FF2E]/10 blur-[130px] rounded-full pointer-events-none" />

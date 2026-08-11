@@ -128,8 +128,8 @@ export default function AllTurfsPage() {
             )}
 
             {/* ── Fixed Search Bar Section (below Navbar) ── */}
-            <div className="w-full shrink-0 pt-[61px] md:pt-[65px] pb-1 bg-white relative z-40">
-                <div className="w-full px-6 lg:px-12 max-w-[1400px] mx-auto mt-6 mb-4">
+            <div className="w-full shrink-0 pt-2 pb-1 bg-transparent relative z-20">
+                <div className="w-full px-6 lg:px-12 max-w-[1400px] mx-auto mt-3 mb-4">
                     <TurfSearchBar
                         values={searchValues}
                         onChange={handleSearchChange}

@@ -173,8 +173,8 @@ export default function HomePage() {
             {/* ══════════════════════════════════════════════
                 AIRBNB-STYLE SEARCH & CATEGORIES
             ══════════════════════════════════════════════ */}
-            <section className="pt-[74px] md:pt-[80px] pb-0 bg-white relative z-40">
-                <div className="w-full px-6 lg:px-12 max-w-[1400px] mx-auto transform translate-y-[7px]">
+            <section className="pt-4 md:pt-6 pb-2 bg-transparent relative z-20">
+                <div className="w-full px-6 lg:px-12 max-w-[1400px] mx-auto">
                     <TurfSearchBar
                         values={searchValues}
                         onChange={handleSearchChange}
