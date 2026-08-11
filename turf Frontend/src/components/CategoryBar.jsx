@@ -3,7 +3,6 @@ import { GiCricketBat, GiShuttlecock, GiCricketBall } from 'react-icons/gi'
 import { MdSportsCricket } from 'react-icons/md'
 
 const categories = [
-    { id: 'football', label: 'Football', icon: IoFootball },
     { id: 'cricket', label: 'Cricket', icon: GiCricketBat },
     { id: 'boxcricket', label: 'Box Cricket', icon: GiCricketBat },
 ]

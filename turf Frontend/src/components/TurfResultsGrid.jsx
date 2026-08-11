@@ -89,6 +89,7 @@ export default function TurfResultsGrid({ turfs, searchValues, recentSearches = 
     const [showFilters, setShowFilters] = useState(false)
     const [viewMode, setViewMode] = useState('list') // 'list' | 'split'
     const [isSortOpen, setIsSortOpen] = useState(false)
+    const [hoveredTurfId, setHoveredTurfId] = useState(null)
 
     const { location, sport } = searchValues || {}
 
@@ -117,10 +118,10 @@ export default function TurfResultsGrid({ turfs, searchValues, recentSearches = 
             <div className="absolute top-[10%] left-[5%] w-[45vw] h-[45vw] bg-[#C8FF2E]/15 blur-[140px] rounded-full pointer-events-none" />
             <div className="absolute bottom-[10%] right-[5%] w-[40vw] h-[40vw] bg-emerald-500/10 blur-[130px] rounded-full pointer-events-none" />
 
-            <div className="max-w-[1400px] mx-auto px-6 relative z-10">
+            <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
                 {/* ── Recent Searches ── */}
                 {recentSearches.length > 0 && (
-                    <div className="flex items-center gap-3 mb-4 bg-white border border-[#E5E7EB] rounded-full py-2 px-5 w-fit shadow-sm">
+                    <div className="flex items-center gap-3 mb-2 bg-white border border-[#E5E7EB] rounded-full py-1.5 px-4 w-fit shadow-sm">
                         <span className="text-[9px] font-black uppercase tracking-widest text-[#6B7280]">Recent Searches</span>
                         <div className="flex gap-2">
                             {recentSearches.slice(0, 3).map((rs, i) => (
@@ -135,10 +136,10 @@ export default function TurfResultsGrid({ turfs, searchValues, recentSearches = 
 
 
                 {/* ── Header & Filters Control Bar ── */}
-                <div className="sticky top-[58px] z-30 bg-white flex flex-col lg:flex-row lg:items-center justify-between gap-4 mb-2 pb-2.5 pt-2 relative before:content-[''] before:absolute before:-top-16 before:-left-[100vw] before:-right-[100vw] before:h-16 before:bg-white before:pointer-events-none after:content-[''] after:absolute after:bottom-0 after:-left-[100vw] after:-right-[100vw] after:border-b after:border-[#E5E7EB] after:pointer-events-none">
+                <div className="sticky top-[56px] z-30 bg-white flex flex-col lg:flex-row lg:items-center justify-between gap-3 mb-2 pb-1.5 pt-1 relative before:content-[''] before:absolute before:-top-8 before:-left-[100vw] before:-right-[100vw] before:h-8 before:bg-white before:pointer-events-none after:content-[''] after:absolute after:bottom-0 after:-left-[100vw] after:-right-[100vw] after:border-b after:border-[#E5E7EB] after:pointer-events-none">
                     {/* Left: Heading & Count Pill */}
                     <div className="flex items-center gap-3 shrink-0">
-                        <h2 className="text-[22px] md:text-[28px] font-black italic uppercase tracking-tight leading-none flex items-center gap-2 text-[#111827]">
+                        <h2 className="text-[20px] md:text-[26px] font-black italic uppercase tracking-tight leading-none flex items-center gap-2 text-[#111827]">
                             EXPLORE <span className="text-[#16A34A] underline decoration-[#C8FF2E] decoration-4 underline-offset-4">TOP TURFS</span>
                         </h2>
                         <span className="text-[9px] font-black text-[#111827] bg-[#C8FF2E] border border-[#B5F000] px-3 py-1 rounded-full shadow-sm">
