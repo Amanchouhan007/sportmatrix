@@ -3,6 +3,7 @@ import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { HiCheck, HiCreditCard, HiUsers, HiOutlineCheckCircle, HiShare, HiArrowRight, HiArrowLeft, HiLocationMarker, HiStar, HiX, HiUser } from 'react-icons/hi'
 import { useToast } from '../../components/ui/Toast'
 import { useAuth } from '../../context/AuthContext'
+import { saveCrmLead } from '../../services/crmService'
 import MatchPaymentProgress from '../../components/booking/MatchPaymentProgress'
 import DareRegistrationModal from '../../components/booking/DareRegistrationModal'
 
@@ -119,30 +120,12 @@ export default function SlotBookingPage() {
     const [paymentMode, setPaymentMode] = useState(searchParams.get('mode') === 'dare' ? 'dare' : 'full')
     const [expandedAccordionMode, setExpandedAccordionMode] = useState(searchParams.get('mode') === 'dare' ? 'dare' : 'full')
 
-    // Step 3: Teams & Customer Details
-    const initialName = user?.name || user?.customerName || (user?.email ? user.email.split('@')[0] : 'Rahul Sharma')
-    const initialPhone = user?.phone || user?.mobileNumber || '+91 98765 43210'
-    const [teamAName, setTeamAName] = useState(user?.teamName || 'Andheri Strikers')
-    const [captainName, setCaptainName] = useState(initialName)
-    const [captainPhone, setCaptainPhone] = useState(initialPhone)
-    const [guestPassword, setGuestPassword] = useState('123')
-    const [teammates, setTeammates] = useState([
-        { id: 1, name: `${initialName} (Captain)`, phone: initialPhone, amount: 900, status: 'Paid', isCaptain: true, tag: 'You' },
-        { id: 2, name: 'Vikram Singh', phone: '+91 98765 43211', amount: 0, status: 'Pending', isCaptain: false, tag: 'VS' },
-    ])
-
-    useEffect(() => {
-        if (user) {
-            const uName = user.name || user.customerName || (user.email ? user.email.split('@')[0] : 'Player')
-            const uPhone = user.phone || user.mobileNumber || '+91 98765 43210'
-            setCaptainName(uName)
-            setCaptainPhone(uPhone)
-            setTeammates(prev => [
-                { ...prev[0], name: `${uName} (Captain)`, phone: uPhone },
-                ...prev.slice(1)
-            ])
-        }
-    }, [user])
+    // Step 3: Teams & Customer Details (Empty by default — no autofill)
+    const [teamAName, setTeamAName] = useState('')
+    const [captainName, setCaptainName] = useState('')
+    const [captainPhone, setCaptainPhone] = useState('')
+    const [guestPassword, setGuestPassword] = useState('')
+    const [teammates, setTeammates] = useState([])
     const [isWhatsappSame, setIsWhatsappSame] = useState(true)
     const [whatsappPhone, setWhatsappPhone] = useState('')
     const [hasOpponentTeam, setHasOpponentTeam] = useState(true)
@@ -339,7 +322,31 @@ export default function SlotBookingPage() {
         handleProceedToConfirm()
     }
 
+    const [validationErrors, setValidationErrors] = useState({})
+
+    const handleStepHeaderClick = (targetStep) => {
+        // Top step bar only allows going BACK to already completed steps
+        if (targetStep < activeStep) {
+            setActiveStep(targetStep)
+        }
+    }
+
     const handleProceedClick = () => {
+        const errors = {}
+        if (!captainName || !captainName.trim()) {
+            errors.name = 'Full Name is required'
+        }
+        if (!captainPhone || !captainPhone.trim()) {
+            errors.phone = 'Mobile Number is required'
+        }
+
+        if (Object.keys(errors).length > 0) {
+            setValidationErrors(errors)
+            if (addToast) addToast('Please enter your Full Name and Mobile Number to proceed!', 'error')
+            return
+        }
+
+        setValidationErrors({})
         if (!user && captainName && captainPhone) {
             // Auto register/login guest with entered name, whatsapp phone & password
             const guestUser = {
@@ -419,6 +426,20 @@ export default function SlotBookingPage() {
         }
         localStorage.setItem('customer_bookings', JSON.stringify([newEntry, ...existing]))
 
+        // Sync lead directly to Turf CRM Database
+        saveCrmLead({
+            name: currentCustomerName,
+            phone: currentCustomerPhone,
+            role: 'team',
+            teamName: teamAName || `${currentCustomerName}'s Team`,
+            preferredSport: selectedSport || 'Cricket',
+            preferredSlot: `${selectedSlotTime || '6:00 PM'} (${selectedDateObj.fullDateString})`,
+            turfBranch: selectedVenue.name || 'SportZone Arena',
+            status: 'Hot Lead',
+            totalBookings: 1,
+            notes: `Website Match Booking (${generatedId})`
+        })
+
         setIsSubmitting(false)
         setActiveStep(4)
         if (addToast) addToast('Match successfully created and invite dispatched!', 'success')
@@ -463,16 +484,18 @@ export default function SlotBookingPage() {
                     {steps.map((step) => {
                         const isActive = activeStep === step.num
                         const isPast = activeStep > step.num
+                        const isFuture = step.num > activeStep
 
                         return (
                             <button
                                 key={step.num}
-                                onClick={() => setActiveStep(step.num)}
-                                className={`px-4 sm:px-5 py-2 sm:py-2.5 rounded-full text-xs font-bold whitespace-nowrap transition-all duration-200 cursor-pointer flex items-center gap-1.5 shadow-sm ${isActive
-                                    ? 'bg-[#111827] text-white border-2 border-[#16A34A] shadow-[0_4px_15px_rgba(22,163,74,0.25)]'
+                                disabled={isFuture}
+                                onClick={() => handleStepHeaderClick(step.num)}
+                                className={`px-4 sm:px-5 py-2 sm:py-2.5 rounded-full text-xs font-bold whitespace-nowrap transition-all duration-200 flex items-center gap-1.5 shadow-sm ${isActive
+                                    ? 'bg-[#111827] text-white border-2 border-[#16A34A] shadow-[0_4px_15px_rgba(22,163,74,0.25)] cursor-default'
                                     : isPast
-                                        ? 'bg-white text-[#111827] border border-[#E5E7EB] hover:border-[#16A34A]'
-                                        : 'bg-white/80 text-[#6B7280] border border-[#E5E7EB] hover:border-[#16A34A]/50 hover:text-[#111827]'
+                                        ? 'bg-white text-[#111827] border border-[#E5E7EB] hover:border-[#16A34A] cursor-pointer'
+                                        : 'bg-slate-100 text-[#9CA3AF] border border-[#E5E7EB] cursor-not-allowed opacity-60'
                                     }`}
                             >
                                 {isPast && <HiCheck className="w-3.5 h-3.5 text-[#16A34A]" />}
@@ -850,303 +873,77 @@ export default function SlotBookingPage() {
                     STEP 3: TEAMS & INVITE
                 ═══════════════════════════════════════════════════ */}
                 {activeStep === 3 && (
-                    <div className="animate-in fade-in duration-200 space-y-6">
-                        {/* Title & Subtitle */}
-                        <div>
-                            <h1 className="text-3xl sm:text-4xl font-black text-[#111827] tracking-tight mb-2">
-                                Team details & invite
+                    <div className="animate-in fade-in duration-200 space-y-6 max-w-xl mx-auto">
+                        {/* Title */}
+                        <div className="text-center">
+                            <h1 className="text-2xl sm:text-3xl font-black text-[#111827] tracking-tight mb-1">
+                                Player & Team Details
                             </h1>
-                            <p className="text-[#6B7280] text-sm font-semibold">
-                                Payment mode: <span className="font-bold text-[#111827]">{getPaymentModeLabel(paymentMode)}</span>
+                            <p className="text-[#6B7280] text-xs font-semibold">
+                                Enter your name and phone number to confirm match booking
                             </p>
                         </div>
 
-                        {/* YOUR TEAM (TEAM A) Card */}
-                        <div className="bg-white border border-[#E5E7EB] rounded-2xl p-5 sm:p-6 shadow-sm space-y-4">
-                            <div className="flex items-center justify-between">
-                                <h2 className="text-xs font-black uppercase tracking-widest text-[#6B7280]">
-                                    YOUR TEAM (TEAM A) & CUSTOMER DETAILS
-                                </h2>
-                                <div className="flex items-center gap-2">
-                                    {user && (
-                                        <span className="text-[10px] bg-emerald-100 text-emerald-800 font-bold px-2.5 py-0.5 rounded-full border border-emerald-300">
-                                            ✓ Logged in as {user.name || user.email}
-                                        </span>
-                                    )}
-                                </div>
+                        {/* Clean Input Card */}
+                        <div className="bg-white border border-[#E5E7EB] rounded-2xl p-6 shadow-sm space-y-4">
+                            <div>
+                                <label className="text-[11px] font-black uppercase tracking-wider text-[#374151] mb-1.5 flex items-center justify-between">
+                                    <span>Full Name *</span>
+                                    {validationErrors.name && <span className="text-red-600 font-bold text-xs normal-case">⚠️ Full Name is required</span>}
+                                </label>
+                                <input
+                                    type="text"
+                                    value={captainName}
+                                    onChange={(e) => {
+                                        setCaptainName(e.target.value)
+                                        if (validationErrors.name) setValidationErrors(prev => ({ ...prev, name: null }))
+                                    }}
+                                    autoComplete="off"
+                                    required
+                                    className={`w-full border rounded-xl px-4 py-3 text-[#111827] text-sm font-bold outline-none transition-all ${validationErrors.name ? 'border-red-500 bg-red-50/50 ring-2 ring-red-500/20' : 'bg-slate-50 border-[#E5E7EB] focus:border-[#16A34A] focus:bg-white'}`}
+                                    placeholder="Enter your full name"
+                                />
                             </div>
 
-                            {/* Customer & Team Inputs */}
-                            <div className="space-y-4">
-                                <div className="grid sm:grid-cols-3 gap-3">
-                                    <div>
-                                        <label className="text-[10px] font-black uppercase tracking-wider text-[#6B7280] mb-1 block">
-                                            Your Team Name
-                                        </label>
-                                        <input
-                                            type="text"
-                                            value={teamAName}
-                                            onChange={(e) => setTeamAName(e.target.value)}
-                                            className="w-full bg-slate-50 border border-[#E5E7EB] rounded-xl px-3.5 py-2.5 text-[#111827] text-xs font-bold outline-none focus:border-[#16A34A] focus:bg-white"
-                                            placeholder="Team A Name"
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className="text-[10px] font-black uppercase tracking-wider text-[#6B7280] mb-1 block">
-                                            Full Name
-                                        </label>
-                                        <input
-                                            type="text"
-                                            value={captainName}
-                                            onChange={(e) => {
-                                                setCaptainName(e.target.value);
-                                                setTeammates(prev => [{ ...prev[0], name: `${e.target.value} (Captain)` }, ...prev.slice(1)]);
-                                            }}
-                                            className="w-full bg-slate-50 border border-[#E5E7EB] rounded-xl px-3.5 py-2.5 text-[#111827] text-xs font-bold outline-none focus:border-[#16A34A] focus:bg-white"
-                                            placeholder="Your Full Name"
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className="text-[10px] font-black uppercase tracking-wider text-[#6B7280] mb-1 block">
-                                            Mobile Number
-                                        </label>
-                                        <input
-                                            type="text"
-                                            value={captainPhone}
-                                            onChange={(e) => {
-                                                setCaptainPhone(e.target.value);
-                                                if (isWhatsappSame) setWhatsappPhone(e.target.value);
-                                                setTeammates(prev => [{ ...prev[0], phone: e.target.value }, ...prev.slice(1)]);
-                                            }}
-                                            className="w-full bg-slate-50 border border-[#E5E7EB] rounded-xl px-3.5 py-2.5 text-[#111827] text-xs font-bold outline-none focus:border-[#16A34A] focus:bg-white"
-                                            placeholder="+91 98765 43210"
-                                        />
-                                    </div>
-                                </div>
-
-                                {/* WhatsApp Number Same Toggle Switch */}
-                                <div className="bg-slate-50 border border-[#E5E7EB] rounded-xl p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                                    <div className="flex items-center gap-3">
-                                        <button
-                                            type="button"
-                                            onClick={() => {
-                                                const nextVal = !isWhatsappSame
-                                                setIsWhatsappSame(nextVal)
-                                                if (nextVal) setWhatsappPhone(captainPhone)
-                                            }}
-                                            className={`w-11 h-6 rounded-full transition-colors relative cursor-pointer flex-shrink-0 ${isWhatsappSame ? 'bg-[#16A34A]' : 'bg-slate-300'}`}
-                                        >
-                                            <div className={`w-5 h-5 rounded-full transition-transform absolute top-0.5 bg-white shadow-sm ${isWhatsappSame ? 'translate-x-5.5' : 'translate-x-0.5'}`} />
-                                        </button>
-                                        <span className="text-xs font-bold text-[#111827]">
-                                            WhatsApp number is same as mobile number
-                                        </span>
-                                    </div>
-
-                                    {!isWhatsappSame && (
-                                        <div className="w-full sm:w-64">
-                                            <input
-                                                type="text"
-                                                value={whatsappPhone}
-                                                onChange={(e) => setWhatsappPhone(e.target.value)}
-                                                className="w-full bg-white border border-[#E5E7EB] rounded-lg px-3 py-1.5 text-[#111827] text-xs font-bold outline-none focus:border-[#16A34A]"
-                                                placeholder="WhatsApp Number (+91)"
-                                            />
-                                        </div>
-                                    )}
-                                </div>
+                            <div>
+                                <label className="text-[11px] font-black uppercase tracking-wider text-[#374151] mb-1.5 flex items-center justify-between">
+                                    <span>Mobile / WhatsApp Number *</span>
+                                    {validationErrors.phone && <span className="text-red-600 font-bold text-xs normal-case">⚠️ Mobile Number is required</span>}
+                                </label>
+                                <input
+                                    type="text"
+                                    value={captainPhone}
+                                    onChange={(e) => {
+                                        setCaptainPhone(e.target.value)
+                                        if (validationErrors.phone) setValidationErrors(prev => ({ ...prev, phone: null }))
+                                    }}
+                                    autoComplete="off"
+                                    required
+                                    className={`w-full border rounded-xl px-4 py-3 text-[#111827] text-sm font-bold outline-none transition-all ${validationErrors.phone ? 'border-red-500 bg-red-50/50 ring-2 ring-red-500/20' : 'bg-slate-50 border-[#E5E7EB] focus:border-[#16A34A] focus:bg-white'}`}
+                                    placeholder="+91 98765 43210"
+                                />
                             </div>
 
-                            {/* Teammates List - Only show split links if per-player, otherwise show simple full pay notice */}
-                            {paymentMode === 'full' ? (
-                                <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-4 text-xs font-semibold text-emerald-950 flex items-start gap-3">
-                                    <span className="text-lg">💳</span>
-                                    <div>
-                                        <strong className="block text-emerald-900 font-bold mb-0.5">Full Pay Selected (100% Paid by You)</strong>
-                                        You are paying the entire venue rent of ₹{totalRent.toLocaleString('en-IN')} upfront. Teammate payment split links are not needed for Full Pay.
-                                    </div>
-                                </div>
-                            ) : paymentMode === 'per-player' ? (
-                                <>
-                                    <div className="space-y-2.5 pt-1">
-                                        {teammates.map((member) => {
-                                            const isPaid = member.isCaptain || member.status === 'Paid'
-                                            const displayAmount = member.isCaptain ? myShareAmount : member.amount || Math.round(totalRent / 6)
-
-                                            return (
-                                                <div
-                                                    key={member.id}
-                                                    className="bg-slate-50 border border-[#E5E7EB] rounded-xl p-3.5 flex items-center justify-between"
-                                                >
-                                                    <div className="flex items-center gap-3">
-                                                        <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 ${member.tag === 'You' ? 'bg-blue-100 text-blue-800' : 'bg-slate-200 text-slate-700'}`}>
-                                                            {member.tag}
-                                                        </div>
-                                                        <div>
-                                                            <div className="text-sm font-black text-[#111827]">{member.name}</div>
-                                                            <div className="text-xs text-[#6B7280] font-medium mt-0.5">
-                                                                {member.phone} · {member.isCaptain ? `Captain Share (₹${myShareAmount.toLocaleString('en-IN')})` : `Share: ₹${displayAmount.toLocaleString('en-IN')}`}
-                                                            </div>
-                                                        </div>
-                                                    </div>
-
-                                                    <span className={`text-xs px-2.5 py-1 rounded-md font-black border ${isPaid
-                                                        ? 'bg-emerald-100 text-emerald-800 border-emerald-300'
-                                                        : 'bg-amber-100 text-amber-800 border-amber-300'
-                                                        }`}>
-                                                        {isPaid ? 'Paid' : 'Pending'}
-                                                    </span>
-                                                </div>
-                                            )
-                                        })}
-                                    </div>
-
-                                    {/* Add Teammate Input / Button */}
-                                    {showAddTeammateInput ? (
-                                        <div className="flex gap-2 pt-2">
-                                            <input
-                                                type="text"
-                                                value={newTeammateName}
-                                                onChange={(e) => setNewTeammateName(e.target.value)}
-                                                placeholder="Player name (e.g. Sameer Khan)"
-                                                className="flex-1 bg-slate-50 border border-[#E5E7EB] rounded-xl px-4 py-2.5 text-[#111827] text-xs font-bold outline-none focus:border-[#16A34A] focus:bg-white"
-                                            />
-                                            <button
-                                                onClick={handleAddTeammate}
-                                                className="px-4 py-2.5 bg-[#111827] text-white font-bold text-xs rounded-xl hover:bg-black cursor-pointer"
-                                            >
-                                                Add
-                                            </button>
-                                        </div>
-                                    ) : (
-                                        <button
-                                            onClick={() => setShowAddTeammateInput(true)}
-                                            className="w-full py-3 rounded-xl border border-[#E5E7EB] hover:border-[#16A34A] bg-slate-50 hover:bg-slate-100 text-[#111827] text-xs font-bold transition-colors cursor-pointer text-center block mt-2"
-                                        >
-                                            + Add teammate (Send Share Link)
-                                        </button>
-                                    )}
-                                </>
-                            ) : null}
-                        </div>
-
-                        {/* OPPONENT TEAM (TEAM B) Card */}
-                        <div className="bg-white border border-[#E5E7EB] rounded-2xl p-5 sm:p-6 shadow-sm space-y-4">
-                            <div className="flex items-center justify-between">
-                                <h2 className="text-xs font-black uppercase tracking-widest text-[#6B7280]">
-                                    OPPONENT TEAM (TEAM B)
-                                </h2>
-                                {paymentMode === 'full' ? (
-                                    <span className="text-[10px] bg-sky-100 text-sky-800 font-bold px-2.5 py-0.5 rounded-full border border-sky-300">
-                                        Free Invite (Slot 100% Paid by You)
-                                    </span>
-                                ) : paymentMode === 'split-50' ? (
-                                    <span className="text-[10px] bg-emerald-100 text-emerald-800 font-bold px-2.5 py-0.5 rounded-full border border-emerald-300">
-                                        Opponent Share: ₹{(totalRent / 2).toLocaleString('en-IN')} (2-Hour Window)
-                                    </span>
-                                ) : paymentMode === 'custom' ? (
-                                    <span className="text-[10px] bg-purple-100 text-purple-800 font-bold px-2.5 py-0.5 rounded-full border border-purple-300">
-                                        Opponent Share: ₹{opponentShareAmount.toLocaleString('en-IN')}
-                                    </span>
-                                ) : paymentMode === 'dare' ? (
-                                    <span className="text-[10px] bg-amber-100 text-amber-800 font-bold px-2.5 py-0.5 rounded-full border border-amber-300">
-                                        Opponent Deposit: ₹100
-                                    </span>
-                                ) : (
-                                    <span className="text-[10px] bg-blue-100 text-blue-800 font-bold px-2.5 py-0.5 rounded-full border border-blue-300">
-                                        Per Player Links
-                                    </span>
-                                )}
+                            <div>
+                                <label className="text-[11px] font-black uppercase tracking-wider text-[#374151] mb-1.5 block">
+                                    Your Team Name (Optional)
+                                </label>
+                                <input
+                                    type="text"
+                                    value={teamAName}
+                                    onChange={(e) => setTeamAName(e.target.value)}
+                                    autoComplete="off"
+                                    className="w-full bg-slate-50 border border-[#E5E7EB] rounded-xl px-4 py-3 text-[#111827] text-sm font-bold outline-none focus:border-[#16A34A] focus:bg-white"
+                                    placeholder="e.g. Andheri Strikers"
+                                />
                             </div>
-
-                            {/* Mode Specific Explanation Banner */}
-                            <div className="bg-slate-50 border border-[#E5E7EB] p-4 rounded-xl text-xs space-y-2">
-                                <div className="flex items-center justify-between font-black text-[#111827] uppercase tracking-wider text-[11px] border-b border-[#E5E7EB] pb-2">
-                                    <span>Payment Condition & Rules</span>
-                                    <span className="text-[#16A34A]">{getPaymentModeLabel(paymentMode)}</span>
-                                </div>
-                                {paymentMode === 'full' && (
-                                    <p className="text-[#4B5563] font-medium leading-relaxed">
-                                        💳 <strong>Full Pay (100%):</strong> You pay ₹{totalRent.toLocaleString('en-IN')} upfront. Slot is locked immediately. Opponent team is invited for free with zero payment required.
-                                    </p>
-                                )}
-                                {paymentMode === 'split-50' && (
-                                    <p className="text-[#4B5563] font-medium leading-relaxed">
-                                        ⚖️ <strong>Split 50-50:</strong> You pay ₹{(totalRent / 2).toLocaleString('en-IN')} now. Opponent captain gets an SMS/WA link to pay the remaining ₹{(totalRent / 2).toLocaleString('en-IN')}. If opponent doesn't pay within <strong>2 hours</strong>, slot is released and you get a <strong>100% refund</strong>.
-                                    </p>
-                                )}
-                                {paymentMode === 'custom' && (
-                                    <p className="text-[#4B5563] font-medium leading-relaxed">
-                                        🎴 <strong>Custom Split:</strong> You pay ₹{myShareAmount.toLocaleString('en-IN')} now. Opponent captain receives a payment link for the remaining ₹{opponentShareAmount.toLocaleString('en-IN')}.
-                                    </p>
-                                )}
-                                {paymentMode === 'dare' && (
-                                    <p className="text-[#4B5563] font-medium leading-relaxed">
-                                        🔥 <strong>Dare to Play:</strong> Both teams deposit ₹100 now. Winner gets deposit refunded; losing team pays full ₹{totalRent.toLocaleString('en-IN')} after match score confirmation.
-                                    </p>
-                                )}
-                                {paymentMode === 'per-player' && (
-                                    <p className="text-[#4B5563] font-medium leading-relaxed">
-                                        👥 <strong>Per-Player Split:</strong> You pay your ₹{Math.round(totalRent / 6).toLocaleString('en-IN')} share. Share links generated for players. Minimum 4 paid players per side required to confirm.
-                                    </p>
-                                )}
-                            </div>
-
-                            {/* Toggle Switch */}
-                            <div className="flex items-center gap-3">
-                                <button
-                                    onClick={() => setHasOpponentTeam(!hasOpponentTeam)}
-                                    className={`w-12 h-6 rounded-full transition-colors relative cursor-pointer ${hasOpponentTeam ? 'bg-[#16A34A]' : 'bg-slate-300'
-                                        }`}
-                                >
-                                    <div className={`w-5 h-5 rounded-full transition-transform absolute top-0.5 bg-white shadow-sm ${hasOpponentTeam ? 'translate-x-6' : 'translate-x-0.5'
-                                        }`} />
-                                </button>
-                                <span className="text-xs font-bold text-[#111827]">
-                                    {hasOpponentTeam ? 'I have an opponent team ready to invite' : 'Open challenge — post match for anyone to join'}
-                                </span>
-                            </div>
-
-                            {/* Opponent Inputs if Enabled */}
-                            {hasOpponentTeam ? (
-                                <div className="grid sm:grid-cols-2 gap-3 pt-2">
-                                    <div>
-                                        <label className="text-[10px] font-black uppercase tracking-wider text-[#6B7280] mb-1.5 block">
-                                            Opponent Team Name
-                                        </label>
-                                        <input
-                                            type="text"
-                                            value={teamBName}
-                                            onChange={(e) => setTeamBName(e.target.value)}
-                                            className="w-full bg-slate-50 border border-[#E5E7EB] rounded-xl px-4 py-2.5 text-[#111827] text-xs font-bold outline-none focus:border-[#16A34A] focus:bg-white"
-                                            placeholder="Enter opponent team name"
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className="text-[10px] font-black uppercase tracking-wider text-[#6B7280] mb-1.5 block">
-                                            Opponent Captain Phone (SMS / WhatsApp Invite)
-                                        </label>
-                                        <input
-                                            type="text"
-                                            value={teamBPhone}
-                                            onChange={(e) => setTeamBPhone(e.target.value)}
-                                            className="w-full bg-slate-50 border border-[#E5E7EB] rounded-xl px-4 py-2.5 text-[#111827] text-xs font-bold outline-none focus:border-[#16A34A] focus:bg-white"
-                                            placeholder="+91 98765 00000"
-                                        />
-                                    </div>
-                                </div>
-                            ) : (
-                                <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-3.5 text-xs text-emerald-950 font-medium">
-                                    Your match will be listed under <strong className="text-emerald-800">Open Challenges</strong>. Any team captain in the area can accept and pay their share.
-                                </div>
-                            )}
                         </div>
 
                         {/* Bottom Action Buttons */}
-                        <div className="flex items-center justify-between pt-8 border-t border-[#E5E7EB] mt-10">
+                        <div className="flex items-center justify-between pt-4 border-t border-[#E5E7EB]">
                             <button
                                 onClick={() => setActiveStep(2)}
-                                className="px-7 py-3.5 rounded-xl bg-white hover:bg-slate-50 border border-[#E5E7EB] text-[#111827] font-bold text-sm transition-all duration-200 shadow-sm cursor-pointer flex items-center gap-2"
+                                className="px-6 py-3 rounded-xl bg-white hover:bg-slate-50 border border-[#E5E7EB] text-[#111827] font-bold text-sm transition-all duration-200 cursor-pointer flex items-center gap-2"
                             >
                                 <span>← Back</span>
                             </button>

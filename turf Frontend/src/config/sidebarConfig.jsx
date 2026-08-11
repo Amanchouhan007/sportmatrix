@@ -15,6 +15,7 @@ const sidebarConfig = {
         { isHeader: true, label: 'MANAGEMENT' },
         { label: 'Owners', icon: <HiUsers />, path: '/super-admin/owners' },
         { label: 'Subscriptions', icon: <HiCreditCard />, path: '/super-admin/subscriptions' },
+        { label: 'Global Lead CRM', icon: <HiUserGroup />, path: '/super-admin/crm' },
         { isHeader: true, label: 'REPORTS' },
         { label: 'Analytics Logs', icon: <HiChartBar />, path: '/super-admin/analytics' },
         { label: 'Payment Logs', icon: <HiClipboardList />, path: '/super-admin/payments' },
@@ -23,6 +24,7 @@ const sidebarConfig = {
     ],
     owner: [
         { label: 'Dashboard', icon: <HiHome />, path: '/admin' },
+        { label: 'Lead CRM & Broadcast', icon: <HiUserGroup />, path: '/admin/crm' },
         {
             isCollapsible: true,
             label: 'Advertising Management',
@@ -97,6 +99,7 @@ const sidebarConfig = {
     ],
     customer: [
         { label: 'Dashboard', icon: <HiHome />, path: '/customer' },
+        { label: 'Offers & Earning Alerts', icon: <HiSparkles />, path: '/customer/offers' },
         { label: 'My Bookings', icon: <HiTicket />, path: '/customer/bookings' },
         { label: 'My Teams', icon: <HiUserGroup />, path: '/customer/teams' },
         { label: 'My Matches', icon: <HiTrophy />, path: '/customer/matches' },

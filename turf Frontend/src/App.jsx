@@ -28,6 +28,7 @@ const ContactPage = lazy(() => import('./pages/website/ContactPage'))
 
 // Lazy Super Admin
 const SADashboard = lazy(() => import('./pages/superadmin/SADashboard'))
+const SuperAdminGlobalCRMPage = lazy(() => import('./pages/superadmin/SuperAdminGlobalCRMPage'))
 const BranchManagement = lazy(() => import('./pages/superadmin/BranchManagement'))
 const OwnerManagement = lazy(() => import('./pages/superadmin/OwnerManagement'))
 const SubscriptionPlans = lazy(() => import('./pages/superadmin/SubscriptionPlans'))
@@ -39,6 +40,8 @@ const SystemSettings = lazy(() => import('./pages/superadmin/SystemSettings'))
 
 // Lazy Owner
 const OwnerDashboard = lazy(() => import('./pages/owner/OwnerDashboard'))
+const TurfLeadCRMPage = lazy(() => import('./pages/owner/TurfLeadCRMPage'))
+const CustomerOffersFeed = lazy(() => import('./pages/customer/CustomerOffersFeed'))
 const SportsManagement = lazy(() => import('./pages/owner/SportsManagement'))
 const SlotManagement = lazy(() => import('./pages/owner/SlotManagement'))
 const BookingManagement = lazy(() => import('./pages/owner/BookingManagement'))
@@ -125,6 +128,7 @@ export default function App() {
                 <Route index element={<SADashboard />} />
                 <Route path="owners" element={<OwnerManagement />} />
                 <Route path="subscriptions" element={<SubscriptionPlans />} />
+                <Route path="crm" element={<SuperAdminGlobalCRMPage />} />
                 <Route path="ads" element={<AllAdvertisements />} />
                 <Route path="ads/create" element={<CreateAdvertisement />} />
                 <Route path="ads/commissions" element={<CommissionManagement />} />
@@ -140,6 +144,7 @@ export default function App() {
               {/* Admin Dashboard (/admin) */}
               <Route path="/admin" element={<ProtectedRoute allowedRoles={['OWNER']}><DashboardLayout role="owner" /></ProtectedRoute>}>
                 <Route index element={<OwnerDashboard />} />
+                <Route path="crm" element={<TurfLeadCRMPage />} />
                 <Route path="ads" element={<OwnerMyAdvertisements />} />
                 <Route path="ads/all" element={<AllAdvertisements />} />
                 <Route path="ads/create" element={<CreateAdvertisement />} />
@@ -211,6 +216,7 @@ export default function App() {
               {/* Customer Dashboard */}
               <Route path="/customer" element={<ProtectedRoute allowedRoles={['CUSTOMER']}><DashboardLayout role="customer" /></ProtectedRoute>}>
                 <Route index element={<CustomerDashboard />} />
+                <Route path="offers" element={<CustomerOffersFeed />} />
                 <Route path="bookings" element={<CustomerBookings />} />
                 <Route path="teams" element={<CustomerTeams />} />
                 <Route path="matches" element={<CustomerMatches />} />
