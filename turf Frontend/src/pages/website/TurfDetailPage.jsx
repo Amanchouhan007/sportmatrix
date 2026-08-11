@@ -5,6 +5,7 @@ import { MdSportsCricket, MdWifi, MdLocalParking, MdLocalDrink, MdOutlineHealthA
 import { RiShieldStarFill } from 'react-icons/ri'
 import SlotGrid from '../../components/ui/SlotGrid'
 import { useToast } from '../../components/ui/Toast'
+import { useAuth } from '../../context/AuthContext'
 import MediaUploadModal from '../../components/MediaUploadModal'
 
 const defaultTurfData = {
@@ -114,6 +115,8 @@ const generateSlots = (hourlyPrice = 1200, durationHours = 1) => {
 export default function TurfDetailPage() {
     const { id } = useParams()
     const navigate = useNavigate()
+    const { user } = useAuth() || {}
+    const [selectedSport, setSelectedSport] = useState('Cricket')
     const [selectedMediaId, setSelectedMediaId] = useState(0)
     const [selectedDate, setSelectedDate] = useState('2026-03-15')
     const [selectedSlot, setSelectedSlot] = useState(null)
