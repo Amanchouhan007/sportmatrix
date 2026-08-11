@@ -8,22 +8,27 @@ import DareRegistrationModal from '../../components/booking/DareRegistrationModa
 
 // Available venues / turfs database lookup
 const allAvailableTurfs = [
-    { id: 1, name: 'SportZone Arena', location: 'Andheri West', city: 'Mumbai', price: 1200, rating: 4.8, sports: ['Cricket', 'Football'], image: '/images/turf1.png' },
+    { id: 1, name: 'SportZone Arena', location: 'Andheri West', city: 'Mumbai', price: 1200, rating: 4.8, sports: ['Cricket'], image: '/images/turf1.png' },
     { id: 2, name: 'Champion Cricket Ground', location: 'Koramangala', city: 'Bangalore', price: 1500, rating: 4.9, sports: ['Cricket'], image: '/images/turf2.png' },
-    { id: 3, name: 'GameVault Center', location: 'Koramangala', city: 'Bangalore', price: 1200, rating: 4.9, sports: ['Football', 'Cricket'], image: '/images/turf3.png' },
-    { id: 4, name: 'ProKick Stadium', location: 'Indiranagar', city: 'Bangalore', price: 1400, rating: 4.7, sports: ['Football'], image: '/images/turf4.png' },
-    { id: 5, name: 'ProPlay Arena', location: 'Vashi', city: 'Mumbai', price: 1000, rating: 4.5, sports: ['Football'], image: '/images/turf4.png' },
+    { id: 3, name: 'GameVault Cricket Center', location: 'Koramangala', city: 'Bangalore', price: 1200, rating: 4.9, sports: ['Cricket'], image: '/images/turf3.png' },
+    { id: 4, name: 'ProKick Cricket Turf', location: 'Indiranagar', city: 'Bangalore', price: 1400, rating: 4.7, sports: ['Cricket'], image: '/images/turf4.png' },
+    { id: 5, name: 'ProPlay Cricket Arena', location: 'Vashi', city: 'Mumbai', price: 1000, rating: 4.5, sports: ['Cricket'], image: '/images/turf4.png' },
     { id: 6, name: 'Royal Cricket Ground', location: 'Vijay Nagar', city: 'Indore', price: 1000, rating: 4.7, sports: ['Cricket'], image: '/images/turf5.png' },
-    { id: 7, name: 'DunkZone', location: 'Bandra', city: 'Mumbai', price: 750, rating: 4.3, sports: ['Football'], image: '/images/turf2.png' },
-    { id: 8, name: 'PixelArena', location: 'HSR Layout', city: 'Bangalore', price: 1500, rating: 4.8, sports: ['Football', 'Cricket'], image: '/images/turf6.png' },
-    { id: 9, name: 'Skyline Football Turf', location: 'Powai', city: 'Mumbai', price: 1400, rating: 4.6, sports: ['Football'], image: '/images/turf6.png' },
+    { id: 7, name: 'DunkZone Cricket Turf', location: 'Bandra', city: 'Mumbai', price: 750, rating: 4.3, sports: ['Cricket'], image: '/images/turf2.png' },
+    { id: 8, name: 'PixelArena Cricket', location: 'HSR Layout', city: 'Bangalore', price: 1500, rating: 4.8, sports: ['Cricket'], image: '/images/turf6.png' },
+    { id: 9, name: 'Skyline Cricket Turf', location: 'Powai', city: 'Mumbai', price: 1400, rating: 4.6, sports: ['Cricket'], image: '/images/turf6.png' },
     { id: 10, name: 'StrikeZone Cricket', location: 'Noida', city: 'Delhi', price: 850, rating: 4.6, sports: ['Cricket'], image: '/images/turf7.png' },
     { id: 11, name: 'Master Blaster Cricket', location: 'Saket', city: 'Delhi', price: 1100, rating: 4.8, sports: ['Cricket'], image: '/images/turf7.png' },
-    { id: 12, name: 'Pune Football Arena', location: 'Kothrud', city: 'Pune', price: 1000, rating: 4.5, sports: ['Football'], image: '/images/turf2.png' },
-    { id: 13, name: 'Spike Football Turf', location: 'Bhawarkua', city: 'Indore', price: 500, rating: 4.6, sports: ['Football'], image: '/images/turf1.png' },
-    { id: 14, name: 'Indore Sports Complex', location: 'LIG Colony', city: 'Indore', price: 1200, rating: 4.9, sports: ['Football', 'Cricket'], image: '/images/turf3.png' },
-    { id: 15, name: 'Rajiv Gandhi Stadium Turf', location: 'Navlakha', city: 'Indore', price: 700, rating: 4.5, sports: ['Football', 'Cricket'], image: '/images/turf4.png' },
+    { id: 12, name: 'Pune Cricket Arena', location: 'Kothrud', city: 'Pune', price: 1000, rating: 4.5, sports: ['Cricket'], image: '/images/turf2.png' },
+    { id: 13, name: 'Spike Cricket Turf', location: 'Bhawarkua', city: 'Indore', price: 500, rating: 4.6, sports: ['Cricket'], image: '/images/turf1.png' },
+    { id: 14, name: 'Indore Sports Complex', location: 'LIG Colony', city: 'Indore', price: 1200, rating: 4.9, sports: ['Cricket'], image: '/images/turf3.png' },
+    { id: 15, name: 'Rajiv Gandhi Stadium Turf', location: 'Navlakha', city: 'Indore', price: 700, rating: 4.5, sports: ['Cricket'], image: '/images/turf4.png' },
 ]
+
+const getSlotTimeRangeText = (slotTime, durationHours = 1) => {
+    if (!slotTime) return '6:00 PM - 7:00 PM'
+    return `${slotTime} (${durationHours} Hr)`
+}
 
 // Generate upcoming days starting from Sat 9 Aug
 const generateUpcomingDays = () => {
@@ -51,24 +56,24 @@ const generateUpcomingDays = () => {
     return days
 }
 
-// Available Time Slots matching exact grid
+// Available Time Slots matching exact grid with dynamic pricing and maintenance states
 const allTimeSlots = [
-    { id: '06:00', time: '6:00 AM', isBooked: false },
-    { id: '07:00', time: '7:00 AM', isBooked: false },
-    { id: '08:00', time: '8:00 AM', isBooked: false },
-    { id: '09:00', time: '9:00 AM', isBooked: true }, // Dimmed
-    { id: '10:00', time: '10:00 AM', isBooked: false },
-    { id: '11:00', time: '11:00 AM', isBooked: false },
-    { id: '12:00', time: '12:00 PM', isBooked: false },
-    { id: '13:00', time: '1:00 PM', isBooked: false },
-    { id: '14:00', time: '2:00 PM', isBooked: false },
-    { id: '15:00', time: '3:00 PM', isBooked: false },
-    { id: '16:00', time: '4:00 PM', isBooked: false },
-    { id: '17:00', time: '5:00 PM', isBooked: false },
-    { id: '18:00', time: '6:00 PM', isBooked: false }, // Selected
-    { id: '19:00', time: '7:00 PM', isBooked: false },
-    { id: '20:00', time: '8:00 PM', isBooked: true }, // Dimmed
-    { id: '21:00', time: '9:00 PM', isBooked: false },
+    { id: '06:00', time: '6:00 AM', price: 1000, status: 'available' },
+    { id: '07:00', time: '7:00 AM', price: 1000, status: 'available' },
+    { id: '08:00', time: '8:00 AM', price: 1000, status: 'staff_unavailable' },
+    { id: '09:00', time: '9:00 AM', price: 1200, status: 'booked' },
+    { id: '10:00', time: '10:00 AM', price: 1200, status: 'available' },
+    { id: '11:00', time: '11:00 AM', price: 1200, status: 'available' },
+    { id: '12:00', time: '12:00 PM', price: 1200, status: 'maintenance' },
+    { id: '13:00', time: '1:00 PM', price: 1200, status: 'available' },
+    { id: '14:00', time: '2:00 PM', price: 1200, status: 'available' },
+    { id: '15:00', time: '3:00 PM', price: 1400, status: 'available' },
+    { id: '16:00', time: '4:00 PM', price: 1400, status: 'available' },
+    { id: '17:00', time: '5:00 PM', price: 1500, status: 'available' },
+    { id: '18:00', time: '6:00 PM', price: 1500, status: 'available' },
+    { id: '19:00', time: '7:00 PM', price: 1500, status: 'available' },
+    { id: '20:00', time: '8:00 PM', price: 1500, status: 'booked' },
+    { id: '21:00', time: '9:00 PM', price: 1500, status: 'available' },
 ]
 
 export default function SlotBookingPage() {
@@ -110,9 +115,15 @@ export default function SlotBookingPage() {
     const [selectedSport, setSelectedSport] = useState(searchParams.get('sport') || 'Cricket')
     const [durationHours, setDurationHours] = useState(1)
 
+<<<<<<< HEAD
     // Step 2: Payment Mode Options
     const [paymentMode, setPaymentMode] = useState(searchParams.get('mode') || 'full')
     const [customSplitMyShare, setCustomSplitMyShare] = useState(1200)
+=======
+    // Step 2: Payment Mode Options & Collapsible Accordion State
+    const [paymentMode, setPaymentMode] = useState(searchParams.get('mode') === 'dare' ? 'dare' : 'full')
+    const [expandedAccordionMode, setExpandedAccordionMode] = useState(searchParams.get('mode') === 'dare' ? 'dare' : 'full')
+>>>>>>> 3c3081ee24fe3556505e8d0d79b9c5822489d961
 
     // Step 3: Teams & Customer Details
     const initialName = user?.name || user?.customerName || (user?.email ? user.email.split('@')[0] : 'Rahul Sharma')
@@ -120,6 +131,7 @@ export default function SlotBookingPage() {
     const [teamAName, setTeamAName] = useState(user?.teamName || 'Andheri Strikers')
     const [captainName, setCaptainName] = useState(initialName)
     const [captainPhone, setCaptainPhone] = useState(initialPhone)
+    const [guestPassword, setGuestPassword] = useState('123')
     const [teammates, setTeammates] = useState([
         { id: 1, name: `${initialName} (Captain)`, phone: initialPhone, amount: 900, status: 'Paid', isCaptain: true, tag: 'You' },
         { id: 2, name: 'Vikram Singh', phone: '+91 98765 43211', amount: 0, status: 'Pending', isCaptain: false, tag: 'VS' },
@@ -137,6 +149,8 @@ export default function SlotBookingPage() {
             ])
         }
     }, [user])
+    const [isWhatsappSame, setIsWhatsappSame] = useState(true)
+    const [whatsappPhone, setWhatsappPhone] = useState('')
     const [hasOpponentTeam, setHasOpponentTeam] = useState(true)
     const [teamBName, setTeamBName] = useState('Dadar Destroyers')
     const [teamBPhone, setTeamBPhone] = useState('+91 98765 43222')
@@ -180,6 +194,11 @@ export default function SlotBookingPage() {
         window.scrollTo(0, 0)
     }, [activeStep])
 
+    // Dynamic Slot Price Calculation
+    const activeSlotObj = allTimeSlots.find(s => s.id === selectedSlotTime)
+    const currentSlotPrice = activeSlotObj?.price || selectedVenue.price
+    const totalRent = currentSlotPrice * durationHours
+
     // Helper to format slot time range (e.g. 6:00 PM – 7:00 PM)
     const formatSlotTimeRange = (timeStr, hours = 1) => {
         const found = allTimeSlots.find(s => s.id === timeStr || s.time === timeStr)
@@ -197,18 +216,11 @@ export default function SlotBookingPage() {
         return `${formatHour(startHour)} – ${formatHour(endHour)}`
     }
 
-    const totalRent = selectedVenue.price * durationHours
-
-    useEffect(() => {
-        setCustomSplitMyShare(Math.round(selectedVenue.price * durationHours * 0.6))
-    }, [selectedVenue.price, durationHours])
-
     const getPaymentModeLabel = (mode) => {
         switch (mode) {
             case 'full': return 'Full Pay'
+            case 'dare': return 'Dare to Play (Loser Pays All)'
             case 'split-50': return 'Split 50-50'
-            case 'custom': return 'Custom Split'
-            case 'dare': return 'Dare to Play'
             case 'per-player': return 'Per Player Split'
             default: return 'Full Pay'
         }
@@ -219,13 +231,11 @@ export default function SlotBookingPage() {
 
     const myShareAmount = paymentMode === 'full'
         ? totalRent
-        : paymentMode === 'split-50'
-            ? totalRent / 2
-            : paymentMode === 'custom'
-                ? customSplitMyShare
-                : paymentMode === 'dare'
-                    ? 100
-                    : perPlayerAmount
+        : paymentMode === 'dare'
+            ? 100
+            : paymentMode === 'split-50'
+                ? totalRent / 2
+                : perPlayerAmount
 
     const opponentShareAmount = Math.max(0, totalRent - myShareAmount)
 
@@ -336,7 +346,23 @@ export default function SlotBookingPage() {
     }
 
     const handleProceedClick = () => {
-        setIsAuthModalOpen(true)
+        if (!user && captainName && captainPhone) {
+            // Auto register/login guest with entered name, whatsapp phone & password
+            const guestUser = {
+                id: `usr_guest_${Date.now()}`,
+                name: captainName,
+                phone: captainPhone,
+                email: `${captainPhone.replace(/\D/g, '')}@guest.com`,
+                role: 'customer'
+            }
+            if (setSession) {
+                setSession(guestUser, `token_guest_${Date.now()}`)
+            } else {
+                localStorage.setItem('user', JSON.stringify(guestUser))
+                localStorage.setItem('token', `token_guest_${Date.now()}`)
+            }
+        }
+        handleProceedToConfirm()
     }
 
     const handleProceedToConfirm = async () => {
@@ -369,50 +395,35 @@ export default function SlotBookingPage() {
             const createData = await createRes.json()
 
             if (createData.success && createData.data?.matchId) {
-                // 2. Verify Payment & Generate Token
-                const verifyRes = await fetch('http://localhost:5000/api/v1/match-payments/verify', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        matchId: createData.data.matchId,
-                        holdId: createData.data.holdId,
-                        gatewayOrderId: `order_${Date.now()}`,
-                        gatewayPaymentId: `pay_${Date.now()}`,
-                        idempotencyKey: `idemp_${Date.now()}`
-                    })
-                })
-                const verifyData = await verifyRes.json()
-                if (verifyData.data?.matchId) {
-                    setBookingId(verifyData.data.matchId)
-                }
+                setBookingId(createData.data.matchId)
             }
-
-            const existing = JSON.parse(localStorage.getItem('customer_bookings') || '[]')
-            const currentUserId = user?.id || (user?.email ? `usr_${user.email}` : `usr_cust_${Date.now()}`)
-            const currentUserEmail = user?.email || authEmail || 'customer@gmail.com'
-            const currentCustomerName = captainName || user?.name || 'Customer'
-            const currentCustomerPhone = captainPhone || user?.phone || user?.mobile || '+91 98765 43210'
-
-            const newEntry = {
-                id: generatedId,
-                userId: currentUserId,
-                userEmail: currentUserEmail,
-                customerName: currentCustomerName,
-                customerPhone: currentCustomerPhone,
-                turfId: `turf_${selectedVenue.id}`,
-                venueId: selectedVenue.id,
-                venue: selectedVenue.name,
-                sport: selectedSport,
-                date: selectedDateObj.fullDateString,
-                time: '6:00 PM',
-                amount: `₹${myShareAmount.toLocaleString('en-IN')}`,
-                status: 'Confirmed',
-                createdAt: new Date().toISOString()
-            }
-            localStorage.setItem('customer_bookings', JSON.stringify([newEntry, ...existing]))
         } catch (e) {
-            console.error('Match payment engine API error:', e)
+            console.log('Backend API server offline, proceeding with frontend local state booking:', e?.message || e)
         }
+
+        const existing = JSON.parse(localStorage.getItem('customer_bookings') || '[]')
+        const currentUserId = user?.id || (user?.email ? `usr_${user.email}` : `usr_cust_${Date.now()}`)
+        const currentUserEmail = user?.email || authEmail || 'customer@gmail.com'
+        const currentCustomerName = captainName || user?.name || 'Customer'
+        const currentCustomerPhone = captainPhone || user?.phone || user?.mobile || '+91 98765 43210'
+
+        const newEntry = {
+            id: generatedId,
+            userId: currentUserId,
+            userEmail: currentUserEmail,
+            customerName: currentCustomerName,
+            customerPhone: currentCustomerPhone,
+            turfId: `turf_${selectedVenue.id}`,
+            venueId: selectedVenue.id,
+            venue: selectedVenue.name,
+            sport: selectedSport,
+            date: selectedDateObj.fullDateString,
+            time: selectedSlotTime || '6:00 PM',
+            amount: `₹${myShareAmount.toLocaleString('en-IN')}`,
+            status: 'Confirmed',
+            createdAt: new Date().toISOString()
+        }
+        localStorage.setItem('customer_bookings', JSON.stringify([newEntry, ...existing]))
 
         setIsSubmitting(false)
         setActiveStep(4)
@@ -578,21 +589,43 @@ export default function SlotBookingPage() {
                             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
                                 {allTimeSlots.map((slot) => {
                                     const isSelected = selectedSlotTime === slot.id
-                                    const isDisabled = slot.isBooked
+                                    const isBooked = slot.status === 'booked'
+                                    const isMaintenance = slot.status === 'maintenance'
+                                    const isStaffUnavail = slot.status === 'staff_unavailable'
+                                    const isDisabled = isBooked || isMaintenance || isStaffUnavail
 
                                     return (
                                         <button
                                             key={slot.id}
                                             disabled={isDisabled}
                                             onClick={() => setSelectedSlotTime(slot.id)}
-                                            className={`py-3.5 px-4 rounded-xl text-sm font-bold transition-all duration-150 text-center ${isSelected
-                                                ? 'bg-[#16A34A] text-white font-black shadow-lg border-2 border-[#15803D] cursor-pointer'
-                                                : isDisabled
+                                            className={`py-3 px-3 rounded-2xl text-xs font-bold transition-all duration-150 text-center flex flex-col items-center justify-center gap-1 min-h-[64px] ${isSelected
+                                                ? 'bg-[#16A34A] text-white font-black shadow-lg border-2 border-[#15803D] cursor-pointer ring-4 ring-[#16A34A]/20'
+                                                : isBooked
                                                     ? 'bg-slate-100 text-slate-400 border border-slate-200 line-through opacity-60 cursor-not-allowed'
-                                                    : 'bg-white text-[#111827] border border-[#E5E7EB] hover:border-[#16A34A] hover:bg-emerald-50/50 shadow-sm cursor-pointer'
+                                                    : isMaintenance
+                                                        ? 'bg-amber-50 text-amber-900 border-2 border-amber-300 opacity-90 cursor-not-allowed'
+                                                        : isStaffUnavail
+                                                            ? 'bg-slate-200 text-slate-700 border-2 border-slate-300 opacity-90 cursor-not-allowed'
+                                                            : 'bg-emerald-50/70 border-2 border-emerald-400/80 text-[#172019] hover:bg-emerald-100 hover:border-emerald-500 shadow-sm cursor-pointer'
                                                 }`}
                                         >
-                                            {slot.time}
+                                            <span className="text-sm font-black tracking-tight">{slot.time}</span>
+                                            {isMaintenance ? (
+                                                <span className="text-[9px] font-black uppercase px-2 py-0.5 rounded-md bg-amber-200 text-amber-900 border border-amber-300">
+                                                    🛠️ Maintenance
+                                                </span>
+                                            ) : isStaffUnavail ? (
+                                                <span className="text-[9px] font-black uppercase px-2 py-0.5 rounded-md bg-slate-300 text-slate-800 border border-slate-400">
+                                                    🚫 Staff Unavail
+                                                </span>
+                                            ) : isBooked ? (
+                                                <span className="text-[9px] font-bold text-slate-400">Booked</span>
+                                            ) : (
+                                                <span className={`text-[10px] font-black px-2 py-0.5 rounded-full ${isSelected ? 'bg-white/20 text-white' : 'bg-emerald-200/80 text-emerald-900'}`}>
+                                                    ₹{slot.price}/hr
+                                                </span>
+                                            )}
                                         </button>
                                     )
                                 })}
@@ -600,13 +633,17 @@ export default function SlotBookingPage() {
 
                             {/* Selected Slot Summary Line */}
                             {selectedSlotTime && (
-                                <div className="mt-6 text-sm font-medium text-[#6B7280] flex items-center gap-2">
-                                    <span>Selected: </span>
-                                    <span className="text-[#111827] font-black">
+                                <div className="mt-6 text-sm font-medium text-[#6B7280] flex flex-wrap items-center gap-2 bg-slate-50 border border-[#E5E7EB] p-3.5 rounded-xl">
+                                    <span className="text-xs font-bold text-[#6B7280]">Selected Slot: </span>
+                                    <span className="text-[#111827] font-black text-sm">
                                         {allTimeSlots.find(s => s.id === selectedSlotTime)?.time || selectedSlotTime} ({durationHours} {durationHours > 1 ? 'Hours' : 'Hour'})
                                     </span>
                                     <span className="text-neutral-300">·</span>
-                                    <span className="text-[#16A34A] font-black">₹{totalRent.toLocaleString('en-IN')} total</span>
+                                    <span className="text-xs font-bold text-[#6B7280]">Slot Rate: </span>
+                                    <span className="text-[#16A34A] font-black text-sm">₹{currentSlotPrice.toLocaleString('en-IN')}/hr</span>
+                                    <span className="text-neutral-300">·</span>
+                                    <span className="text-xs font-bold text-[#6B7280]">Total Rent: </span>
+                                    <span className="text-[#16A34A] font-black text-base">₹{totalRent.toLocaleString('en-IN')}</span>
                                 </div>
                             )}
                         </div>
@@ -653,243 +690,146 @@ export default function SlotBookingPage() {
                             </p>
                         </div>
 
-                        {/* Live 5-Minute Slot Hold Banner */}
-                        <div className="bg-emerald-950 text-white p-3.5 rounded-2xl flex items-center justify-between shadow-md border border-emerald-800 animate-pulse">
-                            <div className="flex items-center gap-2.5">
-                                <span className="text-xl">⏳</span>
-                                <div>
-                                    <span className="text-xs font-black uppercase tracking-wider text-[#C8FF2E]">5-Minute Temporary Slot Hold Active</span>
-                                    <p className="text-[11px] text-slate-300 font-medium">Your slot is locked in database for 5 minutes during payment verification.</p>
-                                </div>
-                            </div>
-                            <div className="text-right pl-2">
-                                <span className="font-mono text-lg font-black text-[#C8FF2E]">{formatTimer(holdSeconds)}</span>
-                                <span className="block text-[9px] uppercase tracking-widest text-slate-400 font-bold">Slot Lock</span>
-                            </div>
-                        </div>
-
-                        {/* Dashed Orange Banner */}
-                        <div className="border-2 border-dashed border-amber-400 bg-amber-50/80 rounded-2xl p-4 sm:p-5 flex items-center gap-3">
-                            <span className="text-xl">🎯</span>
-                            <p className="text-sm font-semibold text-amber-950">
-                                <span className="font-black text-amber-700">New on BookMyTurf:</span> Split with opponent, dare them to play, or make loser pay!
-                            </p>
-                        </div>
-
-                        {/* Payment Options List */}
-                        <div className="space-y-3">
+                        {/* Payment Options List with Collapsible Accordion Conditions */}
+                        <div className="space-y-4">
                             {[
                                 {
                                     id: 'full',
                                     icon: '💳',
                                     title: 'I pay full amount',
-                                    desc: `You pay ₹${totalRent.toLocaleString('en-IN')} now. Collect from your team later offline.`
-                                },
-                                {
-                                    id: 'split-50',
-                                    icon: '⚖️',
-                                    title: 'Split 50-50 with opponent',
-                                    desc: `You pay ₹${(totalRent / 2).toLocaleString('en-IN')} now. Opponent team pays ₹${(totalRent / 2).toLocaleString('en-IN')} to confirm the booking.`
-                                },
-                                {
-                                    id: 'custom',
-                                    icon: '🎴',
-                                    title: 'Custom split',
-                                    desc: `You decide the split. Example: You pay ₹${myShareAmount.toLocaleString('en-IN')}, opponent pays ₹${opponentShareAmount.toLocaleString('en-IN')}.`
+                                    desc: `You pay ₹${totalRent.toLocaleString('en-IN')} now. Collect from your team later offline.`,
+                                    details: {
+                                        youPay: `₹${totalRent.toLocaleString('en-IN')}`,
+                                        opponentPay: '₹0 (Free Invite)',
+                                        rule: 'Slot 100% Locked immediately. No opponent payment required.'
+                                    }
                                 },
                                 {
                                     id: 'dare',
                                     icon: '🔥',
                                     title: 'Dare to play — Loser pays all',
-                                    desc: `Both teams pay ₹100 deposit. Winner gets full refund. Loser pays ₹${totalRent.toLocaleString('en-IN')}. Draw = split ₹${(totalRent / 2).toLocaleString('en-IN')} each.`
+                                    desc: `Both teams pay ₹100 deposit. Winner gets full refund. Loser pays ₹${totalRent.toLocaleString('en-IN')}. Draw = split ₹${(totalRent / 2).toLocaleString('en-IN')} each.`,
+                                    badge: '🔥 POPULAR MATCH CHALLENGE',
+                                    details: {
+                                        youPay: '₹100 Deposit',
+                                        opponentPay: '₹100 Deposit',
+                                        rule: `Winner gets ₹100 deposit refunded. Loser pays full ₹${totalRent.toLocaleString('en-IN')} match fee. Draw = split ₹${(totalRent / 2).toLocaleString('en-IN')} each.`
+                                    }
+                                },
+                                {
+                                    id: 'split-50',
+                                    icon: '⚖️',
+                                    title: 'Split 50-50 with opponent',
+                                    desc: `You pay ₹${(totalRent / 2).toLocaleString('en-IN')} now. Opponent team pays ₹${(totalRent / 2).toLocaleString('en-IN')} to confirm the booking.`,
+                                    details: {
+                                        youPay: `₹${(totalRent / 2).toLocaleString('en-IN')} (50%)`,
+                                        opponentPay: `₹${(totalRent / 2).toLocaleString('en-IN')} (50%)`,
+                                        rule: 'Opponent team gets 2 hours to pay via WhatsApp/SMS link. Unpaid in 2h → Full refund to you.'
+                                    }
                                 },
                                 {
                                     id: 'per-player',
                                     icon: '👥',
                                     title: 'Per player split',
-                                    desc: `Each player pays their share. ${playerCount} players = ₹${perPlayerAmount.toLocaleString('en-IN')} each. Send payment links to teammates.`
+                                    desc: `Each player pays their share. ${playerCount} players = ₹${perPlayerAmount.toLocaleString('en-IN')} each. Send payment links to teammates.`,
+                                    details: {
+                                        youPay: `₹${perPlayerAmount.toLocaleString('en-IN')} / player`,
+                                        opponentPay: `₹${perPlayerAmount.toLocaleString('en-IN')} / player`,
+                                        rule: `Minimum 4 players must complete payment before match is confirmed.`
+                                    }
                                 },
                             ].map((opt) => {
                                 const isSelected = paymentMode === opt.id
+                                const isExpanded = expandedAccordionMode === opt.id
+
                                 return (
                                     <div
                                         key={opt.id}
-                                        onClick={() => setPaymentMode(opt.id)}
-                                        className={`p-4 sm:p-5 rounded-2xl border transition-all cursor-pointer flex items-center justify-between ${isSelected
-                                            ? 'bg-emerald-50/60 border-2 border-[#16A34A] shadow-md'
+                                        className={`rounded-2xl border transition-all overflow-hidden ${isSelected
+                                            ? 'bg-emerald-50/70 border-2 border-[#16A34A] shadow-md ring-2 ring-[#16A34A]/20'
                                             : 'bg-white border-[#E5E7EB] hover:border-[#16A34A]/50 hover:shadow-sm'
                                             }`}
                                     >
-                                        <div className="flex items-center gap-3.5 sm:gap-4">
-                                            <div className="w-10 h-10 rounded-xl bg-slate-100 border border-[#E5E7EB] flex items-center justify-center text-lg flex-shrink-0">
-                                                {opt.icon}
+                                        {/* Card Header Bar */}
+                                        <div
+                                            onClick={() => {
+                                                setPaymentMode(opt.id)
+                                                setExpandedAccordionMode(isExpanded ? null : opt.id)
+                                            }}
+                                            className="p-4 sm:p-5 flex items-center justify-between cursor-pointer select-none"
+                                        >
+                                            <div className="flex items-center gap-3.5 sm:gap-4">
+                                                <div className={`w-11 h-11 rounded-xl border flex items-center justify-center text-xl flex-shrink-0 ${isSelected ? 'bg-[#172019] text-white border-[#B8F52A]' : 'bg-slate-100 border-[#E5E7EB]'}`}>
+                                                    {opt.icon}
+                                                </div>
+                                                <div>
+                                                    <div className="flex items-center gap-2">
+                                                        <h3 className="text-sm sm:text-base font-black text-[#111827] leading-tight">
+                                                            {opt.title}
+                                                        </h3>
+                                                        {opt.badge && (
+                                                            <span className="text-[9px] font-black uppercase tracking-wider bg-[#B8F52A] text-[#121614] px-2.5 py-0.5 rounded-full border border-[#B8F52A] shadow-xs">
+                                                                {opt.badge}
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                    <p className="text-xs text-[#6B7280] font-medium mt-1 leading-relaxed">
+                                                        {opt.desc}
+                                                    </p>
+                                                </div>
                                             </div>
-                                            <div>
-                                                <h3 className="text-sm sm:text-base font-black text-[#111827] leading-tight">
-                                                    {opt.title}
-                                                </h3>
-                                                <p className="text-xs text-[#6B7280] font-medium mt-1 leading-relaxed">
-                                                    {opt.desc}
-                                                </p>
+
+                                            {/* Action Toggles: Radio & Arrow Accordion Toggle */}
+                                            <div className="flex items-center gap-3 flex-shrink-0 ml-3">
+                                                <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${isSelected ? 'border-[#16A34A] bg-[#16A34A]' : 'border-slate-300'}`}>
+                                                    {isSelected && <div className="w-2 h-2 rounded-full bg-white" />}
+                                                </div>
+                                                <button
+                                                    type="button"
+                                                    onClick={(e) => {
+                                                        e.stopPropagation()
+                                                        setExpandedAccordionMode(isExpanded ? null : opt.id)
+                                                    }}
+                                                    className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-[#111827] flex items-center justify-center transition-all cursor-pointer"
+                                                >
+                                                    <span className={`text-xs transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`}>▼</span>
+                                                </button>
                                             </div>
                                         </div>
 
-                                        {/* Radio Circle */}
-                                        <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 ml-3 ${isSelected ? 'border-[#16A34A] bg-[#16A34A]' : 'border-slate-300'
-                                            }`}>
-                                            {isSelected && <div className="w-2 h-2 rounded-full bg-white" />}
-                                        </div>
+                                        {/* COLLAPSIBLE ACCORDION BREAKDOWN BOX */}
+                                        {isExpanded && (
+                                            <div className="border-t border-[#E5E7EB] bg-white p-4 sm:p-5 animate-in fade-in duration-200 space-y-3">
+                                                <div className="flex items-center justify-between">
+                                                    <span className="text-xs font-black uppercase tracking-wider text-[#16A34A] flex items-center gap-1.5">
+                                                        <span>📋</span> STEP-BY-STEP CONDITIONS & RULES
+                                                    </span>
+                                                    <span className="text-[10px] font-bold text-slate-600 bg-slate-100 px-2.5 py-1 rounded-md border border-slate-200">
+                                                        {opt.title}
+                                                    </span>
+                                                </div>
+
+                                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-1">
+                                                    <div className="bg-slate-50 border border-[#E5E7EB] rounded-xl p-3">
+                                                        <div className="text-[9px] font-black uppercase tracking-wider text-[#6B7280] mb-1">You Pay Now</div>
+                                                        <div className="font-black text-[#16A34A] text-sm sm:text-base">{opt.details.youPay}</div>
+                                                        <div className="text-[9px] text-[#6B7280] font-medium mt-0.5">Your Initial Share</div>
+                                                    </div>
+                                                    <div className="bg-slate-50 border border-[#E5E7EB] rounded-xl p-3">
+                                                        <div className="text-[9px] font-black uppercase tracking-wider text-[#6B7280] mb-1">Opponent Share</div>
+                                                        <div className="font-black text-emerald-700 text-sm sm:text-base">{opt.details.opponentPay}</div>
+                                                        <div className="text-[9px] text-[#6B7280] font-medium mt-0.5">Opponent Required Share</div>
+                                                    </div>
+                                                    <div className="bg-amber-50/70 border border-amber-200 rounded-xl p-3">
+                                                        <div className="text-[9px] font-black uppercase tracking-wider text-amber-800 mb-1">Condition Rule</div>
+                                                        <div className="font-bold text-amber-950 text-xs leading-snug">{opt.details.rule}</div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        )}
                                     </div>
                                 )
                             })}
-                        </div>
-
-                        {/* ALL 5 PAYMENT MODE CONDITIONS — Always Visible Comparison */}
-                        <div className="bg-white border border-[#E5E7EB] rounded-2xl overflow-hidden shadow-sm">
-                            <div className="bg-slate-900 px-5 py-3.5 flex items-center justify-between">
-                                <span className="text-xs font-black uppercase tracking-wider text-[#C8FF2E] flex items-center gap-1.5">
-                                    <span>⚙️</span> ALL PAYMENT CONDITIONS & RULES
-                                </span>
-                                <span className="text-[10px] font-bold text-slate-400 bg-slate-800 px-2 py-0.5 rounded-md border border-slate-700">
-                                    Selected: {getPaymentModeLabel(paymentMode)}
-                                </span>
-                            </div>
-                            <div className="divide-y divide-[#F3F4F6]">
-
-                                {/* MODE A: FULL PAY */}
-                                <div className={`p-4 transition-all ${paymentMode === 'full' ? 'bg-emerald-50 border-l-4 border-l-[#16A34A]' : 'bg-white'}`}>
-                                    <div className="flex items-center gap-2 mb-2.5">
-                                        <span>💳</span>
-                                        <span className="text-xs font-black text-[#111827] uppercase tracking-wide">Mode A — Full Pay</span>
-                                        {paymentMode === 'full' && <span className="ml-auto text-[10px] font-black text-emerald-700 bg-emerald-100 border border-emerald-300 px-2 py-0.5 rounded-full">✓ SELECTED</span>}
-                                    </div>
-                                    <div className="grid grid-cols-3 gap-2">
-                                        <div className="bg-white border border-[#E5E7EB] rounded-lg p-2.5">
-                                            <div className="text-[9px] font-black uppercase text-[#6B7280] mb-1">You Pay Now</div>
-                                            <div className="font-black text-[#16A34A] text-sm">₹{totalRent.toLocaleString('en-IN')}</div>
-                                            <div className="text-[9px] text-[#6B7280] mt-0.5">100% Full Rent</div>
-                                        </div>
-                                        <div className="bg-white border border-[#E5E7EB] rounded-lg p-2.5">
-                                            <div className="text-[9px] font-black uppercase text-[#6B7280] mb-1">Opponent Pays</div>
-                                            <div className="font-black text-sky-600 text-sm">₹0</div>
-                                            <div className="text-[9px] text-[#6B7280] mt-0.5">Free Invite Only</div>
-                                        </div>
-                                        <div className="bg-white border border-[#E5E7EB] rounded-lg p-2.5">
-                                            <div className="text-[9px] font-black uppercase text-[#6B7280] mb-1">Condition</div>
-                                            <div className="font-bold text-[#111827] text-[10px]">Slot 100% Locked immediately</div>
-                                            <div className="text-[9px] text-[#6B7280] mt-0.5">No opponent payment needed</div>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                {/* MODE B: SPLIT 50-50 */}
-                                <div className={`p-4 transition-all ${paymentMode === 'split-50' ? 'bg-emerald-50 border-l-4 border-l-[#16A34A]' : 'bg-white'}`}>
-                                    <div className="flex items-center gap-2 mb-2.5">
-                                        <span>⚖️</span>
-                                        <span className="text-xs font-black text-[#111827] uppercase tracking-wide">Mode B — Split 50-50</span>
-                                        {paymentMode === 'split-50' && <span className="ml-auto text-[10px] font-black text-emerald-700 bg-emerald-100 border border-emerald-300 px-2 py-0.5 rounded-full">✓ SELECTED</span>}
-                                    </div>
-                                    <div className="grid grid-cols-3 gap-2">
-                                        <div className="bg-white border border-[#E5E7EB] rounded-lg p-2.5">
-                                            <div className="text-[9px] font-black uppercase text-[#6B7280] mb-1">You Pay Now</div>
-                                            <div className="font-black text-[#16A34A] text-sm">₹{(totalRent / 2).toLocaleString('en-IN')}</div>
-                                            <div className="text-[9px] text-[#6B7280] mt-0.5">Your 50% Share</div>
-                                        </div>
-                                        <div className="bg-white border border-[#E5E7EB] rounded-lg p-2.5">
-                                            <div className="text-[9px] font-black uppercase text-[#6B7280] mb-1">Opponent Pays</div>
-                                            <div className="font-black text-emerald-600 text-sm">₹{(totalRent / 2).toLocaleString('en-IN')}</div>
-                                            <div className="text-[9px] text-[#6B7280] mt-0.5">Via SMS / WhatsApp Link</div>
-                                        </div>
-                                        <div className="bg-white border border-amber-200 rounded-lg p-2.5">
-                                            <div className="text-[9px] font-black uppercase text-[#6B7280] mb-1">Condition</div>
-                                            <div className="font-bold text-amber-700 text-[10px]">2-Hour Payment Window</div>
-                                            <div className="text-[9px] text-[#6B7280] mt-0.5">Unpaid in 2h → Full refund to you</div>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                {/* MODE C: CUSTOM SPLIT */}
-                                <div className={`p-4 transition-all ${paymentMode === 'custom' ? 'bg-emerald-50 border-l-4 border-l-[#16A34A]' : 'bg-white'}`}>
-                                    <div className="flex items-center gap-2 mb-2.5">
-                                        <span>🎴</span>
-                                        <span className="text-xs font-black text-[#111827] uppercase tracking-wide">Mode C — Custom Split</span>
-                                        {paymentMode === 'custom' && <span className="ml-auto text-[10px] font-black text-emerald-700 bg-emerald-100 border border-emerald-300 px-2 py-0.5 rounded-full">✓ SELECTED</span>}
-                                    </div>
-                                    <div className="grid grid-cols-3 gap-2">
-                                        <div className="bg-white border border-[#E5E7EB] rounded-lg p-2.5">
-                                            <div className="text-[9px] font-black uppercase text-[#6B7280] mb-1">You Pay Now</div>
-                                            <div className="font-black text-[#16A34A] text-sm">₹{myShareAmount.toLocaleString('en-IN')}</div>
-                                            <div className="text-[9px] text-[#6B7280] mt-0.5">Your custom % of total</div>
-                                        </div>
-                                        <div className="bg-white border border-[#E5E7EB] rounded-lg p-2.5">
-                                            <div className="text-[9px] font-black uppercase text-[#6B7280] mb-1">Opponent Pays</div>
-                                            <div className="font-black text-purple-600 text-sm">₹{opponentShareAmount.toLocaleString('en-IN')}</div>
-                                            <div className="text-[9px] text-[#6B7280] mt-0.5">Remaining custom share</div>
-                                        </div>
-                                        <div className="bg-white border border-amber-200 rounded-lg p-2.5">
-                                            <div className="text-[9px] font-black uppercase text-[#6B7280] mb-1">Condition</div>
-                                            <div className="font-bold text-amber-700 text-[10px]">2-Hour Payment Window</div>
-                                            <div className="text-[9px] text-[#6B7280] mt-0.5">You choose who pays how much</div>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                {/* MODE D: DARE TO PLAY */}
-                                <div className={`p-4 transition-all ${paymentMode === 'dare' ? 'bg-amber-50 border-l-4 border-l-amber-500' : 'bg-white'}`}>
-                                    <div className="flex items-center gap-2 mb-1.5">
-                                        <span>🔥</span>
-                                        <span className="text-xs font-black text-[#111827] uppercase tracking-wide">Mode D — Dare to Play (Loser Pays All)</span>
-                                        {paymentMode === 'dare' && <span className="ml-auto text-[10px] font-black text-amber-700 bg-amber-100 border border-amber-300 px-2 py-0.5 rounded-full">✓ SELECTED</span>}
-                                    </div>
-                                    <div className="text-[10px] text-amber-800 font-semibold mb-2.5 bg-amber-100/70 border border-amber-200 rounded-lg px-2.5 py-1.5">
-                                        ⚠️ Both teams pre-authorize or prepay full liability ₹{totalRent.toLocaleString('en-IN')} before match confirms. ₹100 deposit is a hold — NOT the final charge. Loser's full ₹{totalRent.toLocaleString('en-IN')} is captured after verified result.
-                                    </div>
-                                    <div className="grid grid-cols-3 gap-2">
-                                        <div className="bg-white border border-amber-200 rounded-lg p-2.5">
-                                            <div className="text-[9px] font-black uppercase text-[#6B7280] mb-1">You Secure Now</div>
-                                            <div className="font-black text-amber-600 text-sm">₹100 deposit</div>
-                                            <div className="text-[9px] text-[#6B7280] mt-0.5">Refunded if you WIN</div>
-                                        </div>
-                                        <div className="bg-white border border-amber-200 rounded-lg p-2.5">
-                                            <div className="text-[9px] font-black uppercase text-[#6B7280] mb-1">Opponent Secures</div>
-                                            <div className="font-black text-amber-600 text-sm">₹100 deposit</div>
-                                            <div className="text-[9px] text-[#6B7280] mt-0.5">Refunded if they WIN</div>
-                                        </div>
-                                        <div className="bg-white border border-red-200 rounded-lg p-2.5">
-                                            <div className="text-[9px] font-black uppercase text-[#6B7280] mb-1">Final Settlement</div>
-                                            <div className="font-bold text-red-600 text-[10px]">Loser pays ₹{totalRent.toLocaleString('en-IN')}</div>
-                                            <div className="text-[9px] text-[#6B7280] mt-0.5">Draw → ₹{(totalRent / 2).toLocaleString('en-IN')} each</div>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                {/* MODE E: PER PLAYER */}
-                                <div className={`p-4 transition-all ${paymentMode === 'per-player' ? 'bg-blue-50 border-l-4 border-l-blue-500' : 'bg-white'}`}>
-                                    <div className="flex items-center gap-2 mb-2.5">
-                                        <span>👥</span>
-                                        <span className="text-xs font-black text-[#111827] uppercase tracking-wide">Mode E — Per Player Split</span>
-                                        {paymentMode === 'per-player' && <span className="ml-auto text-[10px] font-black text-blue-700 bg-blue-100 border border-blue-300 px-2 py-0.5 rounded-full">✓ SELECTED</span>}
-                                    </div>
-                                    <div className="grid grid-cols-3 gap-2">
-                                        <div className="bg-white border border-[#E5E7EB] rounded-lg p-2.5">
-                                            <div className="text-[9px] font-black uppercase text-[#6B7280] mb-1">Per Player Share</div>
-                                            <div className="font-black text-[#16A34A] text-sm">₹{perPlayerAmount.toLocaleString('en-IN')}</div>
-                                            <div className="text-[9px] text-[#6B7280] mt-0.5">₹{totalRent.toLocaleString('en-IN')} ÷ {playerCount} players</div>
-                                        </div>
-                                        <div className="bg-white border border-[#E5E7EB] rounded-lg p-2.5">
-                                            <div className="text-[9px] font-black uppercase text-[#6B7280] mb-1">Teammates Pay</div>
-                                            <div className="font-black text-blue-600 text-sm">₹{perPlayerAmount.toLocaleString('en-IN')} each</div>
-                                            <div className="text-[9px] text-[#6B7280] mt-0.5">Individual SMS/WA links</div>
-                                        </div>
-                                        <div className="bg-white border border-[#E5E7EB] rounded-lg p-2.5">
-                                            <div className="text-[9px] font-black uppercase text-[#6B7280] mb-1">Condition</div>
-                                            <div className="font-bold text-[#111827] text-[10px]">Min. 4 Players Must Pay</div>
-                                            <div className="text-[9px] text-[#6B7280] mt-0.5">Match won't confirm if underfunded</div>
-                                        </div>
-                                    </div>
-                                </div>
-
-                            </div>
                         </div>
 
 
@@ -934,67 +874,92 @@ export default function SlotBookingPage() {
                                     YOUR TEAM (TEAM A) & CUSTOMER DETAILS
                                 </h2>
                                 <div className="flex items-center gap-2">
-                                    {user ? (
+                                    {user && (
                                         <span className="text-[10px] bg-emerald-100 text-emerald-800 font-bold px-2.5 py-0.5 rounded-full border border-emerald-300">
                                             ✓ Logged in as {user.name || user.email}
                                         </span>
-                                    ) : (
-                                        <span className="text-[10px] bg-amber-100 text-amber-900 font-bold px-2.5 py-0.5 rounded-full border border-amber-300 animate-pulse">
-                                            ⚠️ Guest Mode
-                                        </span>
                                     )}
-                                    <button
-                                        onClick={() => setIsAuthModalOpen(true)}
-                                        className="text-[11px] bg-[#16A34A] hover:bg-emerald-700 text-white font-bold px-3 py-1 rounded-lg shadow-sm cursor-pointer flex items-center gap-1 transition-all"
-                                    >
-                                        <span>🔑 Sign In / Login</span>
-                                    </button>
                                 </div>
                             </div>
 
                             {/* Customer & Team Inputs */}
-                            <div className="grid sm:grid-cols-3 gap-3">
-                                <div>
-                                    <label className="text-[10px] font-black uppercase tracking-wider text-[#6B7280] mb-1 block">
-                                        Your Team Name
-                                    </label>
-                                    <input
-                                        type="text"
-                                        value={teamAName}
-                                        onChange={(e) => setTeamAName(e.target.value)}
-                                        className="w-full bg-slate-50 border border-[#E5E7EB] rounded-xl px-3.5 py-2.5 text-[#111827] text-xs font-bold outline-none focus:border-[#16A34A] focus:bg-white"
-                                        placeholder="Team A Name"
-                                    />
+                            <div className="space-y-4">
+                                <div className="grid sm:grid-cols-3 gap-3">
+                                    <div>
+                                        <label className="text-[10px] font-black uppercase tracking-wider text-[#6B7280] mb-1 block">
+                                            Your Team Name
+                                        </label>
+                                        <input
+                                            type="text"
+                                            value={teamAName}
+                                            onChange={(e) => setTeamAName(e.target.value)}
+                                            className="w-full bg-slate-50 border border-[#E5E7EB] rounded-xl px-3.5 py-2.5 text-[#111827] text-xs font-bold outline-none focus:border-[#16A34A] focus:bg-white"
+                                            placeholder="Team A Name"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="text-[10px] font-black uppercase tracking-wider text-[#6B7280] mb-1 block">
+                                            Full Name
+                                        </label>
+                                        <input
+                                            type="text"
+                                            value={captainName}
+                                            onChange={(e) => {
+                                                setCaptainName(e.target.value);
+                                                setTeammates(prev => [{ ...prev[0], name: `${e.target.value} (Captain)` }, ...prev.slice(1)]);
+                                            }}
+                                            className="w-full bg-slate-50 border border-[#E5E7EB] rounded-xl px-3.5 py-2.5 text-[#111827] text-xs font-bold outline-none focus:border-[#16A34A] focus:bg-white"
+                                            placeholder="Your Full Name"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="text-[10px] font-black uppercase tracking-wider text-[#6B7280] mb-1 block">
+                                            Mobile Number
+                                        </label>
+                                        <input
+                                            type="text"
+                                            value={captainPhone}
+                                            onChange={(e) => {
+                                                setCaptainPhone(e.target.value);
+                                                if (isWhatsappSame) setWhatsappPhone(e.target.value);
+                                                setTeammates(prev => [{ ...prev[0], phone: e.target.value }, ...prev.slice(1)]);
+                                            }}
+                                            className="w-full bg-slate-50 border border-[#E5E7EB] rounded-xl px-3.5 py-2.5 text-[#111827] text-xs font-bold outline-none focus:border-[#16A34A] focus:bg-white"
+                                            placeholder="+91 98765 43210"
+                                        />
+                                    </div>
                                 </div>
-                                <div>
-                                    <label className="text-[10px] font-black uppercase tracking-wider text-[#6B7280] mb-1 block">
-                                        Customer / Captain Name
-                                    </label>
-                                    <input
-                                        type="text"
-                                        value={captainName}
-                                        onChange={(e) => {
-                                            setCaptainName(e.target.value);
-                                            setTeammates(prev => [{ ...prev[0], name: `${e.target.value} (Captain)` }, ...prev.slice(1)]);
-                                        }}
-                                        className="w-full bg-slate-50 border border-[#E5E7EB] rounded-xl px-3.5 py-2.5 text-[#111827] text-xs font-bold outline-none focus:border-[#16A34A] focus:bg-white"
-                                        placeholder="Your Full Name"
-                                    />
-                                </div>
-                                <div>
-                                    <label className="text-[10px] font-black uppercase tracking-wider text-[#6B7280] mb-1 block">
-                                        Mobile Number (SMS / Invite)
-                                    </label>
-                                    <input
-                                        type="text"
-                                        value={captainPhone}
-                                        onChange={(e) => {
-                                            setCaptainPhone(e.target.value);
-                                            setTeammates(prev => [{ ...prev[0], phone: e.target.value }, ...prev.slice(1)]);
-                                        }}
-                                        className="w-full bg-slate-50 border border-[#E5E7EB] rounded-xl px-3.5 py-2.5 text-[#111827] text-xs font-bold outline-none focus:border-[#16A34A] focus:bg-white"
-                                        placeholder="+91 98765 43210"
-                                    />
+
+                                {/* WhatsApp Number Same Toggle Switch */}
+                                <div className="bg-slate-50 border border-[#E5E7EB] rounded-xl p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                                    <div className="flex items-center gap-3">
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                const nextVal = !isWhatsappSame
+                                                setIsWhatsappSame(nextVal)
+                                                if (nextVal) setWhatsappPhone(captainPhone)
+                                            }}
+                                            className={`w-11 h-6 rounded-full transition-colors relative cursor-pointer flex-shrink-0 ${isWhatsappSame ? 'bg-[#16A34A]' : 'bg-slate-300'}`}
+                                        >
+                                            <div className={`w-5 h-5 rounded-full transition-transform absolute top-0.5 bg-white shadow-sm ${isWhatsappSame ? 'translate-x-5.5' : 'translate-x-0.5'}`} />
+                                        </button>
+                                        <span className="text-xs font-bold text-[#111827]">
+                                            WhatsApp number is same as mobile number
+                                        </span>
+                                    </div>
+
+                                    {!isWhatsappSame && (
+                                        <div className="w-full sm:w-64">
+                                            <input
+                                                type="text"
+                                                value={whatsappPhone}
+                                                onChange={(e) => setWhatsappPhone(e.target.value)}
+                                                className="w-full bg-white border border-[#E5E7EB] rounded-lg px-3 py-1.5 text-[#111827] text-xs font-bold outline-none focus:border-[#16A34A]"
+                                                placeholder="WhatsApp Number (+91)"
+                                            />
+                                        </div>
+                                    )}
                                 </div>
                             </div>
 

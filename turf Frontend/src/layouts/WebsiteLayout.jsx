@@ -187,8 +187,8 @@ export default function WebsiteLayout({ children }) {
                         <div>
                             <h4 className="text-xs font-black text-[#111827] uppercase tracking-widest mb-3">Sports</h4>
                             <ul className="space-y-2">
-                                <li><NavLink to="/turfs?sport=Football" className="text-[13px] font-bold text-[#6B7280] hover:text-[#16A34A] transition-colors">Football Turfs</NavLink></li>
                                 <li><NavLink to="/turfs?sport=Cricket" className="text-[13px] font-bold text-[#6B7280] hover:text-[#16A34A] transition-colors">Cricket Turfs</NavLink></li>
+                                <li><NavLink to="/turfs?sport=Cricket" className="text-[13px] font-bold text-[#6B7280] hover:text-[#16A34A] transition-colors">Box Cricket Arenas</NavLink></li>
                             </ul>
                         </div>
                     </div>

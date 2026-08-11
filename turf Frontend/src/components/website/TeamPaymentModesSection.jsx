@@ -22,36 +22,6 @@ export default function TeamPaymentModesSection({ onSelectMode, selectedMode = '
             ]
         },
         {
-            id: 'split-50',
-            icon: '⚖️',
-            badge: 'MOST POPULAR',
-            badgeBg: 'bg-sky-100 text-sky-800 border-sky-300',
-            title: 'Split 50-50',
-            desc: 'Both teams pay half of the booking amount to confirm the slot.',
-            example: 'Total: ₹1,200 · You Pay: ₹600 · Opponent: ₹600',
-            cta: 'Choose 50-50',
-            steps: [
-                '1. You pay your half share (₹600) to initiate booking.',
-                '2. System automatically generates and sends payment link to Opponent Captain.',
-                '3. Booking confirms automatically once Opponent completes their ₹600 share.'
-            ]
-        },
-        {
-            id: 'custom',
-            icon: '🎴',
-            badge: 'FLEXIBLE RATIO',
-            badgeBg: 'bg-purple-100 text-purple-800 border-purple-300',
-            title: 'Custom Split',
-            desc: 'Decide exactly how much each team will pay using a custom ratio slider.',
-            example: 'Total: ₹1,200 · Team A: ₹800 (67%) · Team B: ₹400 (33%)',
-            cta: 'Create Custom Split',
-            steps: [
-                '1. Adjust the slider to set custom amounts for both teams.',
-                '2. Pay your custom share amount.',
-                '3. Opponent team receives link for the exact remaining balance.'
-            ]
-        },
-        {
             id: 'dare',
             icon: '🔥',
             badge: '🔥 CHALLENGE MODE',
@@ -66,6 +36,21 @@ export default function TeamPaymentModesSection({ onSelectMode, selectedMode = '
                 '1. Both teams deposit ₹100 security amount to lock match.',
                 '2. Play the match at the turf venue.',
                 '3. Match winner gets full deposit refund; losing team settles the ₹1,200 match fee.'
+            ]
+        },
+        {
+            id: 'split-50',
+            icon: '⚖️',
+            badge: 'MOST POPULAR',
+            badgeBg: 'bg-sky-100 text-sky-800 border-sky-300',
+            title: 'Split 50-50',
+            desc: 'Both teams pay half of the booking amount to confirm the slot.',
+            example: 'Total: ₹1,200 · You Pay: ₹600 · Opponent: ₹600',
+            cta: 'Choose 50-50',
+            steps: [
+                '1. You pay your half share (₹600) to initiate booking.',
+                '2. System automatically generates and sends payment link to Opponent Captain.',
+                '3. Booking confirms automatically once Opponent completes their ₹600 share.'
             ]
         },
         {
