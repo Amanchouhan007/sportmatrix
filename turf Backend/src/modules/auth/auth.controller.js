@@ -88,9 +88,9 @@ const login = async (req, res) => {
                 if (owner.password_hash === password) {
                     isMatch = true;
                 } else if (owner.password_hash && owner.password_hash.startsWith('$2')) {
-                    try { isMatch = await bcrypt.compare(password, owner.password_hash); } catch(e){}
+                    try { isMatch = await bcrypt.compare(password, owner.password_hash); } catch (e) { }
                 } else {
-                    try { isMatch = await bcrypt.compare(password, owner.password_hash); } catch(e){}
+                    try { isMatch = await bcrypt.compare(password, owner.password_hash); } catch (e) { }
                 }
 
                 // Dev/fallback matching for quick testing
@@ -112,7 +112,7 @@ const login = async (req, res) => {
                         'INSERT INTO users (id, name, email, password_hash, role, mobile, alternate_mobile, avatar, status) VALUES (?, ?, ?, ?, "OWNER", ?, ?, ?, "ACTIVE") ON DUPLICATE KEY UPDATE name = VALUES(name), mobile = VALUES(mobile)',
                         [userId, owner.full_name, owner.email, owner.password_hash, owner.mobile, owner.alternate_mobile || null, owner.profile_image || null]
                     );
-                } catch (e) {}
+                } catch (e) { }
 
                 user = {
                     id: userId,
@@ -137,9 +137,9 @@ const login = async (req, res) => {
             if (user.password_hash === password) {
                 isMatch = true;
             } else if (user.password_hash && user.password_hash.startsWith('$2')) {
-                try { isMatch = await bcrypt.compare(password, user.password_hash); } catch(e){}
+                try { isMatch = await bcrypt.compare(password, user.password_hash); } catch (e) { }
             } else {
-                try { isMatch = await bcrypt.compare(password, user.password_hash); } catch(e){}
+                try { isMatch = await bcrypt.compare(password, user.password_hash); } catch (e) { }
             }
 
             // Dev/fallback matching for quick testing
@@ -212,7 +212,7 @@ const getProfile = async (req, res) => {
 
         try {
             await db.query(`ALTER TABLE users ADD COLUMN alternate_mobile VARCHAR(20);`);
-        } catch (e) {}
+        } catch (e) { }
 
         const [users] = await db.query(
             'SELECT id, name, email, role, mobile, alternate_mobile, avatar, status, created_at FROM users WHERE id = ? OR email = ? OR role = "SUPER_ADMIN"',
@@ -261,13 +261,13 @@ const updateProfile = async (req, res) => {
     try {
         try {
             await db.query(`ALTER TABLE users ADD COLUMN alternate_mobile VARCHAR(20);`);
-        } catch (e) {}
+        } catch (e) { }
         try {
             await db.query(`ALTER TABLE users MODIFY COLUMN avatar LONGTEXT;`);
-        } catch (e) {}
+        } catch (e) { }
         try {
             await db.query(`ALTER TABLE owners MODIFY COLUMN profile_image LONGTEXT;`);
-        } catch (e) {}
+        } catch (e) { }
 
         const displayName = (fullName || name || '').trim();
         const displayMobile = mobile ? mobile.trim() : null;
