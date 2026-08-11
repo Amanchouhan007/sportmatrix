@@ -500,16 +500,6 @@ export default function SlotBookingPage() {
                         return (
                             <button
                                 key={step.num}
-<<<<<<< HEAD
-                                disabled={isFuture}
-                                onClick={() => handleStepHeaderClick(step.num)}
-                                className={`px-4 sm:px-5 py-2 sm:py-2.5 rounded-full text-xs font-bold whitespace-nowrap transition-all duration-200 flex items-center gap-1.5 shadow-sm ${isActive
-                                    ? 'bg-[#111827] text-white border-2 border-[#16A34A] shadow-[0_4px_15px_rgba(22,163,74,0.25)] cursor-default'
-                                    : isPast
-                                        ? 'bg-white text-[#111827] border border-[#E5E7EB] hover:border-[#16A34A] cursor-pointer'
-                                        : 'bg-slate-100 text-[#9CA3AF] border border-[#E5E7EB] cursor-not-allowed opacity-60'
-                                    }`}
-=======
                                 onClick={() => setActiveStep(step.num)}
                                 className={`px-5 py-2.5 rounded-full text-xs font-black uppercase tracking-wider whitespace-nowrap transition-all duration-200 cursor-pointer flex items-center gap-2 shadow-xs ${
                                     isActive
@@ -518,7 +508,6 @@ export default function SlotBookingPage() {
                                         ? 'bg-white text-[#10B981] border border-emerald-300'
                                         : 'bg-white text-slate-500 border border-[#E2E8F0] hover:text-[#111827] hover:border-slate-400'
                                 }`}
->>>>>>> 3c6d1938bfb95d4d5c6baa3a51f6d50b9612634b
                             >
                                 {isPast && <HiCheck className="w-3.5 h-3.5 text-[#10B981]" />}
                                 <span>{step.label}</span>

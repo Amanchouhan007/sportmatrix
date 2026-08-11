@@ -1,16 +1,19 @@
 import React, { useState, useEffect } from 'react'
-import { HiUserGroup, HiPlus, HiSearch, HiFilter, HiPaperAirplane, HiDownload, HiTrash, HiPencilAlt, HiSparkles, HiPhone, HiTag, HiOutlineRefresh } from 'react-icons/hi'
-import { getCrmLeads, saveCrmLead, deleteCrmLead } from '../../services/crmService'
+import { HiUserGroup, HiPlus, HiSearch, HiFilter, HiPaperAirplane, HiDownload, HiTrash, HiPencilAlt, HiSparkles, HiPhone, HiTag, HiOutlineRefresh, HiCheck } from 'react-icons/hi'
+import { getCrmLeads, saveCrmLead, deleteCrmLead, AVAILABLE_TURF_BRANCHES } from '../../services/crmService'
 import OfferBroadcastModal from '../../components/crm/OfferBroadcastModal'
 import { useToast } from '../../components/ui/Toast'
 
 export default function TurfLeadCRMPage() {
     const [leads, setLeads] = useState([])
+    const [selectedBranch, setSelectedBranch] = useState('all') // 'all' | specific turf branch
     const [activeTab, setActiveTab] = useState('all') // 'all' | 'team' | 'player' | 'umpire' | 'organizer'
     const [searchQuery, setSearchQuery] = useState('')
+    const [selectedLeadIds, setSelectedLeadIds] = useState([])
     const [isAddModalOpen, setIsAddModalOpen] = useState(false)
     const [isBroadcastModalOpen, setIsBroadcastModalOpen] = useState(false)
     const [selectedLeadForBroadcast, setSelectedLeadForBroadcast] = useState(null)
+    const [selectedLeadsForBroadcast, setSelectedLeadsForBroadcast] = useState([])
     const { addToast } = useToast()
 
     // Form inputs for Add Lead Modal
@@ -18,6 +21,7 @@ export default function TurfLeadCRMPage() {
     const [formPhone, setFormPhone] = useState('')
     const [formRole, setFormRole] = useState('team')
     const [formTeamName, setFormTeamName] = useState('')
+    const [formTurfBranch, setFormTurfBranch] = useState('SportZone Arena')
     const [formPreferredSport, setFormPreferredSport] = useState('Cricket')
     const [formPreferredSlot, setFormPreferredSlot] = useState('Weekend Evening')
     const [formNotes, setFormNotes] = useState('')
@@ -25,6 +29,47 @@ export default function TurfLeadCRMPage() {
     useEffect(() => {
         setLeads(getCrmLeads())
     }, [])
+
+    // Dynamic config for form field labels & placeholders based on Lead Category
+    const getCategoryFieldConfig = (role) => {
+        switch (role) {
+            case 'organizer':
+                return {
+                    nameLabel: 'ORGANIZER / CONTACT NAME',
+                    namePlaceholder: 'e.g. Rajesh Kumar (Event Manager)',
+                    secondaryLabel: 'TOURNAMENT / ORGANIZATION',
+                    secondaryPlaceholder: 'e.g. Indore Tournament Association',
+                    categoryName: '🏆 Tournament Organizer'
+                }
+            case 'player':
+                return {
+                    nameLabel: 'PLAYER NAME',
+                    namePlaceholder: 'e.g. Amit Kumar',
+                    secondaryLabel: 'TEAM / ACADEMY NAME',
+                    secondaryPlaceholder: 'e.g. Free Agent / Royals XI',
+                    categoryName: '⚡ Player'
+                }
+            case 'umpire':
+                return {
+                    nameLabel: 'UMPIRE / REFEREE NAME',
+                    namePlaceholder: 'e.g. Siddharth Roy',
+                    secondaryLabel: 'ASSOCIATION / CERTIFICATION',
+                    secondaryPlaceholder: 'e.g. BCA Certified Official',
+                    categoryName: '🚩 Umpire / Referee'
+                }
+            case 'team':
+            default:
+                return {
+                    nameLabel: 'CAPTAIN / CONTACT NAME',
+                    namePlaceholder: 'e.g. Vikram Malhotra (Captain)',
+                    secondaryLabel: 'TEAM NAME',
+                    secondaryPlaceholder: 'e.g. Andheri Strikers',
+                    categoryName: '🏏 Team / Captain'
+                }
+        }
+    }
+
+    const fieldConfig = getCategoryFieldConfig(formRole)
 
     const handleAddLead = (e) => {
         e.preventDefault()
@@ -36,36 +81,84 @@ export default function TurfLeadCRMPage() {
             name: formName,
             phone: formPhone,
             role: formRole,
-            teamName: formTeamName || (formRole === 'umpire' ? 'Official Referee' : 'Individual Lead'),
+            teamName: formTeamName || (formRole === 'umpire' ? 'Official Referee' : formRole === 'organizer' ? 'Independent Organizer' : 'Individual Lead'),
             preferredSport: formPreferredSport,
             preferredSlot: formPreferredSlot,
-            turfBranch: 'SportZone Arena',
+            turfBranch: formTurfBranch || (selectedBranch !== 'all' ? selectedBranch : 'SportZone Arena'),
             notes: formNotes
         })
         setLeads(getCrmLeads())
         setIsAddModalOpen(false)
         setFormName('')
         setFormPhone('')
+        setFormTeamName('')
         setFormNotes('')
-        if (addToast) addToast(`Lead ${created.name} successfully added to CRM!`, 'success')
+        if (addToast) addToast(`Lead ${created.name} (${fieldConfig.categoryName}) successfully added to CRM!`, 'success')
     }
 
     const handleDelete = (id, name) => {
         if (window.confirm(`Are you sure you want to delete lead ${name}?`)) {
-            setLeads(deleteCrmLead(id))
+            const updated = deleteCrmLead(id)
+            setLeads(updated)
+            setSelectedLeadIds(prev => prev.filter(i => i !== id))
             if (addToast) addToast(`Lead ${name} deleted.`, 'info')
         }
     }
 
-    const handleOpenBroadcast = (lead) => {
+    const handleOpenSingleBroadcast = (lead) => {
         setSelectedLeadForBroadcast(lead)
+        setSelectedLeadsForBroadcast([])
         setIsBroadcastModalOpen(true)
     }
 
+    const handleOpenBulkBroadcast = () => {
+        const bulkLeads = leads.filter(l => selectedLeadIds.includes(l.id))
+        if (bulkLeads.length === 0) {
+            if (addToast) addToast('Please select at least one contact!', 'error')
+            return
+        }
+        setSelectedLeadsForBroadcast(bulkLeads)
+        setSelectedLeadForBroadcast(null)
+        setIsBroadcastModalOpen(true)
+    }
+
+    // Filter Logic
+    const branchOptions = ['all', ...new Set([...AVAILABLE_TURF_BRANCHES, ...leads.map(l => l.turfBranch).filter(Boolean)])]
+
+    const filteredLeads = leads.filter(lead => {
+        const matchesBranch = selectedBranch === 'all' || lead.turfBranch === selectedBranch
+        const matchesTab = activeTab === 'all' || lead.role === activeTab
+        const matchesSearch = 
+            lead.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            lead.phone?.includes(searchQuery) ||
+            lead.teamName?.toLowerCase().includes(searchQuery.toLowerCase())
+        return matchesBranch && matchesTab && matchesSearch
+    })
+
+    // Checkbox toggles
+    const isAllSelected = filteredLeads.length > 0 && filteredLeads.every(l => selectedLeadIds.includes(l.id))
+
+    const handleToggleSelectAll = () => {
+        if (isAllSelected) {
+            setSelectedLeadIds([])
+        } else {
+            setSelectedLeadIds(filteredLeads.map(l => l.id))
+        }
+    }
+
+    const handleToggleSelectLead = (id) => {
+        if (selectedLeadIds.includes(id)) {
+            setSelectedLeadIds(selectedLeadIds.filter(i => i !== id))
+        } else {
+            setSelectedLeadIds([...selectedLeadIds, id])
+        }
+    }
+
     const handleExportCSV = () => {
-        const headers = ['ID,Name,Phone,Role,Team Name,Preferred Sport,Preferred Slot,Status,Total Bookings,Notes,Created Date']
-        const rows = filteredLeads.map(l => 
-            `"${l.id}","${l.name}","${l.phone}","${l.role}","${l.teamName}","${l.preferredSport}","${l.preferredSlot}","${l.status}","${l.totalBookings}","${l.notes || ''}","${l.createdAt}"`
+        const targetLeads = selectedLeadIds.length > 0 ? leads.filter(l => selectedLeadIds.includes(l.id)) : filteredLeads
+        const headers = ['ID,Name,Phone,Role,Team/Organization,Turf Branch,Preferred Sport,Preferred Slot,Status,Total Bookings,Notes,Created Date']
+        const rows = targetLeads.map(l => 
+            `"${l.id}","${l.name}","${l.phone}","${l.role}","${l.teamName}","${l.turfBranch}","${l.preferredSport}","${l.preferredSlot}","${l.status}","${l.totalBookings}","${l.notes || ''}","${l.createdAt}"`
         )
         const csvContent = 'data:text/csv;charset=utf-8,' + [headers, ...rows].join('\n')
         const encodedUri = encodeURI(csvContent)
@@ -75,18 +168,8 @@ export default function TurfLeadCRMPage() {
         document.body.appendChild(link)
         link.click()
         document.body.removeChild(link)
-        if (addToast) addToast('CRM contacts exported to CSV!', 'success')
+        if (addToast) addToast(`Exported ${targetLeads.length} contacts to CSV!`, 'success')
     }
-
-    // Filter Logic
-    const filteredLeads = leads.filter(lead => {
-        const matchesTab = activeTab === 'all' || lead.role === activeTab
-        const matchesSearch = 
-            lead.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            lead.phone?.includes(searchQuery) ||
-            lead.teamName?.toLowerCase().includes(searchQuery.toLowerCase())
-        return matchesTab && matchesSearch
-    })
 
     const roleBadge = (role) => {
         switch (role) {
@@ -110,7 +193,7 @@ export default function TurfLeadCRMPage() {
                         Lead Database & Offer Broadcast
                     </h1>
                     <p className="text-xs text-slate-500 font-medium">
-                        Manage your Captains, Players, Umpires & Tournament Organizers. Send 1-click WhatsApp broadcasts to fill empty slots!
+                        Manage your Captains, Players, Umpires & Tournament Organizers separately per Turf Branch.
                     </p>
                 </div>
 
@@ -124,7 +207,10 @@ export default function TurfLeadCRMPage() {
                     </button>
 
                     <button
-                        onClick={() => setIsAddModalOpen(true)}
+                        onClick={() => {
+                            if (selectedBranch !== 'all') setFormTurfBranch(selectedBranch)
+                            setIsAddModalOpen(true)
+                        }}
                         className="px-5 py-2.5 rounded-xl bg-[#16A34A] hover:bg-emerald-700 text-white font-black text-xs shadow-md cursor-pointer flex items-center gap-1.5 transition-all"
                     >
                         <HiPlus className="w-4 h-4" />
@@ -133,29 +219,59 @@ export default function TurfLeadCRMPage() {
                 </div>
             </div>
 
-            {/* Quick Stats Grid */}
+            {/* Quick Stats Grid - Dynamic to Selected Turf Branch */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                 <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm">
-                    <div className="text-[10px] font-black uppercase text-slate-400">Total Leads</div>
-                    <div className="text-2xl font-black text-slate-900 mt-1">{leads.length}</div>
+                    <div className="text-[10px] font-black uppercase text-slate-400">Total Leads ({selectedBranch === 'all' ? 'All Turfs' : selectedBranch})</div>
+                    <div className="text-2xl font-black text-slate-900 mt-1">{filteredLeads.length}</div>
                 </div>
                 <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm">
                     <div className="text-[10px] font-black uppercase text-slate-400">Teams & Captains</div>
-                    <div className="text-2xl font-black text-emerald-600 mt-1">{leads.filter(l => l.role === 'team').length}</div>
+                    <div className="text-2xl font-black text-emerald-600 mt-1">{filteredLeads.filter(l => l.role === 'team').length}</div>
                 </div>
                 <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm">
                     <div className="text-[10px] font-black uppercase text-slate-400">Registered Umpires</div>
-                    <div className="text-2xl font-black text-amber-600 mt-1">{leads.filter(l => l.role === 'umpire').length}</div>
+                    <div className="text-2xl font-black text-amber-600 mt-1">{filteredLeads.filter(l => l.role === 'umpire').length}</div>
                 </div>
                 <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm">
                     <div className="text-[10px] font-black uppercase text-slate-400">Organizers & Players</div>
-                    <div className="text-2xl font-black text-sky-600 mt-1">{leads.filter(l => l.role === 'organizer' || l.role === 'player').length}</div>
+                    <div className="text-2xl font-black text-sky-600 mt-1">{filteredLeads.filter(l => l.role === 'organizer' || l.role === 'player').length}</div>
                 </div>
             </div>
 
-            {/* Controls Bar: Tabs & Search */}
-            <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
-                {/* Tabs */}
+            {/* Controls Bar: Turf Selector, Tabs & Search */}
+            <div className="flex flex-col gap-3 bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+                    {/* Turf Branch Selector */}
+                    <div className="flex items-center gap-2">
+                        <label className="text-[10px] font-black uppercase tracking-wider text-slate-500 whitespace-nowrap">
+                            🏟️ Turf Branch:
+                        </label>
+                        <select
+                            value={selectedBranch}
+                            onChange={(e) => setSelectedBranch(e.target.value)}
+                            className="bg-slate-50 border border-slate-200 rounded-xl px-3 py-1.5 text-xs font-bold text-slate-900 outline-none focus:border-[#16A34A] focus:bg-white min-w-48"
+                        >
+                            {branchOptions.map(b => (
+                                <option key={b} value={b}>{b === 'all' ? '🌐 All Turf Branches' : `🏟️ ${b}`}</option>
+                            ))}
+                        </select>
+                    </div>
+
+                    {/* Search Bar */}
+                    <div className="relative w-full sm:w-72">
+                        <HiSearch className="absolute left-3.5 top-2.5 text-slate-400 w-4 h-4" />
+                        <input
+                            type="text"
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            placeholder="Search captain name, phone, team..."
+                            className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-9 pr-4 py-1.5 text-xs font-medium text-slate-900 outline-none focus:border-[#16A34A] focus:bg-white"
+                        />
+                    </div>
+                </div>
+
+                {/* Role Tabs */}
                 <div className="flex bg-slate-100 p-1 rounded-xl gap-1 text-xs font-bold overflow-x-auto">
                     {[
                         { id: 'all', label: '👥 All Contacts' },
@@ -167,25 +283,42 @@ export default function TurfLeadCRMPage() {
                         <button
                             key={tab.id}
                             onClick={() => setActiveTab(tab.id)}
-                            className={`px-3 py-2 rounded-lg whitespace-nowrap transition-all cursor-pointer ${activeTab === tab.id ? 'bg-white text-[#16A34A] shadow-sm font-black' : 'text-slate-600 hover:text-slate-900'}`}
+                            className={`px-3 py-1.5 rounded-lg whitespace-nowrap transition-all cursor-pointer ${activeTab === tab.id ? 'bg-white text-[#16A34A] shadow-sm font-black' : 'text-slate-600 hover:text-slate-900'}`}
                         >
                             {tab.label}
                         </button>
                     ))}
                 </div>
-
-                {/* Search Bar */}
-                <div className="relative w-full sm:w-72">
-                    <HiSearch className="absolute left-3.5 top-3 text-slate-400 w-4 h-4" />
-                    <input
-                        type="text"
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                        placeholder="Search name, phone, team..."
-                        className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-9 pr-4 py-2 text-xs font-medium text-slate-900 outline-none focus:border-[#16A34A] focus:bg-white"
-                    />
-                </div>
             </div>
+
+            {/* STICKY BULK BROADCAST TOOLBAR (When contacts selected) */}
+            {selectedLeadIds.length > 0 && (
+                <div className="bg-slate-900 text-white p-4 rounded-2xl flex flex-wrap items-center justify-between gap-4 shadow-xl border border-slate-800 animate-in fade-in slide-in-from-bottom-2">
+                    <div className="flex items-center gap-3">
+                        <span className="bg-[#D4FF45] text-slate-950 px-3 py-1 rounded-full text-xs font-black">
+                            {selectedLeadIds.length} Contacts Ticked
+                        </span>
+                        <span className="text-xs font-bold text-slate-300">
+                            Ready to dispatch bulk WhatsApp offers to all selected leads
+                        </span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <button
+                            onClick={handleOpenBulkBroadcast}
+                            className="px-4 py-2 rounded-xl bg-[#25D366] hover:bg-[#20bd5a] text-white font-black text-xs flex items-center gap-2 shadow-md cursor-pointer transition-all"
+                        >
+                            <HiPaperAirplane className="rotate-90 w-4 h-4" />
+                            <span>📢 Broadcast Offer to ({selectedLeadIds.length}) Contacts</span>
+                        </button>
+                        <button
+                            onClick={() => setSelectedLeadIds([])}
+                            className="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold text-xs cursor-pointer"
+                        >
+                            Deselect All
+                        </button>
+                    </div>
+                </div>
+            )}
 
             {/* CRM Leads Table */}
             <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
@@ -193,92 +326,132 @@ export default function TurfLeadCRMPage() {
                     <table className="w-full text-left text-xs">
                         <thead className="bg-slate-50 border-b border-slate-200 text-slate-500 uppercase font-black tracking-wider text-[10px]">
                             <tr>
-                                <th className="py-3.5 px-4">Contact / Name</th>
+                                <th className="py-3.5 px-4 w-10 text-center">
+                                    <input
+                                        type="checkbox"
+                                        checked={isAllSelected}
+                                        onChange={handleToggleSelectAll}
+                                        className="w-4 h-4 rounded text-emerald-600 focus:ring-emerald-500 cursor-pointer accent-[#16A34A]"
+                                        title="Select All Leads"
+                                    />
+                                </th>
+                                <th className="py-3.5 px-4">Captain / Contact Name</th>
                                 <th className="py-3.5 px-4">Category</th>
                                 <th className="py-3.5 px-4">Team / Organization</th>
+                                <th className="py-3.5 px-4">Turf Branch</th>
                                 <th className="py-3.5 px-4">Slot Preference</th>
                                 <th className="py-3.5 px-4">Status</th>
-                                <th className="py-3.5 px-4">Bookings</th>
                                 <th className="py-3.5 px-4 text-right">WhatsApp Action</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100 font-medium text-slate-800">
                             {filteredLeads.length === 0 ? (
                                 <tr>
-                                    <td colSpan="7" className="text-center py-8 text-slate-400 font-bold">
+                                    <td colSpan="8" className="text-center py-8 text-slate-400 font-bold">
                                         No leads found matching criteria.
                                     </td>
                                 </tr>
                             ) : (
-                                filteredLeads.map((lead) => (
-                                    <tr key={lead.id} className="hover:bg-slate-50/80 transition-colors">
-                                        <td className="py-3.5 px-4 font-bold text-slate-900">
-                                            <div>{lead.name}</div>
-                                            <div className="text-[11px] text-slate-500 font-mono flex items-center gap-1 mt-0.5">
-                                                <HiPhone className="w-3 h-3 text-emerald-600" />
-                                                <span>{lead.phone}</span>
-                                            </div>
-                                        </td>
-                                        <td className="py-3.5 px-4">
-                                            <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase border ${roleBadge(lead.role)}`}>
-                                                {lead.role}
-                                            </span>
-                                        </td>
-                                        <td className="py-3.5 px-4 font-semibold text-slate-700">
-                                            {lead.teamName || '—'}
-                                        </td>
-                                        <td className="py-3.5 px-4 text-slate-600">
-                                            {lead.preferredSlot || 'Any Time'}
-                                        </td>
-                                        <td className="py-3.5 px-4">
-                                            <span className="px-2 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-200 font-bold text-[10px]">
-                                                {lead.status || 'Active'}
-                                            </span>
-                                        </td>
-                                        <td className="py-3.5 px-4 font-mono font-bold text-slate-900">
-                                            {lead.totalBookings || 0} matches
-                                        </td>
-                                        <td className="py-3.5 px-4 text-right">
-                                            <div className="flex items-center justify-end gap-2">
-                                                <button
-                                                    onClick={() => handleOpenBroadcast(lead)}
-                                                    className="px-3 py-1.5 rounded-lg bg-[#25D366] hover:bg-[#20bd5a] text-white font-bold text-[11px] shadow-sm cursor-pointer flex items-center gap-1 transition-all"
-                                                >
-                                                    <HiPaperAirplane className="w-3 h-3 rotate-90" />
-                                                    <span>Offer Broadcast</span>
-                                                </button>
-                                                <button
-                                                    onClick={() => handleDelete(lead.id, lead.name)}
-                                                    className="p-1.5 text-slate-400 hover:text-red-600 rounded-lg hover:bg-slate-100 transition-colors cursor-pointer"
-                                                    title="Delete Lead"
-                                                >
-                                                    <HiTrash className="w-4 h-4" />
-                                                </button>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                ))
+                                filteredLeads.map((lead) => {
+                                    const isSelected = selectedLeadIds.includes(lead.id)
+                                    return (
+                                        <tr key={lead.id} className={`hover:bg-slate-50/80 transition-colors ${isSelected ? 'bg-emerald-50/40' : ''}`}>
+                                            <td className="py-3.5 px-4 text-center">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={isSelected}
+                                                    onChange={() => handleToggleSelectLead(lead.id)}
+                                                    className="w-4 h-4 rounded text-emerald-600 focus:ring-emerald-500 cursor-pointer accent-[#16A34A]"
+                                                />
+                                            </td>
+                                            <td className="py-3.5 px-4 font-bold text-slate-900">
+                                                <div>{lead.name}</div>
+                                                <div className="text-[11px] text-slate-500 font-mono flex items-center gap-1 mt-0.5">
+                                                    <HiPhone className="w-3 h-3 text-emerald-600" />
+                                                    <span>{lead.phone}</span>
+                                                </div>
+                                            </td>
+                                            <td className="py-3.5 px-4">
+                                                <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase border ${roleBadge(lead.role)}`}>
+                                                    {lead.role === 'team' ? 'Captain / Team' : lead.role === 'organizer' ? 'Tournament Org' : lead.role}
+                                                </span>
+                                            </td>
+                                            <td className="py-3.5 px-4 font-semibold text-slate-700">
+                                                {lead.teamName || '—'}
+                                            </td>
+                                            <td className="py-3.5 px-4 font-bold text-emerald-700">
+                                                {lead.turfBranch || 'SportZone Arena'}
+                                            </td>
+                                            <td className="py-3.5 px-4 text-slate-600">
+                                                {lead.preferredSlot || 'Any Time'}
+                                            </td>
+                                            <td className="py-3.5 px-4">
+                                                <span className="px-2 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-200 font-bold text-[10px]">
+                                                    {lead.status || 'Active'}
+                                                </span>
+                                            </td>
+                                            <td className="py-3.5 px-4 text-right">
+                                                <div className="flex items-center justify-end gap-2">
+                                                    <button
+                                                        onClick={() => handleOpenSingleBroadcast(lead)}
+                                                        className="px-3 py-1.5 rounded-lg bg-[#25D366] hover:bg-[#20bd5a] text-white font-bold text-[11px] shadow-sm cursor-pointer flex items-center gap-1 transition-all"
+                                                    >
+                                                        <HiPaperAirplane className="w-3 h-3 rotate-90" />
+                                                        <span>Offer Broadcast</span>
+                                                    </button>
+                                                    <button
+                                                        onClick={() => handleDelete(lead.id, lead.name)}
+                                                        className="p-1.5 text-slate-400 hover:text-red-600 rounded-lg hover:bg-slate-100 transition-colors cursor-pointer"
+                                                        title="Delete Lead"
+                                                    >
+                                                        <HiTrash className="w-4 h-4" />
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    )
+                                })
                             )}
                         </tbody>
                     </table>
                 </div>
             </div>
 
-            {/* ADD LEAD MODAL */}
+            {/* ADD LEAD MODAL WITH DYNAMIC CATEGORY LABELS */}
             {isAddModalOpen && (
                 <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/80 backdrop-blur-sm p-4 animate-in fade-in duration-200">
                     <div className="bg-white border border-slate-200 rounded-3xl p-6 max-w-md w-full shadow-2xl space-y-4">
-                        <h3 className="text-xl font-black text-slate-900 tracking-tight">Add New CRM Lead / Contact</h3>
+                        <h3 className="text-xl font-black text-slate-900 tracking-tight">
+                            Add New CRM Lead / Contact
+                        </h3>
                         
                         <form onSubmit={handleAddLead} className="space-y-3 text-xs">
+                            {/* Category Selector */}
                             <div>
-                                <label className="text-[10px] font-black uppercase text-slate-500 mb-1 block">Full Name</label>
+                                <label className="text-[10px] font-black uppercase text-slate-500 mb-1 block">Lead Category</label>
+                                <select
+                                    value={formRole}
+                                    onChange={(e) => setFormRole(e.target.value)}
+                                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 font-bold text-slate-900 outline-none focus:border-[#16A34A]"
+                                >
+                                    <option value="team">🏏 Team / Captain</option>
+                                    <option value="organizer">🏆 Tournament Organization</option>
+                                    <option value="player">⚡ Individual Player</option>
+                                    <option value="umpire">🚩 Umpire / Referee</option>
+                                </select>
+                            </div>
+
+                            {/* Dynamic Full Name / Captain / Organizer Name */}
+                            <div>
+                                <label className="text-[10px] font-black uppercase text-[#16A34A] mb-1 block">
+                                    {fieldConfig.nameLabel}
+                                </label>
                                 <input
                                     type="text"
                                     value={formName}
                                     onChange={(e) => setFormName(e.target.value)}
                                     required
-                                    placeholder="e.g. Vikram Malhotra"
+                                    placeholder={fieldConfig.namePlaceholder}
                                     className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2 font-bold text-slate-900 outline-none focus:border-[#16A34A]"
                                 />
                             </div>
@@ -295,30 +468,32 @@ export default function TurfLeadCRMPage() {
                                 />
                             </div>
 
-                            <div className="grid grid-cols-2 gap-2">
-                                <div>
-                                    <label className="text-[10px] font-black uppercase text-slate-500 mb-1 block">Lead Category</label>
-                                    <select
-                                        value={formRole}
-                                        onChange={(e) => setFormRole(e.target.value)}
-                                        className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 font-bold text-slate-900 outline-none focus:border-[#16A34A]"
-                                    >
-                                        <option value="team">🏏 Team / Captain</option>
-                                        <option value="player">⚡ Player</option>
-                                        <option value="umpire">🚩 Umpire / Referee</option>
-                                        <option value="organizer">🏆 Tournament Org</option>
-                                    </select>
-                                </div>
-                                <div>
-                                    <label className="text-[10px] font-black uppercase text-slate-500 mb-1 block">Team / Organization</label>
-                                    <input
-                                        type="text"
-                                        value={formTeamName}
-                                        onChange={(e) => setFormTeamName(e.target.value)}
-                                        placeholder="Team Name"
-                                        className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 font-bold text-slate-900 outline-none focus:border-[#16A34A]"
-                                    />
-                                </div>
+                            {/* Dynamic Team Name / Tournament Org Name */}
+                            <div>
+                                <label className="text-[10px] font-black uppercase text-[#16A34A] mb-1 block">
+                                    {fieldConfig.secondaryLabel}
+                                </label>
+                                <input
+                                    type="text"
+                                    value={formTeamName}
+                                    onChange={(e) => setFormTeamName(e.target.value)}
+                                    placeholder={fieldConfig.secondaryPlaceholder}
+                                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2 font-bold text-slate-900 outline-none focus:border-[#16A34A]"
+                                />
+                            </div>
+
+                            {/* Turf Branch Selector */}
+                            <div>
+                                <label className="text-[10px] font-black uppercase text-slate-500 mb-1 block">Assign Turf Branch</label>
+                                <select
+                                    value={formTurfBranch}
+                                    onChange={(e) => setFormTurfBranch(e.target.value)}
+                                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 font-bold text-slate-900 outline-none focus:border-[#16A34A]"
+                                >
+                                    {AVAILABLE_TURF_BRANCHES.map(b => (
+                                        <option key={b} value={b}>🏟️ {b}</option>
+                                    ))}
+                                </select>
                             </div>
 
                             <div>
@@ -366,9 +541,15 @@ export default function TurfLeadCRMPage() {
             {/* BROADCAST OFFER MODAL */}
             <OfferBroadcastModal
                 isOpen={isBroadcastModalOpen}
-                onClose={() => setIsBroadcastModalOpen(false)}
+                onClose={() => {
+                    setIsBroadcastModalOpen(false)
+                    setSelectedLeadForBroadcast(null)
+                    setSelectedLeadsForBroadcast([])
+                }}
                 selectedLead={selectedLeadForBroadcast}
+                selectedLeads={selectedLeadsForBroadcast}
             />
         </div>
     )
 }
+

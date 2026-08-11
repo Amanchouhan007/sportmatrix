@@ -1,4 +1,12 @@
-// Local storage & mock data service for Turf Lead CRM & Offer Broadcasting
+export const AVAILABLE_TURF_BRANCHES = [
+    'SportZone Arena',
+    'Champion Cricket Ground',
+    'GameVault Center',
+    'Royal Cricket Ground',
+    'Skyline Turf',
+    'ProKick Cricket Turf',
+    'ProPlay Cricket Arena'
+]
 
 const INITIAL_CRM_LEADS = [
     {
