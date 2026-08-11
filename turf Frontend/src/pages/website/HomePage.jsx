@@ -10,6 +10,8 @@ import { RiTrophyFill, RiGamepadFill } from 'react-icons/ri'
 import TurfSearchBar from '../../components/TurfSearchBar'
 import TurfResultsGrid from '../../components/TurfResultsGrid'
 import TurfMapExplorer from '../../components/TurfMapExplorer'
+import TeamPaymentModesSection from '../../components/website/TeamPaymentModesSection'
+import LiveCricketChallengeCard from '../../components/website/LiveCricketChallengeCard'
 function useReveal() {
     const ref = useRef(null)
     const [v, setV] = useState(false)
@@ -181,6 +183,17 @@ export default function HomePage() {
                         onSearch={handleSearch}
                         onClear={clearFilters}
                     />
+
+                    {/* FRONT CRICKET CHALLENGE CARD ALERT */}
+                    <div className="mt-6">
+                        <LiveCricketChallengeCard
+                            challengerTeam="Aman XI Warriors"
+                            venueName="SportZone Turf Arena, Mumbai"
+                            matchTime="Tonight, 8:00 PM – 9:00 PM"
+                            matchFee={1200}
+                            depositFee={100}
+                        />
+                    </div>
                 </div>
             </section>
 
@@ -444,6 +457,11 @@ export default function HomePage() {
                     </div>
                 </div>
             </section>
+
+            {/* ══════════════════════════════════════════════
+                SECTION 4.5: TEAM MATCH PAYMENT MODES SHOWCASE
+            ══════════════════════════════════════════════ */}
+            <TeamPaymentModesSection onSelectMode={(modeId) => navigate(`/booking/1?mode=${modeId}`)} />
 
             {/* ══════════════════════════════════════════════
                 SECTION 5: OWNER COMMAND CENTRAL CTA

@@ -290,6 +290,76 @@
     100% { background-position: 0% 50%; }
   }
 
+  @keyframes kenburnsBg {
+    0% { transform: scale(1) translate(0, 0); }
+    50% { transform: scale(1.12) translate(-1.5%, -1%); }
+    100% { transform: scale(1) translate(0, 0); }
+  }
+
+  @keyframes ambientLaser {
+    0% { transform: translateX(-150%) rotate(25deg); opacity: 0.15; }
+    50% { transform: translateX(250%) rotate(25deg); opacity: 0.55; }
+    100% { transform: translateX(-150%) rotate(25deg); opacity: 0.15; }
+  }
+
+  @keyframes movingGradient {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+  }
+
+  .animate-kenburns {
+    animation: kenburnsBg 16s ease-in-out infinite alternate;
+  }
+
+  .animate-ambient-laser {
+    animation: ambientLaser 10s linear infinite;
+  }
+
+  .animate-moving-gradient {
+    background-size: 200% 200%;
+    animation: movingGradient 8s ease infinite;
+  }
+
+  /* Cricket & Turf Stadium Motion Animations */
+  @keyframes cricketBallSpin {
+    0% { transform: rotate(0deg) scale(1); filter: drop-shadow(0 0 10px rgba(184, 255, 42, 0.6)); }
+    50% { transform: rotate(180deg) scale(1.15); filter: drop-shadow(0 0 20px rgba(212, 255, 69, 0.9)); }
+    100% { transform: rotate(360deg) scale(1); filter: drop-shadow(0 0 10px rgba(184, 255, 42, 0.6)); }
+  }
+
+  @keyframes wicketFlash {
+    0%, 100% { opacity: 0.3; transform: scale(1); }
+    50% { opacity: 0.85; transform: scale(1.1); filter: drop-shadow(0 0 25px #b8f52a); }
+  }
+
+  @keyframes stadiumLightSweep {
+    0% { transform: translateX(-120%) skewX(-20deg); opacity: 0.15; }
+    50% { transform: translateX(180%) skewX(-20deg); opacity: 0.55; }
+    100% { transform: translateX(-120%) skewX(-20deg); opacity: 0.15; }
+  }
+
+  @keyframes pitchGlowPulse {
+    0%, 100% { opacity: 0.4; }
+    50% { opacity: 0.85; }
+  }
+
+  .animate-cricket-spin {
+    animation: cricketBallSpin 6s linear infinite;
+  }
+
+  .animate-wicket-flash {
+    animation: wicketFlash 2.5s ease-in-out infinite;
+  }
+
+  .animate-stadium-sweep {
+    animation: stadiumLightSweep 7s ease-in-out infinite;
+  }
+
+  .animate-pitch-pulse {
+    animation: pitchGlowPulse 4s ease-in-out infinite;
+  }
+
   @keyframes borderGlow {
     0%, 100% { border-color: rgba(16, 185, 129, 0.3); }
     50% { border-color: rgba(16, 185, 129, 0.6); }
