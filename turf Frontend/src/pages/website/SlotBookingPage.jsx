@@ -126,6 +126,30 @@ export default function SlotBookingPage() {
     const [durationHours, setDurationHours] = useState(1)
     const [hasVerifiedUmpire, setHasVerifiedUmpire] = useState(false)
 
+    // Curated & Turf Owner Offers Database
+    const availableCoupons = [
+        { code: 'SM200', title: 'Flat ₹200 OFF', desc: 'Instant discount on any slot booking', discount: 200, type: 'flat', minAmount: 500, icon: '🔥', tag: 'RECOMMENDED' },
+        { code: 'CRICKET20', title: '20% OFF First Match', desc: 'Save 20% on total match rent', discount: 20, type: 'percent', maxDiscount: 300, minAmount: 600, icon: '⚡', tag: 'POPULAR' },
+        { code: 'PROUMPIRE', title: 'Free Umpire Addon', desc: 'Official umpire included for free (₹300 value)', discount: 300, type: 'umpire', minAmount: 1000, icon: '🏏', tag: 'FAIRPLAY' },
+        { code: 'EARLY250', title: 'Early Bird ₹250 OFF', desc: 'Applicable on morning matches', discount: 250, type: 'flat', minAmount: 600, icon: '⭐', tag: 'SAVER' },
+        { code: 'NIGHTSPECIAL', title: 'Night Match ₹200 OFF', desc: 'Floodlights & special slot rebate', discount: 200, type: 'flat', minAmount: 800, icon: '🌙', tag: 'NIGHT' },
+        { code: 'SQUAD100', title: 'Squad Match Discount', desc: 'Save ₹150 on squad split games', discount: 150, type: 'flat', minAmount: 800, icon: '🎟️', tag: 'TEAMS' }
+    ]
+
+    const initialPromoCode = searchParams.get('promo') || ''
+    const [couponInput, setCouponInput] = useState(initialPromoCode)
+    const [appliedOffer, setAppliedOffer] = useState(() => {
+        if (!initialPromoCode) return null
+        const found = availableCoupons.find(c => c.code.toUpperCase() === initialPromoCode.toUpperCase())
+        return found || { code: initialPromoCode.toUpperCase(), title: `Promo ${initialPromoCode.toUpperCase()}`, discount: 200, type: 'flat', icon: '🔥', tag: 'PROMO' }
+    })
+
+    useEffect(() => {
+        if (initialPromoCode && addToast) {
+            addToast(`🎉 Offer "${initialPromoCode.toUpperCase()}" Auto-Applied! Discount Added.`, 'success')
+        }
+    }, [initialPromoCode])
+
     // Step 2: Payment Mode Options & Collapsible Accordion State
     const initialMode = searchParams.get('mode') || 'full'
     const [paymentMode, setPaymentMode] = useState(initialMode)
@@ -197,7 +221,22 @@ export default function SlotBookingPage() {
     })()
 
     const umpireFee = (hasVerifiedUmpire && isTurfUmpireAvailable) ? 300 : 0
-    const totalRent = (currentSlotPrice * durationHours) + umpireFee
+    const grossRent = (currentSlotPrice * durationHours) + umpireFee
+
+    // Calculate Offer Discount
+    let discountAmount = 0
+    if (appliedOffer) {
+        if (appliedOffer.type === 'percent') {
+            discountAmount = Math.min(appliedOffer.maxDiscount || 500, Math.round((grossRent * (appliedOffer.discount || 20)) / 100))
+        } else if (appliedOffer.type === 'umpire') {
+            discountAmount = hasVerifiedUmpire ? 300 : 150
+        } else {
+            discountAmount = appliedOffer.discount || 200
+        }
+    }
+
+    // Net Total Rent after Offer
+    const totalRent = Math.max(100, grossRent - discountAmount)
 
     // Helper to format slot time range (e.g. 6:00 PM – 7:00 PM)
     const formatSlotTimeRange = (timeStr, hours = 1) => {
@@ -234,7 +273,7 @@ export default function SlotBookingPage() {
         : paymentMode === 'dare'
             ? 100
             : paymentMode === 'split-50'
-                ? totalRent / 2
+                ? Math.round(totalRent / 2)
                 : perPlayerAmount
 
     const opponentShareAmount = Math.max(0, totalRent - myShareAmount)
@@ -682,7 +721,7 @@ export default function SlotBookingPage() {
                                 })}
                             </div>
 
-                            {/* Selected Slot Summary Line */}
+                            {/* Selected Slot Summary Line with Dynamic Discount Breakdown */}
                             {selectedSlotTime && (
                                 <div className="mt-4 bg-[#F8FAFC] border border-[#E2E8F0] p-4 sm:p-5 rounded-[20px] shadow-xs flex flex-wrap items-center gap-2 text-xs sm:text-sm font-semibold text-slate-600">
                                     <span>Selected Slot: </span>
@@ -696,19 +735,136 @@ export default function SlotBookingPage() {
                                     )}
                                     <span className="text-slate-300 mx-1">·</span>
                                     <span>Slot Rate: </span>
-                                    <span className="text-[#10B981] font-black text-sm sm:text-base font-mono">₹{currentSlotPrice.toLocaleString('en-IN')}/hr</span>
+                                    <span className="text-slate-800 font-bold font-mono">₹{currentSlotPrice.toLocaleString('en-IN')}/hr</span>
+
                                     {hasVerifiedUmpire && (
                                         <>
                                             <span className="text-slate-300 mx-1">·</span>
                                             <span>Umpire Add-on: </span>
-                                            <span className="text-emerald-700 font-black text-sm sm:text-base font-mono">+₹300</span>
+                                            <span className="text-emerald-700 font-bold font-mono">+₹300</span>
                                         </>
                                     )}
+
+                                    {appliedOffer && discountAmount > 0 && (
+                                        <>
+                                            <span className="text-slate-300 mx-1">·</span>
+                                            <span className="bg-emerald-100 text-emerald-800 font-black text-xs px-2.5 py-0.5 rounded-full border border-emerald-300 flex items-center gap-1">
+                                                🏷️ {appliedOffer.code} Applied: -₹{discountAmount.toLocaleString('en-IN')}
+                                            </span>
+                                        </>
+                                    )}
+
                                     <span className="text-slate-300 mx-1">·</span>
                                     <span>Total Rent: </span>
+                                    {appliedOffer && discountAmount > 0 && (
+                                        <span className="text-slate-400 line-through text-xs font-mono">₹{grossRent.toLocaleString('en-IN')}</span>
+                                    )}
                                     <span className="text-[#10B981] font-black text-base sm:text-lg font-mono">₹{totalRent.toLocaleString('en-IN')}</span>
                                 </div>
                             )}
+
+                            {/* ── AVAILABLE TURF OFFERS & COUPONS SECTION ── */}
+                            <div className="mt-5 p-4 sm:p-5 rounded-2xl bg-gradient-to-br from-amber-500/5 via-orange-500/5 to-rose-500/5 border-2 border-orange-200/80 shadow-xs">
+                                <div className="flex items-center justify-between gap-2 mb-3">
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-xl animate-bounce">🏷️</span>
+                                        <div>
+                                            <h4 className="text-sm font-black text-[#111827]">Available Turf Offers & Coupons</h4>
+                                            <p className="text-[11px] text-slate-500 font-medium">Turf owner special match discounts & promos</p>
+                                        </div>
+                                    </div>
+                                    {appliedOffer && (
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                setAppliedOffer(null)
+                                                setCouponInput('')
+                                                if (addToast) addToast('Coupon removed', 'info')
+                                            }}
+                                            className="text-[11px] font-bold text-rose-600 hover:text-rose-700 bg-rose-50 px-2.5 py-1 rounded-lg border border-rose-200 cursor-pointer transition-colors"
+                                        >
+                                            ✕ Remove Code
+                                        </button>
+                                    )}
+                                </div>
+
+                                {/* Custom Coupon Input */}
+                                <div className="flex items-center gap-2 mb-3.5">
+                                    <div className="relative flex-1">
+                                        <input
+                                            type="text"
+                                            value={couponInput}
+                                            onChange={(e) => setCouponInput(e.target.value.toUpperCase())}
+                                            placeholder="ENTER PROMO CODE (e.g. SM200, CRICKET20)"
+                                            className="w-full px-3.5 py-2 text-xs font-bold uppercase rounded-xl border border-slate-300 focus:border-orange-500 focus:ring-1 focus:ring-orange-500 bg-white placeholder:normal-case placeholder:font-normal"
+                                        />
+                                    </div>
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            if (!couponInput.trim()) return
+                                            const code = couponInput.trim().toUpperCase()
+                                            const found = availableCoupons.find(c => c.code === code)
+                                            if (found) {
+                                                setAppliedOffer(found)
+                                                if (addToast) addToast(`🎉 Offer "${found.code}" applied! ${found.title}`, 'success')
+                                            } else {
+                                                setAppliedOffer({ code, title: `Promo ${code}`, discount: 150, type: 'flat', icon: '🎁', tag: 'OFFER' })
+                                                if (addToast) addToast(`🎉 Code "${code}" applied! ₹150 discount added.`, 'success')
+                                            }
+                                        }}
+                                        className="px-5 py-2 bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white font-black text-xs rounded-xl shadow-sm cursor-pointer transition-all active:scale-95 whitespace-nowrap"
+                                    >
+                                        APPLY CODE
+                                    </button>
+                                </div>
+
+                                {/* Quick Click Coupon Chips */}
+                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
+                                    {availableCoupons.map((c) => {
+                                        const isThisApplied = appliedOffer?.code === c.code
+                                        return (
+                                            <div
+                                                key={c.code}
+                                                onClick={() => {
+                                                    if (isThisApplied) {
+                                                        setAppliedOffer(null)
+                                                        setCouponInput('')
+                                                        if (addToast) addToast('Coupon removed', 'info')
+                                                    } else {
+                                                        setAppliedOffer(c)
+                                                        setCouponInput(c.code)
+                                                        if (addToast) addToast(`🎉 Offer "${c.code}" applied! ${c.title}`, 'success')
+                                                    }
+                                                }}
+                                                className={`p-3 rounded-xl border-2 transition-all cursor-pointer flex items-center justify-between gap-2 select-none ${
+                                                    isThisApplied
+                                                        ? 'bg-orange-50/90 border-orange-500 shadow-md shadow-orange-500/10 scale-[1.02]'
+                                                        : 'bg-white border-slate-200 hover:border-orange-300 hover:bg-orange-50/40'
+                                                }`}
+                                            >
+                                                <div className="flex items-center gap-2.5 min-w-0">
+                                                    <span className="text-xl shrink-0">{c.icon}</span>
+                                                    <div className="min-w-0">
+                                                        <div className="flex items-center gap-1.5">
+                                                            <span className="font-mono font-black text-xs text-[#111827]">{c.code}</span>
+                                                            <span className="text-[8px] font-black px-1.5 py-0.2 rounded bg-orange-100 text-orange-800 uppercase shrink-0">
+                                                                {c.tag}
+                                                            </span>
+                                                        </div>
+                                                        <p className="text-[10px] text-slate-600 font-bold truncate mt-0.5">{c.title}</p>
+                                                    </div>
+                                                </div>
+                                                <span className={`text-[10px] font-black px-2.5 py-1 rounded-lg shrink-0 transition-colors ${
+                                                    isThisApplied ? 'bg-orange-600 text-white' : 'bg-slate-100 text-slate-700 hover:bg-orange-100'
+                                                }`}>
+                                                    {isThisApplied ? '✓ APPLIED' : '+ APPLY'}
+                                                </span>
+                                            </div>
+                                        )
+                                    })}
+                                </div>
+                            </div>
 
                             {/* ADD VERIFIED UMPIRE BOOKING ADD-ON (Tier 2 Verification) - Only shown if Turf Owner enabled service */}
                             {isTurfUmpireAvailable && (

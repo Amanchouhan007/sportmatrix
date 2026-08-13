@@ -32,26 +32,26 @@ const sports = [
 
 const allTurfs = [
     // 🌟 INDORE PRIMARY VENUES FIRST
-    { id: 13, name: 'Spike Cricket Turf', location: 'Bhawarkua, Indore', city: 'Indore', rating: 4.6, price: 500, image: '/images/turf1.png', sports: ['Cricket'], amenities: ['Floodlights', 'Parking', 'Washroom'], lat: 22.6953, lng: 75.8690 },
-    { id: 6, name: 'Royal Cricket Ground', location: 'Vijay Nagar, Indore', city: 'Indore', rating: 4.7, price: 1000, image: '/images/turf5.png', sports: ['Cricket'], amenities: ['Floodlights', 'Parking', 'Drinking Water'], lat: 22.7533, lng: 75.8937 },
-    { id: 14, name: 'Indore Sports Complex', location: 'LIG Colony, Indore', city: 'Indore', rating: 4.9, price: 1200, image: '/images/turf3.png', sports: ['Cricket'], amenities: ['Floodlights', 'Parking', 'Seating', 'Washroom', 'AC'], lat: 22.7380, lng: 75.8916 },
-    { id: 15, name: 'Rajiv Gandhi Stadium Turf', location: 'Navlakha, Indore', city: 'Indore', rating: 4.5, price: 700, image: '/images/turf4.png', sports: ['Cricket'], amenities: ['Floodlights', 'Parking', 'Seating', 'Drinking Water'], lat: 22.7000, lng: 75.8752 },
-    { id: 16, name: 'Champion Turf Ground', location: 'Palasia, Indore', city: 'Indore', rating: 4.8, price: 900, image: '/images/turf2.png', sports: ['Cricket'], amenities: ['Floodlights', 'Parking', 'Seating', 'Drinking Water'], lat: 22.7244, lng: 75.8839 },
-    { id: 17, name: 'Skyline Sports Hub', location: 'Super Corridor, Indore', city: 'Indore', rating: 4.7, price: 1100, image: '/images/turf6.png', sports: ['Cricket'], amenities: ['Floodlights', 'Parking', 'Washroom', 'Cafeteria'], lat: 22.7650, lng: 75.8300 },
-    { id: 18, name: 'GreenField Arena', location: 'Rau, Indore', city: 'Indore', rating: 4.6, price: 800, image: '/images/turf7.png', sports: ['Cricket'], amenities: ['Floodlights', 'Parking', 'Seating'], lat: 22.6300, lng: 75.8050 },
-    { id: 19, name: 'Annapurna Sports Arena', location: 'Annapurna, Indore', city: 'Indore', rating: 4.5, price: 650, image: '/images/turf1.png', sports: ['Cricket'], amenities: ['Floodlights', 'Parking', 'Washroom'], lat: 22.7010, lng: 75.8320 },
+    { id: 13, name: 'Spike Cricket Turf', location: 'Bhawarkua, Indore', city: 'Indore', rating: 4.6, price: 500, dimensions: '90 × 45 ft', image: '/images/turf1.png', sports: ['Cricket'], amenities: ['Floodlights', 'Parking', 'Washroom'], lat: 22.6953, lng: 75.8690 },
+    { id: 6, name: 'Royal Cricket Ground', location: 'Vijay Nagar, Indore', city: 'Indore', rating: 4.7, price: 1000, dimensions: '110 × 55 ft', image: '/images/turf5.png', sports: ['Cricket'], amenities: ['Floodlights', 'Parking', 'Drinking Water'], lat: 22.7533, lng: 75.8937 },
+    { id: 14, name: 'Indore Sports Complex', location: 'LIG Colony, Indore', city: 'Indore', rating: 4.9, price: 1200, dimensions: '120 × 60 ft', image: '/images/turf3.png', sports: ['Cricket'], amenities: ['Floodlights', 'Parking', 'Seating', 'Washroom', 'AC'], lat: 22.7380, lng: 75.8916 },
+    { id: 15, name: 'Rajiv Gandhi Stadium Turf', location: 'Navlakha, Indore', city: 'Indore', rating: 4.5, price: 700, dimensions: '95 × 50 ft', image: '/images/turf4.png', sports: ['Cricket'], amenities: ['Floodlights', 'Parking', 'Seating', 'Drinking Water'], lat: 22.7000, lng: 75.8752 },
+    { id: 16, name: 'Champion Turf Ground', location: 'Palasia, Indore', city: 'Indore', rating: 4.8, price: 900, dimensions: '100 × 50 ft', image: '/images/turf2.png', sports: ['Cricket'], amenities: ['Floodlights', 'Parking', 'Seating', 'Drinking Water'], lat: 22.7244, lng: 75.8839 },
+    { id: 17, name: 'Skyline Sports Hub', location: 'Super Corridor, Indore', city: 'Indore', rating: 4.7, price: 1100, dimensions: '110 × 50 ft', image: '/images/turf6.png', sports: ['Cricket'], amenities: ['Floodlights', 'Parking', 'Washroom', 'Cafeteria'], lat: 22.7650, lng: 75.8300 },
+    { id: 18, name: 'GreenField Arena', location: 'Rau, Indore', city: 'Indore', rating: 4.6, price: 800, dimensions: '100 × 48 ft', image: '/images/turf7.png', sports: ['Cricket'], amenities: ['Floodlights', 'Parking', 'Seating'], lat: 22.6300, lng: 75.8050 },
+    { id: 19, name: 'Annapurna Sports Arena', location: 'Annapurna, Indore', city: 'Indore', rating: 4.5, price: 650, dimensions: '90 × 45 ft', image: '/images/turf1.png', sports: ['Cricket'], amenities: ['Floodlights', 'Parking', 'Washroom'], lat: 22.7010, lng: 75.8320 },
     // Other cities
-    { id: 1, name: 'SportZone Arena', location: 'Andheri West, Mumbai', city: 'Mumbai', rating: 4.8, price: 1200, image: '/images/turf1.png', sports: ['Cricket'], amenities: ['Floodlights', 'Parking', 'Washroom'], lat: 19.1136, lng: 72.8697 },
-    { id: 2, name: 'Champion Cricket Ground', location: 'Koramangala, Bangalore', city: 'Bangalore', rating: 4.9, price: 1500, image: '/images/turf2.png', sports: ['Cricket'], amenities: ['Floodlights', 'Seating', 'Drinking Water'], lat: 12.9352, lng: 77.6245 },
-    { id: 3, name: 'GameVault Cricket Center', location: 'Koramangala, Bangalore', city: 'Bangalore', rating: 4.9, price: 1200, image: '/images/turf3.png', sports: ['Cricket'], amenities: ['Floodlights', 'Parking', 'Seating', 'Washroom'], lat: 12.9698, lng: 77.7500 },
-    { id: 4, name: 'ProKick Cricket Turf', location: 'Indiranagar, Bangalore', city: 'Bangalore', rating: 4.7, price: 1400, image: '/images/turf4.png', sports: ['Cricket'], amenities: ['Floodlights', 'Parking', 'Washroom'], lat: 12.9784, lng: 77.6408 },
-    { id: 5, name: 'ProPlay Cricket Arena', location: 'Vashi, Navi Mumbai', city: 'Mumbai', rating: 4.5, price: 1000, image: '/images/turf4.png', sports: ['Cricket'], amenities: ['Floodlights', 'Parking'], lat: 19.0330, lng: 73.0297 },
-    { id: 7, name: 'DunkZone Cricket Turf', location: 'Bandra, Mumbai', city: 'Mumbai', rating: 4.3, price: 750, image: '/images/turf2.png', sports: ['Cricket'], amenities: ['Floodlights', 'Parking'], lat: 19.0596, lng: 72.8295 },
-    { id: 8, name: 'PixelArena Cricket', location: 'HSR Layout, Bangalore', city: 'Bangalore', rating: 4.8, price: 1500, image: '/images/turf6.png', sports: ['Cricket'], amenities: ['Floodlights', 'Parking', 'Washroom', 'Seating', 'Drinking Water', 'AC'], lat: 12.9121, lng: 77.6446 },
-    { id: 9, name: 'Skyline Cricket Turf', location: 'Powai, Mumbai', city: 'Mumbai', rating: 4.6, price: 1400, image: '/images/turf6.png', sports: ['Cricket'], amenities: ['Floodlights', 'Washroom'], lat: 19.1176, lng: 72.9060 },
-    { id: 10, name: 'StrikeZone Cricket', location: 'Noida, Delhi', city: 'Delhi', rating: 4.6, price: 850, image: '/images/turf7.png', sports: ['Cricket'], amenities: ['Floodlights', 'Parking', 'Washroom', 'Drinking Water'], lat: 28.5355, lng: 77.3910 },
-    { id: 11, name: 'Master Blaster Cricket', location: 'Saket, Delhi', city: 'Delhi', rating: 4.8, price: 1100, image: '/images/turf7.png', sports: ['Cricket'], amenities: ['Floodlights', 'Equipment'], lat: 28.5244, lng: 77.2167 },
-    { id: 12, name: 'Pune Cricket Arena', location: 'Kothrud, Pune', city: 'Pune', rating: 4.5, price: 1000, image: '/images/turf2.png', sports: ['Cricket'], amenities: ['Floodlights', 'Parking', 'Washroom', 'Seating'], lat: 18.5074, lng: 73.8077 },
+    { id: 1, name: 'SportZone Arena', location: 'Andheri West, Mumbai', city: 'Mumbai', rating: 4.8, price: 1200, dimensions: '100 × 50 ft', image: '/images/turf1.png', sports: ['Cricket'], amenities: ['Floodlights', 'Parking', 'Washroom'], lat: 19.1136, lng: 72.8697 },
+    { id: 2, name: 'Champion Cricket Ground', location: 'Koramangala, Bangalore', city: 'Bangalore', rating: 4.9, price: 1500, dimensions: '120 × 60 ft', image: '/images/turf2.png', sports: ['Cricket'], amenities: ['Floodlights', 'Seating', 'Drinking Water'], lat: 12.9352, lng: 77.6245 },
+    { id: 3, name: 'GameVault Cricket Center', location: 'Koramangala, Bangalore', city: 'Bangalore', rating: 4.9, price: 1200, dimensions: '110 × 55 ft', image: '/images/turf3.png', sports: ['Cricket'], amenities: ['Floodlights', 'Parking', 'Seating', 'Washroom'], lat: 12.9698, lng: 77.7500 },
+    { id: 4, name: 'ProKick Cricket Turf', location: 'Indiranagar, Bangalore', city: 'Bangalore', rating: 4.7, price: 1400, dimensions: '105 × 50 ft', image: '/images/turf4.png', sports: ['Cricket'], amenities: ['Floodlights', 'Parking', 'Washroom'], lat: 12.9784, lng: 77.6408 },
+    { id: 5, name: 'ProPlay Cricket Arena', location: 'Vashi, Navi Mumbai', city: 'Mumbai', rating: 4.5, price: 1000, dimensions: '95 × 48 ft', image: '/images/turf4.png', sports: ['Cricket'], amenities: ['Floodlights', 'Parking'], lat: 19.0330, lng: 73.0297 },
+    { id: 7, name: 'DunkZone Cricket Turf', location: 'Bandra, Mumbai', city: 'Mumbai', rating: 4.3, price: 750, dimensions: '85 × 45 ft', image: '/images/turf2.png', sports: ['Cricket'], amenities: ['Floodlights', 'Parking'], lat: 19.0596, lng: 72.8295 },
+    { id: 8, name: 'PixelArena Cricket', location: 'HSR Layout, Bangalore', city: 'Bangalore', rating: 4.8, price: 1500, dimensions: '125 × 65 ft', image: '/images/turf6.png', sports: ['Cricket'], amenities: ['Floodlights', 'Parking', 'Washroom', 'Seating', 'Drinking Water', 'AC'], lat: 12.9121, lng: 77.6446 },
+    { id: 9, name: 'Skyline Cricket Turf', location: 'Powai, Mumbai', city: 'Mumbai', rating: 4.6, price: 1400, dimensions: '100 × 50 ft', image: '/images/turf6.png', sports: ['Cricket'], amenities: ['Floodlights', 'Washroom'], lat: 19.1176, lng: 72.9060 },
+    { id: 10, name: 'StrikeZone Cricket', location: 'Noida, Delhi', city: 'Delhi', rating: 4.6, price: 850, dimensions: '90 × 45 ft', image: '/images/turf7.png', sports: ['Cricket'], amenities: ['Floodlights', 'Parking', 'Washroom', 'Drinking Water'], lat: 28.5355, lng: 77.3910 },
+    { id: 11, name: 'Master Blaster Cricket', location: 'Saket, Delhi', city: 'Delhi', rating: 4.8, price: 1100, dimensions: '105 × 52 ft', image: '/images/turf7.png', sports: ['Cricket'], amenities: ['Floodlights', 'Equipment'], lat: 28.5244, lng: 77.2167 },
+    { id: 12, name: 'Pune Cricket Arena', location: 'Kothrud, Pune', city: 'Pune', rating: 4.5, price: 1000, dimensions: '100 × 50 ft', image: '/images/turf2.png', sports: ['Cricket'], amenities: ['Floodlights', 'Parking', 'Washroom', 'Seating'], lat: 18.5074, lng: 73.8077 },
 ]
 
 export default function HomePage() {
@@ -254,8 +254,8 @@ const resolveOriginCoordinates = (locString, userGPS, explicitCoords) => {
                         />
                     </div>
 
-                    {/* ── SPECIAL CRICKET MODES & USP ATTRACTION BAR (Ultra Catchy & High Energy) ── */}
-                    <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 w-full select-none">
+                    {/* ── SPECIAL CRICKET MODES & USP ATTRACTION BAR (Ultra Catchy 4-Card Layout) ── */}
+                    <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5 w-full select-none">
                         {/* 1. 🔥 DARE MATCH™ */}
                         <button
                             type="button"
@@ -263,22 +263,22 @@ const resolveOriginCoordinates = (locString, userGPS, explicitCoords) => {
                                 setIsChallengeVisible(true)
                                 navigate('/booking/1?mode=dare&pay=opponent')
                             }}
-                            className="group relative overflow-hidden w-full flex items-center gap-3 p-3 sm:p-3.5 rounded-2xl bg-gradient-to-br from-orange-500/15 via-amber-500/10 to-red-500/10 border-2 border-orange-400/80 hover:border-orange-500 shadow-sm hover:shadow-[0_8px_25px_rgba(249,115,22,0.4)] transition-all duration-300 cursor-pointer hover:scale-[1.04] hover:-translate-y-0.5 active:scale-95 text-left shimmer-sweep"
+                            className="group relative overflow-hidden w-full flex items-center gap-3 p-3.5 sm:p-4 rounded-2xl bg-gradient-to-br from-orange-500/15 via-amber-500/10 to-red-500/10 border-2 border-orange-400/80 hover:border-orange-500 shadow-sm hover:shadow-[0_8px_25px_rgba(249,115,22,0.4)] transition-all duration-300 cursor-pointer hover:scale-[1.03] hover:-translate-y-0.5 active:scale-95 text-left shimmer-sweep"
                         >
-                            <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-orange-500 to-red-600 text-white shadow-[0_0_15px_rgba(249,115,22,0.6)] flex items-center justify-center text-lg shrink-0 group-hover:scale-110 group-hover:rotate-6 transition-transform animate-fire-float">
+                            <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-orange-500 to-red-600 text-white shadow-[0_0_15px_rgba(249,115,22,0.6)] flex items-center justify-center text-xl shrink-0 group-hover:scale-110 group-hover:rotate-6 transition-transform animate-fire-float">
                                 🔥
                             </div>
                             <div className="flex flex-col min-w-0 leading-tight">
                                 <div className="flex items-center gap-1.5 mb-0.5">
-                                    <span className="text-[11px] font-black text-orange-950 uppercase tracking-tight">Dare Match™</span>
-                                    <span className="bg-gradient-to-r from-red-600 to-orange-500 text-white font-black text-[7.5px] px-1.5 py-0.2 rounded-full uppercase tracking-wider animate-pulse shrink-0">
+                                    <span className="text-[11.5px] font-black text-orange-950 uppercase tracking-tight">Dare Match™</span>
+                                    <span className="bg-gradient-to-r from-red-600 to-orange-500 text-white font-black text-[8px] px-1.5 py-0.5 rounded-full uppercase tracking-wider animate-pulse shrink-0">
                                         ₹0 FREE
                                     </span>
                                 </div>
-                                <span className="text-xs font-black text-[#111827] truncate group-hover:text-orange-600 transition-colors">
+                                <span className="text-[13px] font-black text-[#111827] truncate group-hover:text-orange-600 transition-colors">
                                     Winner Plays FREE!
                                 </span>
-                                <span className="text-[9.5px] text-orange-900/80 font-bold truncate mt-0.5">
+                                <span className="text-[10px] text-orange-900/80 font-bold truncate mt-0.5">
                                     Loser Bharega Pura Bill ⚡
                                 </span>
                             </div>
@@ -288,22 +288,22 @@ const resolveOriginCoordinates = (locString, userGPS, explicitCoords) => {
                         <button
                             type="button"
                             onClick={() => navigate('/booking/1?mode=split50')}
-                            className="group relative overflow-hidden w-full flex items-center gap-3 p-3 sm:p-3.5 rounded-2xl bg-gradient-to-br from-emerald-500/15 via-teal-500/10 to-emerald-500/10 border-2 border-emerald-400/80 hover:border-emerald-500 shadow-sm hover:shadow-[0_8px_25px_rgba(16,185,129,0.4)] transition-all duration-300 cursor-pointer hover:scale-[1.04] hover:-translate-y-0.5 active:scale-95 text-left shimmer-sweep"
+                            className="group relative overflow-hidden w-full flex items-center gap-3 p-3.5 sm:p-4 rounded-2xl bg-gradient-to-br from-emerald-500/15 via-teal-500/10 to-emerald-500/10 border-2 border-emerald-400/80 hover:border-emerald-500 shadow-sm hover:shadow-[0_8px_25px_rgba(160,185,129,0.4)] transition-all duration-300 cursor-pointer hover:scale-[1.03] hover:-translate-y-0.5 active:scale-95 text-left shimmer-sweep"
                         >
-                            <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-700 text-white shadow-[0_0_15px_rgba(16,185,129,0.6)] flex items-center justify-center text-lg shrink-0 group-hover:scale-110 group-hover:-rotate-6 transition-transform">
+                            <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-700 text-white shadow-[0_0_15px_rgba(16,185,129,0.6)] flex items-center justify-center text-xl shrink-0 group-hover:scale-110 group-hover:-rotate-6 transition-transform">
                                 🤝
                             </div>
                             <div className="flex flex-col min-w-0 leading-tight">
                                 <div className="flex items-center gap-1.5 mb-0.5">
-                                    <span className="text-[11px] font-black text-[#064E3B] uppercase tracking-tight">50:50 Split™</span>
-                                    <span className="bg-[#10B981] text-white font-black text-[7.5px] px-1.5 py-0.2 rounded-full uppercase tracking-wider shrink-0">
+                                    <span className="text-[11.5px] font-black text-[#064E3B] uppercase tracking-tight">50:50 Split™</span>
+                                    <span className="bg-[#10B981] text-white font-black text-[8px] px-1.5 py-0.5 rounded-full uppercase tracking-wider shrink-0">
                                         NO KHAT-PAT
                                     </span>
                                 </div>
-                                <span className="text-xs font-black text-[#111827] truncate group-hover:text-[#10B981] transition-colors">
+                                <span className="text-[13px] font-black text-[#111827] truncate group-hover:text-[#10B981] transition-colors">
                                     Captain vs Captain
                                 </span>
-                                <span className="text-[9.5px] text-emerald-900/80 font-bold truncate mt-0.5">
+                                <span className="text-[10px] text-emerald-900/80 font-bold truncate mt-0.5">
                                     ₹600 Aapka • ₹600 Unka
                                 </span>
                             </div>
@@ -313,22 +313,22 @@ const resolveOriginCoordinates = (locString, userGPS, explicitCoords) => {
                         <button
                             type="button"
                             onClick={() => navigate('/booking/1?mode=per_player')}
-                            className="group relative overflow-hidden w-full flex items-center gap-3 p-3 sm:p-3.5 rounded-2xl bg-gradient-to-br from-blue-500/15 via-indigo-500/10 to-blue-500/10 border-2 border-blue-400/80 hover:border-blue-500 shadow-sm hover:shadow-[0_8px_25px_rgba(59,130,246,0.4)] transition-all duration-300 cursor-pointer hover:scale-[1.04] hover:-translate-y-0.5 active:scale-95 text-left shimmer-sweep"
+                            className="group relative overflow-hidden w-full flex items-center gap-3 p-3.5 sm:p-4 rounded-2xl bg-gradient-to-br from-blue-500/15 via-indigo-500/10 to-blue-500/10 border-2 border-blue-400/80 hover:border-blue-500 shadow-sm hover:shadow-[0_8px_25px_rgba(59,130,246,0.4)] transition-all duration-300 cursor-pointer hover:scale-[1.03] hover:-translate-y-0.5 active:scale-95 text-left shimmer-sweep"
                         >
-                            <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-700 text-white shadow-[0_0_15px_rgba(59,130,246,0.6)] flex items-center justify-center text-lg shrink-0 group-hover:scale-110 group-hover:rotate-6 transition-transform">
+                            <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-700 text-white shadow-[0_0_15px_rgba(59,130,246,0.6)] flex items-center justify-center text-xl shrink-0 group-hover:scale-110 group-hover:rotate-6 transition-transform">
                                 👥
                             </div>
                             <div className="flex flex-col min-w-0 leading-tight">
                                 <div className="flex items-center gap-1.5 mb-0.5">
-                                    <span className="text-[11px] font-black text-blue-950 uppercase tracking-tight">Squad Split™</span>
-                                    <span className="bg-blue-600 text-white font-black text-[7.5px] px-1.5 py-0.2 rounded-full uppercase tracking-wider shrink-0">
+                                    <span className="text-[11.5px] font-black text-blue-950 uppercase tracking-tight">Squad Split™</span>
+                                    <span className="bg-blue-600 text-white font-black text-[8px] px-1.5 py-0.5 rounded-full uppercase tracking-wider shrink-0">
                                         AUTO QR
                                     </span>
                                 </div>
-                                <span className="text-xs font-black text-[#111827] truncate group-hover:text-blue-600 transition-colors">
+                                <span className="text-[13px] font-black text-[#111827] truncate group-hover:text-blue-600 transition-colors">
                                     Sirf ₹100 / Khiladi
                                 </span>
-                                <span className="text-[9.5px] text-blue-900/80 font-bold truncate mt-0.5">
+                                <span className="text-[10px] text-blue-900/80 font-bold truncate mt-0.5">
                                     11 Khiladi Direct Pay Karein
                                 </span>
                             </div>
@@ -338,48 +338,23 @@ const resolveOriginCoordinates = (locString, userGPS, explicitCoords) => {
                         <button
                             type="button"
                             onClick={() => navigate('/leaderboard')}
-                            className="group relative overflow-hidden w-full flex items-center gap-3 p-3 sm:p-3.5 rounded-2xl bg-gradient-to-br from-amber-500/15 via-yellow-500/10 to-amber-500/10 border-2 border-amber-400/80 hover:border-amber-500 shadow-sm hover:shadow-[0_8px_25px_rgba(245,158,11,0.4)] transition-all duration-300 cursor-pointer hover:scale-[1.04] hover:-translate-y-0.5 active:scale-95 text-left shimmer-sweep"
+                            className="group relative overflow-hidden w-full flex items-center gap-3 p-3.5 sm:p-4 rounded-2xl bg-gradient-to-br from-amber-500/15 via-yellow-500/10 to-amber-500/10 border-2 border-amber-400/80 hover:border-amber-500 shadow-sm hover:shadow-[0_8px_25px_rgba(245,158,11,0.4)] transition-all duration-300 cursor-pointer hover:scale-[1.03] hover:-translate-y-0.5 active:scale-95 text-left shimmer-sweep"
                         >
-                            <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-amber-400 to-yellow-600 text-black shadow-[0_0_15px_rgba(245,158,11,0.6)] flex items-center justify-center text-lg shrink-0 group-hover:scale-110 group-hover:-rotate-6 transition-transform">
+                            <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-amber-400 to-yellow-600 text-black shadow-[0_0_15px_rgba(245,158,11,0.6)] flex items-center justify-center text-xl shrink-0 group-hover:scale-110 group-hover:-rotate-6 transition-transform">
                                 👑
                             </div>
                             <div className="flex flex-col min-w-0 leading-tight">
                                 <div className="flex items-center gap-1.5 mb-0.5">
-                                    <span className="text-[11px] font-black text-amber-950 uppercase tracking-tight">Hall of Fame™</span>
-                                    <span className="bg-amber-500 text-black font-black text-[7.5px] px-1.5 py-0.2 rounded-full uppercase tracking-wider shrink-0">
+                                    <span className="text-[11.5px] font-black text-amber-950 uppercase tracking-tight">Hall of Fame™</span>
+                                    <span className="bg-amber-500 text-black font-black text-[8px] px-1.5 py-0.5 rounded-full uppercase tracking-wider shrink-0">
                                         RANK #1
                                     </span>
                                 </div>
-                                <span className="text-xs font-black text-[#111827] truncate group-hover:text-amber-600 transition-colors">
+                                <span className="text-[13px] font-black text-[#111827] truncate group-hover:text-amber-600 transition-colors">
                                     Indore Turf King
                                 </span>
-                                <span className="text-[9.5px] text-amber-900/80 font-bold truncate mt-0.5">
+                                <span className="text-[10px] text-amber-900/80 font-bold truncate mt-0.5">
                                     Live PPS Stats & Trophy 🏆
-                                </span>
-                            </div>
-                        </button>
-
-                        {/* 5. 👨‍⚖️ PRO THIRD UMPIRE™ */}
-                        <button
-                            type="button"
-                            onClick={() => navigate('/booking/1')}
-                            className="group relative overflow-hidden w-full flex items-center gap-3 p-3 sm:p-3.5 rounded-2xl bg-gradient-to-br from-purple-500/15 via-fuchsia-500/10 to-purple-500/10 border-2 border-purple-400/80 hover:border-purple-500 shadow-sm hover:shadow-[0_8px_25px_rgba(168,85,247,0.4)] transition-all duration-300 cursor-pointer hover:scale-[1.04] hover:-translate-y-0.5 active:scale-95 text-left col-span-1 sm:col-span-2 lg:col-span-1 shimmer-sweep"
-                        >
-                            <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-purple-500 to-fuchsia-700 text-white shadow-[0_0_15px_rgba(168,85,247,0.6)] flex items-center justify-center text-lg shrink-0 group-hover:scale-110 group-hover:rotate-6 transition-transform">
-                                👨‍⚖️
-                            </div>
-                            <div className="flex flex-col min-w-0 leading-tight">
-                                <div className="flex items-center gap-1.5 mb-0.5">
-                                    <span className="text-[11px] font-black text-purple-950 uppercase tracking-tight">Third Umpire™</span>
-                                    <span className="bg-purple-600 text-white font-black text-[7.5px] px-1.5 py-0.2 rounded-full uppercase tracking-wider shrink-0">
-                                        FAIRPLAY
-                                    </span>
-                                </div>
-                                <span className="text-xs font-black text-[#111827] truncate group-hover:text-purple-600 transition-colors">
-                                    No LBW Fights!
-                                </span>
-                                <span className="text-[9.5px] text-purple-900/80 font-bold truncate mt-0.5">
-                                    Official Umpire Addon (+₹300)
                                 </span>
                             </div>
                         </button>

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { HiHeart } from 'react-icons/hi';
 import { useToast } from './ui/Toast';
@@ -41,26 +41,36 @@ export default function TurfCard({ turf, onMouseEnter, onMouseLeave, i = 0 }) {
         }
     };
 
-    const turfNameLower = (turf.name || '').toLowerCase()
-    let promo = null
-    if (turfNameLower.includes('indore sports arena') || turfNameLower.includes('indore sports complex')) {
-        promo = { icon: '🎁', text: 'Today 9:00 AM - 10:00 AM' }
-    } else if (turfNameLower.includes('royal cricket ground')) {
-        promo = { icon: '🏷️', text: 'Early Bird Offer • ₹200 OFF' }
-    } else if (turfNameLower.includes('green arena') || turfNameLower.includes('sportzone arena')) {
-        promo = { icon: '⚽', text: 'Peak Hour Offer • 25% OFF' }
-    } else if (turfNameLower.includes('champion cricket') || turfNameLower.includes('prokick stadium')) {
-        promo = { icon: '🏏', text: 'Weekend Special • ₹300 OFF' }
+    // Dynamic high-converting cricket offer generator with guaranteed visible CSS gradients
+    const getTurfOffer = (t) => {
+        const id = Number(t.id) || 1
+        const offers = [
+            { code: 'SM200', icon: '🔥', tag: 'FLAT ₹200 OFF', discount: 200, type: 'flat', bg: 'linear-gradient(135deg, #E11D48 0%, #F97316 50%, #F59E0B 100%)', shadow: '0 6px 18px rgba(225,29,72,0.55)' },
+            { code: 'CRICKET20', icon: '⚡', tag: '20% OFF FIRST MATCH', discount: 20, type: 'percent', bg: 'linear-gradient(135deg, #D97706 0%, #EA580C 50%, #DC2626 100%)', shadow: '0 6px 18px rgba(234,88,12,0.55)' },
+            { code: 'PROUMPIRE', icon: '🏏', tag: 'FREE UMPIRE ADDON', discount: 300, type: 'umpire', bg: 'linear-gradient(135deg, #059669 0%, #0D9488 50%, #059669 100%)', shadow: '0 6px 18px rgba(5,150,105,0.55)' },
+            { code: 'NIGHTSPECIAL', icon: '🌙', tag: 'NIGHT MATCH DEAL', discount: 200, type: 'flat', bg: 'linear-gradient(135deg, #4F46E5 0%, #7C3AED 50%, #DB2777 100%)', shadow: '0 6px 18px rgba(124,58,237,0.55)' },
+            { code: 'DARECASH150', icon: '🎁', tag: '₹150 DARE CASHBACK', discount: 150, type: 'flat', bg: 'linear-gradient(135deg, #EA580C 0%, #DC2626 50%, #F59E0B 100%)', shadow: '0 6px 18px rgba(220,38,38,0.55)' },
+            { code: 'SQUAD100', icon: '🎟️', tag: 'SQUAD ₹100/PLAYER', discount: 150, type: 'flat', bg: 'linear-gradient(135deg, #2563EB 0%, #4F46E5 50%, #0284C7 100%)', shadow: '0 6px 18px rgba(37,99,235,0.55)' },
+            { code: 'EARLY250', icon: '⭐', tag: 'EARLY BIRD ₹250 OFF', discount: 250, type: 'flat', bg: 'linear-gradient(135deg, #059669 0%, #65A30D 50%, #0D9488 100%)', shadow: '0 6px 18px rgba(101,163,13,0.55)' },
+        ]
+        return offers[id % offers.length]
     }
+    const promo = getTurfOffer(turf)
 
     const fallbackImage = '/images/turf1.png';
+
+    const handleBookNow = (e) => {
+        if (e) e.stopPropagation();
+        const promoParam = promo?.code ? `?promo=${promo.code}` : ''
+        navigate(`/booking/${turf.id}${promoParam}`)
+    }
 
     return (
         <div
             id={`turf-card-${turf.id}`}
             onMouseEnter={onMouseEnter}
             onMouseLeave={onMouseLeave}
-            onClick={() => navigate(`/turfs/${turf.id}`)}
+            onClick={handleBookNow}
             style={{ animationDelay: `${i * 100}ms` }}
             className={`group relative flex flex-col h-full bg-white border border-[#E5E7EB] rounded-[18px] overflow-hidden transition-all duration-300 hover:-translate-y-[6px] hover:border-[#16A34A]/40 shadow-[0_15px_45px_rgba(0,0,0,0.08)] hover:shadow-[0_25px_60px_rgba(0,0,0,0.14)] cursor-pointer`}
         >
@@ -92,11 +102,19 @@ export default function TurfCard({ turf, onMouseEnter, onMouseLeave, i = 0 }) {
                         <HiHeart className={`w-4 h-4 transition-transform duration-200 ${isLiked ? 'scale-110 text-rose-500' : ''}`} />
                     </button>
 
+                    {/* Ultra-Attractive Glowing Offer Badge (Prominent, Bold & Guaranteed Visible) */}
                     {promo && (
-                        <div className="absolute top-2 left-2 z-[2] bg-[#C8FF2E] border border-[#B5F000] rounded-[8px] px-2 py-0.5 flex items-center gap-1 shadow-sm">
-                            <span className="text-[10px]">{promo.icon}</span>
-                            <span className="text-[9px] font-black text-[#111827] uppercase tracking-wider">
-                                {promo.text.includes('•') ? promo.text.split('•')[1].trim() : promo.text}
+                        <div 
+                            onClick={(e) => { e.stopPropagation(); handleBookNow(e) }}
+                            style={{ 
+                                background: promo.bg, 
+                                boxShadow: promo.shadow 
+                            }}
+                            className="absolute top-2.5 left-2.5 z-10 border-2 border-white/80 rounded-xl px-3 py-1.5 flex items-center gap-1.5 backdrop-blur-md transition-all duration-300 group-hover:scale-105 shadow-lg select-none cursor-pointer"
+                        >
+                            <span className="text-sm animate-bounce shrink-0 drop-shadow-md">{promo.icon}</span>
+                            <span className="text-[11px] sm:text-[11.5px] font-black text-white uppercase tracking-wider drop-shadow-md whitespace-nowrap">
+                                {promo.tag}
                             </span>
                         </div>
                     )}
@@ -110,33 +128,24 @@ export default function TurfCard({ turf, onMouseEnter, onMouseLeave, i = 0 }) {
 
             <div className="px-3.5 py-2.5 flex flex-col flex-1 relative z-10 bg-white">
 
-                <h3 className="text-[16px] font-black text-[#111827] leading-tight mb-0.5 truncate group-hover:text-[#16A34A] transition-colors">
-                    {turf.name}
-                </h3>
-
-                <div className="text-[11px] text-[#6B7280] mb-0.5 flex items-center gap-1.5 truncate font-semibold">
-                    <a
-                        href={`https://www.google.com/maps/dir/?api=1&destination=${turf.lat || 19.1136},${turf.lng || 72.8697}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        onClick={(e) => e.stopPropagation()}
-                        className="hover:text-[#16A34A] hover:underline flex items-center gap-1 cursor-pointer transition-colors"
-                        title="Open directions in Google Maps"
-                    >
-                        <span>📍 {turf.location}</span>
-                    </a>
-                    {turf.distance !== null && turf.distance !== undefined && !isNaN(Number(turf.distance)) && (
-                        <>
-                            <span className="text-slate-300">•</span>
-                            <span>{Number(turf.distance).toFixed(1)} km</span>
-                        </>
-                    )}
+                <div className="flex items-start justify-between gap-1 mb-1">
+                    <h3 className="text-[14px] font-black text-[#111827] leading-snug line-clamp-1 group-hover:text-[#16A34A] transition-colors">
+                        {turf.name}
+                    </h3>
                 </div>
 
-                <div className="text-[10px] text-[#6B7280] mb-1.5 flex items-center gap-1">
-                    <span className="text-amber-500 text-[10px]">⭐</span>
-                    <span className="font-bold text-[#111827]">{turf.rating ? Number(turf.rating).toFixed(1) : '4.5'}</span>
-                    <span className="font-medium text-[#6B7280]">({turf.reviews || 120})</span>
+                <div className="flex items-center gap-1.5 text-[11px] text-[#6B7280] font-semibold mb-1">
+                    <span className="truncate">📍 {turf.location || turf.city}</span>
+                    <span>•</span>
+                    <span className="text-[#10B981] font-bold shrink-0">{turf.distance ? `${Number(turf.distance).toFixed(1)} km` : '1.2 km'}</span>
+                </div>
+
+                <div className="flex items-center gap-1 mb-1.5">
+                    <div className="flex items-center text-amber-500">
+                        <span className="text-xs">⭐</span>
+                        <span className="text-xs font-black text-[#111827] ml-0.5">{turf.rating || '4.5'}</span>
+                    </div>
+                    <span className="text-[10px] text-[#6B7280] font-medium">(120)</span>
                 </div>
 
                 <div className="flex flex-wrap items-center gap-1.5 mb-1.5">
@@ -155,14 +164,43 @@ export default function TurfCard({ turf, onMouseEnter, onMouseLeave, i = 0 }) {
                 </div>
 
                 <div className="flex flex-wrap items-center mb-1.5">
-                    <span className="text-[10px] font-medium text-[#6B7280] line-clamp-2 leading-tight" title={[turf.dimensions || '90 × 45 ft', 'Turf', ...(turf.amenities || ['Parking', 'Washroom'])].join(', ')}>
-                        {[
-                            turf.dimensions || '90 × 45 ft',
-                            'Turf',
-                            ...(turf.amenities || ['Parking', 'Washroom'])
-                        ].join(', ')}
+                    <span className="text-[10px] font-medium text-[#4B5563] line-clamp-2 leading-tight">
+                        {(()=>{
+                            const dim = turf.dimensions || '90 × 45 ft';
+                            const m = dim.match(/(\d+)\s*(?:[×x*X]|by)\s*(\d+)/);
+                            const sqft = m ? (parseInt(m[1], 10) * parseInt(m[2], 10)).toLocaleString('en-IN') : '4,050';
+                            return (
+                                <>
+                                    <strong className="text-[#111827] font-bold">📏 {sqft} Sq.Ft</strong>
+                                    <span className="text-slate-300 mx-1">•</span>
+                                    <span>Turf</span>
+                                    <span className="text-slate-300 mx-1">•</span>
+                                    <span>{(turf.amenities || ['Parking', 'Washroom']).slice(0, 3).join(', ')}</span>
+                                </>
+                            );
+                        })()}
                     </span>
                 </div>
+
+                {/* ── PROFESSIONAL IN-CARD COUPON STRIP (Swiggy / Zomato Pro Style) ── */}
+                {promo && (
+                    <div 
+                        onClick={handleBookNow}
+                        className="my-1.5 py-1 px-2 rounded-lg bg-gradient-to-r from-emerald-50 via-teal-50 to-emerald-50 border border-dashed border-emerald-400/90 flex items-center justify-between gap-1.5 transition-all hover:bg-emerald-100/60 cursor-pointer group/promo select-none"
+                    >
+                        <div className="flex items-center gap-1.5 min-w-0">
+                            <span className="text-xs shrink-0">{promo.icon}</span>
+                            <span className="text-[10px] font-black text-emerald-950 truncate tracking-tight">
+                                {promo.tag}
+                            </span>
+                        </div>
+                        <div className="flex items-center gap-1 shrink-0">
+                            <span className="font-mono font-black text-[9px] bg-emerald-700 text-white px-1.5 py-0.5 rounded shadow-2xs uppercase tracking-wider">
+                                {promo.code}
+                            </span>
+                        </div>
+                    </div>
+                )}
 
                 <div className="border-t border-[#E5E7EB] pt-2 mt-auto flex items-center justify-between gap-2">
                     <div className="flex flex-col">
@@ -174,7 +212,7 @@ export default function TurfCard({ turf, onMouseEnter, onMouseLeave, i = 0 }) {
                     </div>
 
                     <button
-                        onClick={(e) => { e.stopPropagation(); navigate(`/booking/${turf.id}`) }}
+                        onClick={handleBookNow}
                         className="px-4 py-2 rounded-[14px] text-[11px] font-black text-[#111827] bg-[#C8FF2E] hover:bg-[#B5F000] transition-all duration-300 shadow-[0_4px_15px_rgba(200,255,46,0.4)] hover:shadow-[0_6px_20px_rgba(200,255,46,0.6)] hover:scale-105 active:scale-95 flex-shrink-0 cursor-pointer border border-[#B5F000]"
                     >
                         Book Now
