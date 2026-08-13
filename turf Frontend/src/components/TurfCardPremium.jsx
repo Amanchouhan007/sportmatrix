@@ -1,10 +1,41 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { HiLocationMarker, HiStar, HiHeart } from 'react-icons/hi';
 import { useNavigate } from 'react-router-dom';
 
 export default function TurfCardPremium({ turf, onMouseEnter, onClick, isActive }) {
     const navigate = useNavigate();
     
+    const [isLiked, setIsLiked] = useState(() => {
+        try {
+            const stored = localStorage.getItem('sportmatrix_liked_turfs');
+            if (stored) {
+                const arr = JSON.parse(stored);
+                return arr.includes(turf.id);
+            }
+            return turf.id === 6;
+        } catch (e) {
+            return false;
+        }
+    });
+
+    const toggleLike = (e) => {
+        e.stopPropagation();
+        const nextState = !isLiked;
+        setIsLiked(nextState);
+        try {
+            const stored = localStorage.getItem('sportmatrix_liked_turfs');
+            let arr = stored ? JSON.parse(stored) : [6];
+            if (nextState) {
+                if (!arr.includes(turf.id)) arr.push(turf.id);
+            } else {
+                arr = arr.filter(id => id !== turf.id);
+            }
+            localStorage.setItem('sportmatrix_liked_turfs', JSON.stringify(arr));
+        } catch (err) {
+            console.error(err);
+        }
+    };
+
     let sportsArr = [];
     try {
         sportsArr = typeof turf.sports === 'string' ? JSON.parse(turf.sports) : (turf.sports || []);
@@ -29,8 +60,16 @@ export default function TurfCardPremium({ turf, onMouseEnter, onClick, isActive 
                     alt={turf.name} 
                     className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
                 />
-                <button className="absolute top-1.5 right-1.5 bg-black/40 backdrop-blur-md p-1 rounded-full text-slate-300 hover:text-red-500 transition-colors z-10">
-                    <HiHeart className="w-4 h-4" />
+                <button
+                    type="button"
+                    onClick={toggleLike}
+                    className={`absolute top-1.5 right-1.5 p-1 rounded-full backdrop-blur-md transition-all duration-200 z-10 cursor-pointer ${
+                        isLiked
+                            ? 'bg-white text-rose-500 scale-110 shadow-md ring-2 ring-rose-300'
+                            : 'bg-black/40 text-slate-300 hover:text-rose-400 hover:scale-105'
+                    }`}
+                >
+                    <HiHeart className={`w-3.5 h-3.5 ${isLiked ? 'text-rose-500' : ''}`} />
                 </button>
                 <div className="absolute top-1.5 left-1.5 bg-gradient-to-r from-orange-500/90 to-red-500/90 backdrop-blur-md px-1.5 py-0.5 rounded border border-white/20 flex items-center gap-1 z-10 shadow-[0_2px_8px_rgba(0,0,0,0.5)]">
                     <span className="text-[10px]">🔥</span>
