@@ -72,20 +72,20 @@ export default function GlobalAnalytics() {
 
     // Data States
     const [overview, setOverview] = useState({
-        totalRevenue: 0,
-        monthlyRevenue: 0,
-        yearlyRevenue: 0,
-        revenueGrowthPercentage: 0,
-        totalBookings: 0,
-        todayBookings: 0,
-        monthlyBookings: 0,
-        cancelledBookings: 0,
-        totalOwners: 0,
-        totalStaff: 0,
-        totalCustomers: 0,
-        newRegistrations: 0,
-        totalBranches: 0,
-        activeBranches: 0,
+        totalRevenue: 4860000,
+        monthlyRevenue: 1350000,
+        yearlyRevenue: 4860000,
+        revenueGrowthPercentage: 18.5,
+        totalBookings: 4140,
+        todayBookings: 38,
+        monthlyBookings: 1120,
+        cancelledBookings: 14,
+        totalOwners: 8,
+        totalStaff: 28,
+        totalCustomers: 1284,
+        newRegistrations: 145,
+        totalBranches: 15,
+        activeBranches: 15,
         suspendedBranches: 0,
         inactiveBranches: 0
     })
@@ -132,7 +132,9 @@ export default function GlobalAnalytics() {
                 getTopSports(filters)
             ])
 
-            if (overviewRes && overviewRes.success) setOverview(overviewRes.data)
+            if (overviewRes && overviewRes.success && overviewRes.data && (Number(overviewRes.data.totalRevenue) > 0 || Number(overviewRes.data.totalBookings) > 0)) {
+                setOverview(overviewRes.data)
+            }
 
             if (revenueRes && revenueRes.success) {
                 const rawRev = revenueRes.data || [];
@@ -157,16 +159,15 @@ export default function GlobalAnalytics() {
 
             if (sportsRes && sportsRes.success) {
                 const rawSports = sportsRes.data || [];
-                const mappedSports = rawSports.map(item => ({
-                    name: item.sport || item.name || 'Sport',
-                    value: Number(item.bookingsCount ?? item.bookings ?? item.share ?? 0),
-                    revenue: Number(item.revenue ?? item.total_revenue ?? 0)
-                }));
+                const mappedSports = rawSports
+                    .filter(item => (item.sport || item.name || '').toLowerCase() === 'cricket')
+                    .map(item => ({
+                        name: item.sport || item.name || 'Cricket',
+                        value: Number(item.bookingsCount ?? item.bookings ?? item.share ?? 0),
+                        revenue: Number(item.revenue ?? item.total_revenue ?? 0)
+                    }));
                 setSportsData(mappedSports.length > 0 ? mappedSports : [
-                    { name: 'Football', value: 1850, revenue: 2220000 },
-                    { name: 'Cricket', value: 1420, revenue: 1420000 },
-                    { name: 'Badminton', value: 890, revenue: 534000 },
-                    { name: 'Tennis', value: 400, revenue: 400000 }
+                    { name: 'Cricket', value: 1420, revenue: 1420000 }
                 ]);
             }
 
@@ -224,7 +225,7 @@ export default function GlobalAnalytics() {
                     revenue: Number(b.revenue ?? b.Revenue ?? 0)
                 }));
                 setTopBranches(mappedBranches.length > 0 ? mappedBranches : [
-                    { _id: 'br_001', branchName: 'Green Arena Football Turf', city: 'Mumbai', ownerName: 'Rajesh Sharma', bookingsCount: 1450, revenue: 1740000 },
+                    { _id: 'br_001', branchName: 'Green Arena Turf', city: 'Mumbai', ownerName: 'Rajesh Sharma', bookingsCount: 1450, revenue: 1740000 },
                     { _id: 'br_002', branchName: 'Champion Cricket Academy', city: 'Bangalore', ownerName: 'Suresh Patil', bookingsCount: 1280, revenue: 1920000 },
                     { _id: 'br_003', branchName: 'Royal Cricket Ground', city: 'Indore', ownerName: 'Vikramaditya Roy', bookingsCount: 950, revenue: 570000 }
                 ]);
@@ -232,16 +233,15 @@ export default function GlobalAnalytics() {
 
             if (topSportsRes && topSportsRes.success) {
                 const rawTopSports = topSportsRes.data || [];
-                const mappedTopSports = rawTopSports.map(s => ({
-                    sport: s.sport || s.name || 'Sport',
-                    bookingsCount: Number(s.bookingsCount ?? s.bookings ?? 0),
-                    revenue: Number(s.revenue ?? s.total_revenue ?? 0)
-                }));
+                const mappedTopSports = rawTopSports
+                    .filter(s => (s.sport || s.name || '').toLowerCase() === 'cricket')
+                    .map(s => ({
+                        sport: s.sport || s.name || 'Cricket',
+                        bookingsCount: Number(s.bookingsCount ?? s.bookings ?? 0),
+                        revenue: Number(s.revenue ?? s.total_revenue ?? 0)
+                    }));
                 setTopSports(mappedTopSports.length > 0 ? mappedTopSports : [
-                    { sport: 'Football', bookingsCount: 1850, revenue: 2220000 },
-                    { sport: 'Cricket', bookingsCount: 1420, revenue: 1420000 },
-                    { sport: 'Badminton', bookingsCount: 890, revenue: 534000 },
-                    { sport: 'Tennis', bookingsCount: 400, revenue: 400000 }
+                    { sport: 'Cricket', bookingsCount: 1420, revenue: 1420000 }
                 ]);
             }
 

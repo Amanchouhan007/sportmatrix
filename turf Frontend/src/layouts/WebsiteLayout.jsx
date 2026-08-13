@@ -37,9 +37,9 @@ export default function WebsiteLayout({ children }) {
             <div className="fixed top-0 left-0 w-[500px] h-[500px] bg-[#16A34A]/5 rounded-full blur-3xl pointer-events-none -z-10" />
             <div className="fixed bottom-0 right-0 w-[600px] h-[600px] bg-[#C8FF2E]/10 rounded-full blur-3xl pointer-events-none -z-10" />
 
-            {/* 🌟 Top Navigation Bar (Highest z-index so it is always visible) */}
+            {/* 🌟 Top Navigation Bar (Highest z-index so it is always visible on scroll) */}
             <header 
-                className={`fixed top-0 inset-x-0 z-50 transition-all duration-200 bg-white/95 backdrop-blur-md border-b ${
+                className={`fixed top-0 inset-x-0 z-[1000] transition-all duration-200 bg-white/95 backdrop-blur-md border-b ${
                     isScrolled 
                         ? 'border-slate-200/80 shadow-md' 
                         : 'border-slate-200/60 shadow-xs'

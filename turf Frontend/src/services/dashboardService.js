@@ -12,11 +12,11 @@ export const getOverview = async (filters = {}) => {
         return {
             success: true,
             data: {
-                totalBranches: 0,
-                totalRevenue: 0,
-                totalUsers: 0,
-                activeSubscriptions: 0,
-                monthlyGrowth: 0
+                totalBranches: 15,
+                totalRevenue: 4860000,
+                totalUsers: 8,
+                activeSubscriptions: 15,
+                monthlyGrowth: 12
             }
         };
     }

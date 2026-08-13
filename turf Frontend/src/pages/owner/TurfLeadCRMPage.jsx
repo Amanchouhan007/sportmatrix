@@ -3,6 +3,7 @@ import { HiUserGroup, HiPlus, HiSearch, HiFilter, HiPaperAirplane, HiDownload, H
 import { getCrmLeads, saveCrmLead, deleteCrmLead, AVAILABLE_TURF_BRANCHES } from '../../services/crmService'
 import OfferBroadcastModal from '../../components/crm/OfferBroadcastModal'
 import { useToast } from '../../components/ui/Toast'
+import CustomSelect from '../../components/ui/CustomSelect'
 
 export default function TurfLeadCRMPage() {
     const [leads, setLeads] = useState([])
@@ -243,19 +244,17 @@ export default function TurfLeadCRMPage() {
             <div className="flex flex-col gap-3 bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
                 <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
                     {/* Turf Branch Selector */}
-                    <div className="flex items-center gap-2">
-                        <label className="text-[10px] font-black uppercase tracking-wider text-slate-500 whitespace-nowrap">
-                            🏟️ Turf Branch:
-                        </label>
-                        <select
+                    <div className="flex items-center gap-2 min-w-[240px]">
+                        <CustomSelect
+                            label="🏟️ Turf Branch"
                             value={selectedBranch}
-                            onChange={(e) => setSelectedBranch(e.target.value)}
-                            className="bg-slate-50 border border-slate-200 rounded-xl px-3 py-1.5 text-xs font-bold text-slate-900 outline-none focus:border-[#16A34A] focus:bg-white min-w-48"
-                        >
-                            {branchOptions.map(b => (
-                                <option key={b} value={b}>{b === 'all' ? '🌐 All Turf Branches' : `🏟️ ${b}`}</option>
-                            ))}
-                        </select>
+                            onChange={(val) => setSelectedBranch(val)}
+                            options={branchOptions.map(b => ({
+                                value: b,
+                                label: b === 'all' ? '🌐 All Turf Branches' : `🏟️ ${b}`
+                            }))}
+                            className="w-full"
+                        />
                     </div>
 
                     {/* Search Bar */}

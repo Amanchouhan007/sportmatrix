@@ -72,6 +72,7 @@ const CustomerTournaments = lazy(() => import('./pages/customer/CustomerTourname
 const CustomerTournamentDetail = lazy(() => import('./pages/customer/CustomerTournamentDetail'))
 const CustomerWallet = lazy(() => import('./pages/customer/CustomerWallet'))
 const CustomerProfile = lazy(() => import('./pages/customer/CustomerProfile'))
+const CustomerLeaderboard = lazy(() => import('./pages/customer/CustomerLeaderboard'))
 
 // Lazy Advertising & Marketing Modules
 const AllAdvertisements = lazy(() => import('./pages/advertising/AllAdvertisements'))
@@ -225,6 +226,7 @@ export default function App() {
                 <Route path="matches" element={<CustomerMatches />} />
                 <Route path="tournaments" element={<CustomerTournaments />} />
                 <Route path="tournaments/:id" element={<CustomerTournamentDetail />} />
+                <Route path="leaderboard" element={<CustomerLeaderboard />} />
                 <Route path="wallet" element={<CustomerWallet />} />
                 <Route path="profile" element={<CustomerProfile />} />
               </Route>

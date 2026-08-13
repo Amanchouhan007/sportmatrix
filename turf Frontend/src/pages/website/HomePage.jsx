@@ -31,21 +31,27 @@ const sports = [
 ]
 
 const allTurfs = [
+    // 🌟 INDORE PRIMARY VENUES FIRST
+    { id: 13, name: 'Spike Cricket Turf', location: 'Bhawarkua, Indore', city: 'Indore', rating: 4.6, price: 500, image: '/images/turf1.png', sports: ['Cricket'], amenities: ['Floodlights', 'Parking', 'Washroom'], lat: 22.6953, lng: 75.8690 },
+    { id: 6, name: 'Royal Cricket Ground', location: 'Vijay Nagar, Indore', city: 'Indore', rating: 4.7, price: 1000, image: '/images/turf5.png', sports: ['Cricket'], amenities: ['Floodlights', 'Parking', 'Drinking Water'], lat: 22.7533, lng: 75.8937 },
+    { id: 14, name: 'Indore Sports Complex', location: 'LIG Colony, Indore', city: 'Indore', rating: 4.9, price: 1200, image: '/images/turf3.png', sports: ['Cricket'], amenities: ['Floodlights', 'Parking', 'Seating', 'Washroom', 'AC'], lat: 22.7380, lng: 75.8916 },
+    { id: 15, name: 'Rajiv Gandhi Stadium Turf', location: 'Navlakha, Indore', city: 'Indore', rating: 4.5, price: 700, image: '/images/turf4.png', sports: ['Cricket'], amenities: ['Floodlights', 'Parking', 'Seating', 'Drinking Water'], lat: 22.7000, lng: 75.8752 },
+    { id: 16, name: 'Champion Turf Ground', location: 'Palasia, Indore', city: 'Indore', rating: 4.8, price: 900, image: '/images/turf2.png', sports: ['Cricket'], amenities: ['Floodlights', 'Parking', 'Seating', 'Drinking Water'], lat: 22.7244, lng: 75.8839 },
+    { id: 17, name: 'Skyline Sports Hub', location: 'Super Corridor, Indore', city: 'Indore', rating: 4.7, price: 1100, image: '/images/turf6.png', sports: ['Cricket'], amenities: ['Floodlights', 'Parking', 'Washroom', 'Cafeteria'], lat: 22.7650, lng: 75.8300 },
+    { id: 18, name: 'GreenField Arena', location: 'Rau, Indore', city: 'Indore', rating: 4.6, price: 800, image: '/images/turf7.png', sports: ['Cricket'], amenities: ['Floodlights', 'Parking', 'Seating'], lat: 22.6300, lng: 75.8050 },
+    { id: 19, name: 'Annapurna Sports Arena', location: 'Annapurna, Indore', city: 'Indore', rating: 4.5, price: 650, image: '/images/turf1.png', sports: ['Cricket'], amenities: ['Floodlights', 'Parking', 'Washroom'], lat: 22.7010, lng: 75.8320 },
+    // Other cities
     { id: 1, name: 'SportZone Arena', location: 'Andheri West, Mumbai', city: 'Mumbai', rating: 4.8, price: 1200, image: '/images/turf1.png', sports: ['Cricket'], amenities: ['Floodlights', 'Parking', 'Washroom'], lat: 19.1136, lng: 72.8697 },
     { id: 2, name: 'Champion Cricket Ground', location: 'Koramangala, Bangalore', city: 'Bangalore', rating: 4.9, price: 1500, image: '/images/turf2.png', sports: ['Cricket'], amenities: ['Floodlights', 'Seating', 'Drinking Water'], lat: 12.9352, lng: 77.6245 },
     { id: 3, name: 'GameVault Cricket Center', location: 'Koramangala, Bangalore', city: 'Bangalore', rating: 4.9, price: 1200, image: '/images/turf3.png', sports: ['Cricket'], amenities: ['Floodlights', 'Parking', 'Seating', 'Washroom'], lat: 12.9698, lng: 77.7500 },
     { id: 4, name: 'ProKick Cricket Turf', location: 'Indiranagar, Bangalore', city: 'Bangalore', rating: 4.7, price: 1400, image: '/images/turf4.png', sports: ['Cricket'], amenities: ['Floodlights', 'Parking', 'Washroom'], lat: 12.9784, lng: 77.6408 },
     { id: 5, name: 'ProPlay Cricket Arena', location: 'Vashi, Navi Mumbai', city: 'Mumbai', rating: 4.5, price: 1000, image: '/images/turf4.png', sports: ['Cricket'], amenities: ['Floodlights', 'Parking'], lat: 19.0330, lng: 73.0297 },
-    { id: 6, name: 'Royal Cricket Ground', location: 'Vijay Nagar, Indore', city: 'Indore', rating: 4.7, price: 1000, image: '/images/turf5.png', sports: ['Cricket'], amenities: ['Floodlights', 'Parking', 'Drinking Water'], lat: 22.7533, lng: 75.8937 },
     { id: 7, name: 'DunkZone Cricket Turf', location: 'Bandra, Mumbai', city: 'Mumbai', rating: 4.3, price: 750, image: '/images/turf2.png', sports: ['Cricket'], amenities: ['Floodlights', 'Parking'], lat: 19.0596, lng: 72.8295 },
     { id: 8, name: 'PixelArena Cricket', location: 'HSR Layout, Bangalore', city: 'Bangalore', rating: 4.8, price: 1500, image: '/images/turf6.png', sports: ['Cricket'], amenities: ['Floodlights', 'Parking', 'Washroom', 'Seating', 'Drinking Water', 'AC'], lat: 12.9121, lng: 77.6446 },
     { id: 9, name: 'Skyline Cricket Turf', location: 'Powai, Mumbai', city: 'Mumbai', rating: 4.6, price: 1400, image: '/images/turf6.png', sports: ['Cricket'], amenities: ['Floodlights', 'Washroom'], lat: 19.1176, lng: 72.9060 },
     { id: 10, name: 'StrikeZone Cricket', location: 'Noida, Delhi', city: 'Delhi', rating: 4.6, price: 850, image: '/images/turf7.png', sports: ['Cricket'], amenities: ['Floodlights', 'Parking', 'Washroom', 'Drinking Water'], lat: 28.5355, lng: 77.3910 },
     { id: 11, name: 'Master Blaster Cricket', location: 'Saket, Delhi', city: 'Delhi', rating: 4.8, price: 1100, image: '/images/turf7.png', sports: ['Cricket'], amenities: ['Floodlights', 'Equipment'], lat: 28.5244, lng: 77.2167 },
     { id: 12, name: 'Pune Cricket Arena', location: 'Kothrud, Pune', city: 'Pune', rating: 4.5, price: 1000, image: '/images/turf2.png', sports: ['Cricket'], amenities: ['Floodlights', 'Parking', 'Washroom', 'Seating'], lat: 18.5074, lng: 73.8077 },
-    { id: 13, name: 'Spike Cricket Turf', location: 'Bhawarkua, Indore', city: 'Indore', rating: 4.6, price: 500, image: '/images/turf1.png', sports: ['Cricket'], amenities: ['Floodlights', 'Parking', 'Washroom'], lat: 22.6953, lng: 75.8690 },
-    { id: 14, name: 'Indore Sports Complex', location: 'LIG Colony, Indore', city: 'Indore', rating: 4.9, price: 1200, image: '/images/turf3.png', sports: ['Cricket'], amenities: ['Floodlights', 'Parking', 'Seating', 'Washroom', 'AC'], lat: 22.7380, lng: 75.8916 },
-    { id: 15, name: 'Rajiv Gandhi Stadium Turf', location: 'Navlakha, Indore', city: 'Indore', rating: 4.5, price: 700, image: '/images/turf4.png', sports: ['Cricket'], amenities: ['Floodlights', 'Parking', 'Seating', 'Drinking Water'], lat: 22.7000, lng: 75.8752 },
 ]
 
 export default function HomePage() {
@@ -76,6 +82,7 @@ export default function HomePage() {
     const [userLocation, setUserLocation] = useState(null)
     const [upcomingTournaments, setUpcomingTournaments] = useState([])
     const [homePlans, setHomePlans] = useState([])
+    const [isChallengeVisible, setIsChallengeVisible] = useState(true)
 
     /* ── Fetch Upcoming Tournaments & Subscription Plans ── */
     useEffect(() => {
@@ -168,15 +175,24 @@ export default function HomePage() {
         setShowResults(false)
     }
 
+    // Dynamic Dare Challenge details based on selected location
+    const activeCityName = appliedFilters.location || searchValues.location || 'Indore'
+    const dynamicDareVenue = activeCityName.toLowerCase().includes('indore') || !appliedFilters.location
+        ? 'Indore Turf Arena, Vijay Nagar, Indore'
+        : `${activeCityName} Sports Arena`
+    const dynamicChallenger = activeCityName.toLowerCase().includes('indore') || !appliedFilters.location
+        ? 'Indore Warriors XI'
+        : `${activeCityName} Strikers XI`
+
     return (
-        <div className="bg-white relative selection:bg-[#C8FF2E]/40 overflow-x-hidden min-h-screen text-[#111827]">
+        <div className="bg-white relative selection:bg-[#C8FF2E]/40 min-h-screen text-[#111827]">
 
             {/* ══════════════════════════════════════════════
                 AIRBNB-STYLE SEARCH & CATEGORIES
             ══════════════════════════════════════════════ */}
-            <section className="pt-2 md:pt-3 pb-1 bg-transparent relative z-[90]">
+            <section className="pt-3 pb-2 bg-transparent relative z-20">
                 <div className="w-full px-4 sm:px-6 lg:px-8 max-w-[1400px] mx-auto">
-                    <div className="relative z-[90]">
+                    <div className="relative z-20">
                         <TurfSearchBar
                             values={searchValues}
                             onChange={handleSearchChange}
@@ -185,23 +201,26 @@ export default function HomePage() {
                         />
                     </div>
 
-                    {/* FRONT CRICKET CHALLENGE CARD ALERT */}
-                    <div className="mt-3 relative z-10">
-                        <LiveCricketChallengeCard
-                            challengerTeam="Aman XI Warriors"
-                            venueName="SportZone Turf Arena, Mumbai"
-                            matchTime="Tonight, 8:00 PM – 9:00 PM"
-                            matchFee={1200}
-                            depositFee={100}
-                        />
-                    </div>
+                    {/* FRONT CRICKET CHALLENGE CARD ALERT (Dynamic to Indore / Active City) */}
+                    {isChallengeVisible && (
+                        <div className="mt-4 relative z-10 animate-in fade-in zoom-in-95 duration-200">
+                            <LiveCricketChallengeCard
+                                challengerTeam={dynamicChallenger}
+                                venueName={dynamicDareVenue}
+                                matchTime="Tonight, 8:00 PM – 9:00 PM"
+                                matchFee={1200}
+                                depositFee={100}
+                                onDismiss={() => setIsChallengeVisible(false)}
+                            />
+                        </div>
+                    )}
                 </div>
             </section>
 
             {/* ══════════════════════════════════════════════
                 POPULAR TURFS GRID
             ══════════════════════════════════════════════ */}
-            <div ref={resultsRef} className="relative z-10 pt-0 pb-1 -mt-1">
+            <div ref={resultsRef} className={`relative z-10 ${isChallengeVisible ? 'pt-3' : 'pt-0'} pb-12`}>
                 {/* Radial Glow Lighting behind Explore Turfs */}
                 <div
                     style={{
@@ -416,29 +435,29 @@ export default function HomePage() {
                     >
                         {[
                             {
-                                title: 'Smart Booking Engine',
-                                desc: 'Realtime session scheduler with dynamic pricing, peak-hour management, and weather-based auto-adjustments.',
+                                title: 'Smart Slot Booking',
+                                desc: 'Instant cricket turf slot reservations, floodlight night match booking, dynamic pricing, and instant confirmation.',
                                 icon: MdStadium,
                             },
                             {
-                                title: 'Multi-Sport Turf Hub',
-                                desc: 'Central architecture coordinating grass, clay, and turf-based athletic fields on a unified management ledger.',
-                                icon: GiCricketBat,
+                                title: 'Captain Handshake',
+                                desc: 'Anti-tamper match verification where opponent captains confirm scores or certified turf umpires ratify official stats.',
+                                icon: HiShieldCheck,
                             },
                             {
-                                title: 'POS Powered Billing',
-                                desc: 'Integrated cash splits, canteen orders, hardware rentals, and instant checkout with split payment engines.',
+                                title: 'Live Leaderboard',
+                                desc: 'Weighted Player Performance Score (PPS) tracking top batsmen, lethal bowlers, and MVPs across turf cricket matches.',
+                                icon: RiTrophyFill,
+                            },
+                            {
+                                title: 'Split Pay & Dare Mode',
+                                desc: 'Split match fees equally among teammates via UPI or challenge rival squads in high-stakes "Winner Refunded" Dare matches.',
                                 icon: MdPayments,
                             },
                             {
-                                title: 'QR Access Controls',
-                                desc: 'Contactless slot verification, secure locker systems, and automated session-duration tracking checks.',
-                                icon: MdQrCodeScanner,
-                            },
-                            {
-                                title: 'Bracket Engine',
-                                desc: 'Automated tournament scheduling, squad bracket generators, and live leaderboard tracking systems.',
-                                icon: RiTrophyFill,
+                                title: 'Cricket Tournaments',
+                                desc: 'Automated knockout brackets, squad registrations, live tournament standings, and verified prize pool distribution.',
+                                icon: GiCricketBat,
                             }
                         ].map((item, idx) => (
                             <div

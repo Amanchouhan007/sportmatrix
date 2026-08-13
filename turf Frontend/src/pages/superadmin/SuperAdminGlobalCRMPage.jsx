@@ -3,6 +3,7 @@ import { HiShieldCheck, HiSearch, HiPaperAirplane, HiDownload, HiFilter, HiPhone
 import { getCrmLeads } from '../../services/crmService'
 import OfferBroadcastModal from '../../components/crm/OfferBroadcastModal'
 import { useToast } from '../../components/ui/Toast'
+import CustomSelect from '../../components/ui/CustomSelect'
 
 export default function SuperAdminGlobalCRMPage() {
     const [leads, setLeads] = useState([])
@@ -131,31 +132,30 @@ export default function SuperAdminGlobalCRMPage() {
             {/* Filter Controls Bar */}
             <div className="grid sm:grid-cols-3 gap-3 bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
                 <div>
-                    <label className="text-[10px] font-black uppercase tracking-wider text-slate-400 mb-1 block">Filter by Venue / Branch</label>
-                    <select
+                    <CustomSelect
+                        label="Filter by Venue / Branch"
                         value={selectedBranch}
-                        onChange={(e) => setSelectedBranch(e.target.value)}
-                        className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold text-slate-900 outline-none focus:border-[#16A34A]"
-                    >
-                        {branches.map(b => (
-                            <option key={b} value={b}>{b === 'all' ? '🌐 All Turf Branches' : b}</option>
-                        ))}
-                    </select>
+                        onChange={(val) => setSelectedBranch(val)}
+                        options={branches.map(b => ({
+                            value: b,
+                            label: b === 'all' ? '🌐 All Turf Branches' : b
+                        }))}
+                    />
                 </div>
 
                 <div>
-                    <label className="text-[10px] font-black uppercase tracking-wider text-slate-400 mb-1 block">Filter by Category</label>
-                    <select
+                    <CustomSelect
+                        label="Filter by Category"
                         value={selectedRole}
-                        onChange={(e) => setSelectedRole(e.target.value)}
-                        className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold text-slate-900 outline-none focus:border-[#16A34A]"
-                    >
-                        <option value="all">👥 All Roles</option>
-                        <option value="team">🏏 Teams / Captains</option>
-                        <option value="player">⚡ Players</option>
-                        <option value="umpire">🚩 Umpires / Referees</option>
-                        <option value="organizer">🏆 Tournament Organizers</option>
-                    </select>
+                        onChange={(val) => setSelectedRole(val)}
+                        options={[
+                            { value: 'all', label: '👥 All Roles' },
+                            { value: 'team', label: '🏏 Teams / Captains' },
+                            { value: 'player', label: '⚡ Players' },
+                            { value: 'umpire', label: '🚩 Umpires / Referees' },
+                            { value: 'organizer', label: '🏆 Tournament Organizers' }
+                        ]}
+                    />
                 </div>
 
                 <div>

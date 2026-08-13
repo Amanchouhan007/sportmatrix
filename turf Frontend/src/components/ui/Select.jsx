@@ -72,7 +72,7 @@ export default function Select({
     return (
         <div ref={containerRef} className={`relative inline-block text-left ${isOpen ? 'z-50' : 'z-10'} ${className}`}>
             {label && (
-                <label htmlFor={id} className="block text-[10px] font-black uppercase tracking-wider text-surface-500 mb-1">
+                <label htmlFor={id} className="block text-[10px] font-black uppercase tracking-wider text-slate-500 mb-1.5">
                     {label}
                 </label>
             )}
@@ -84,11 +84,11 @@ export default function Select({
                 onClick={() => setIsOpen(!isOpen)}
                 className={`w-full bg-white border ${
                     isOpen
-                        ? 'border-emerald-500 ring-2 ring-emerald-500/20 shadow-md'
+                        ? 'border-[#16A34A] ring-2 ring-[#16A34A]/20 shadow-md'
                         : error
-                        ? 'border-red-500'
-                        : 'border-surface-200/90 hover:border-emerald-500/80 hover:bg-slate-50/50'
-                } rounded-xl px-3.5 py-2.5 text-xs font-bold text-surface-900 flex items-center justify-between gap-2.5 transition-all duration-200 cursor-pointer shadow-xs ${
+                        ? 'border-rose-500 text-rose-600'
+                        : 'border-slate-200 hover:border-[#16A34A] hover:bg-slate-50/60'
+                } rounded-2xl px-4 py-2.5 text-xs font-black text-slate-900 flex items-center justify-between gap-3 transition-all duration-200 cursor-pointer shadow-xs ${
                     disabled ? 'opacity-50 cursor-not-allowed bg-slate-100' : ''
                 }`}
             >
@@ -96,16 +96,16 @@ export default function Select({
                     {selectedOpt ? selectedOpt.label : (placeholder || 'Select...')}
                 </span>
                 <HiChevronDown
-                    className={`w-4 h-4 text-surface-400 transition-transform duration-200 shrink-0 ${
-                        isOpen ? 'rotate-180 text-emerald-600' : ''
+                    className={`w-4 h-4 text-slate-400 transition-transform duration-200 shrink-0 ${
+                        isOpen ? 'rotate-180 text-[#16A34A]' : ''
                     }`}
                 />
             </button>
 
             {isOpen && !disabled && (
-                <div className="absolute top-full left-0 mt-1.5 min-w-full w-max max-w-xs z-[9999] bg-white/95 backdrop-blur-xl border border-surface-200/90 rounded-2xl shadow-[0_20px_40px_rgba(0,0,0,0.14)] p-1.5 max-h-60 overflow-y-auto space-y-0.5 animate-in fade-in zoom-in-95 duration-150 hide-scrollbar">
+                <div className="absolute top-full left-0 mt-2 min-w-full w-max max-w-xs z-[9999] bg-white border border-slate-200 rounded-2xl shadow-[0_20px_45px_rgba(0,0,0,0.14)] p-1.5 max-h-60 overflow-y-auto space-y-1 animate-in fade-in zoom-in-95 duration-150 custom-scrollbar">
                     {parsedOptions.length === 0 ? (
-                        <div className="px-3 py-2 text-xs font-medium text-surface-400 text-center">No options</div>
+                        <div className="px-3 py-2.5 text-xs font-bold text-slate-400 text-center">No options available</div>
                     ) : (
                         parsedOptions.map((opt, idx) => {
                             const isSelected = String(opt.value) === String(value)
@@ -114,10 +114,10 @@ export default function Select({
                                     key={opt.value ?? idx}
                                     type="button"
                                     onClick={() => handleSelect(opt.value)}
-                                    className={`w-full flex items-center justify-between gap-3 px-3 py-2 rounded-xl text-xs font-bold transition-all duration-150 cursor-pointer text-left ${
+                                    className={`w-full flex items-center justify-between gap-3 px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all duration-150 cursor-pointer text-left ${
                                         isSelected
-                                            ? 'bg-emerald-500 text-white font-extrabold shadow-sm'
-                                            : 'text-surface-800 hover:bg-emerald-50/80 hover:text-emerald-700'
+                                            ? 'bg-[#16A34A] text-white font-black shadow-xs'
+                                            : 'text-slate-800 hover:bg-emerald-50/70 hover:text-[#065F46]'
                                     }`}
                                 >
                                     <span className="truncate">{opt.label}</span>
@@ -129,7 +129,7 @@ export default function Select({
                 </div>
             )}
 
-            {error && <p className="text-red-500 text-[11px] mt-1 font-semibold">{error}</p>}
+            {error && <p className="text-rose-500 text-[11px] mt-1 font-bold">{error}</p>}
         </div>
     )
 }

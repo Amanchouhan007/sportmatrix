@@ -20,7 +20,6 @@ const allLocations = locationSuggestions.flatMap(loc => [
 
 /* ── Sports Data ── */
 const sportsOptions = [
-    { name: 'Football', icon: IoFootball },
     { name: 'Cricket', icon: GiCricketBat },
 ]
 
@@ -172,11 +171,7 @@ export default function TurfSearchBar({ onSearch, values, onChange, onClear }) {
     /* ── Time Picker State ── */
     const [timeOpen, setTimeOpen] = useState(false)
     const timeRef = useRef(null)
-    
-    /* ── Sport Selection State ── */
-    const [sportOpen, setSportOpen] = useState(false)
-    const sportRef = useRef(null)
-    
+
     /* ── Players Selection State ── */
     const [playersOpen, setPlayersOpen] = useState(false)
     const playersRef = useRef(null)
@@ -190,7 +185,6 @@ export default function TurfSearchBar({ onSearch, values, onChange, onClear }) {
             if (locRef.current && !locRef.current.contains(e.target)) setLocOpen(false)
             if (dateRef.current && !dateRef.current.contains(e.target)) setDateOpen(false)
             if (timeRef.current && !timeRef.current.contains(e.target)) setTimeOpen(false)
-            if (sportRef.current && !sportRef.current.contains(e.target)) setSportOpen(false)
             if (playersRef.current && !playersRef.current.contains(e.target)) setPlayersOpen(false)
         }
         document.addEventListener('mousedown', handler)
@@ -350,54 +344,7 @@ export default function TurfSearchBar({ onSearch, values, onChange, onClear }) {
                     )}
                 </div>
                 
-                {/* 2. SPORT */}
-                <div ref={sportRef} className="flex-1 min-w-0 relative group/sec border-b border-[#E5E7EB] lg:border-b-0 lg:border-r lg:border-[#E5E7EB]">
-                    <div
-                        className="transition-all duration-300 cursor-pointer h-full px-4 py-1.5 flex items-center justify-between hover:bg-slate-50 rounded-[12px] lg:rounded-none"
-                        onClick={() => setSportOpen(!sportOpen)}
-                    >
-                        <div className="flex gap-3 items-center">
-                            <IoTrophyOutline className="text-[#16A34A] w-5 h-5 shrink-0" />
-                            <div className="flex flex-col">
-                                <span className="text-[11px] font-black text-[#111827] tracking-wide uppercase">Sport</span>
-                                <span className="text-[11px] font-semibold text-[#6B7280] truncate max-w-[110px]">
-                                    {selectedSportObj ? selectedSportObj.name : 'Select Sport'}
-                                </span>
-                            </div>
-                        </div>
-                    </div>
-                    {sportOpen && (
-                        <div className="absolute top-full left-0 w-full md:w-[220px] bg-white border border-[#E5E7EB] text-[#111827] p-3 rounded-[22px] mt-2 shadow-[0_20px_50px_rgba(0,0,0,0.18)] z-[99999]">
-                            <span className="text-[10px] font-black uppercase tracking-wider text-[#6B7280] block mb-2 px-1">Select Sport</span>
-                            <div className="flex flex-col gap-1">
-                                {sportsOptions.map(s => {
-                                    const IconComponent = s.icon
-                                    const isSelected = s.name === sport
-                                    return (
-                                        <div
-                                            key={s.name}
-                                            className={`flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl cursor-pointer transition-all text-xs font-bold ${
-                                                isSelected
-                                                    ? 'bg-[#C8FF2E] text-[#111827] border border-[#B5F000] shadow-[0_4px_12px_rgba(200,255,46,0.35)]'
-                                                    : 'text-[#4B5563] bg-white hover:bg-[#C8FF2E] hover:text-[#111827] border border-transparent hover:border-[#B5F000]'
-                                            }`}
-                                            onClick={() => selectSport(s.name)}
-                                        >
-                                            {typeof IconComponent === 'function' ? (
-                                                <IconComponent className="w-4 h-4 shrink-0 text-[#16A34A]" />
-                                            ) : (
-                                                <span className="text-sm">{s.icon}</span>
-                                            )}
-                                            <span>{s.name}</span>
-                                        </div>
-                                    )
-                                })}
-                            </div>
-                        </div>
-                    )}
-                </div>
-
-                {/* 3. DATE */}
+                {/* 2. DATE */}
                 <div ref={dateRef} className="flex-1 min-w-0 relative group/sec border-b border-[#E5E7EB] lg:border-b-0 lg:border-r lg:border-[#E5E7EB]">
                     <div
                         className="transition-all duration-300 cursor-pointer h-full px-4 py-1.5 flex items-center justify-between hover:bg-slate-50 rounded-[12px] lg:rounded-none"
