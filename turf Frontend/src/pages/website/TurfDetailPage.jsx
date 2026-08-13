@@ -140,7 +140,7 @@ export default function TurfDetailPage() {
     const [isMediaModalOpen, setIsMediaModalOpen] = useState(false);
     const [customMediaList, setCustomMediaList] = useState(() => {
         try {
-            const saved = localStorage.getItem(`turf_media_${activeTurf.id}`);
+            const saved = localStorage.getItem(`turf_media_${activeTurf.id}`) || localStorage.getItem('turf_media_custom');
             if (saved) {
                 const parsed = JSON.parse(saved);
                 if (Array.isArray(parsed) && parsed.length > 0) return parsed;
