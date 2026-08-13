@@ -123,6 +123,7 @@ export default function SlotBookingPage() {
     const [selectedDateObj, setSelectedDateObj] = useState(dateList[0])
     const [selectedSlotTime, setSelectedSlotTime] = useState('18:00') // 6:00 PM
     const [selectedSport, setSelectedSport] = useState(searchParams.get('sport') || 'Cricket')
+    const [durationHours, setDurationHours] = useState(1)
     const [hasVerifiedUmpire, setHasVerifiedUmpire] = useState(false)
 
     // Step 2: Payment Mode Options & Collapsible Accordion State
