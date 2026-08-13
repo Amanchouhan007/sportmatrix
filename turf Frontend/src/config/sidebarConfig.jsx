@@ -103,6 +103,7 @@ const sidebarConfig = {
         { label: 'My Bookings', icon: <HiTicket />, path: '/customer/bookings' },
         { label: 'My Teams', icon: <HiUserGroup />, path: '/customer/teams' },
         { label: 'My Matches', icon: <HiTrophy />, path: '/customer/matches' },
+        { label: 'Leaderboards', icon: <HiStar />, path: '/leaderboard' },
         { label: 'Tournaments', icon: <HiDocumentText />, path: '/customer/tournaments' },
         { label: 'Wallet', icon: <HiWallet />, path: '/customer/wallet' },
         { label: 'Profile', icon: <HiUser />, path: '/customer/profile' },

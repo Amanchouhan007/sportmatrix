@@ -122,6 +122,7 @@ export default function App() {
               <Route path="/tournaments" element={<WebsiteLayout><TournamentListPage /></WebsiteLayout>} />
               <Route path="/tournaments/:id" element={<WebsiteLayout><TournamentDetailPage /></WebsiteLayout>} />
               <Route path="/membership" element={<WebsiteLayout><MembershipPage /></WebsiteLayout>} />
+              <Route path="/leaderboard" element={<WebsiteLayout><PlayerLeaderboardPage /></WebsiteLayout>} />
               <Route path="/contact" element={<WebsiteLayout><ContactPage /></WebsiteLayout>} />
               <Route path="/leaderboards" element={<WebsiteLayout><PlayerLeaderboardPage /></WebsiteLayout>} />
 

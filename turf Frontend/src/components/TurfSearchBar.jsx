@@ -302,7 +302,7 @@ export default function TurfSearchBar({ onSearch, values, onChange, onClear }) {
                         </div>
                     </div>
                     {locOpen && (
-                        <div className="absolute top-full left-0 w-full md:w-[250px] bg-white border border-[#E2E8F0] text-[#111827] rounded-[20px] mt-2 p-2 shadow-[0_20px_45px_rgba(0,0,0,0.14)] z-[9999] max-h-72 overflow-y-auto custom-scrollbar">
+                        <div className="absolute top-full left-0 w-full md:w-[260px] bg-white border border-[#E2E8F0] text-[#111827] rounded-[22px] mt-2 p-2 shadow-[0_20px_50px_rgba(0,0,0,0.18)] z-[99999] max-h-72 overflow-y-auto custom-scrollbar">
                             <div className="px-3 py-2 text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center justify-between border-b border-slate-100 mb-1">
                                 <span>SELECT CITY / AREA</span>
                                 <span className="text-[9px] bg-emerald-100 text-[#065F46] font-bold px-2 py-0.5 rounded-full">{filteredLocations.length} Available</span>
@@ -367,7 +367,7 @@ export default function TurfSearchBar({ onSearch, values, onChange, onClear }) {
                         </div>
                     </div>
                     {sportOpen && (
-                        <div className="absolute top-full left-0 w-full md:w-[210px] bg-white border border-[#E5E7EB] text-[#111827] p-3 rounded-[20px] mt-2 shadow-[0_20px_40px_rgba(0,0,0,0.1)] z-[9999]">
+                        <div className="absolute top-full left-0 w-full md:w-[220px] bg-white border border-[#E5E7EB] text-[#111827] p-3 rounded-[22px] mt-2 shadow-[0_20px_50px_rgba(0,0,0,0.18)] z-[99999]">
                             <span className="text-[10px] font-black uppercase tracking-wider text-[#6B7280] block mb-2 px-1">Select Sport</span>
                             <div className="flex flex-col gap-1">
                                 {sportsOptions.map(s => {
@@ -414,15 +414,15 @@ export default function TurfSearchBar({ onSearch, values, onChange, onClear }) {
                         </div>
                     </div>
                     {dateOpen && (
-                        <div className="absolute top-full left-0 md:left-1/2 md:-translate-x-1/2 w-[235px] bg-white border border-[#E5E7EB] p-3 rounded-[20px] mt-2 shadow-[0_15px_35px_rgba(0,0,0,0.12)] z-[9999]">
+                        <div className="absolute top-full left-0 md:left-1/2 md:-translate-x-1/2 w-[265px] bg-white border border-[#E5E7EB] p-3.5 rounded-[22px] mt-2 shadow-[0_20px_50px_rgba(0,0,0,0.18)] z-[99999]">
                             {/* Quick Presets Bar */}
-                            <span className="text-[9px] font-black uppercase tracking-wider text-[#6B7280] block mb-1.5">Select Date</span>
-                            <div className="flex gap-1 mb-2 flex-wrap">
+                            <span className="text-[10px] font-black uppercase tracking-wider text-[#6B7280] block mb-2">Select Date</span>
+                            <div className="flex gap-1.5 mb-2.5 flex-wrap">
                                 {[{ l: 'Today', v: getDateString(0) }, { l: 'Tomorrow', v: getDateString(1) }, { l: 'Weekend', v: getWeekendDate() }].map(opt => (
                                     <button
                                         key={opt.l}
                                         type="button"
-                                        className={`px-2.5 py-1 rounded-full text-[10px] font-bold transition-all border shadow-sm cursor-pointer ${
+                                        className={`px-3 py-1 rounded-full text-[10px] font-black transition-all border shadow-xs cursor-pointer ${
                                             date === opt.v
                                                 ? 'bg-[#C8FF2E] text-[#111827] border-[#B5F000] shadow-[0_2px_8px_rgba(200,255,46,0.35)]'
                                                 : 'bg-white hover:bg-[#C8FF2E] text-[#111827] border-[#E5E7EB] hover:border-[#B5F000]'
@@ -435,7 +435,7 @@ export default function TurfSearchBar({ onSearch, values, onChange, onClear }) {
                             </div>
                             
                             {/* Custom Modern Sports Calendar Widget */}
-                            <div className="pt-1.5 border-t border-[#E5E7EB]">
+                            <div className="pt-2 border-t border-[#E5E7EB]">
                                 <CustomCalendarWidget selectedDate={date} onSelectDate={selectDate} />
                             </div>
                         </div>
@@ -459,8 +459,8 @@ export default function TurfSearchBar({ onSearch, values, onChange, onClear }) {
                         </div>
                     </div>
                     {timeOpen && (
-                        <div className="absolute top-full right-0 w-[260px] bg-white border border-[#E5E7EB] p-4 rounded-[20px] mt-2 shadow-[0_20px_40px_rgba(0,0,0,0.1)] z-[9999]">
-                            <span className="text-[10px] font-black uppercase tracking-wider text-[#6B7280] block mb-2">Select Time Slot</span>
+                        <div className="absolute top-full right-0 w-[275px] bg-white border border-[#E5E7EB] p-4 rounded-[22px] mt-2 shadow-[0_20px_50px_rgba(0,0,0,0.18)] z-[99999]">
+                            <span className="text-[10px] font-black uppercase tracking-wider text-[#6B7280] block mb-2.5">Select Time Slot</span>
                             <div className="grid grid-cols-2 gap-2">
                                 {timeSlots.map(t => (
                                     <button

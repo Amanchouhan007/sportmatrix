@@ -94,9 +94,12 @@ export default function CricketScorerConsole({ match, onClose }) {
     const [changeBowlerModalOpen, setChangeBowlerModalOpen] = useState(false)
     const [newBatsmanModalOpen, setNewBatsmanModalOpen] = useState(false)
     const [liveScoreModalOpen, setLiveScoreModalOpen] = useState(false)
-    const [liveModalTab, setLiveModalTab] = useState('scorecard')
     const [qrModalOpen, setQrModalOpen] = useState(false)
     const [isLandscapeMode, setIsLandscapeMode] = useState(false)
+    const [finalizeModalOpen, setFinalizeModalOpen] = useState(false)
+    const [isUmpireCertified, setIsUmpireCertified] = useState(false)
+    const [selectedMvp, setSelectedMvp] = useState('Aman Varma (48 Runs)')
+    const [umpireLicense, setUmpireLicense] = useState('UMP-LIC-4481 (BCCI Level 2)')
 
     // Mobile Controller QR Connection Session State
     const [connectModalOpen, setConnectModalOpen] = useState(false)
@@ -565,6 +568,18 @@ export default function CricketScorerConsole({ match, onClose }) {
                         <FiClock className="animate-spin text-emerald-600" />
                         <span>TIMER: {formatTimer(matchInfo.timerSeconds)}</span>
                     </div>
+
+                    <button
+                        onClick={() => setFinalizeModalOpen(true)}
+                        className={`flex items-center gap-1.5 px-3.5 py-2 rounded-2xl font-black text-xs transition-all shadow-md cursor-pointer hover:scale-105 ${
+                            isUmpireCertified
+                                ? 'bg-emerald-600 text-white shadow-emerald-600/30'
+                                : 'bg-gradient-to-r from-amber-500 via-emerald-600 to-teal-600 hover:from-amber-400 hover:to-emerald-500 text-white shadow-amber-500/20'
+                        }`}
+                    >
+                        <span>⚖️</span>
+                        <span>{isUmpireCertified ? '✓ Certified (1.5x)' : 'Finalize & Certify ⚖️'}</span>
+                    </button>
 
                     <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-2xl border border-slate-200">
                         {['Scheduled', 'Live', 'Innings Break', 'Completed'].map(st => (
@@ -1931,6 +1946,125 @@ export default function CricketScorerConsole({ match, onClose }) {
                                     </button>
                                 </>
                             )}
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* ==================================================== */}
+            {/* OFFICIAL UMPIRE CERTIFICATION & SIGN-OFF MODAL */}
+            {/* ==================================================== */}
+            {finalizeModalOpen && (
+                <div className="fixed inset-0 z-[99999999] bg-slate-950/90 backdrop-blur-xl flex items-center justify-center p-4 animate-in fade-in duration-200">
+                    <div className="bg-[#0B0F17] border-2 border-emerald-500/50 rounded-3xl p-6 w-full max-w-lg shadow-2xl space-y-5 text-white relative">
+                        {/* CLOSE BUTTON */}
+                        <button
+                            onClick={() => setFinalizeModalOpen(false)}
+                            className="absolute top-4 right-4 p-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-400 hover:text-white transition-all cursor-pointer border border-slate-800"
+                        >
+                            <FiX className="w-4 h-4" />
+                        </button>
+
+                        {/* HEADER */}
+                        <div className="flex items-center gap-3">
+                            <div className="w-12 h-12 rounded-2xl bg-emerald-500/20 border border-emerald-400/40 text-emerald-400 flex items-center justify-center text-2xl font-black">
+                                ⚖️
+                            </div>
+                            <div>
+                                <div className="flex items-center gap-2">
+                                    <h3 className="font-black text-white text-lg">Official Umpire Sign-off</h3>
+                                    <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-400/40">
+                                        Tier 2 Verified (1.5x)
+                                    </span>
+                                </div>
+                                <p className="text-xs text-slate-400">Certify match result and push locked ball-by-ball record to leaderboard.</p>
+                            </div>
+                        </div>
+
+                        {/* MATCH SUMMARY BOX */}
+                        <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-4 space-y-3">
+                            <div className="flex items-center justify-between text-xs font-mono border-b border-slate-800 pb-2">
+                                <span className="text-slate-400">Match #{matchInfo.matchNumber} · {matchInfo.venue}</span>
+                                <span className="text-emerald-400 font-black">STATUS: {matchInfo.status}</span>
+                            </div>
+
+                            <div className="flex items-center justify-between">
+                                <div>
+                                    <div className="text-xs text-slate-400">Batting Team</div>
+                                    <div className="text-base font-black text-white">{matchInfo.battingTeam}</div>
+                                </div>
+                                <div className="text-right">
+                                    <div className="text-2xl font-black text-emerald-400 font-mono">
+                                        {matchState.totalRuns}/{matchState.wickets}
+                                    </div>
+                                    <div className="text-[10px] font-mono text-slate-400">({matchState.overs}.{matchState.balls} Overs)</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* MVP & UMPIRE CREDENTIALS */}
+                        <div className="space-y-3">
+                            <div>
+                                <label className="text-[11px] font-black uppercase tracking-wider text-slate-400 block mb-1.5">
+                                    Select Match MVP / Player of the Match
+                                </label>
+                                <select
+                                    value={selectedMvp}
+                                    onChange={(e) => setSelectedMvp(e.target.value)}
+                                    className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs font-bold text-white outline-none focus:border-emerald-500"
+                                >
+                                    <option value="Aman Varma (48 Runs off 28b)">Aman Varma (48 Runs off 28b)</option>
+                                    <option value="Vikramaditya Roy (2 Wickets, 28 Runs)">Vikramaditya Roy (2 Wickets, 28 Runs)</option>
+                                    <option value="Karan Malhotra (22 Runs off 14b)">Karan Malhotra (22 Runs off 14b)</option>
+                                </select>
+                            </div>
+
+                            <div>
+                                <label className="text-[11px] font-black uppercase tracking-wider text-slate-400 block mb-1.5">
+                                    Umpire License & Digital Credential
+                                </label>
+                                <input
+                                    type="text"
+                                    value={umpireLicense}
+                                    onChange={(e) => setUmpireLicense(e.target.value)}
+                                    className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs font-bold text-slate-300 outline-none focus:border-emerald-500"
+                                />
+                            </div>
+                        </div>
+
+                        {/* TRUST PERK HIGHLIGHT */}
+                        <div className="bg-emerald-950/40 border border-emerald-500/30 rounded-2xl p-3 text-xs text-emerald-300 flex items-center gap-2.5">
+                            <span className="text-xl">🏆</span>
+                            <div>
+                                <strong className="block font-black text-emerald-400">1.5x Player Performance Score Applied</strong>
+                                <span>Stats will be permanently locked and verified without opponent dispute risk.</span>
+                            </div>
+                        </div>
+
+                        {/* ACTION BUTTONS */}
+                        <div className="grid grid-cols-2 gap-2 pt-2 border-t border-slate-800">
+                            <button
+                                onClick={() => setFinalizeModalOpen(false)}
+                                className="py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-300 font-bold text-xs border border-slate-800 cursor-pointer"
+                            >
+                                Cancel
+                            </button>
+
+                            <button
+                                onClick={() => {
+                                    setIsUmpireCertified(true)
+                                    setMatchInfo(prev => ({ ...prev, status: 'Completed' }))
+                                    setFinalizeModalOpen(false)
+                                    addToast({
+                                        title: 'Match Certified by Official Umpire ⚖️',
+                                        message: `Issued Tier 2 Umpire Verification Badge with 1.5x Rank multiplier!`,
+                                        type: 'success'
+                                    })
+                                }}
+                                className="py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-500 hover:from-emerald-500 hover:to-teal-400 text-slate-950 font-black text-xs shadow-lg shadow-emerald-500/20 cursor-pointer flex items-center justify-center gap-1.5"
+                            >
+                                <FiCheck className="w-4 h-4" /> Issue 1.5x Badge
+                            </button>
                         </div>
                     </div>
                 </div>
