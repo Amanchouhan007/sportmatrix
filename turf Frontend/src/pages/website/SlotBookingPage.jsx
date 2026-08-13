@@ -124,6 +124,11 @@ export default function SlotBookingPage() {
     const [selectedSlotTime, setSelectedSlotTime] = useState('18:00') // 6:00 PM
     const [selectedSport, setSelectedSport] = useState(searchParams.get('sport') || 'Cricket')
     const [durationHours, setDurationHours] = useState(1)
+    const [addVerifiedUmpire, setAddVerifiedUmpire] = useState(false)
+
+    const currentSlotPrice = selectedVenue?.price || 1500
+    const umpireFee = addVerifiedUmpire ? 300 : 0
+    const totalRent = (currentSlotPrice * durationHours) + umpireFee
 
     // Step 2: Payment Mode Options & Collapsible Accordion State
     const initialMode = searchParams.get('mode') || 'full'
@@ -665,13 +670,52 @@ export default function SlotBookingPage() {
                                 })}
                             </div>
 
+                            {/* PAID ADD-ON: VERIFIED UMPIRE & SCORER */}
+                            <div className="mt-8 bg-gradient-to-r from-emerald-50 via-teal-50/60 to-emerald-50 border-2 border-[#10B981] p-4 sm:p-5 rounded-[22px] shadow-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                                <div className="flex items-start sm:items-center gap-3.5">
+                                    <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-[#10B981] text-white flex items-center justify-center text-2xl font-bold shrink-0 shadow-md shadow-emerald-500/20">
+                                        ⚖️
+                                    </div>
+                                    <div>
+                                        <div className="flex flex-wrap items-center gap-2">
+                                            <h3 className="text-sm sm:text-base font-black text-[#111827]">
+                                                Add Verified Umpire & Live Scorer
+                                            </h3>
+                                            <span className="text-[9px] font-black uppercase tracking-wider bg-[#C8FF2E] text-[#111827] px-2.5 py-0.5 rounded-full border border-[#B5F000]">
+                                                1.5x Rank Weight
+                                            </span>
+                                        </div>
+                                        <p className="text-xs text-slate-600 font-semibold mt-0.5 leading-relaxed">
+                                            Official ball-by-ball umpiring at turf, 100% verified match badge (`✓ Umpire Verified`), MVP trophy badge, and 1.5x bonus ranking points.
+                                        </p>
+                                    </div>
+                                </div>
+
+                                <button
+                                    type="button"
+                                    onClick={() => setAddVerifiedUmpire(!addVerifiedUmpire)}
+                                    className={`w-full sm:w-auto px-5 py-2.5 rounded-xl font-black text-xs uppercase tracking-wider transition-all duration-200 shrink-0 cursor-pointer shadow-xs ${
+                                        addVerifiedUmpire
+                                            ? 'bg-[#111827] text-white border border-[#111827]'
+                                            : 'bg-[#10B981] hover:bg-emerald-700 text-white'
+                                    }`}
+                                >
+                                    {addVerifiedUmpire ? '✓ Umpire Added (+₹300)' : '+ Add Umpire (+₹300)'}
+                                </button>
+                            </div>
+
                             {/* Selected Slot Summary Line */}
                             {selectedSlotTime && (
-                                <div className="mt-6 bg-[#F8FAFC] border border-[#E2E8F0] p-4 sm:p-5 rounded-[20px] shadow-xs flex flex-wrap items-center gap-2 text-xs sm:text-sm font-semibold text-slate-600">
+                                <div className="mt-4 bg-[#F8FAFC] border border-[#E2E8F0] p-4 sm:p-5 rounded-[20px] shadow-xs flex flex-wrap items-center gap-2 text-xs sm:text-sm font-semibold text-slate-600">
                                     <span>Selected Slot: </span>
                                     <strong className="text-[#111827] font-black text-sm sm:text-base">
                                         {allTimeSlots.find(s => s.id === selectedSlotTime)?.time || selectedSlotTime} ({durationHours} {durationHours > 1 ? 'Hours' : 'Hour'})
                                     </strong>
+                                    {addVerifiedUmpire && (
+                                        <span className="text-[10px] font-black bg-emerald-100 text-[#065F46] px-2 py-0.5 rounded-full border border-emerald-300">
+                                            ⚖️ Umpire Included (+₹300)
+                                        </span>
+                                    )}
                                     <span className="text-slate-300 mx-1">·</span>
                                     <span>Slot Rate: </span>
                                     <span className="text-[#10B981] font-black text-sm sm:text-base font-mono">₹{currentSlotPrice.toLocaleString('en-IN')}/hr</span>
