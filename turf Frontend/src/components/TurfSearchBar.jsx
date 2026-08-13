@@ -2,21 +2,24 @@ import { useState, useRef, useEffect, useCallback } from 'react'
 import { IoRefreshOutline, IoLocationOutline, IoCalendarOutline, IoTimeOutline, IoTrophyOutline, IoPeopleOutline, IoSearch, IoFootball, IoChevronBack, IoChevronForward } from 'react-icons/io5'
 import { GiCricketBat } from 'react-icons/gi'
 
-/* ── Location Data ── */
-const locationSuggestions = [
-    { city: 'Indore', areas: ['Vijay Nagar', 'Palasia', 'Bypass', 'Bhawarkuan', 'Rajwada'] },
-    { city: 'Mumbai', areas: ['Andheri West', 'Bandra', 'Powai', 'Vashi', 'Thane'] },
-    { city: 'Delhi', areas: ['Dwarka', 'Saket', 'Connaught Place', 'Rohini', 'Vasant Kunj'] },
-    { city: 'Bangalore', areas: ['Koramangala', 'Whitefield', 'Indiranagar', 'HSR Layout', 'Electronic City'] },
-    { city: 'Pune', areas: ['Baner', 'Kothrud', 'Hadapsar', 'Hinjewadi', 'Viman Nagar'] },
-    { city: 'Hyderabad', areas: ['Madhapur', 'Gachibowli', 'Banjara Hills', 'Jubilee Hills', 'Kukatpally'] },
-    { city: 'Chennai', areas: ['Adyar', 'Velachery', 'T. Nagar', 'Anna Nagar', 'OMR'] },
+/* ── Location Data (Indore Areas Priority) ── */
+const allLocations = [
+    'Vijay Nagar, Indore',
+    'Palasia, Indore',
+    'Bhawarkua, Indore',
+    'LIG Colony, Indore',
+    'Navlakha, Indore',
+    'Annapurna, Indore',
+    'Super Corridor, Indore',
+    'Rau, Indore',
+    'Bypass, Indore',
+    'Rajwada, Indore',
+    'Indore (All Venues)',
+    'Mumbai',
+    'Bangalore',
+    'Delhi',
+    'Pune',
 ]
-
-const allLocations = locationSuggestions.flatMap(loc => [
-    loc.city,
-    ...loc.areas.map(area => `${loc.city} ${area}`)
-])
 
 /* ── Sports Data ── */
 const sportsOptions = [
@@ -24,13 +27,34 @@ const sportsOptions = [
     { name: 'Cricket', icon: GiCricketBat },
 ]
 
-/* ── Time Slots ── */
-const timeSlots = [
-    { label: 'Morning', range: '6AM–12PM', value: 'morning' },
-    { label: 'Afternoon', range: '12PM–4PM', value: 'afternoon' },
-    { label: 'Evening', range: '4PM–8PM', value: 'evening' },
-    { label: 'Night', range: '8PM–12AM', value: 'night' },
+/* ── Time Slots (6:00 AM to 11:00 PM Operating Hours) ── */
+const timeBands = [
+    { label: 'Morning', range: '06:00 AM – 12:00 PM', value: 'morning', icon: '🌅' },
+    { label: 'Afternoon', range: '12:00 PM – 04:00 PM', value: 'afternoon', icon: '☀️' },
+    { label: 'Evening', range: '04:00 PM – 08:00 PM', value: 'evening', icon: '🌆' },
+    { label: 'Night (Lights)', range: '08:00 PM – 11:00 PM', value: 'night', icon: '🌙' },
 ]
+
+const hourlySlots = [
+    '06:00 AM - 07:00 AM',
+    '07:00 AM - 08:00 AM',
+    '08:00 AM - 09:00 AM',
+    '09:00 AM - 10:00 AM',
+    '04:00 PM - 05:00 PM',
+    '05:00 PM - 06:00 PM',
+    '06:00 PM - 07:00 PM',
+    '07:00 PM - 08:00 PM',
+    '08:00 PM - 09:00 PM',
+    '09:00 PM - 10:00 PM',
+    '10:00 PM - 11:00 PM',
+]
+
+function formatTimeDisplay(val) {
+    if (!val) return 'Any Time'
+    const foundBand = timeBands.find(b => b.value === val)
+    if (foundBand) return `${foundBand.icon} ${foundBand.label}`
+    return `${val}`
+}
 
 /* ── Helper: Format date ── */
 function formatDate(dateStr) {
@@ -192,14 +216,45 @@ export default function TurfSearchBar({ onSearch, values, onChange, onClear }) {
         return () => document.removeEventListener('mousedown', handler)
     }, [])
 
+    /* ── Current Location GPS State ── */
+    const [isLocating, setIsLocating] = useState(false)
+
+    const handleUseCurrentLocation = (e) => {
+        e?.stopPropagation?.()
+        if (navigator.geolocation) {
+            setIsLocating(true)
+            navigator.geolocation.getCurrentPosition(
+                (pos) => {
+                    setIsLocating(false)
+                    setLocInput('Near Me (Current Location)')
+                    setLocOpen(false)
+                    emit('location', 'Near Me (Current Location)', true, {
+                        lat: pos.coords.latitude,
+                        lng: pos.coords.longitude
+                    })
+                },
+                (err) => {
+                    setIsLocating(false)
+                    setLocInput('Indore')
+                    setLocOpen(false)
+                    emit('location', 'Indore')
+                },
+                { timeout: 8000 }
+            )
+        }
+    }
+
     /* ── Filtered location suggestions ── */
     const filteredLocations = locInput.trim()
-        ? allLocations.filter(l => l.toLowerCase().includes(locInput.toLowerCase())).slice(0, 8)
-        : allLocations.slice(0, 8)
+        ? allLocations.filter(l => l.toLowerCase().includes(locInput.toLowerCase())).slice(0, 10)
+        : allLocations.slice(0, 10)
 
     /* ── Emit changes ── */
-    const emit = useCallback((field, val, triggerSearch = true) => {
+    const emit = useCallback((field, val, triggerSearch = true, extraCoords = null) => {
         const next = { location, sport, date, time, players, [field]: val }
+        if (extraCoords) {
+            next.coords = extraCoords
+        }
         onChange?.(next)
         if (triggerSearch) {
             onSearch?.(next)
@@ -220,7 +275,7 @@ export default function TurfSearchBar({ onSearch, values, onChange, onClear }) {
             const selected = filteredLocations[locHighlight]
             setLocInput(selected)
             setLocOpen(false)
-            emit('location', selected.split(' ')[0])
+            emit('location', selected)
         } else if (e.key === 'Escape') {
             setLocOpen(false)
         }
@@ -229,7 +284,7 @@ export default function TurfSearchBar({ onSearch, values, onChange, onClear }) {
     const selectLocation = (loc) => {
         setLocInput(loc)
         setLocOpen(false)
-        emit('location', loc.split(' ')[0])
+        emit('location', loc)
     }
 
     const selectDate = (d) => {
@@ -242,19 +297,7 @@ export default function TurfSearchBar({ onSearch, values, onChange, onClear }) {
         emit('time', time === t ? '' : t)
     }
 
-    const selectSport = (s) => {
-        setSportOpen(false)
-        emit('sport', sport === s ? '' : s)
-    }
-
-    const selectPlayers = (p) => {
-        setPlayersOpen(false)
-        emit('players', p)
-    }
-
     const todayStr = getDateString(0)
-    const selectedTime = timeSlots.find(t => t.value === time)
-    const selectedSportObj = sportsOptions.find(s => s.name === sport)
 
     return (
         <div className="w-full max-w-[880px] mx-auto relative z-40 select-none">
@@ -276,29 +319,51 @@ export default function TurfSearchBar({ onSearch, values, onChange, onClear }) {
                         <div className="flex gap-3 items-center">
                             <IoLocationOutline className="text-[#16A34A] w-5 h-5 shrink-0" />
                             <div className="flex flex-col">
-                                <span className="text-[11px] font-black text-[#111827] tracking-wide uppercase">City</span>
+                                <span className="text-[11px] font-black text-[#111827] tracking-wide uppercase">City / Area</span>
                                 {locOpen ? (
                                     <input
                                         ref={locInputRef}
                                         type="text"
-                                        className="text-[11px] text-[#111827] bg-transparent outline-none w-[110px] placeholder:text-[#6B7280] font-semibold p-0 m-0 border-none h-4"
-                                        placeholder="Select City"
+                                        className="text-[11px] text-[#111827] bg-transparent outline-none w-[130px] placeholder:text-[#6B7280] font-semibold p-0 m-0 border-none h-4"
+                                        placeholder="Type Area / City..."
                                         value={locInput}
                                         onChange={(e) => { setLocInput(e.target.value); setLocOpen(true); setLocHighlight(-1); emit('location', e.target.value, false) }}
                                         onFocus={() => setLocOpen(true)}
                                         onKeyDown={handleLocKeyDown}
                                     />
                                 ) : (
-                                    <span className="text-[11px] font-semibold text-[#6B7280] truncate max-w-[110px]">
-                                        {location || 'Select City'}
+                                    <span className="text-[11px] font-semibold text-[#6B7280] truncate max-w-[130px]">
+                                        {location || 'Select City / Area'}
                                     </span>
                                 )}
                             </div>
                         </div>
                     </div>
                     {locOpen && (
-                        <div className="absolute top-full left-0 w-full md:w-[260px] bg-white border border-[#E2E8F0] text-[#111827] rounded-[22px] mt-2 p-2 shadow-[0_20px_50px_rgba(0,0,0,0.18)] z-[99999] max-h-72 overflow-y-auto custom-scrollbar">
-                            <div className="px-3 py-2 text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center justify-between border-b border-slate-100 mb-1">
+                        <div className="absolute top-full left-0 w-full md:w-[290px] bg-white border border-[#E2E8F0] text-[#111827] rounded-[22px] mt-2 p-2.5 shadow-[0_20px_50px_rgba(0,0,0,0.18)] z-[99999] max-h-80 overflow-y-auto custom-scrollbar">
+                            {/* Live GPS Near Me Button */}
+                            <button
+                                type="button"
+                                onClick={handleUseCurrentLocation}
+                                className="w-full mb-2.5 px-3 py-2.5 rounded-xl bg-gradient-to-r from-emerald-50 to-green-50 hover:from-emerald-100 hover:to-green-100 border border-emerald-200 text-[#065F46] font-black text-xs flex items-center justify-between transition-all cursor-pointer shadow-xs group"
+                            >
+                                <div className="flex items-center gap-2.5">
+                                    <span className="w-6 h-6 rounded-lg bg-[#10B981] text-white flex items-center justify-center text-xs shadow-xs group-hover:scale-110 transition-transform shrink-0">
+                                        📍
+                                    </span>
+                                    <div className="flex flex-col text-left">
+                                        <span className="text-[11px] font-black text-[#065F46]">Use Current Location</span>
+                                        <span className="text-[9px] font-semibold text-emerald-600">Find nearest turfs near me (GPS)</span>
+                                    </div>
+                                </div>
+                                {isLocating ? (
+                                    <span className="text-[10px] font-bold text-emerald-700 animate-pulse">Detecting...</span>
+                                ) : (
+                                    <span className="text-[10px] bg-emerald-200 text-emerald-900 px-2 py-0.5 rounded-full font-bold">GPS ➔</span>
+                                )}
+                            </button>
+
+                            <div className="px-3 py-1.5 text-[9px] font-black text-slate-400 uppercase tracking-widest flex items-center justify-between border-b border-slate-100 mb-1">
                                 <span>SELECT CITY / AREA</span>
                                 <span className="text-[9px] bg-emerald-100 text-[#065F46] font-bold px-2 py-0.5 rounded-full">{filteredLocations.length} Available</span>
                             </div>
@@ -306,12 +371,12 @@ export default function TurfSearchBar({ onSearch, values, onChange, onClear }) {
                                 <div className="p-3 text-center text-slate-400 text-xs font-semibold">No locations found</div>
                             ) : (
                                 filteredLocations.map((loc, i) => {
-                                    const isSel = location && loc.toLowerCase().startsWith(location.toLowerCase())
+                                    const isSel = location && loc.toLowerCase().includes(location.toLowerCase())
                                     const isHighlighted = i === locHighlight
                                     return (
                                         <div
                                             key={loc}
-                                            className={`flex items-center justify-between px-3 py-2.5 rounded-xl cursor-pointer transition-all duration-150 group ${
+                                            className={`flex items-center justify-between px-3 py-2 rounded-xl cursor-pointer transition-all duration-150 group ${
                                                 isSel
                                                     ? 'bg-[#ECFDF5] border-l-4 border-[#10B981] text-[#065F46] font-black shadow-xs'
                                                     : isHighlighted
@@ -322,12 +387,12 @@ export default function TurfSearchBar({ onSearch, values, onChange, onClear }) {
                                             onMouseEnter={() => setLocHighlight(i)}
                                         >
                                             <div className="flex items-center gap-2.5 min-w-0">
-                                                <div className={`w-7 h-7 rounded-xl flex items-center justify-center text-xs shrink-0 transition-colors ${
+                                                <div className={`w-6 h-6 rounded-lg flex items-center justify-center text-xs shrink-0 transition-colors ${
                                                     isSel
                                                         ? 'bg-[#10B981] text-white shadow-xs'
                                                         : 'bg-emerald-50 text-[#10B981] group-hover:bg-[#10B981] group-hover:text-white'
                                                 }`}>
-                                                    <IoLocationOutline className="w-4 h-4" />
+                                                    <IoLocationOutline className="w-3.5 h-3.5" />
                                                 </div>
                                                 <span className="text-xs truncate">{loc}</span>
                                             </div>
@@ -390,7 +455,7 @@ export default function TurfSearchBar({ onSearch, values, onChange, onClear }) {
                     )}
                 </div>
 
-                {/* 4. TIME */}
+                {/* 3. TIME */}
                 <div ref={timeRef} className="flex-1 min-w-0 relative group/sec">
                     <div
                         className="transition-all duration-300 cursor-pointer h-full px-4 py-1.5 flex items-center justify-between hover:bg-slate-50 rounded-[12px] lg:rounded-full lg:rounded-l-none"
@@ -399,31 +464,71 @@ export default function TurfSearchBar({ onSearch, values, onChange, onClear }) {
                         <div className="flex gap-3 items-center">
                             <IoTimeOutline className="text-[#16A34A] w-5 h-5 shrink-0" />
                             <div className="flex flex-col">
-                                <span className="text-[11px] font-black text-[#111827] tracking-wide uppercase">Time</span>
-                                <span className="text-[11px] font-semibold text-[#6B7280] truncate max-w-[110px]">
-                                    {selectedTime ? selectedTime.label : 'Any Time'}
+                                <span className="text-[11px] font-black text-[#111827] tracking-wide uppercase">Time Slot</span>
+                                <span className="text-[11px] font-semibold text-[#6B7280] truncate max-w-[130px]" title={time || 'Any Time'}>
+                                    {formatTimeDisplay(time)}
                                 </span>
                             </div>
                         </div>
                     </div>
                     {timeOpen && (
-                        <div className="absolute top-full right-0 w-[275px] bg-white border border-[#E5E7EB] p-4 rounded-[22px] mt-2 shadow-[0_20px_50px_rgba(0,0,0,0.18)] z-[99999]">
-                            <span className="text-[10px] font-black uppercase tracking-wider text-[#6B7280] block mb-2.5">Select Time Slot</span>
-                            <div className="grid grid-cols-2 gap-2">
-                                {timeSlots.map(t => (
+                        <div className="absolute top-full right-0 w-[300px] bg-white border border-[#E5E7EB] p-3.5 rounded-[22px] mt-2 shadow-[0_20px_50px_rgba(0,0,0,0.18)] z-[99999] max-h-96 overflow-y-auto custom-scrollbar">
+                            <div className="flex items-center justify-between mb-2.5 px-1 border-b border-slate-100 pb-1.5">
+                                <span className="text-[10px] font-black uppercase tracking-wider text-[#6B7280]">Select Time Slot</span>
+                                {time && (
+                                    <button
+                                        type="button"
+                                        onClick={() => selectTime('')}
+                                        className="text-[10px] font-bold text-rose-500 hover:underline cursor-pointer"
+                                    >
+                                        Clear (Any Time)
+                                    </button>
+                                )}
+                            </div>
+
+                            {/* 1. Quick Time Bands */}
+                            <div className="grid grid-cols-2 gap-1.5 mb-3">
+                                {timeBands.map(t => (
                                     <button
                                         key={t.value}
-                                        className={`flex flex-col items-center justify-center p-2.5 rounded-xl transition-all border shadow-sm ${
+                                        type="button"
+                                        className={`flex flex-col items-start p-2 rounded-xl transition-all border shadow-xs text-left cursor-pointer ${
                                             time === t.value
                                                 ? 'bg-[#C8FF2E] text-[#111827] border-[#B5F000] shadow-[0_4px_12px_rgba(200,255,46,0.35)]'
-                                                : 'bg-white hover:bg-[#C8FF2E] text-[#111827] border-[#E5E7EB] hover:border-[#B5F000]'
+                                                : 'bg-white hover:bg-[#C8FF2E]/30 text-[#111827] border-[#E5E7EB] hover:border-[#B5F000]'
                                         }`}
                                         onClick={() => selectTime(t.value)}
                                     >
-                                        <span className="text-[11px] font-bold">{t.label}</span>
-                                        <span className="text-[9px] text-[#6B7280] font-semibold mt-0.5">{t.range}</span>
+                                        <div className="flex items-center gap-1.5 mb-0.5">
+                                            <span>{t.icon}</span>
+                                            <span className="text-[11px] font-bold">{t.label}</span>
+                                        </div>
+                                        <span className="text-[9px] text-[#6B7280] font-semibold">{t.range}</span>
                                     </button>
                                 ))}
+                            </div>
+
+                            {/* 2. Exact Hourly Match Slots */}
+                            <div className="border-t border-[#E5E7EB] pt-2">
+                                <span className="text-[9px] font-black uppercase tracking-wider text-[#6B7280] block mb-2 px-1">
+                                    OR PICK EXACT 1-HOUR SLOT
+                                </span>
+                                <div className="grid grid-cols-2 gap-1.5 max-h-40 overflow-y-auto pr-0.5 custom-scrollbar">
+                                    {hourlySlots.map(slot => (
+                                        <button
+                                            key={slot}
+                                            type="button"
+                                            onClick={() => selectTime(slot)}
+                                            className={`px-2 py-1.5 rounded-lg text-[10px] font-bold transition-all border shadow-xs text-center cursor-pointer ${
+                                                time === slot
+                                                    ? 'bg-[#10B981] text-white border-[#059669] shadow-xs'
+                                                    : 'bg-slate-50 hover:bg-emerald-50 text-[#374151] hover:text-[#065F46] border-[#E5E7EB] hover:border-emerald-300'
+                                            }`}
+                                        >
+                                            {slot}
+                                        </button>
+                                    ))}
+                                </div>
                             </div>
                         </div>
                     )}

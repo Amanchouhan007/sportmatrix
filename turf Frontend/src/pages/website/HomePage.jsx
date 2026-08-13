@@ -113,6 +113,50 @@ export default function HomePage() {
         }
     }, [])
 
+/* ── Coordinate Mapping for Dynamic Distance & Nearby Sorting ── */
+const AREA_COORDINATES = {
+    // Indore Areas
+    'vijay nagar': { lat: 22.7533, lng: 75.8937, name: 'Vijay Nagar, Indore' },
+    'palasia': { lat: 22.7244, lng: 75.8839, name: 'Palasia, Indore' },
+    'lig': { lat: 22.7380, lng: 75.8916, name: 'LIG Colony, Indore' },
+    'lig colony': { lat: 22.7380, lng: 75.8916, name: 'LIG Colony, Indore' },
+    'bhawarkua': { lat: 22.6953, lng: 75.8690, name: 'Bhawarkua, Indore' },
+    'bhawarkuan': { lat: 22.6953, lng: 75.8690, name: 'Bhawarkua, Indore' },
+    'navlakha': { lat: 22.7000, lng: 75.8752, name: 'Navlakha, Indore' },
+    'annapurna': { lat: 22.7010, lng: 75.8320, name: 'Annapurna, Indore' },
+    'super corridor': { lat: 22.7650, lng: 75.8300, name: 'Super Corridor, Indore' },
+    'rau': { lat: 22.6300, lng: 75.8050, name: 'Rau, Indore' },
+    'bypass': { lat: 22.7200, lng: 75.9200, name: 'Bypass, Indore' },
+    'rajwada': { lat: 22.7196, lng: 75.8577, name: 'Rajwada, Indore' },
+    'indore': { lat: 22.7196, lng: 75.8577, name: 'Indore' },
+    // Other Cities
+    'mumbai': { lat: 19.0760, lng: 72.8777, name: 'Mumbai' },
+    'andheri': { lat: 19.1136, lng: 72.8697, name: 'Andheri, Mumbai' },
+    'bandra': { lat: 19.0596, lng: 72.8295, name: 'Bandra, Mumbai' },
+    'powai': { lat: 19.1176, lng: 72.9060, name: 'Powai, Mumbai' },
+    'vashi': { lat: 19.0330, lng: 73.0297, name: 'Vashi, Mumbai' },
+    'bangalore': { lat: 12.9716, lng: 77.5946, name: 'Bangalore' },
+    'koramangala': { lat: 12.9352, lng: 77.6245, name: 'Koramangala, Bangalore' },
+    'indiranagar': { lat: 12.9784, lng: 77.6408, name: 'Indiranagar, Bangalore' },
+    'hsr layout': { lat: 12.9121, lng: 77.6446, name: 'HSR Layout, Bangalore' },
+    'delhi': { lat: 28.6139, lng: 77.2090, name: 'Delhi' },
+    'pune': { lat: 18.5204, lng: 73.8567, name: 'Pune' },
+}
+
+const resolveOriginCoordinates = (locString, userGPS, explicitCoords) => {
+    if (explicitCoords?.lat && explicitCoords?.lng) return explicitCoords
+    if (!locString || locString.toLowerCase().includes('current') || locString.toLowerCase().includes('near me')) {
+        if (userGPS?.lat && userGPS?.lng) return userGPS
+        return { lat: 22.7196, lng: 75.8577 } // default Indore Center
+    }
+    const clean = locString.toLowerCase()
+    for (const [key, coords] of Object.entries(AREA_COORDINATES)) {
+        if (clean.includes(key)) return coords
+    }
+    if (userGPS?.lat && userGPS?.lng) return userGPS
+    return { lat: 22.7196, lng: 75.8577 }
+}
+
     const getDistance = (lat1, lon1, lat2, lon2) => {
         if (!lat1 || !lon1 || !lat2 || !lon2) return 9999
         const R = 6371 // km
@@ -122,16 +166,27 @@ export default function HomePage() {
             Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
             Math.sin(dLon / 2) * Math.sin(dLon / 2)
         const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
-        return R * c
+        return Math.max(0.1, Number((R * c).toFixed(1)))
     }
 
-    /* ── Filtered Turfs ── */
-    const filteredTurfs = allTurfs.map(t => ({
-        ...t,
-        distance: userLocation ? getDistance(userLocation.lat, userLocation.lng, t.lat, t.lng) : null
-    })).filter(t => {
-        if (appliedFilters.location) {
-            const locFilter = appliedFilters.location.toLowerCase().trim()
+    const activeLoc = appliedFilters.location || searchValues.location
+    const originCoords = resolveOriginCoordinates(activeLoc, userLocation, appliedFilters.coords || searchValues.coords)
+
+    /* ── Filtered & Nearby-Ranked Turfs (Google Maps / Nearby First Style) ── */
+    const filteredTurfs = allTurfs.map(t => {
+        const d = getDistance(originCoords.lat, originCoords.lng, t.lat, t.lng)
+        return {
+            ...t,
+            distance: d
+        }
+    }).filter(t => {
+        if (activeLoc && !activeLoc.toLowerCase().includes('near me') && !activeLoc.toLowerCase().includes('current') && !activeLoc.toLowerCase().includes('all venues')) {
+            const locFilter = activeLoc.toLowerCase().trim()
+            // If user searched for an Indore area, prioritize and show Indore turfs
+            const isIndoreQuery = locFilter.includes('indore') || Object.keys(AREA_COORDINATES).filter(k => AREA_COORDINATES[k].lat > 22 && AREA_COORDINATES[k].lat < 23).some(k => locFilter.includes(k))
+            if (isIndoreQuery) {
+                return t.city.toLowerCase() === 'indore'
+            }
             const matchCity = t.city.toLowerCase().includes(locFilter) || locFilter.includes(t.city.toLowerCase())
             const matchLocation = t.location ? t.location.toLowerCase().includes(locFilter) : false
             const matchName = t.name ? t.name.toLowerCase().includes(locFilter) : false
@@ -141,10 +196,8 @@ export default function HomePage() {
 
         return true
     }).sort((a, b) => {
-        if (userLocation && a.distance !== null && b.distance !== null) {
-            return a.distance - b.distance
-        }
-        return b.rating - a.rating
+        // ALWAYS rank closest turfs to the searched location/area first
+        return a.distance - b.distance
     })
 
     /* ── Handle search field changes (No filtering here) ── */
@@ -201,18 +254,147 @@ export default function HomePage() {
                         />
                     </div>
 
-                    {/* FRONT CRICKET CHALLENGE CARD ALERT (Dynamic to Indore / Active City) */}
+                    {/* ── SPECIAL CRICKET MODES & USP ATTRACTION BAR (Ultra Catchy & High Energy) ── */}
+                    <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 w-full select-none">
+                        {/* 1. 🔥 DARE MATCH™ */}
+                        <button
+                            type="button"
+                            onClick={() => {
+                                setIsChallengeVisible(true)
+                                navigate('/booking/1?mode=dare&pay=opponent')
+                            }}
+                            className="group relative overflow-hidden w-full flex items-center gap-3 p-3 sm:p-3.5 rounded-2xl bg-gradient-to-br from-orange-500/15 via-amber-500/10 to-red-500/10 border-2 border-orange-400/80 hover:border-orange-500 shadow-sm hover:shadow-[0_8px_25px_rgba(249,115,22,0.4)] transition-all duration-300 cursor-pointer hover:scale-[1.04] hover:-translate-y-0.5 active:scale-95 text-left shimmer-sweep"
+                        >
+                            <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-orange-500 to-red-600 text-white shadow-[0_0_15px_rgba(249,115,22,0.6)] flex items-center justify-center text-lg shrink-0 group-hover:scale-110 group-hover:rotate-6 transition-transform animate-fire-float">
+                                🔥
+                            </div>
+                            <div className="flex flex-col min-w-0 leading-tight">
+                                <div className="flex items-center gap-1.5 mb-0.5">
+                                    <span className="text-[11px] font-black text-orange-950 uppercase tracking-tight">Dare Match™</span>
+                                    <span className="bg-gradient-to-r from-red-600 to-orange-500 text-white font-black text-[7.5px] px-1.5 py-0.2 rounded-full uppercase tracking-wider animate-pulse shrink-0">
+                                        ₹0 FREE
+                                    </span>
+                                </div>
+                                <span className="text-xs font-black text-[#111827] truncate group-hover:text-orange-600 transition-colors">
+                                    Winner Plays FREE!
+                                </span>
+                                <span className="text-[9.5px] text-orange-900/80 font-bold truncate mt-0.5">
+                                    Loser Bharega Pura Bill ⚡
+                                </span>
+                            </div>
+                        </button>
+
+                        {/* 2. 🤝 50:50 MATCH SPLIT™ */}
+                        <button
+                            type="button"
+                            onClick={() => navigate('/booking/1?mode=split50')}
+                            className="group relative overflow-hidden w-full flex items-center gap-3 p-3 sm:p-3.5 rounded-2xl bg-gradient-to-br from-emerald-500/15 via-teal-500/10 to-emerald-500/10 border-2 border-emerald-400/80 hover:border-emerald-500 shadow-sm hover:shadow-[0_8px_25px_rgba(16,185,129,0.4)] transition-all duration-300 cursor-pointer hover:scale-[1.04] hover:-translate-y-0.5 active:scale-95 text-left shimmer-sweep"
+                        >
+                            <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-700 text-white shadow-[0_0_15px_rgba(16,185,129,0.6)] flex items-center justify-center text-lg shrink-0 group-hover:scale-110 group-hover:-rotate-6 transition-transform">
+                                🤝
+                            </div>
+                            <div className="flex flex-col min-w-0 leading-tight">
+                                <div className="flex items-center gap-1.5 mb-0.5">
+                                    <span className="text-[11px] font-black text-[#064E3B] uppercase tracking-tight">50:50 Split™</span>
+                                    <span className="bg-[#10B981] text-white font-black text-[7.5px] px-1.5 py-0.2 rounded-full uppercase tracking-wider shrink-0">
+                                        NO KHAT-PAT
+                                    </span>
+                                </div>
+                                <span className="text-xs font-black text-[#111827] truncate group-hover:text-[#10B981] transition-colors">
+                                    Captain vs Captain
+                                </span>
+                                <span className="text-[9.5px] text-emerald-900/80 font-bold truncate mt-0.5">
+                                    ₹600 Aapka • ₹600 Unka
+                                </span>
+                            </div>
+                        </button>
+
+                        {/* 3. 👥 SQUAD UPI SPLIT™ */}
+                        <button
+                            type="button"
+                            onClick={() => navigate('/booking/1?mode=per_player')}
+                            className="group relative overflow-hidden w-full flex items-center gap-3 p-3 sm:p-3.5 rounded-2xl bg-gradient-to-br from-blue-500/15 via-indigo-500/10 to-blue-500/10 border-2 border-blue-400/80 hover:border-blue-500 shadow-sm hover:shadow-[0_8px_25px_rgba(59,130,246,0.4)] transition-all duration-300 cursor-pointer hover:scale-[1.04] hover:-translate-y-0.5 active:scale-95 text-left shimmer-sweep"
+                        >
+                            <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-700 text-white shadow-[0_0_15px_rgba(59,130,246,0.6)] flex items-center justify-center text-lg shrink-0 group-hover:scale-110 group-hover:rotate-6 transition-transform">
+                                👥
+                            </div>
+                            <div className="flex flex-col min-w-0 leading-tight">
+                                <div className="flex items-center gap-1.5 mb-0.5">
+                                    <span className="text-[11px] font-black text-blue-950 uppercase tracking-tight">Squad Split™</span>
+                                    <span className="bg-blue-600 text-white font-black text-[7.5px] px-1.5 py-0.2 rounded-full uppercase tracking-wider shrink-0">
+                                        AUTO QR
+                                    </span>
+                                </div>
+                                <span className="text-xs font-black text-[#111827] truncate group-hover:text-blue-600 transition-colors">
+                                    Sirf ₹100 / Khiladi
+                                </span>
+                                <span className="text-[9.5px] text-blue-900/80 font-bold truncate mt-0.5">
+                                    11 Khiladi Direct Pay Karein
+                                </span>
+                            </div>
+                        </button>
+
+                        {/* 4. 👑 HALL OF FAME™ */}
+                        <button
+                            type="button"
+                            onClick={() => navigate('/leaderboard')}
+                            className="group relative overflow-hidden w-full flex items-center gap-3 p-3 sm:p-3.5 rounded-2xl bg-gradient-to-br from-amber-500/15 via-yellow-500/10 to-amber-500/10 border-2 border-amber-400/80 hover:border-amber-500 shadow-sm hover:shadow-[0_8px_25px_rgba(245,158,11,0.4)] transition-all duration-300 cursor-pointer hover:scale-[1.04] hover:-translate-y-0.5 active:scale-95 text-left shimmer-sweep"
+                        >
+                            <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-amber-400 to-yellow-600 text-black shadow-[0_0_15px_rgba(245,158,11,0.6)] flex items-center justify-center text-lg shrink-0 group-hover:scale-110 group-hover:-rotate-6 transition-transform">
+                                👑
+                            </div>
+                            <div className="flex flex-col min-w-0 leading-tight">
+                                <div className="flex items-center gap-1.5 mb-0.5">
+                                    <span className="text-[11px] font-black text-amber-950 uppercase tracking-tight">Hall of Fame™</span>
+                                    <span className="bg-amber-500 text-black font-black text-[7.5px] px-1.5 py-0.2 rounded-full uppercase tracking-wider shrink-0">
+                                        RANK #1
+                                    </span>
+                                </div>
+                                <span className="text-xs font-black text-[#111827] truncate group-hover:text-amber-600 transition-colors">
+                                    Indore Turf King
+                                </span>
+                                <span className="text-[9.5px] text-amber-900/80 font-bold truncate mt-0.5">
+                                    Live PPS Stats & Trophy 🏆
+                                </span>
+                            </div>
+                        </button>
+
+                        {/* 5. 👨‍⚖️ PRO THIRD UMPIRE™ */}
+                        <button
+                            type="button"
+                            onClick={() => navigate('/booking/1')}
+                            className="group relative overflow-hidden w-full flex items-center gap-3 p-3 sm:p-3.5 rounded-2xl bg-gradient-to-br from-purple-500/15 via-fuchsia-500/10 to-purple-500/10 border-2 border-purple-400/80 hover:border-purple-500 shadow-sm hover:shadow-[0_8px_25px_rgba(168,85,247,0.4)] transition-all duration-300 cursor-pointer hover:scale-[1.04] hover:-translate-y-0.5 active:scale-95 text-left col-span-1 sm:col-span-2 lg:col-span-1 shimmer-sweep"
+                        >
+                            <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-purple-500 to-fuchsia-700 text-white shadow-[0_0_15px_rgba(168,85,247,0.6)] flex items-center justify-center text-lg shrink-0 group-hover:scale-110 group-hover:rotate-6 transition-transform">
+                                👨‍⚖️
+                            </div>
+                            <div className="flex flex-col min-w-0 leading-tight">
+                                <div className="flex items-center gap-1.5 mb-0.5">
+                                    <span className="text-[11px] font-black text-purple-950 uppercase tracking-tight">Third Umpire™</span>
+                                    <span className="bg-purple-600 text-white font-black text-[7.5px] px-1.5 py-0.2 rounded-full uppercase tracking-wider shrink-0">
+                                        FAIRPLAY
+                                    </span>
+                                </div>
+                                <span className="text-xs font-black text-[#111827] truncate group-hover:text-purple-600 transition-colors">
+                                    No LBW Fights!
+                                </span>
+                                <span className="text-[9.5px] text-purple-900/80 font-bold truncate mt-0.5">
+                                    Official Umpire Addon (+₹300)
+                                </span>
+                            </div>
+                        </button>
+                    </div>
+
+                    {/* FLOATING SIDE LIVE CRICKET CHALLENGE POPUP (Dynamic to Indore / Active City) */}
                     {isChallengeVisible && (
-                        <div className="mt-4 relative z-10 animate-in fade-in zoom-in-95 duration-200">
-                            <LiveCricketChallengeCard
-                                challengerTeam={dynamicChallenger}
-                                venueName={dynamicDareVenue}
-                                matchTime="Tonight, 8:00 PM – 9:00 PM"
-                                matchFee={1200}
-                                depositFee={100}
-                                onDismiss={() => setIsChallengeVisible(false)}
-                            />
-                        </div>
+                        <LiveCricketChallengeCard
+                            challengerTeam={dynamicChallenger}
+                            venueName={dynamicDareVenue}
+                            matchTime="Tonight, 8:00 PM – 9:00 PM"
+                            matchFee={1200}
+                            depositFee={100}
+                            onDismiss={() => setIsChallengeVisible(false)}
+                        />
                     )}
                 </div>
             </section>

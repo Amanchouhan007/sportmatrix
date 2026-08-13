@@ -12,75 +12,27 @@ const filterOptions = [
     { key: 'available', label: 'Available Now', icon: '✅' },
 ]
 
-/* ── Slot Availability Data (mock) ── */
+/* ── Slot Availability Data (Operating 6:00 AM to 11:00 PM) ── */
 const slotsByTurf = {
-    1: [
-        { time: '6PM', status: 'available' },
-        { time: '7PM', status: 'available' },
-        { time: '8PM', status: 'few' },
-        { time: '9PM', status: 'booked' },
-    ],
-    2: [
-        { time: '5PM', status: 'available' },
-        { time: '6PM', status: 'few' },
-        { time: '7PM', status: 'booked' },
-    ],
-    3: [
-        { time: '4PM', status: 'available' },
-        { time: '5PM', status: 'available' },
-        { time: '6PM', status: 'available' },
-    ],
-    4: [
-        { time: '6PM', status: 'booked' },
-        { time: '7PM', status: 'booked' },
-        { time: '8PM', status: 'few' },
-    ],
-    5: [
-        { time: '5PM', status: 'available' },
-        { time: '6PM', status: 'available' },
-        { time: '7PM', status: 'few' },
-        { time: '8PM', status: 'available' },
-    ],
-    6: [
-        { time: '4PM', status: 'available' },
-        { time: '5PM', status: 'available' },
-        { time: '6PM', status: 'available' },
-        { time: '7PM', status: 'few' },
-    ],
-    7: [
-        { time: '4PM', status: 'available' },
-        { time: '5PM', status: 'available' },
-        { time: '6PM', status: 'few' },
-        { time: '7PM', status: 'booked' },
-    ],
-    8: [
-        { time: '6PM', status: 'available' },
-        { time: '7PM', status: 'available' },
-        { time: '8PM', status: 'available' },
-        { time: '9PM', status: 'available' },
-    ],
-    9: [
-        { time: '5PM', status: 'few' },
-        { time: '6PM', status: 'booked' },
-        { time: '7PM', status: 'available' },
-        { time: '8PM', status: 'available' },
-    ],
-    10: [
-        { time: '4PM', status: 'available' },
-        { time: '5PM', status: 'available' },
-        { time: '6PM', status: 'available' },
-    ],
-    11: [
-        { time: '6PM', status: 'available' },
-        { time: '7PM', status: 'few' },
-        { time: '8PM', status: 'booked' },
-    ],
-    12: [
-        { time: '5PM', status: 'available' },
-        { time: '6PM', status: 'available' },
-        { time: '7PM', status: 'available' },
-        { time: '8PM', status: 'few' },
-    ],
+    1: [{ time: '6:00 PM', status: 'available' }, { time: '7:00 PM', status: 'available' }, { time: '8:00 PM', status: 'few' }],
+    2: [{ time: '5:00 PM', status: 'available' }, { time: '6:00 PM', status: 'few' }, { time: '8:00 PM', status: 'available' }],
+    3: [{ time: '6:00 AM', status: 'available' }, { time: '7:00 AM', status: 'available' }, { time: '6:00 PM', status: 'available' }],
+    4: [{ time: '7:00 PM', status: 'available' }, { time: '8:00 PM', status: 'few' }, { time: '9:00 PM', status: 'available' }],
+    5: [{ time: '6:00 AM', status: 'available' }, { time: '6:00 PM', status: 'available' }, { time: '7:00 PM', status: 'few' }],
+    6: [{ time: '6:00 AM', status: 'available' }, { time: '7:00 AM', status: 'available' }, { time: '8:00 AM', status: 'available' }, { time: '6:00 PM', status: 'available' }, { time: '8:00 PM', status: 'available' }, { time: '9:00 PM', status: 'available' }],
+    7: [{ time: '6:00 PM', status: 'few' }, { time: '7:00 PM', status: 'available' }, { time: '8:00 PM', status: 'available' }],
+    8: [{ time: '6:00 AM', status: 'available' }, { time: '7:00 PM', status: 'available' }, { time: '8:00 PM', status: 'available' }],
+    9: [{ time: '6:00 PM', status: 'few' }, { time: '7:00 PM', status: 'available' }],
+    10: [{ time: '6:00 AM', status: 'available' }, { time: '6:00 PM', status: 'available' }],
+    11: [{ time: '7:00 PM', status: 'few' }, { time: '8:00 PM', status: 'available' }],
+    12: [{ time: '6:00 AM', status: 'available' }, { time: '7:00 PM', status: 'available' }],
+    13: [{ time: '6:00 AM', status: 'available' }, { time: '7:00 AM', status: 'available' }, { time: '5:00 PM', status: 'available' }, { time: '7:00 PM', status: 'available' }, { time: '8:00 PM', status: 'available' }],
+    14: [{ time: '6:00 AM', status: 'available' }, { time: '8:00 AM', status: 'available' }, { time: '6:00 PM', status: 'available' }, { time: '8:00 PM', status: 'available' }, { time: '9:00 PM', status: 'available' }],
+    15: [{ time: '6:00 AM', status: 'available' }, { time: '7:00 AM', status: 'available' }, { time: '6:00 PM', status: 'available' }, { time: '7:00 PM', status: 'available' }],
+    16: [{ time: '6:00 AM', status: 'available' }, { time: '7:00 AM', status: 'available' }, { time: '6:00 PM', status: 'available' }, { time: '8:00 PM', status: 'available' }],
+    17: [{ time: '6:00 AM', status: 'available' }, { time: '7:00 AM', status: 'available' }, { time: '7:00 PM', status: 'available' }, { time: '9:00 PM', status: 'available' }],
+    18: [{ time: '6:00 AM', status: 'available' }, { time: '6:00 PM', status: 'available' }, { time: '8:00 PM', status: 'available' }],
+    19: [{ time: '6:00 AM', status: 'available' }, { time: '7:00 AM', status: 'available' }, { time: '6:00 PM', status: 'available' }, { time: '8:00 PM', status: 'available' }],
 }
 
 export default function TurfResultsGrid({ turfs, searchValues, recentSearches = [], onClear }) {
@@ -156,7 +108,7 @@ export default function TurfResultsGrid({ turfs, searchValues, recentSearches = 
                                 className="flex items-center gap-2 bg-white border border-[#E5E7EB] hover:border-[#C8FF2E] px-4 py-2 rounded-full shrink-0 shadow-sm transition-all cursor-pointer"
                             >
                                 <span className="text-[11px] font-bold text-[#111827] uppercase tracking-wider leading-none">
-                                    SORT: <span className="text-[#16A34A]">{activeFilter === 'price-low' ? 'PRICE: LOW TO HIGH' : activeFilter === 'price-high' ? 'PRICE: HIGH TO LOW' : 'RECOMMENDED'}</span>
+                                    SORT: <span className="text-[#16A34A]">{activeFilter === 'price-low' ? 'PRICE: LOW TO HIGH' : activeFilter === 'price-high' ? 'PRICE: HIGH TO LOW' : activeFilter === 'rating' ? 'TOP RATED' : 'NEAREST FIRST'}</span>
                                 </span>
                                 <svg className={`w-3 h-3 text-[#111827] transition-transform duration-200 ${isSortOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M19 9l-7 7-7-7" />
@@ -166,11 +118,12 @@ export default function TurfResultsGrid({ turfs, searchValues, recentSearches = 
                             {isSortOpen && (
                                 <>
                                     <div className="fixed inset-0 z-40" onClick={() => setIsSortOpen(false)} />
-                                    <div className="absolute right-0 top-full mt-2 w-52 bg-white border border-[#E5E7EB] rounded-2xl shadow-xl py-1.5 z-50 overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+                                    <div className="absolute right-0 top-full mt-2 w-64 bg-white border border-[#E5E7EB] rounded-2xl shadow-xl py-1.5 z-50 overflow-hidden animate-in fade-in zoom-in-95 duration-150">
                                         {[
-                                            { value: '', label: 'RECOMMENDED' },
-                                            { value: 'price-low', label: 'PRICE: LOW TO HIGH' },
-                                            { value: 'price-high', label: 'PRICE: HIGH TO LOW' },
+                                            { value: '', label: '📍 NEAREST FIRST' },
+                                            { value: 'price-low', label: '💰 PRICE: LOW TO HIGH' },
+                                            { value: 'price-high', label: '💸 PRICE: HIGH TO LOW' },
+                                            { value: 'rating', label: '⭐ TOP RATED' },
                                         ].map((opt) => (
                                             <button
                                                 key={opt.value}
@@ -178,7 +131,7 @@ export default function TurfResultsGrid({ turfs, searchValues, recentSearches = 
                                                     setActiveFilter(opt.value);
                                                     setIsSortOpen(false);
                                                 }}
-                                                className={`w-full text-left px-4 py-2.5 text-[11px] font-bold uppercase tracking-wider transition-colors flex items-center justify-between ${
+                                                className={`w-full text-left px-4 py-2.5 text-[11px] font-bold uppercase tracking-wider transition-colors flex items-center justify-between cursor-pointer ${
                                                     activeFilter === opt.value
                                                         ? 'bg-[#C8FF2E] text-[#111827]'
                                                         : 'text-[#6B7280] hover:bg-[#F7F9FC] hover:text-[#111827]'
@@ -186,7 +139,7 @@ export default function TurfResultsGrid({ turfs, searchValues, recentSearches = 
                                             >
                                                 <span>{opt.label}</span>
                                                 {activeFilter === opt.value && (
-                                                    <span className="text-xs">✓</span>
+                                                    <span className="text-xs font-black">✓</span>
                                                 )}
                                             </button>
                                         ))}
