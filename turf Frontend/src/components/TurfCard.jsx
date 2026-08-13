@@ -103,7 +103,7 @@ export default function TurfCard({ turf, onMouseEnter, onMouseLeave, i = 0 }) {
 
                     <div className="absolute bottom-2 left-2 z-[2] text-[9px] font-black text-white flex items-center gap-1.5 drop-shadow-md whitespace-nowrap bg-black/60 backdrop-blur-md px-2 py-0.5 rounded-full border border-white/20">
                         <span className="w-1.5 h-1.5 rounded-full bg-[#C8FF2E] shadow-[0_0_8px_rgba(200,255,46,0.8)] animate-pulse"></span>
-                        Open till 11 PM
+                        Open: 6:00 AM – 11:00 PM
                     </div>
                 </div>
             </div>

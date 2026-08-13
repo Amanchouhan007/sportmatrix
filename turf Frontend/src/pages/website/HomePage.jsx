@@ -435,29 +435,29 @@ export default function HomePage() {
                     >
                         {[
                             {
-                                title: 'Smart Booking Engine',
-                                desc: 'Realtime session scheduler with dynamic pricing, peak-hour management, and weather-based auto-adjustments.',
+                                title: 'Smart Slot Booking',
+                                desc: 'Instant cricket turf slot reservations, floodlight night match booking, dynamic pricing, and instant confirmation.',
                                 icon: MdStadium,
                             },
                             {
-                                title: 'Multi-Sport Turf Hub',
-                                desc: 'Central architecture coordinating grass, clay, and turf-based athletic fields on a unified management ledger.',
-                                icon: GiCricketBat,
+                                title: 'Captain Handshake',
+                                desc: 'Anti-tamper match verification where opponent captains confirm scores or certified turf umpires ratify official stats.',
+                                icon: HiShieldCheck,
                             },
                             {
-                                title: 'POS Powered Billing',
-                                desc: 'Integrated cash splits, canteen orders, hardware rentals, and instant checkout with split payment engines.',
+                                title: 'Live Leaderboard',
+                                desc: 'Weighted Player Performance Score (PPS) tracking top batsmen, lethal bowlers, and MVPs across turf cricket matches.',
+                                icon: RiTrophyFill,
+                            },
+                            {
+                                title: 'Split Pay & Dare Mode',
+                                desc: 'Split match fees equally among teammates via UPI or challenge rival squads in high-stakes "Winner Refunded" Dare matches.',
                                 icon: MdPayments,
                             },
                             {
-                                title: 'QR Access Controls',
-                                desc: 'Contactless slot verification, secure locker systems, and automated session-duration tracking checks.',
-                                icon: MdQrCodeScanner,
-                            },
-                            {
-                                title: 'Bracket Engine',
-                                desc: 'Automated tournament scheduling, squad bracket generators, and live leaderboard tracking systems.',
-                                icon: RiTrophyFill,
+                                title: 'Cricket Tournaments',
+                                desc: 'Automated knockout brackets, squad registrations, live tournament standings, and verified prize pool distribution.',
+                                icon: GiCricketBat,
                             }
                         ].map((item, idx) => (
                             <div
