@@ -15,20 +15,20 @@ export const getOverview = async (filters = {}) => {
     return {
         success: true,
         data: {
-            totalRevenue: 0,
-            monthlyRevenue: 0,
-            yearlyRevenue: 0,
-            revenueGrowthPercentage: 0,
-            totalBookings: 0,
-            todayBookings: 0,
-            monthlyBookings: 0,
-            cancelledBookings: 0,
-            totalOwners: 0,
-            totalStaff: 0,
-            totalCustomers: 0,
-            newRegistrations: 0,
-            totalBranches: 0,
-            activeBranches: 0,
+            totalRevenue: 4860000,
+            monthlyRevenue: 1350000,
+            yearlyRevenue: 4860000,
+            revenueGrowthPercentage: 18.5,
+            totalBookings: 4140,
+            todayBookings: 38,
+            monthlyBookings: 1120,
+            cancelledBookings: 14,
+            totalOwners: 8,
+            totalStaff: 28,
+            totalCustomers: 1284,
+            newRegistrations: 145,
+            totalBranches: 15,
+            activeBranches: 15,
             suspendedBranches: 0,
             inactiveBranches: 0
         }
@@ -153,10 +153,7 @@ export const getSportsAnalytics = async (filters = {}) => {
     return {
         success: true,
         data: [
-            { sport: 'Football', bookingsCount: 1850, revenue: 2220000 },
-            { sport: 'Cricket', bookingsCount: 1420, revenue: 1420000 },
-            { sport: 'Badminton', bookingsCount: 890, revenue: 534000 },
-            { sport: 'Tennis', bookingsCount: 400, revenue: 400000 }
+            { sport: 'Cricket', bookingsCount: 1420, revenue: 1420000 }
         ]
     };
 };
@@ -220,7 +217,7 @@ export const getTopBranches = async (filters = {}) => {
     return {
         success: true,
         data: [
-            { _id: 'br_001', id: 'br_001', branchName: 'Green Arena Football Turf', city: 'Mumbai', ownerName: 'Rajesh Sharma', bookingsCount: 1450, bookings: 1450, revenue: 1740000 },
+            { _id: 'br_001', id: 'br_001', branchName: 'Green Arena Turf', city: 'Mumbai', ownerName: 'Rajesh Sharma', bookingsCount: 1450, bookings: 1450, revenue: 1740000 },
             { _id: 'br_002', id: 'br_002', branchName: 'Champion Cricket Academy', city: 'Bangalore', ownerName: 'Suresh Patil', bookingsCount: 1280, bookings: 1280, revenue: 1920000 },
             { _id: 'br_003', id: 'br_003', branchName: 'Royal Cricket Ground', city: 'Indore', ownerName: 'Vikramaditya Roy', bookingsCount: 950, bookings: 950, revenue: 570000 }
         ]
@@ -242,10 +239,7 @@ export const getTopSports = async (filters = {}) => {
     return {
         success: true,
         data: [
-            { sport: 'Football', name: 'Football', bookingsCount: 1850, bookings: 1850, revenue: 2220000 },
-            { sport: 'Cricket', name: 'Cricket', bookingsCount: 1420, bookings: 1420, revenue: 1420000 },
-            { sport: 'Badminton', name: 'Badminton', bookingsCount: 890, bookings: 890, revenue: 534000 },
-            { sport: 'Tennis', name: 'Tennis', bookingsCount: 400, bookings: 400, revenue: 400000 }
+            { sport: 'Cricket', name: 'Cricket', bookingsCount: 1420, bookings: 1420, revenue: 1420000 }
         ]
     };
 };

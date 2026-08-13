@@ -49,7 +49,7 @@ export default function CustomerProfile() {
     const handleUpdateProfile = () => {
         setSavedProfile(formData)
         localStorage.setItem('customer_profile', JSON.stringify(formData))
-        addToast({ title: 'Profile Updated', message: 'Your personal information has been saved successfully.', type: 'success' })
+        addToast({ title: 'Profile Updated', message: 'Your personal & career information has been saved.', type: 'success' })
     }
 
     const handleAddSport = () => {

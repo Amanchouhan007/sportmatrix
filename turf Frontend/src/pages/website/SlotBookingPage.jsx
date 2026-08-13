@@ -684,11 +684,16 @@ export default function SlotBookingPage() {
 
                             {/* Selected Slot Summary Line */}
                             {selectedSlotTime && (
-                                <div className="mt-6 bg-[#F8FAFC] border border-[#E2E8F0] p-4 sm:p-5 rounded-[20px] shadow-xs flex flex-wrap items-center gap-2 text-xs sm:text-sm font-semibold text-slate-600">
+                                <div className="mt-4 bg-[#F8FAFC] border border-[#E2E8F0] p-4 sm:p-5 rounded-[20px] shadow-xs flex flex-wrap items-center gap-2 text-xs sm:text-sm font-semibold text-slate-600">
                                     <span>Selected Slot: </span>
                                     <strong className="text-[#111827] font-black text-sm sm:text-base">
                                         {allTimeSlots.find(s => s.id === selectedSlotTime)?.time || selectedSlotTime} ({durationHours} {durationHours > 1 ? 'Hours' : 'Hour'})
                                     </strong>
+                                    {hasVerifiedUmpire && (
+                                        <span className="text-[10px] font-black bg-emerald-100 text-[#065F46] px-2 py-0.5 rounded-full border border-emerald-300">
+                                            ⚖️ Umpire Included (+₹300)
+                                        </span>
+                                    )}
                                     <span className="text-slate-300 mx-1">·</span>
                                     <span>Slot Rate: </span>
                                     <span className="text-[#10B981] font-black text-sm sm:text-base font-mono">₹{currentSlotPrice.toLocaleString('en-IN')}/hr</span>

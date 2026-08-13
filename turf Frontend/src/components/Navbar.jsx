@@ -5,9 +5,7 @@ import { useAuth } from '../context/AuthContext'
 
 const navLinks = [
     { label: 'TURFS & VENUES', href: '/turfs', isPage: true },
-    { label: 'LEADERBOARD', href: '/leaderboard', isPage: true },
-    { label: 'FEATURES', href: 'features' },
-    { label: 'MODULES', href: 'modules' },
+    { label: 'LEADERBOARD 🏆', href: '/leaderboard', isPage: true },
     { label: 'MEMBERSHIP', href: '/membership', isPage: true },
 ]
 

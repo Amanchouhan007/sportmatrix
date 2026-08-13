@@ -624,23 +624,25 @@ export default function SystemSettings() {
                                 {/* Sport-wise Rates */}
                                 <div className="space-y-3">
                                     <h4 className="text-xs font-black uppercase tracking-widest text-slate-400">Sport-wise Commission Breakdown</h4>
-                                    <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                                        {(displayData.sportsRates || []).map((item, index) => (
-                                            <div key={item.sportName || index} className="flex items-center justify-between p-4 bg-slate-50/80 rounded-xl border border-slate-200/70 hover:border-emerald-300 transition-all duration-200">
-                                                <span className="text-xs font-bold text-slate-900">{item.sportName}</span>
-                                                <div className="relative w-28">
-                                                    <input
-                                                        type="number"
-                                                        value={item.commissionRate ?? ''}
-                                                        onChange={e => updateSportRate(index, e.target.value)}
-                                                        placeholder="8"
-                                                        disabled={!isEditingCommission}
-                                                        className="w-full h-9 pl-3 pr-8 border border-slate-200 rounded-lg text-xs font-bold text-slate-900 text-right outline-none focus:border-[#16A34A] focus:ring-2 focus:ring-[#16A34A]/20 bg-white transition-all shadow-2xs disabled:bg-slate-100/60 disabled:text-slate-400"
-                                                    />
-                                                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-black text-slate-400">%</span>
+                                    <div className="grid sm:grid-cols-1 max-w-md gap-4">
+                                        {(displayData.sportsRates || [])
+                                            .filter(item => (item.sportName || '').toLowerCase() === 'cricket')
+                                            .map((item, index) => (
+                                                <div key={item.sportName || index} className="flex items-center justify-between p-4 bg-slate-50/80 rounded-xl border border-slate-200/70 hover:border-emerald-300 transition-all duration-200">
+                                                    <span className="text-xs font-bold text-slate-900">{item.sportName}</span>
+                                                    <div className="relative w-28">
+                                                        <input
+                                                            type="number"
+                                                            value={item.commissionRate ?? ''}
+                                                            onChange={e => updateSportRate(index, e.target.value)}
+                                                            placeholder="8"
+                                                            disabled={!isEditingCommission}
+                                                            className="w-full h-9 pl-3 pr-8 border border-slate-200 rounded-lg text-xs font-bold text-slate-900 text-right outline-none focus:border-[#16A34A] focus:ring-2 focus:ring-[#16A34A]/20 bg-white transition-all shadow-2xs disabled:bg-slate-100/60 disabled:text-slate-400"
+                                                        />
+                                                        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-black text-slate-400">%</span>
+                                                    </div>
                                                 </div>
-                                            </div>
-                                        ))}
+                                            ))}
                                     </div>
                                 </div>
                             </div>

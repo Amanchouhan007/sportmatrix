@@ -23,7 +23,6 @@ const allLocations = [
 
 /* ── Sports Data ── */
 const sportsOptions = [
-    { name: 'Football', icon: IoFootball },
     { name: 'Cricket', icon: GiCricketBat },
 ]
 

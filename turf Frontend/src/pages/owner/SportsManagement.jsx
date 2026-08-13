@@ -32,12 +32,10 @@ export default function SportsManagement() {
 
     // Sports state
     const DEFAULT_MASTER_SPORTS = [
-        { _id: 'sp-1', id: 'sp-1', name: 'Cricket', icon: '🏏' },
-        { _id: 'sp-2', id: 'sp-2', name: 'Football', icon: '⚽' }
+        { _id: 'sp-1', id: 'sp-1', name: 'Cricket', icon: '🏏' }
     ]
     const DEFAULT_SPORTS = [
-        { _id: 'br-sp-1', name: 'Cricket', icon: '🏏', regularPrice: 1000, peakPrice: 1500, status: 'ACTIVE', totalCourts: 2, totalBookings: 45 },
-        { _id: 'br-sp-2', name: 'Football', icon: '⚽', regularPrice: 1200, peakPrice: 1800, status: 'ACTIVE', totalCourts: 1, totalBookings: 32 }
+        { _id: 'br-sp-1', name: 'Cricket', icon: '🏏', regularPrice: 1000, peakPrice: 1500, status: 'ACTIVE', totalCourts: 2, totalBookings: 45 }
     ]
     const [masterSports, setMasterSports] = useState(DEFAULT_MASTER_SPORTS)
     const [sports, setSports] = useState(DEFAULT_SPORTS)
@@ -473,38 +471,40 @@ export default function SportsManagement() {
                     </div>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
-                    {sports.map((sport) => {
-                        const sName = sport.sportId?.name || sport.name;
-                        const sIcon = sport.sportId?.icon || sport.icon || '🏏';
-                        const regP = sport.regularPrice || 800;
-                        const peakP = sport.peakPrice || 1200;
-                        return (
-                            <div key={sport._id} className="bg-slate-800/80 hover:bg-slate-800 border border-slate-700/70 rounded-2xl p-4 transition-all">
-                                <div className="flex items-center justify-between mb-3">
-                                    <span className="text-2xl">{sIcon}</span>
-                                    <span className="text-[10px] font-black text-emerald-400 bg-emerald-950/60 border border-emerald-800 px-2 py-0.5 rounded-full">
-                                        {sport.status}
-                                    </span>
+                <div className="grid grid-cols-1 md:grid-cols-2 max-w-2xl gap-3.5">
+                    {sports
+                        .filter(sport => (sport.sportId?.name || sport.name)?.toLowerCase() !== 'football')
+                        .map((sport) => {
+                            const sName = sport.sportId?.name || sport.name;
+                            const sIcon = sport.sportId?.icon || sport.icon || '🏏';
+                            const regP = sport.regularPrice || 800;
+                            const peakP = sport.peakPrice || 1200;
+                            return (
+                                <div key={sport._id} className="bg-slate-800/80 hover:bg-slate-800 border border-slate-700/70 rounded-2xl p-4 transition-all">
+                                    <div className="flex items-center justify-between mb-3">
+                                        <span className="text-2xl">{sIcon}</span>
+                                        <span className="text-[10px] font-black text-emerald-400 bg-emerald-950/60 border border-emerald-800 px-2 py-0.5 rounded-full">
+                                            {sport.status}
+                                        </span>
+                                    </div>
+                                    <h4 className="text-sm font-black text-white">{sName}</h4>
+                                    <div className="mt-3 space-y-1.5 pt-2 border-t border-slate-700/60 text-xs">
+                                        <div className="flex justify-between items-center text-slate-300">
+                                            <span className="text-[11px] text-slate-400">Regular (06:00-17:00):</span>
+                                            <span className="font-extrabold text-[#C8FF2E]">₹{regP}/hr</span>
+                                        </div>
+                                        <div className="flex justify-between items-center text-slate-300">
+                                            <span className="text-[11px] text-slate-400">Peak (18:00-23:00):</span>
+                                            <span className="font-extrabold text-amber-400">₹{peakP}/hr</span>
+                                        </div>
+                                        <div className="flex justify-between items-center text-slate-300">
+                                            <span className="text-[11px] text-slate-400">50-50 Split:</span>
+                                            <span className="font-semibold text-slate-200">₹{regP / 2} each</span>
+                                        </div>
+                                    </div>
                                 </div>
-                                <h4 className="text-sm font-black text-white">{sName}</h4>
-                                <div className="mt-3 space-y-1.5 pt-2 border-t border-slate-700/60 text-xs">
-                                    <div className="flex justify-between items-center text-slate-300">
-                                        <span className="text-[11px] text-slate-400">Regular (06:00-17:00):</span>
-                                        <span className="font-extrabold text-[#C8FF2E]">₹{regP}/hr</span>
-                                    </div>
-                                    <div className="flex justify-between items-center text-slate-300">
-                                        <span className="text-[11px] text-slate-400">Peak (18:00-23:00):</span>
-                                        <span className="font-extrabold text-amber-400">₹{peakP}/hr</span>
-                                    </div>
-                                    <div className="flex justify-between items-center text-slate-300">
-                                        <span className="text-[11px] text-slate-400">50-50 Split:</span>
-                                        <span className="font-semibold text-slate-200">₹{regP / 2} each</span>
-                                    </div>
-                                </div>
-                            </div>
-                        );
-                    })}
+                            );
+                        })}
                 </div>
             </div>
 
@@ -551,12 +551,12 @@ export default function SportsManagement() {
             </div>
 
             {/* Sports Cards Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 max-w-2xl gap-6">
                 {isCardsLoading ? (
-                    Array.from({ length: 4 }).map((_, i) => (
+                    Array.from({ length: 2 }).map((_, i) => (
                         <SkeletonLoader key={i} variant="card" />
                     ))
-                ) : sports.length === 0 ? (
+                ) : sports.filter(s => (s.sportId?.name || s.name)?.toLowerCase() !== 'football').length === 0 ? (
                     <div className="col-span-full">
                         <EmptyState
                             icon="🏏"
@@ -565,7 +565,9 @@ export default function SportsManagement() {
                         />
                     </div>
                 ) : (
-                    sports.map((sport) => {
+                    sports
+                        .filter(sport => (sport.sportId?.name || sport.name)?.toLowerCase() !== 'football')
+                        .map((sport) => {
                         const sportName = sport.sportId?.name || sport.name
                         const sportIcon = sport.sportId?.icon || sport.icon || '🏏'
                         const isActiveStatus = sport.status === 'ACTIVE'
@@ -656,7 +658,7 @@ export default function SportsManagement() {
                                 }))
                             }}
                             options={masterSports
-                                .filter(s => ['Cricket', 'Football', 'Football', 'Cricket'].includes(s.name))
+                                .filter(s => s.name === 'Cricket')
                                 .map(s => ({
                                     value: s.id || s._id,
                                     label: `${s.icon} ${s.name}`

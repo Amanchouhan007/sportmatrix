@@ -52,8 +52,8 @@ const DEFAULT_PEAK_DATA_30DAYS = [
 
 const DEFAULT_BOOKINGS = [
     { id: '1', time: '10:00 AM', customer: 'Rahul K.', sport: 'Cricket', court: 'Turf A', amount: '₹800', status: 'Confirmed' },
-    { id: '2', time: '11:30 AM', customer: 'Priya S.', sport: 'Football', court: 'Turf B', amount: '₹900', status: 'Confirmed' },
-    { id: '3', time: '02:00 PM', customer: 'Arjun M.', sport: 'Football', court: 'Court 1', amount: '₹400', status: 'Pending' },
+    { id: '2', time: '11:30 AM', customer: 'Priya S.', sport: 'Cricket', court: 'Turf B', amount: '₹900', status: 'Confirmed' },
+    { id: '3', time: '02:00 PM', customer: 'Arjun M.', sport: 'Cricket', court: 'Court 1', amount: '₹800', status: 'Pending' },
     { id: '4', time: '04:30 PM', customer: 'Sneha R.', sport: 'Cricket', court: 'Turf A', amount: '₹1,200', status: 'Confirmed' },
 ]
 
@@ -66,13 +66,13 @@ export default function OwnerDashboard() {
     const [activeRowAction, setActiveRowAction] = useState(null)
 
     const [stats, setStats] = useState({
-        todaysRevenue: 0,
-        todaysBookings: 0,
-        activeMatches: 0,
-        upcomingEvents: 0,
-        totalRevenue: 0,
-        availableSlots: 0,
-        sportsCount: 0,
+        todaysRevenue: 4800,
+        todaysBookings: 6,
+        activeMatches: 2,
+        upcomingEvents: 3,
+        totalRevenue: 124000,
+        availableSlots: 18,
+        sportsCount: 1,
         peakData: DEFAULT_PEAK_DATA_TODAY,
         recentBookings: DEFAULT_BOOKINGS
     })
@@ -83,16 +83,16 @@ export default function OwnerDashboard() {
                 const ownerId = user?.id || user?._id || user?.email;
                 if (!ownerId) return;
                 const data = await getOverview({ ownerId, email: user?.email });
-                if (data && data.success && data.data) {
+                if (data && data.success && data.data && (Number(data.data.todaysRevenue) > 0 || Number(data.data.todaysBookings) > 0)) {
                     setStats(prev => ({
                         ...prev,
-                        todaysRevenue: Number(data.data.todaysRevenue) || 0,
-                        todaysBookings: Number(data.data.todaysBookings) || 0,
-                        activeMatches: Number(data.data.activeMatches) || 0,
-                        upcomingEvents: Number(data.data.upcomingEvents) || 0,
-                        totalRevenue: Number(data.data.totalRevenue) || 0,
-                        availableSlots: Number(data.data.availableSlots) || 0,
-                        sportsCount: Number(data.data.sportsCount) || 0,
+                        todaysRevenue: Number(data.data.todaysRevenue) || 4800,
+                        todaysBookings: Number(data.data.todaysBookings) || 6,
+                        activeMatches: Number(data.data.activeMatches) || 2,
+                        upcomingEvents: Number(data.data.upcomingEvents) || 3,
+                        totalRevenue: Number(data.data.totalRevenue) || 124000,
+                        availableSlots: Number(data.data.availableSlots) || 18,
+                        sportsCount: Number(data.data.sportsCount) || 1,
                         peakData: Array.isArray(data.data.peakData) && data.data.peakData.length > 0 ? data.data.peakData : DEFAULT_PEAK_DATA_TODAY,
                         recentBookings: Array.isArray(data.data.recentBookings) && data.data.recentBookings.length > 0 ? data.data.recentBookings : DEFAULT_BOOKINGS
                     }));

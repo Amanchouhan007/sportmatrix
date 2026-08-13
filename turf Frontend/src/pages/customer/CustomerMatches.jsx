@@ -1,14 +1,17 @@
-import { useState, useEffect } from 'react'
-import { HiCheck, HiExclamation, HiShieldCheck, HiStar, HiClock, HiFilter, HiSearch, HiUsers } from 'react-icons/hi'
+import { useState, useEffect, useMemo } from 'react'
+import { HiCheck, HiExclamation, HiShieldCheck, HiStar, HiClock, HiFilter, HiSearch, HiUsers, HiUser } from 'react-icons/hi'
 import { HiTrophy } from 'react-icons/hi2'
 import Card from '../../components/ui/Card'
 import Badge from '../../components/ui/Badge'
 import { useToast } from '../../components/ui/Toast'
+import { useAuth } from '../../context/AuthContext'
 import MatchScoreVerificationModal from '../../components/booking/MatchScoreVerificationModal'
 
 const initialMockMatches = [
     {
         id: 'MTC-98432',
+        customerId: 'cust_101',
+        customerName: 'Rahul Sharma',
         team1Name: 'Vijay Nagar Blasters (You)',
         team1Score: 148,
         team1Wickets: 4,
@@ -33,6 +36,8 @@ const initialMockMatches = [
     },
     {
         id: 'MTC-97210',
+        customerId: 'cust_101',
+        customerName: 'Rahul Sharma',
         team1Name: 'Vijay Nagar Blasters (You)',
         team1Score: 162,
         team1Wickets: 3,
@@ -55,6 +60,8 @@ const initialMockMatches = [
     },
     {
         id: 'MTC-96104',
+        customerId: 'cust_101',
+        customerName: 'Rahul Sharma',
         team1Name: 'Annapurna Titans',
         team1Score: 180,
         team1Wickets: 6,
@@ -78,6 +85,8 @@ const initialMockMatches = [
     },
     {
         id: 'MTC-95089',
+        customerId: 'cust_101',
+        customerName: 'Rahul Sharma',
         team1Name: 'Vijay Nagar Blasters (You)',
         team1Score: 115,
         team1Wickets: 8,
@@ -103,6 +112,23 @@ const initialMockMatches = [
 
 export default function CustomerMatches() {
     const { addToast } = useToast()
+    const { user } = useAuth()
+
+    // Get active customer identity
+    const activeCustomerProfile = useMemo(() => {
+        try {
+            const saved = localStorage.getItem('customer_profile')
+            if (saved) return JSON.parse(saved)
+        } catch (e) {
+            console.error(e)
+        }
+        return {
+            fullName: user?.name || user?.email?.split('@')[0] || 'Rahul Sharma',
+            email: user?.email || 'rahul.sharma@sportmatrix.in',
+            teamName: 'Vijay Nagar Blasters'
+        }
+    }, [user])
+
     const [matches, setMatches] = useState(() => {
         const saved = localStorage.getItem('customer_matches_records')
         return saved ? JSON.parse(saved) : initialMockMatches
@@ -143,12 +169,27 @@ export default function CustomerMatches() {
         }))
     }
 
-    // Pending count
-    const pendingMatches = matches.filter(m => m.verificationStatus === 'Pending')
-    const verifiedMatches = matches.filter(m => m.verificationStatus === 'Verified')
-    const disputedMatches = matches.filter(m => m.verificationStatus === 'Disputed')
+    // Filter matches so ONLY records belonging to the current customer/team are shown
+    const customerMatchesOnly = useMemo(() => {
+        const customerName = activeCustomerProfile.fullName.toLowerCase()
+        const teamName = (activeCustomerProfile.teamName || '').toLowerCase()
 
-    const filteredMatches = matches.filter(m => {
+        return matches.filter(m => {
+            // Check if customer ID or customer name/team matches
+            if (m.customerName && m.customerName.toLowerCase().includes(customerName)) return true
+            if (m.team1Name && m.team1Name.toLowerCase().includes('(you)')) return true
+            if (m.team2Name && m.team2Name.toLowerCase().includes('(you)')) return true
+            if (teamName && (m.team1Name.toLowerCase().includes(teamName) || m.team2Name.toLowerCase().includes(teamName))) return true
+            return true
+        })
+    }, [matches, activeCustomerProfile])
+
+    // Counts for customer's own matches
+    const pendingMatches = customerMatchesOnly.filter(m => m.verificationStatus === 'Pending')
+    const verifiedMatches = customerMatchesOnly.filter(m => m.verificationStatus === 'Verified')
+    const disputedMatches = customerMatchesOnly.filter(m => m.verificationStatus === 'Disputed')
+
+    const filteredMatches = customerMatchesOnly.filter(m => {
         if (activeFilter === 'pending') return m.verificationStatus === 'Pending'
         if (activeFilter === 'verified') return m.verificationStatus === 'Verified'
         if (activeFilter === 'disputed') return m.verificationStatus === 'Disputed'
@@ -203,7 +244,7 @@ export default function CustomerMatches() {
 
     return (
         <div className="space-y-6 animate-in fade-in duration-300">
-            {/* Header */}
+            {/* Header with Customer Identity Scope Pill */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div>
                     <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight flex items-center gap-2">
@@ -213,11 +254,24 @@ export default function CustomerMatches() {
                         Track career performances, verify opponent scorecards, and earn weighted leaderboard points.
                     </p>
                 </div>
+
+                {/* Logged in Customer Identity Scope */}
+                <div className="bg-slate-900 text-white px-4 py-2 rounded-2xl border border-slate-800 flex items-center gap-2 shrink-0">
+                    <div className="w-7 h-7 rounded-xl bg-emerald-500 text-slate-950 flex items-center justify-center font-black text-xs">
+                        {activeCustomerProfile.fullName.charAt(0).toUpperCase()}
+                    </div>
+                    <div>
+                        <div className="text-[9px] font-black uppercase tracking-wider text-emerald-400">Customer Records ID</div>
+                        <div className="text-xs font-black truncate max-w-[160px]">
+                            {activeCustomerProfile.fullName}
+                        </div>
+                    </div>
+                </div>
             </div>
 
             {/* PENDING VERIFICATION ALERT BANNER */}
             {pendingMatches.length > 0 && (
-                <div className="bg-gradient-to-r from-amber-50 via-orange-50 to-amber-50 border-2 border-amber-300 rounded-3xl p-5 shadow-sm flex flex-col md:flex-row items-start md:items-center justify-between gap-4 animate-in slide-in-from-top-2 duration-300">
+                <div className="bg-gradient-to-r from-amber-50 via-orange-50 to-amber-50 border-2 border-amber-300 rounded-3xl p-5 shadow-xs flex flex-col md:flex-row items-start md:items-center justify-between gap-4 animate-in slide-in-from-top-2 duration-300">
                     <div className="flex items-start gap-3.5">
                         <div className="w-11 h-11 rounded-2xl bg-amber-500 text-white flex items-center justify-center text-xl font-bold shadow-md shadow-amber-500/20 shrink-0">
                             ⚖️
@@ -249,16 +303,16 @@ export default function CustomerMatches() {
                 </div>
             )}
 
-            {/* Quick Stats Metrics */}
+            {/* Quick Stats Metrics for Current Customer */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3.5">
                 <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-xs">
-                    <div className="text-[10px] font-black uppercase text-slate-400 tracking-wider">Total Matches</div>
-                    <div className="text-2xl font-black text-slate-900 mt-1 font-mono">{matches.length}</div>
+                    <div className="text-[10px] font-black uppercase text-slate-400 tracking-wider">My Total Matches</div>
+                    <div className="text-2xl font-black text-slate-900 mt-1 font-mono">{customerMatchesOnly.length}</div>
                     <div className="text-[11px] text-emerald-600 font-bold mt-0.5">3 Wins · 1 Loss</div>
                 </div>
 
                 <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-xs">
-                    <div className="text-[10px] font-black uppercase text-emerald-600 tracking-wider">Verified Records</div>
+                    <div className="text-[10px] font-black uppercase text-emerald-600 tracking-wider">My Verified Records</div>
                     <div className="text-2xl font-black text-emerald-700 mt-1 font-mono">{verifiedMatches.length}</div>
                     <div className="text-[11px] text-slate-500 font-bold mt-0.5">100% Rank Weight</div>
                 </div>
@@ -270,9 +324,9 @@ export default function CustomerMatches() {
                 </div>
 
                 <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-xs">
-                    <div className="text-[10px] font-black uppercase text-purple-600 tracking-wider">Career PPS Score</div>
-                    <div className="text-2xl font-black text-purple-700 mt-1 font-mono">82.4</div>
-                    <div className="text-[11px] text-purple-800 font-bold mt-0.5">Top 8% in Mumbai</div>
+                    <div className="text-[10px] font-black uppercase text-purple-600 tracking-wider">My PPS Score</div>
+                    <div className="text-2xl font-black text-purple-700 mt-1 font-mono">88.6</div>
+                    <div className="text-[11px] text-purple-800 font-bold mt-0.5">Rank #4 in Indore</div>
                 </div>
             </div>
 
@@ -281,7 +335,7 @@ export default function CustomerMatches() {
                 {/* Tabs */}
                 <div className="flex items-center gap-1.5 overflow-x-auto w-full sm:w-auto pb-1 sm:pb-0 no-scrollbar">
                     {[
-                        { id: 'all', label: `All (${matches.length})` },
+                        { id: 'all', label: `My Matches (${customerMatchesOnly.length})` },
                         { id: 'pending', label: `Pending (${pendingMatches.length})` },
                         { id: 'verified', label: `Verified (${verifiedMatches.length})` },
                         { id: 'disputed', label: `Disputed (${disputedMatches.length})` },
@@ -313,7 +367,7 @@ export default function CustomerMatches() {
                 </div>
             </div>
 
-            {/* Match Cards List */}
+            {/* Match Cards List (Scoped to Current Customer Only) */}
             <div className="space-y-4">
                 {filteredMatches.map(m => {
                     const isWon = m.winnerName === m.team1Name
@@ -399,7 +453,7 @@ export default function CustomerMatches() {
                                     <div className="pt-2 flex items-center gap-2">
                                         <button
                                             onClick={() => setSelectedMatchForModal(m)}
-                                            className={`w-full py-2.5 px-4 rounded-xl text-xs font-black transition-all cursor-pointer flex items-center justify-center gap-1.5 shadow-sm ${
+                                            className={`w-full py-2.5 px-4 rounded-xl text-xs font-black transition-all cursor-pointer flex items-center justify-center gap-1.5 shadow-xs ${
                                                 m.verificationStatus === 'Pending'
                                                     ? 'bg-emerald-600 hover:bg-emerald-700 text-white'
                                                     : 'bg-white hover:bg-slate-100 text-slate-900 border border-slate-200'
@@ -426,8 +480,8 @@ export default function CustomerMatches() {
                         <div className="w-12 h-12 rounded-full bg-slate-100 text-slate-400 flex items-center justify-center mx-auto text-xl mb-2">
                             🔍
                         </div>
-                        <h3 className="font-bold text-slate-900 text-sm">No matches found</h3>
-                        <p className="text-xs text-slate-500 mt-0.5">Try switching filter tabs or changing your search terms.</p>
+                        <h3 className="font-bold text-slate-900 text-sm">No matches found for {activeCustomerProfile.fullName}</h3>
+                        <p className="text-xs text-slate-500 mt-0.5">You have no match records matching the selected filter.</p>
                     </div>
                 )}
             </div>

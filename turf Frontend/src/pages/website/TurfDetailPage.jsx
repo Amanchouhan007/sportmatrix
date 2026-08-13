@@ -10,10 +10,9 @@ import MediaUploadModal from '../../components/MediaUploadModal'
 
 const defaultTurfData = {
     id: 1, name: 'SportZone Arena', location: 'Andheri West, Mumbai', rating: 4.8, reviews: 124,
-    description: 'Elite sports facility engineered for peak performance. Features high-lumen LED floodlights, FIFA-certified synthetic turf, and professional-grade recovery zones. Ideal for intense 7v7 football campaigns or standard cricket matches.',
+    description: 'Elite sports facility engineered for peak performance. Features high-lumen LED floodlights, pro-grade synthetic turf, and professional recovery zones. Ideal for intense box cricket leagues and standard cricket matches.',
     sports: [
         { name: 'Cricket', price: 800, peakPrice: 1200 },
-        { name: 'Football', price: 900, peakPrice: 1400 },
     ],
     amenities: ['Floodlights', 'Secured Parking', 'Pro Locker Rooms', 'Hydration Station', 'Med-Bay', 'High-Speed Wi-Fi'],
     media: [

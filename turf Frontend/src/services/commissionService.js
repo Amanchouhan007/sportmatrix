@@ -16,10 +16,7 @@ export const getCommissionSettings = async () => {
                 maxRate: 15.0,
                 status: 'ACTIVE',
                 sportsRates: [
-                    { sportName: 'Football', commissionRate: 5.0 },
-                    { sportName: 'Cricket', commissionRate: 5.0 },
-                    { sportName: 'Badminton', commissionRate: 4.0 },
-                    { sportName: 'Tennis', commissionRate: 4.5 }
+                    { sportName: 'Cricket', commissionRate: 5.0 }
                 ]
             }
         };

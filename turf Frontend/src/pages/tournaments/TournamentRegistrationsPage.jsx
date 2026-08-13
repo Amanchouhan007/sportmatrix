@@ -53,8 +53,8 @@ const mockTeams = [
         tournamentTitle: 'Indore Football Cup',
         teamName: 'Red Devils Futsal',
         logo: '😈',
-        captainName: 'Sunny Leone',
-        captainEmail: 'sunny@gmail.com',
+        captainName: 'Suraj Sharma',
+        captainEmail: 'suraj.sharma@gmail.com',
         captainMobile: '+91 98765 43220',
         jerseyColor: 'Crimson Red',
         paymentStatus: 'PAID',
@@ -63,7 +63,7 @@ const mockTeams = [
         status: 'Pending',
         registeredAt: '2026-03-05',
         players: [
-            { id: 1, name: 'Sunny Leone (C)', jerseyNumber: 10, role: 'Forward' },
+            { id: 1, name: 'Suraj Sharma (C)', jerseyNumber: 10, role: 'Forward' },
             { id: 2, name: 'Varun Dhawan', jerseyNumber: 7, role: 'Midfielder' }
         ]
     }
