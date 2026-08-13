@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { createPortal } from 'react-dom'
 import { HiCheck, HiX, HiExclamation, HiShieldCheck, HiStar, HiClock, HiShare } from 'react-icons/hi'
 import { HiTrophy } from 'react-icons/hi2'
 import { useToast } from '../ui/Toast'
@@ -100,11 +101,11 @@ export default function MatchScoreVerificationModal({ match, isOpen, onClose, on
         }, 500)
     }
 
-    return (
-        <div className="fixed inset-0 z-[99999] bg-black/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 overflow-y-auto animate-in fade-in duration-200">
-            <div className="bg-white rounded-3xl border border-[#E5E7EB] shadow-2xl max-w-3xl w-full max-h-[90vh] flex flex-col overflow-hidden text-[#111827] my-auto">
-                {/* Header (Clean Light & Emerald Aesthetic) */}
-                <div className="p-5 sm:p-6 bg-gradient-to-r from-emerald-50/90 via-white to-slate-50 border-b border-slate-200 flex items-start justify-between gap-4">
+    return createPortal(
+        <div className="fixed inset-0 z-[99999999] bg-black/70 backdrop-blur-xs flex items-center justify-center p-3 sm:p-6 overflow-y-auto animate-in fade-in duration-200">
+            <div className="bg-white rounded-3xl border border-[#E5E7EB] shadow-2xl max-w-3xl w-full max-h-[85vh] flex flex-col overflow-hidden text-[#111827] my-auto">
+                {/* Header (Clean Light & Emerald Aesthetic - Fixed at top) */}
+                <div className="shrink-0 p-5 sm:p-6 bg-gradient-to-r from-emerald-50/90 via-white to-slate-50 border-b border-slate-200 flex items-start justify-between gap-4">
                     <div className="space-y-1.5">
                         <div className="flex items-center gap-2 flex-wrap">
                             <span className="text-[11px] font-black uppercase tracking-widest text-[#065F46] bg-emerald-100/80 px-2.5 py-0.5 rounded-full border border-emerald-300">
@@ -142,8 +143,8 @@ export default function MatchScoreVerificationModal({ match, isOpen, onClose, on
                     </button>
                 </div>
 
-                {/* Body Content */}
-                <div className="p-5 sm:p-6 overflow-y-auto space-y-5 flex-1">
+                {/* Body Content (Independently scrollable) */}
+                <div className="p-5 sm:p-6 overflow-y-auto space-y-4 flex-1 min-h-0">
                     {/* Status Alert Banner */}
                     {isDisputed ? (
                         <div className="bg-rose-50 border border-rose-200 rounded-2xl p-4 flex items-start gap-3 text-xs text-rose-900">
@@ -420,6 +421,7 @@ export default function MatchScoreVerificationModal({ match, isOpen, onClose, on
                     </div>
                 </div>
             </div>
-        </div>
+        </div>,
+        document.body
     )
 }

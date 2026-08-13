@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react'
+import { createPortal } from 'react-dom'
 import { useNavigate } from 'react-router-dom'
 import {
     HiSearch, HiFilter, HiShieldCheck, HiStar, HiCheck,
@@ -813,9 +814,9 @@ export default function PlayerLeaderboardPage() {
                 {/* ═══════════════════════════════════════════════════
                     INSPECT PLAYER DETAILS MODAL
                 ═══════════════════════════════════════════════════ */}
-                {inspectPlayer && (
-                    <div className="fixed inset-0 z-[999999] bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200">
-                        <div className="bg-white border border-[#E5E7EB] rounded-3xl p-6 w-full max-w-lg shadow-2xl space-y-5 text-[#111827] relative">
+                {inspectPlayer && createPortal(
+                    <div className="fixed inset-0 z-[99999999] bg-black/70 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-200">
+                        <div className="bg-white border border-[#E5E7EB] rounded-3xl p-6 w-full max-w-lg shadow-2xl space-y-5 text-[#111827] relative max-h-[85vh] overflow-y-auto">
                             {/* Close Button */}
                             <button
                                 onClick={() => setInspectPlayer(null)}
@@ -885,14 +886,16 @@ export default function PlayerLeaderboardPage() {
                                 Close Inspection
                             </button>
                         </div>
-                    </div>
+                    </div>,
+                    document.body
                 )}
+
                 {/* ═══════════════════════════════════════════════════
                     📝 DIRECT MATCH SCORECARD & VERIFICATION MODAL
                 ═══════════════════════════════════════════════════ */}
-                {isSubmitModalOpen && (
-                    <div className="fixed inset-0 z-[999999] bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-200 overflow-y-auto">
-                        <div className="bg-white border border-[#E5E7EB] rounded-3xl p-6 sm:p-7 w-full max-w-xl shadow-2xl space-y-5 text-[#111827] relative my-8 max-h-[90vh] overflow-y-auto">
+                {isSubmitModalOpen && createPortal(
+                    <div className="fixed inset-0 z-[99999999] bg-black/70 backdrop-blur-xs flex items-center justify-center p-3 sm:p-5 overflow-y-auto animate-in fade-in duration-200">
+                        <div className="bg-white border border-[#E5E7EB] rounded-3xl p-6 sm:p-7 w-full max-w-xl shadow-2xl space-y-5 text-[#111827] relative my-auto max-h-[85vh] overflow-y-auto">
                             {/* Close Button */}
                             <button
                                 type="button"
@@ -1139,7 +1142,8 @@ export default function PlayerLeaderboardPage() {
                                 </div>
                             </form>
                         </div>
-                    </div>
+                    </div>,
+                    document.body
                 )}
 
                 {/* ═══════════════════════════════════════════════════
