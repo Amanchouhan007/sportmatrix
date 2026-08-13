@@ -19,9 +19,25 @@ import {
 
 const TURF_OPTIONS = [
     { value: 'ALL', label: 'All Turfs' },
-    { value: 'turf-1', label: 'Champions Turf Arena' },
-    { value: 'turf-2', label: 'SkyLine Football Turf' },
-    { value: 'turf-3', label: 'Velocity Sports Hub' }
+    { value: '13', label: 'Spike Cricket Turf (Indore)' },
+    { value: '6', label: 'Royal Cricket Ground (Indore)' },
+    { value: '14', label: 'Indore Sports Complex (Indore)' },
+    { value: '15', label: 'Rajiv Gandhi Stadium Turf (Indore)' },
+    { value: '16', label: 'Champion Turf Ground (Indore)' },
+    { value: '17', label: 'Skyline Sports Hub (Indore)' },
+    { value: '18', label: 'GreenField Arena (Indore)' },
+    { value: '19', label: 'Annapurna Sports Arena (Indore)' },
+    { value: '1', label: 'SportZone Arena (Mumbai)' },
+    { value: '2', label: 'Champion Cricket Ground (Bangalore)' },
+    { value: '3', label: 'GameVault Cricket Center (Bangalore)' },
+    { value: '4', label: 'ProKick Cricket Turf (Bangalore)' },
+    { value: '5', label: 'ProPlay Cricket Arena (Navi Mumbai)' },
+    { value: '7', label: 'DunkZone Cricket Turf (Mumbai)' },
+    { value: '8', label: 'PixelArena Cricket (Bangalore)' },
+    { value: '9', label: 'Skyline Cricket Turf (Mumbai)' },
+    { value: '10', label: 'StrikeZone Cricket (Delhi)' },
+    { value: '11', label: 'Master Blaster Cricket (Delhi)' },
+    { value: '12', label: 'Pune Cricket Arena (Pune)' }
 ]
 
 const TYPE_OPTIONS = [

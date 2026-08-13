@@ -62,16 +62,32 @@ export default function CreateDiscountOffer() {
         status: 'Active'
     })
 
+    const ALL_TURFS = [
+        { id: '13', name: 'Spike Cricket Turf (Indore)', owner: 'Rohit Verma' },
+        { id: '6', name: 'Royal Cricket Ground (Indore)', owner: 'Aman Singhal' },
+        { id: '14', name: 'Indore Sports Complex (Indore)', owner: 'Vijay Malhotra' },
+        { id: '15', name: 'Rajiv Gandhi Stadium Turf (Indore)', owner: 'Sanjay Sharma' },
+        { id: '16', name: 'Champion Turf Ground (Indore)', owner: 'Ritesh Jain' },
+        { id: '17', name: 'Skyline Sports Hub (Indore)', owner: 'Pooja Gupta' },
+        { id: '18', name: 'GreenField Arena (Indore)', owner: 'Devendra Patel' },
+        { id: '19', name: 'Annapurna Sports Arena (Indore)', owner: 'Yash Rathore' },
+        { id: '1', name: 'SportZone Arena (Mumbai)', owner: 'Rajesh Sharma' },
+        { id: '2', name: 'Champion Cricket Ground (Bangalore)', owner: 'Suresh Patil' },
+        { id: '3', name: 'GameVault Cricket Center (Bangalore)', owner: 'Kunal Kapoor' },
+        { id: '4', name: 'ProKick Cricket Turf (Bangalore)', owner: 'Ananya Roy' },
+        { id: '5', name: 'ProPlay Cricket Arena (Navi Mumbai)', owner: 'Dinesh Joshi' },
+        { id: '7', name: 'DunkZone Cricket Turf (Mumbai)', owner: 'Arjun Mehta' },
+        { id: '8', name: 'PixelArena Cricket (Bangalore)', owner: 'Vikram Sethi' },
+        { id: '9', name: 'Skyline Cricket Turf (Mumbai)', owner: 'Pooja Hegde' },
+        { id: '10', name: 'StrikeZone Cricket (Delhi)', owner: 'Harsh Vardhan' },
+        { id: '11', name: 'Master Blaster Cricket (Delhi)', owner: 'Sachin Narang' },
+        { id: '12', name: 'Pune Cricket Arena (Pune)', owner: 'Vikramaditya Roy' }
+    ]
+
     const handleTurfChange = (turfId) => {
-        let turfName = 'Champions Turf Arena (Mumbai)'
-        let ownerName = 'Rajesh Sharma'
-        if (turfId === 'turf-2') {
-            turfName = 'SkyLine Football Turf (Pune)'
-            ownerName = 'Vikramaditya Roy'
-        } else if (turfId === 'turf-3') {
-            turfName = 'Velocity Sports Hub (Bangalore)'
-            ownerName = 'Suresh Patil'
-        }
+        const found = ALL_TURFS.find(t => String(t.id) === String(turfId))
+        const turfName = found ? found.name : 'Spike Cricket Turf (Indore)'
+        const ownerName = found ? found.owner : 'Rohit Verma'
         setFormData(prev => ({ ...prev, turfId, turfName, ownerName }))
     }
 
@@ -260,9 +276,11 @@ export default function CreateDiscountOffer() {
                                         value={formData.turfId}
                                         onChange={(e) => handleTurfChange(e.target.value)}
                                     >
-                                        <option value="turf-1">Champions Turf Arena (Mumbai)</option>
-                                        <option value="turf-2">SkyLine Football Turf (Pune)</option>
-                                        <option value="turf-3">Velocity Sports Hub (Bangalore)</option>
+                                        {ALL_TURFS.map(t => (
+                                            <option key={t.id} value={t.id}>
+                                                {t.name}
+                                            </option>
+                                        ))}
                                     </Select>
                                 </div>
 

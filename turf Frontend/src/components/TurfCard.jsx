@@ -41,9 +41,41 @@ export default function TurfCard({ turf, onMouseEnter, onMouseLeave, i = 0 }) {
         }
     };
 
-    // Dynamic high-converting cricket offer generator with guaranteed visible CSS gradients
+    // Dynamic Turf Owner Offer Reader with Guaranteed CSS Gradients
     const getTurfOffer = (t) => {
-        const id = Number(t.id) || 1
+        try {
+            // 1. Check if Turf Owner has created an active offer for this specific turf
+            const cachedDiscounts = localStorage.getItem('sports_discounts_data');
+            if (cachedDiscounts) {
+                const list = JSON.parse(cachedDiscounts);
+                const matched = list.find(d => {
+                    if (d.status && d.status !== 'Active') return false;
+                    const matchesId = String(d.turfId) === String(t.id) ||
+                                      d.turfId === `turf-${t.id}` ||
+                                      (d.turfName && d.turfName.toLowerCase().includes(t.name.toLowerCase()));
+                    return matchesId;
+                });
+
+                if (matched) {
+                    const isPercent = matched.discountType === 'Percentage';
+                    const tag = isPercent ? `${matched.discountValue}% OFF` : `FLAT ₹${matched.discountValue} OFF`;
+                    return {
+                        code: matched.promoCode || 'PROMO' + matched.discountValue,
+                        icon: '🔥',
+                        tag: matched.title ? matched.title.toUpperCase() : tag,
+                        discount: matched.discountValue,
+                        type: isPercent ? 'percent' : 'flat',
+                        bg: 'linear-gradient(135deg, #E11D48 0%, #F97316 50%, #F59E0B 100%)',
+                        shadow: '0 6px 18px rgba(225,29,72,0.55)'
+                    };
+                }
+            }
+        } catch (e) {
+            console.error('Error fetching turf owner offer:', e);
+        }
+
+        // 2. Default high-converting offer if no owner custom discount is active
+        const id = Number(t.id) || 1;
         const offers = [
             { code: 'SM200', icon: '🔥', tag: 'FLAT ₹200 OFF', discount: 200, type: 'flat', bg: 'linear-gradient(135deg, #E11D48 0%, #F97316 50%, #F59E0B 100%)', shadow: '0 6px 18px rgba(225,29,72,0.55)' },
             { code: 'CRICKET20', icon: '⚡', tag: '20% OFF FIRST MATCH', discount: 20, type: 'percent', bg: 'linear-gradient(135deg, #D97706 0%, #EA580C 50%, #DC2626 100%)', shadow: '0 6px 18px rgba(234,88,12,0.55)' },
@@ -52,8 +84,8 @@ export default function TurfCard({ turf, onMouseEnter, onMouseLeave, i = 0 }) {
             { code: 'DARECASH150', icon: '🎁', tag: '₹150 DARE CASHBACK', discount: 150, type: 'flat', bg: 'linear-gradient(135deg, #EA580C 0%, #DC2626 50%, #F59E0B 100%)', shadow: '0 6px 18px rgba(220,38,38,0.55)' },
             { code: 'SQUAD100', icon: '🎟️', tag: 'SQUAD ₹100/PLAYER', discount: 150, type: 'flat', bg: 'linear-gradient(135deg, #2563EB 0%, #4F46E5 50%, #0284C7 100%)', shadow: '0 6px 18px rgba(37,99,235,0.55)' },
             { code: 'EARLY250', icon: '⭐', tag: 'EARLY BIRD ₹250 OFF', discount: 250, type: 'flat', bg: 'linear-gradient(135deg, #059669 0%, #65A30D 50%, #0D9488 100%)', shadow: '0 6px 18px rgba(101,163,13,0.55)' },
-        ]
-        return offers[id % offers.length]
+        ];
+        return offers[id % offers.length];
     }
     const promo = getTurfOffer(turf)
 

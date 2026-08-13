@@ -126,15 +126,42 @@ export default function SlotBookingPage() {
     const [durationHours, setDurationHours] = useState(1)
     const [hasVerifiedUmpire, setHasVerifiedUmpire] = useState(false)
 
-    // Curated & Turf Owner Offers Database
-    const availableCoupons = [
-        { code: 'SM200', title: 'Flat ₹200 OFF', desc: 'Instant discount on any slot booking', discount: 200, type: 'flat', minAmount: 500, icon: '🔥', tag: 'RECOMMENDED' },
-        { code: 'CRICKET20', title: '20% OFF First Match', desc: 'Save 20% on total match rent', discount: 20, type: 'percent', maxDiscount: 300, minAmount: 600, icon: '⚡', tag: 'POPULAR' },
-        { code: 'PROUMPIRE', title: 'Free Umpire Addon', desc: 'Official umpire included for free (₹300 value)', discount: 300, type: 'umpire', minAmount: 1000, icon: '🏏', tag: 'FAIRPLAY' },
-        { code: 'EARLY250', title: 'Early Bird ₹250 OFF', desc: 'Applicable on morning matches', discount: 250, type: 'flat', minAmount: 600, icon: '⭐', tag: 'SAVER' },
-        { code: 'NIGHTSPECIAL', title: 'Night Match ₹200 OFF', desc: 'Floodlights & special slot rebate', discount: 200, type: 'flat', minAmount: 800, icon: '🌙', tag: 'NIGHT' },
-        { code: 'SQUAD100', title: 'Squad Match Discount', desc: 'Save ₹150 on squad split games', discount: 150, type: 'flat', minAmount: 800, icon: '🎟️', tag: 'TEAMS' }
-    ]
+    // Curated & Turf Owner Offers Database (Merged dynamically from Owner Discounts)
+    const getCombinedCoupons = () => {
+        const defaultCoupons = [
+            { code: 'SM200', title: 'Flat ₹200 OFF', desc: 'Instant discount on any slot booking', discount: 200, type: 'flat', minAmount: 500, icon: '🔥', tag: 'RECOMMENDED' },
+            { code: 'CRICKET20', title: '20% OFF First Match', desc: 'Save 20% on total match rent', discount: 20, type: 'percent', maxDiscount: 300, minAmount: 600, icon: '⚡', tag: 'POPULAR' },
+            { code: 'PROUMPIRE', title: 'Free Umpire Addon', desc: 'Official umpire included for free (₹300 value)', discount: 300, type: 'umpire', minAmount: 1000, icon: '🏏', tag: 'FAIRPLAY' },
+            { code: 'EARLY250', title: 'Early Bird ₹250 OFF', desc: 'Applicable on morning matches', discount: 250, type: 'flat', minAmount: 600, icon: '⭐', tag: 'SAVER' },
+            { code: 'NIGHTSPECIAL', title: 'Night Match ₹200 OFF', desc: 'Floodlights & special slot rebate', discount: 200, type: 'flat', minAmount: 800, icon: '🌙', tag: 'NIGHT' },
+            { code: 'SQUAD100', title: 'Squad Match Discount', desc: 'Save ₹150 on squad split games', discount: 150, type: 'flat', minAmount: 800, icon: '🎟️', tag: 'TEAMS' }
+        ]
+        try {
+            const cached = localStorage.getItem('sports_discounts_data')
+            if (cached) {
+                const list = JSON.parse(cached)
+                const ownerCoupons = list
+                    .filter(d => d.status === 'Active' && d.promoCode)
+                    .map(d => ({
+                        code: d.promoCode.toUpperCase(),
+                        title: d.title || `Offer ${d.promoCode}`,
+                        desc: d.description || `Special discount by ${d.turfName || 'Turf Owner'}`,
+                        discount: Number(d.discountValue || 100),
+                        type: d.discountType === 'Percentage' ? 'percent' : 'flat',
+                        maxDiscount: Number(d.maximumDiscountAmount || 500),
+                        minAmount: Number(d.minimumBookingAmount || 500),
+                        icon: '🏷️',
+                        tag: 'OWNER EXCLUSIVE'
+                    }))
+                return [...ownerCoupons, ...defaultCoupons]
+            }
+        } catch (e) {
+            console.error('Error merging owner coupons:', e)
+        }
+        return defaultCoupons
+    }
+
+    const availableCoupons = getCombinedCoupons()
 
     const initialPromoCode = searchParams.get('promo') || ''
     const [couponInput, setCouponInput] = useState(initialPromoCode)

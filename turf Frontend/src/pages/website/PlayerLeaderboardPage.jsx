@@ -797,12 +797,24 @@ export default function PlayerLeaderboardPage() {
                                             </span>
                                         </td>
                                         <td className="py-3.5 px-4 text-center">
-                                            <button
-                                                onClick={() => setInspectPlayer(player)}
-                                                className="px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs transition-colors cursor-pointer"
-                                            >
-                                                Inspect
-                                            </button>
+                                            <div className="flex items-center justify-center gap-1.5">
+                                                <button
+                                                    onClick={() => setInspectPlayer(player)}
+                                                    className="px-2.5 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs transition-colors cursor-pointer"
+                                                >
+                                                    Inspect
+                                                </button>
+                                                <button
+                                                    onClick={() => {
+                                                        const text = encodeURIComponent(`Hi ${player.name}! We saw your profile on SportTurf Indore Leaderboard (${player.team}). We want to challenge your squad for a cricket match! 🏏🔥`);
+                                                        window.open(`https://wa.me/?text=${text}`, '_blank');
+                                                    }}
+                                                    className="px-2.5 py-1.5 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white font-bold text-xs transition-all shadow-xs hover:scale-105 cursor-pointer flex items-center gap-1"
+                                                    title={`WhatsApp ${player.name}`}
+                                                >
+                                                    <span>💬</span> Contact
+                                                </button>
+                                            </div>
                                         </td>
                                     </tr>
                                 ))}
@@ -879,11 +891,35 @@ export default function PlayerLeaderboardPage() {
                                 </div>
                             </div>
 
+                            {/* ── PLAYER & SQUAD INTERACTIVE ACTIONS ── */}
+                            <div className="pt-2 border-t border-slate-100 flex flex-col sm:flex-row gap-2.5">
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        const text = encodeURIComponent(`Hi ${inspectPlayer.name}! We saw your profile on SportTurf Indore Leaderboard (${inspectPlayer.team}). We want to challenge your squad for a cricket match! 🏏🔥`);
+                                        window.open(`https://wa.me/?text=${text}`, '_blank');
+                                    }}
+                                    className="flex-1 py-3 px-4 rounded-xl bg-[#25D366] hover:bg-[#1EBE5D] text-white font-black text-xs transition-all shadow-md hover:shadow-lg flex items-center justify-center gap-2 cursor-pointer active:scale-95"
+                                >
+                                    <span className="text-sm">💬</span> WhatsApp Captain / Squad
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        setInspectPlayer(null);
+                                        navigate('/booking/1?mode=dare&pay=opponent');
+                                    }}
+                                    className="flex-1 py-3 px-4 rounded-xl bg-gradient-to-r from-orange-500 to-red-600 hover:from-orange-600 hover:to-red-700 text-white font-black text-xs transition-all shadow-md hover:shadow-lg flex items-center justify-center gap-2 cursor-pointer active:scale-95"
+                                >
+                                    <span>🔥</span> Challenge for Match
+                                </button>
+                            </div>
+
                             <button
                                 onClick={() => setInspectPlayer(null)}
-                                className="w-full py-2.5 rounded-xl bg-[#111827] hover:bg-slate-800 text-white font-bold text-xs transition-colors cursor-pointer"
+                                className="w-full py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs transition-colors cursor-pointer"
                             >
-                                Close Inspection
+                                Close
                             </button>
                         </div>
                     </div>,
