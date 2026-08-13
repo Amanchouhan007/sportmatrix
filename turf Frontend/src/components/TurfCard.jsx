@@ -1,8 +1,46 @@
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { HiHeart } from 'react-icons/hi';
+import { useToast } from './ui/Toast';
 
 export default function TurfCard({ turf, onMouseEnter, onMouseLeave, i = 0 }) {
     const navigate = useNavigate();
+    const { addToast } = useToast();
+
+    const [isLiked, setIsLiked] = useState(() => {
+        try {
+            const stored = localStorage.getItem('sportmatrix_liked_turfs');
+            if (stored) {
+                const arr = JSON.parse(stored);
+                return arr.includes(turf.id);
+            }
+            // default like for Royal Cricket Ground (id 6)
+            return turf.id === 6;
+        } catch (e) {
+            return turf.id === 6;
+        }
+    });
+
+    const toggleLike = (e) => {
+        e.stopPropagation();
+        const nextState = !isLiked;
+        setIsLiked(nextState);
+        try {
+            const stored = localStorage.getItem('sportmatrix_liked_turfs');
+            let arr = stored ? JSON.parse(stored) : [6];
+            if (nextState) {
+                if (!arr.includes(turf.id)) arr.push(turf.id);
+                if (addToast) addToast({ message: `❤️ Added ${turf.name} to Wishlist!`, type: 'success' });
+            } else {
+                arr = arr.filter(id => id !== turf.id);
+                if (addToast) addToast({ message: `Removed ${turf.name} from Wishlist.`, type: 'info' });
+            }
+            localStorage.setItem('sportmatrix_liked_turfs', JSON.stringify(arr));
+        } catch (err) {
+            console.error(err);
+        }
+    };
+
     const turfNameLower = (turf.name || '').toLowerCase()
     let promo = null
     if (turfNameLower.includes('indore sports arena') || turfNameLower.includes('indore sports complex')) {
@@ -42,10 +80,16 @@ export default function TurfCard({ turf, onMouseEnter, onMouseLeave, i = 0 }) {
                     <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent pointer-events-none" />
 
                     <button
-                        onClick={(e) => { e.stopPropagation(); }}
-                        className="absolute top-2 right-2 bg-white/80 backdrop-blur-md p-1 rounded-full text-slate-600 hover:text-red-500 transition-colors z-20 shadow-sm"
+                        type="button"
+                        onClick={toggleLike}
+                        title={isLiked ? 'Remove from Wishlist' : 'Add to Wishlist'}
+                        className={`absolute top-2 right-2 p-1.5 rounded-full backdrop-blur-md transition-all duration-200 z-20 shadow-md cursor-pointer ${
+                            isLiked
+                                ? 'bg-white text-rose-500 scale-110 ring-2 ring-rose-300 shadow-rose-200'
+                                : 'bg-white/85 text-slate-400 hover:text-rose-500 hover:scale-105'
+                        }`}
                     >
-                        <HiHeart className="w-3.5 h-3.5" />
+                        <HiHeart className={`w-4 h-4 transition-transform duration-200 ${isLiked ? 'scale-110 text-rose-500' : ''}`} />
                     </button>
 
                     {promo && (
