@@ -25,6 +25,7 @@ const TournamentListPage = lazy(() => import('./pages/website/TournamentListPage
 const TournamentDetailPage = lazy(() => import('./pages/website/TournamentDetailPage'))
 const MembershipPage = lazy(() => import('./pages/website/MembershipPage'))
 const ContactPage = lazy(() => import('./pages/website/ContactPage'))
+const PlayerLeaderboardPage = lazy(() => import('./pages/website/PlayerLeaderboardPage'))
 
 // Lazy Super Admin
 const SADashboard = lazy(() => import('./pages/superadmin/SADashboard'))
@@ -121,6 +122,7 @@ export default function App() {
               <Route path="/tournaments" element={<WebsiteLayout><TournamentListPage /></WebsiteLayout>} />
               <Route path="/tournaments/:id" element={<WebsiteLayout><TournamentDetailPage /></WebsiteLayout>} />
               <Route path="/membership" element={<WebsiteLayout><MembershipPage /></WebsiteLayout>} />
+              <Route path="/leaderboard" element={<WebsiteLayout><PlayerLeaderboardPage /></WebsiteLayout>} />
               <Route path="/contact" element={<WebsiteLayout><ContactPage /></WebsiteLayout>} />
 
               {/* Super Admin Dashboard */}

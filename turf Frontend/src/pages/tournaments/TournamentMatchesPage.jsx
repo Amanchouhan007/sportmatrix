@@ -27,7 +27,9 @@ const mockMatches = [
         scheduledTime: '16:00',
         yellowCards: 2,
         redCards: 0,
-        remarks: 'High scoring match'
+        remarks: 'High scoring match',
+        verificationTier: 'Tier 3',
+        trustMultiplier: '2.0x'
     },
     {
         id: 'fix_102',
@@ -44,7 +46,9 @@ const mockMatches = [
         scheduledTime: '18:00',
         yellowCards: 1,
         redCards: 1,
-        remarks: '1 Red card issued in 18th over'
+        remarks: '1 Red card issued in 18th over',
+        verificationTier: 'Tier 3',
+        trustMultiplier: '2.0x'
     },
     {
         id: 'fix_103',
@@ -60,7 +64,9 @@ const mockMatches = [
         scheduledTime: '19:00',
         yellowCards: 0,
         redCards: 0,
-        remarks: ''
+        remarks: '',
+        verificationTier: 'Tier 3',
+        trustMultiplier: '2.0x'
     }
 ]
 
@@ -157,6 +163,18 @@ export default function TournamentMatchesPage() {
                 <div className="flex gap-2 text-xs font-bold">
                     <span className="px-2 py-0.5 bg-amber-100 text-amber-800 rounded">🟨 {r.yellowCards}</span>
                     <span className="px-2 py-0.5 bg-red-100 text-red-800 rounded">🟥 {r.redCards}</span>
+                </div>
+            )
+        },
+        {
+            key: 'verification',
+            label: 'Verification Tier',
+            render: (_, r) => (
+                <div className="flex flex-col gap-0.5">
+                    <span className="px-2 py-0.5 rounded-full text-[10px] font-black uppercase bg-purple-50 text-purple-700 border border-purple-200 inline-flex items-center gap-1 w-max">
+                        🏆 Tier 3 Official
+                    </span>
+                    <span className="text-[10px] font-mono font-bold text-slate-500">2.0x Rank Weight</span>
                 </div>
             )
         },

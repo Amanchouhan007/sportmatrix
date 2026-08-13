@@ -277,12 +277,24 @@ export default function TurfDetailPage() {
     const [newTeammateName, setNewTeammateName] = useState('');
     const [showAddTeammateInput, setShowAddTeammateInput] = useState(false);
 
+    const [hasVerifiedUmpire, setHasVerifiedUmpire] = useState(false);
     const handleSelectSlot = (slotId) => {
         setSelectedSlot(slotId);
     };
 
     const currentSlot = slots.find(s => s.id === selectedSlot) || slots[12] || slots[0];
-    const totalRent = (activeTurf.price || 1200) * duration;
+
+    // Check if this Turf offers Verified Umpire Service (Configured by Turf Owner)
+    const isTurfUmpireAvailable = (() => {
+        const savedSetting = localStorage.getItem(`turf_umpire_enabled_${activeTurf?.id || id}`)
+        if (savedSetting !== null) return savedSetting === 'true'
+        const globalSetting = localStorage.getItem('turf_umpire_enabled')
+        if (globalSetting !== null) return globalSetting === 'true'
+        return activeTurf?.hasUmpireService !== false
+    })()
+
+    const umpireFee = (hasVerifiedUmpire && isTurfUmpireAvailable) ? 300 : 0;
+    const totalRent = ((activeTurf.price || 1200) * duration) + umpireFee;
 
     useEffect(() => {
         setCustomSplitMyShare(Math.round(totalRent * 0.6))
@@ -803,19 +815,69 @@ export default function TurfDetailPage() {
                                                 <span className="text-slate-300 mx-1">·</span>
                                                 <span>Slot Rate: </span>
                                                 <span className="text-[#10B981] font-black text-sm sm:text-base font-mono">₹{(currentSlot?.price || 1500).toLocaleString('en-IN')}/hr</span>
+                                                {hasVerifiedUmpire && (
+                                                    <>
+                                                        <span className="text-slate-300 mx-1">·</span>
+                                                        <span>Umpire Add-on: </span>
+                                                        <span className="text-emerald-700 font-black text-sm sm:text-base font-mono">+₹300</span>
+                                                    </>
+                                                )}
                                                 <span className="text-slate-300 mx-1">·</span>
                                                 <span>Total Rent: </span>
                                                 <span className="text-[#10B981] font-black text-base sm:text-lg font-mono">₹{totalRent.toLocaleString('en-IN')}</span>
                                             </div>
+
+                                            {/* ADD VERIFIED UMPIRE ADD-ON (Tier 2 Verification) - Only shown if Turf Owner enabled service */}
+                                            {isTurfUmpireAvailable && (
+                                                <div className={`mt-5 p-4 sm:p-5 rounded-2xl border-2 transition-all duration-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 ${
+                                                    hasVerifiedUmpire 
+                                                        ? 'bg-emerald-50/80 border-[#10B981] shadow-md shadow-emerald-500/10' 
+                                                        : 'bg-white border-slate-200 hover:border-emerald-300 shadow-xs'
+                                                }`}>
+                                                    <div className="flex items-start gap-3.5">
+                                                        <div className={`w-11 h-11 rounded-2xl flex items-center justify-center text-xl font-bold shrink-0 transition-colors ${
+                                                            hasVerifiedUmpire ? 'bg-[#10B981] text-white shadow-md shadow-emerald-500/20' : 'bg-slate-100 text-slate-700'
+                                                        }`}>
+                                                            ⚖️
+                                                        </div>
+                                                        <div>
+                                                            <div className="flex items-center gap-2 flex-wrap">
+                                                                <h4 className="text-sm font-black text-[#111827]">Add Verified Umpire & Live Scorer</h4>
+                                                                <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-full bg-emerald-100 text-[#065F46] border border-emerald-300">
+                                                                    ⭐ 1.5x Rank Weight
+                                                                </span>
+                                                            </div>
+                                                            <p className="text-xs text-slate-500 font-medium mt-0.5">
+                                                                Official ball-by-ball scoring, dispute-free result, guaranteed 1.5x verified player rating & MVP trophy badge.
+                                                            </p>
+                                                        </div>
+                                                    </div>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => {
+                                                            setHasVerifiedUmpire(!hasVerifiedUmpire)
+                                                            if (addToast) addToast(!hasVerifiedUmpire ? '✓ Added Verified Umpire (+₹300) to booking!' : 'Removed Verified Umpire add-on', 'info')
+                                                        }}
+                                                        className={`px-5 py-2.5 rounded-xl font-black text-xs transition-all cursor-pointer whitespace-nowrap w-full sm:w-auto text-center ${
+                                                            hasVerifiedUmpire 
+                                                                ? 'bg-emerald-700 hover:bg-emerald-800 text-white shadow-xs' 
+                                                                : 'bg-[#10B981] hover:bg-emerald-600 text-white shadow-md shadow-emerald-500/20'
+                                                        }`}
+                                                    >
+                                                        {hasVerifiedUmpire ? '✓ Added (+₹300)' : '+ Add ₹300'}
+                                                    </button>
+                                                </div>
+                                            )}
                                         </div>
 
                                         {/* Bottom Action Bar */}
                                         <div className="pt-6 border-t border-[#E5E7EB] flex items-center justify-between">
                                             <button
                                                 onClick={() => navigate('/turfs')}
-                                                className="px-5 py-2.5 bg-white hover:bg-slate-50 border border-[#E5E7EB] text-[#111827] font-bold text-xs uppercase tracking-wider rounded-full transition-colors cursor-pointer"
+                                                className="px-5 py-2.5 bg-white hover:bg-slate-50 border border-[#E5E7EB] text-[#111827] font-bold text-xs uppercase tracking-wider rounded-full transition-colors cursor-pointer flex items-center gap-2"
                                             >
-                                                ← Back to All Turfs
+                                                <HiArrowLeft className="w-4 h-4" />
+                                                <span>Back to All Turfs</span>
                                             </button>
 
                                             <button

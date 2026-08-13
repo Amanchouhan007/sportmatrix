@@ -124,6 +124,7 @@ export default function SlotBookingPage() {
     const [selectedSlotTime, setSelectedSlotTime] = useState('18:00') // 6:00 PM
     const [selectedSport, setSelectedSport] = useState(searchParams.get('sport') || 'Cricket')
     const [durationHours, setDurationHours] = useState(1)
+    const [hasVerifiedUmpire, setHasVerifiedUmpire] = useState(false)
 
     // Step 2: Payment Mode Options & Collapsible Accordion State
     const initialMode = searchParams.get('mode') || 'full'
@@ -185,7 +186,18 @@ export default function SlotBookingPage() {
     // Dynamic Slot Price Calculation
     const activeSlotObj = allTimeSlots.find(s => s.id === selectedSlotTime)
     const currentSlotPrice = activeSlotObj?.price || selectedVenue.price
-    const totalRent = currentSlotPrice * durationHours
+
+    // Check if this Turf offers Verified Umpire Service (Configured by Turf Owner)
+    const isTurfUmpireAvailable = (() => {
+        const savedSetting = localStorage.getItem(`turf_umpire_enabled_${selectedVenue?.id}`)
+        if (savedSetting !== null) return savedSetting === 'true'
+        const globalSetting = localStorage.getItem('turf_umpire_enabled')
+        if (globalSetting !== null) return globalSetting === 'true'
+        return selectedVenue?.hasUmpireService !== false
+    })()
+
+    const umpireFee = (hasVerifiedUmpire && isTurfUmpireAvailable) ? 300 : 0
+    const totalRent = (currentSlotPrice * durationHours) + umpireFee
 
     // Helper to format slot time range (e.g. 6:00 PM – 7:00 PM)
     const formatSlotTimeRange = (timeStr, hours = 1) => {
@@ -433,6 +445,9 @@ export default function SlotBookingPage() {
             time: selectedSlotTime || '6:00 PM',
             amount: `₹${myShareAmount.toLocaleString('en-IN')}`,
             status: 'Confirmed',
+            hasVerifiedUmpire,
+            umpireFee,
+            verificationTier: hasVerifiedUmpire ? 'Tier 2' : 'Tier 1',
             createdAt: new Date().toISOString()
         }
         localStorage.setItem('customer_bookings', JSON.stringify([newEntry, ...existing]))
@@ -476,15 +491,16 @@ export default function SlotBookingPage() {
                         className="inline-flex items-center gap-2 text-xs font-black uppercase tracking-wider text-slate-700 hover:text-[#16A34A] transition-colors cursor-pointer group bg-white border border-[#E2E8F0] hover:border-slate-400 px-5 py-2.5 rounded-full shadow-xs"
                     >
                         <HiArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
-                        <span>← — BACK TO TURF DETAILS</span>
+                        <span>BACK TO TURF DETAILS</span>
                     </button>
 
                     <button
                         onClick={() => setIsVenueModalOpen(true)}
-                        className="text-xs font-bold text-[#10B981] hover:underline cursor-pointer flex items-center gap-1"
+                        className="inline-flex items-center gap-2 text-xs font-black uppercase tracking-wider text-[#065F46] hover:text-emerald-900 bg-[#ECFDF5] hover:bg-emerald-100 border border-emerald-300 hover:border-emerald-400 px-5 py-2.5 rounded-full shadow-xs transition-all cursor-pointer hover:scale-[1.02] active:scale-[0.98]"
                     >
-                        <span>Change Turf Venue (Switch)</span>
-                        <span>▾</span>
+                        <span>🏟️</span>
+                        <span>SWITCH TURF VENUE</span>
+                        <span className="text-emerald-700 text-sm font-black">▾</span>
                     </button>
                 </div>
 
@@ -531,9 +547,10 @@ export default function SlotBookingPage() {
                                     <span>{selectedVenue.name} — {selectedVenue.location} · ₹{selectedVenue.price.toLocaleString('en-IN')}/hr</span>
                                     <button
                                         onClick={() => setIsVenueModalOpen(true)}
-                                        className="text-[11px] font-extrabold text-[#065F46] bg-[#ECFDF5] border border-emerald-300 px-2.5 py-0.5 rounded-md hover:bg-emerald-100 cursor-pointer transition-colors"
+                                        className="text-xs font-black text-[#065F46] bg-[#ECFDF5] border border-emerald-300 px-3 py-1 rounded-full hover:bg-emerald-100 cursor-pointer transition-all inline-flex items-center gap-1 shadow-xs hover:scale-105"
                                     >
-                                        Switch Turf ▾
+                                        <span>Switch Turf</span>
+                                        <span>▾</span>
                                     </button>
                                 </div>
                             </div>
@@ -675,9 +692,58 @@ export default function SlotBookingPage() {
                                     <span className="text-slate-300 mx-1">·</span>
                                     <span>Slot Rate: </span>
                                     <span className="text-[#10B981] font-black text-sm sm:text-base font-mono">₹{currentSlotPrice.toLocaleString('en-IN')}/hr</span>
+                                    {hasVerifiedUmpire && (
+                                        <>
+                                            <span className="text-slate-300 mx-1">·</span>
+                                            <span>Umpire Add-on: </span>
+                                            <span className="text-emerald-700 font-black text-sm sm:text-base font-mono">+₹300</span>
+                                        </>
+                                    )}
                                     <span className="text-slate-300 mx-1">·</span>
                                     <span>Total Rent: </span>
                                     <span className="text-[#10B981] font-black text-base sm:text-lg font-mono">₹{totalRent.toLocaleString('en-IN')}</span>
+                                </div>
+                            )}
+
+                            {/* ADD VERIFIED UMPIRE BOOKING ADD-ON (Tier 2 Verification) - Only shown if Turf Owner enabled service */}
+                            {isTurfUmpireAvailable && (
+                                <div className={`mt-5 p-4 sm:p-5 rounded-2xl border-2 transition-all duration-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 ${
+                                    hasVerifiedUmpire 
+                                        ? 'bg-emerald-50/80 border-[#10B981] shadow-md shadow-emerald-500/10' 
+                                        : 'bg-white border-slate-200 hover:border-emerald-300 shadow-xs'
+                                }`}>
+                                    <div className="flex items-start gap-3.5">
+                                        <div className={`w-11 h-11 rounded-2xl flex items-center justify-center text-xl font-bold shrink-0 transition-colors ${
+                                            hasVerifiedUmpire ? 'bg-[#10B981] text-white shadow-md shadow-emerald-500/20' : 'bg-slate-100 text-slate-700'
+                                        }`}>
+                                            ⚖️
+                                        </div>
+                                        <div>
+                                            <div className="flex items-center gap-2 flex-wrap">
+                                                <h4 className="text-sm font-black text-[#111827]">Add Verified Umpire & Live Scorer</h4>
+                                                <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-full bg-emerald-100 text-[#065F46] border border-emerald-300">
+                                                    ⭐ 1.5x Rank Weight
+                                                </span>
+                                            </div>
+                                            <p className="text-xs text-slate-500 font-medium mt-0.5">
+                                                Official ball-by-ball scoring, dispute-free result, guaranteed 1.5x verified player rating & MVP trophy badge.
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            setHasVerifiedUmpire(!hasVerifiedUmpire)
+                                            if (addToast) addToast(!hasVerifiedUmpire ? '✓ Added Verified Umpire (+₹300) to booking!' : 'Removed Verified Umpire add-on', 'info')
+                                        }}
+                                        className={`px-5 py-2.5 rounded-xl font-black text-xs transition-all cursor-pointer whitespace-nowrap w-full sm:w-auto text-center ${
+                                            hasVerifiedUmpire 
+                                                ? 'bg-emerald-700 hover:bg-emerald-800 text-white shadow-xs' 
+                                                : 'bg-[#10B981] hover:bg-emerald-600 text-white shadow-md shadow-emerald-500/20'
+                                        }`}
+                                    >
+                                        {hasVerifiedUmpire ? '✓ Added (+₹300)' : '+ Add ₹300'}
+                                    </button>
                                 </div>
                             )}
                         </div>
@@ -689,7 +755,8 @@ export default function SlotBookingPage() {
                                     onClick={() => navigate(-1)}
                                     className="flex-1 sm:flex-none px-6 py-3.5 rounded-xl bg-white hover:bg-slate-50 border border-[#E5E7EB] text-[#111827] font-bold text-sm transition-all duration-200 shadow-sm cursor-pointer flex items-center justify-center gap-2"
                                 >
-                                    <span>← Back to Turf Details</span>
+                                    <HiArrowLeft className="w-4 h-4" />
+                                    <span>Back to Turf Details</span>
                                 </button>
                                 <button
                                     onClick={() => setIsVenueModalOpen(true)}
@@ -873,7 +940,8 @@ export default function SlotBookingPage() {
                                 onClick={() => setActiveStep(1)}
                                 className="px-7 py-3.5 rounded-xl bg-white hover:bg-slate-50 border border-[#E5E7EB] text-[#111827] font-bold text-sm transition-all duration-200 shadow-sm cursor-pointer flex items-center gap-2"
                             >
-                                <span>← Back to Date & Time</span>
+                                <HiArrowLeft className="w-4 h-4" />
+                                <span>Back to Date & Time</span>
                             </button>
 
                             <button
@@ -953,6 +1021,28 @@ export default function SlotBookingPage() {
                                     className="w-full bg-slate-50 border border-[#E5E7EB] rounded-xl px-4 py-3 text-[#111827] text-sm font-bold outline-none focus:border-[#16A34A] focus:bg-white"
                                     placeholder="e.g. Andheri Strikers"
                                 />
+                            </div>
+
+                            {/* Umpire Option in Step 3 */}
+                            <div className={`p-4 rounded-xl border-2 transition-all flex items-center justify-between gap-3 ${
+                                hasVerifiedUmpire ? 'bg-emerald-50/80 border-emerald-500' : 'bg-slate-50 border-slate-200'
+                            }`}>
+                                <div className="flex items-center gap-2.5">
+                                    <span className="text-xl">⚖️</span>
+                                    <div>
+                                        <div className="text-xs font-black text-slate-900">Verified Platform Umpire (+₹300)</div>
+                                        <div className="text-[10px] text-slate-500 font-medium">1.5x Trust Multiplier & Official Live Scorer</div>
+                                    </div>
+                                </div>
+                                <button
+                                    type="button"
+                                    onClick={() => setHasVerifiedUmpire(!hasVerifiedUmpire)}
+                                    className={`px-3 py-1.5 rounded-lg text-xs font-black transition-all ${
+                                        hasVerifiedUmpire ? 'bg-emerald-700 text-white' : 'bg-[#10B981] text-white hover:bg-emerald-600'
+                                    }`}
+                                >
+                                    {hasVerifiedUmpire ? '✓ Selected' : '+ Add'}
+                                </button>
                             </div>
                         </div>
 

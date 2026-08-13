@@ -174,17 +174,19 @@ export default function HomePage() {
             {/* ══════════════════════════════════════════════
                 AIRBNB-STYLE SEARCH & CATEGORIES
             ══════════════════════════════════════════════ */}
-            <section className="pt-2 md:pt-3 pb-1 bg-transparent relative z-20">
+            <section className="pt-2 md:pt-3 pb-1 bg-transparent relative z-[90]">
                 <div className="w-full px-4 sm:px-6 lg:px-8 max-w-[1400px] mx-auto">
-                    <TurfSearchBar
-                        values={searchValues}
-                        onChange={handleSearchChange}
-                        onSearch={handleSearch}
-                        onClear={clearFilters}
-                    />
+                    <div className="relative z-[90]">
+                        <TurfSearchBar
+                            values={searchValues}
+                            onChange={handleSearchChange}
+                            onSearch={handleSearch}
+                            onClear={clearFilters}
+                        />
+                    </div>
 
                     {/* FRONT CRICKET CHALLENGE CARD ALERT */}
-                    <div className="mt-3">
+                    <div className="mt-3 relative z-10">
                         <LiveCricketChallengeCard
                             challengerTeam="Aman XI Warriors"
                             venueName="SportZone Turf Arena, Mumbai"
@@ -199,7 +201,7 @@ export default function HomePage() {
             {/* ══════════════════════════════════════════════
                 POPULAR TURFS GRID
             ══════════════════════════════════════════════ */}
-            <div ref={resultsRef} className="relative z-30 pt-0 pb-1 -mt-1">
+            <div ref={resultsRef} className="relative z-10 pt-0 pb-1 -mt-1">
                 {/* Radial Glow Lighting behind Explore Turfs */}
                 <div
                     style={{

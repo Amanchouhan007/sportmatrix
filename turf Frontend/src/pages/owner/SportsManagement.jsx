@@ -63,6 +63,28 @@ export default function SportsManagement() {
         allowDare: true,
         allowPerPlayer: true
     })
+
+    // Turf Umpire Service State (1-Click Toggle)
+    const [isUmpireEnabled, setIsUmpireEnabled] = useState(() => {
+        const saved = localStorage.getItem('turf_umpire_enabled')
+        return saved !== null ? saved === 'true' : true
+    })
+
+    const handleToggleUmpireService = () => {
+        const nextState = !isUmpireEnabled
+        setIsUmpireEnabled(nextState)
+        localStorage.setItem('turf_umpire_enabled', String(nextState))
+        for (let i = 1; i <= 20; i++) {
+            localStorage.setItem(`turf_umpire_enabled_${i}`, String(nextState))
+        }
+        addToast({
+            title: nextState ? 'Umpire Service Activated ✓' : 'Umpire Service Disabled 🚫',
+            message: nextState 
+                ? 'Customers can now select "+ Add Verified Umpire (+₹300)" during booking.'
+                : 'Umpire option is now completely hidden on all customer booking pages for this turf.',
+            type: nextState ? 'success' : 'info'
+        })
+    }
     const [currentSport, setCurrentSport] = useState({
         _id: '',
         sportId: '',
@@ -483,6 +505,48 @@ export default function SportsManagement() {
                             </div>
                         );
                     })}
+                </div>
+            </div>
+
+            {/* ⚖️ TURF OFFICIAL UMPIRE SERVICE 1-CLICK TOGGLE */}
+            <div className="bg-gradient-to-r from-emerald-950 via-slate-900 to-[#0A0E17] rounded-3xl p-5 md:p-6 text-white shadow-xl border border-emerald-500/40 mb-6">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div className="flex items-start gap-3.5">
+                        <div className="w-12 h-12 rounded-2xl bg-emerald-500/20 text-emerald-400 border border-emerald-400/30 flex items-center justify-center text-2xl shrink-0">
+                            ⚖️
+                        </div>
+                        <div>
+                            <div className="flex items-center gap-2 flex-wrap">
+                                <h3 className="text-base font-black text-white">Verified Umpire & Live Scorer Add-on Service</h3>
+                                <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider font-mono ${
+                                    isUmpireEnabled
+                                        ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-400/40'
+                                        : 'bg-rose-500/20 text-rose-400 border border-rose-400/40'
+                                }`}>
+                                    {isUmpireEnabled ? '● ACTIVE ON BOOKING PAGE (+₹300)' : '○ COMPLETELY HIDDEN / DISABLED'}
+                                </span>
+                            </div>
+                            <p className="text-xs text-slate-400 font-medium mt-1 max-w-2xl">
+                                {isUmpireEnabled
+                                    ? 'Customers can opt to hire a verified umpire for +₹300 during booking with official ball-by-ball certified scoring.'
+                                    : 'Service is disabled. Customers will NOT see any umpire add-on option or fee on their booking page for this turf.'}
+                            </p>
+                        </div>
+                    </div>
+
+                    <div className="flex items-center gap-3 shrink-0">
+                        <button
+                            type="button"
+                            onClick={handleToggleUmpireService}
+                            className={`px-5 py-2.5 rounded-2xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer shadow-md ${
+                                isUmpireEnabled
+                                    ? 'bg-rose-600 hover:bg-rose-500 text-white shadow-rose-600/20'
+                                    : 'bg-[#10B981] hover:bg-emerald-500 text-slate-950 font-black shadow-emerald-500/20'
+                            }`}
+                        >
+                            {isUmpireEnabled ? '❌ 1-Click Hide Umpire Option' : '✓ 1-Click Show Umpire Option'}
+                        </button>
+                    </div>
                 </div>
             </div>
 

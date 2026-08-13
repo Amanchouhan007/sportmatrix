@@ -7,6 +7,7 @@ const navLinks = [
     { label: 'Home', to: '/' },
     { label: 'Turfs', to: '/turfs' },
     { label: 'Tournaments', to: '/tournaments' },
+    { label: 'Leaderboard', to: '/leaderboard' },
     { label: 'Membership', to: '/membership' },
     { label: 'Contact', to: '/contact' },
 ]
@@ -170,6 +171,7 @@ export default function WebsiteLayout({ children }) {
                                 <li><NavLink to="/" className="text-[13px] font-bold text-[#6B7280] hover:text-[#16A34A] transition-colors">Home</NavLink></li>
                                 <li><NavLink to="/turfs" className="text-[13px] font-bold text-[#6B7280] hover:text-[#16A34A] transition-colors">Explore Turfs</NavLink></li>
                                 <li><NavLink to="/tournaments" className="text-[13px] font-bold text-[#6B7280] hover:text-[#16A34A] transition-colors">Tournaments</NavLink></li>
+                                <li><NavLink to="/leaderboard" className="text-[13px] font-bold text-[#6B7280] hover:text-[#16A34A] transition-colors">Player Leaderboard</NavLink></li>
                                 <li><NavLink to="/membership" className="text-[13px] font-bold text-[#6B7280] hover:text-[#16A34A] transition-colors">Membership Plans</NavLink></li>
                                 <li><NavLink to="/contact" className="text-[13px] font-bold text-[#6B7280] hover:text-[#16A34A] transition-colors">Contact Us</NavLink></li>
                             </ul>
