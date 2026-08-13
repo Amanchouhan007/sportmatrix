@@ -603,6 +603,45 @@ export default function SlotBookingPage() {
                 ═══════════════════════════════════════════════════ */}
                 {activeStep === 1 && (
                     <div className="animate-in fade-in duration-200">
+                        {/* Turf Photo & Specs Quick Preview Banner */}
+                        <div className="mb-6 p-4 rounded-2xl bg-white border border-[#E5E7EB] shadow-sm flex flex-col sm:flex-row items-center gap-4">
+                            <div className="relative w-full sm:w-44 h-28 rounded-xl overflow-hidden shrink-0 group">
+                                <img
+                                    src={selectedVenue.image || '/images/turf1.png'}
+                                    alt={selectedVenue.name}
+                                    className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                                    onError={(e) => { e.currentTarget.src = '/images/turf1.png' }}
+                                />
+                                <span className="absolute bottom-1.5 left-1.5 bg-black/75 text-[#C8FF2E] text-[10px] font-black px-2 py-0.5 rounded-md backdrop-blur-xs flex items-center gap-1">
+                                    <span>⭐</span> {selectedVenue.rating || '4.8'}
+                                </span>
+                            </div>
+                            <div className="flex-1 w-full flex flex-col justify-between">
+                                <div>
+                                    <div className="flex flex-wrap items-center justify-between gap-2">
+                                        <h3 className="text-base sm:text-lg font-black text-[#111827] leading-snug">{selectedVenue.name}</h3>
+                                        <button
+                                            type="button"
+                                            onClick={() => navigate(`/turf/${selectedVenue.id}`)}
+                                            className="text-[11px] font-extrabold text-[#065F46] bg-[#ECFDF5] hover:bg-emerald-100 border border-emerald-300 px-3 py-1 rounded-full transition-all cursor-pointer inline-flex items-center gap-1 shadow-2xs hover:scale-105"
+                                        >
+                                            <span>🖼️ View Photos & Specs</span>
+                                            <span>→</span>
+                                        </button>
+                                    </div>
+                                    <p className="text-xs text-[#6B7280] font-semibold mt-0.5">
+                                        📍 {selectedVenue.location}, {selectedVenue.city || 'Indore'} · Starts ₹{selectedVenue.price?.toLocaleString('en-IN')}/hr
+                                    </p>
+                                </div>
+                                <div className="flex flex-wrap items-center gap-1.5 mt-2.5">
+                                    <span className="text-[10px] font-bold bg-slate-100 text-slate-700 px-2 py-0.5 rounded-md border border-slate-200">🏏 Box Cricket Turf</span>
+                                    <span className="text-[10px] font-bold bg-slate-100 text-slate-700 px-2 py-0.5 rounded-md border border-slate-200">💡 LED Floodlights</span>
+                                    <span className="text-[10px] font-bold bg-slate-100 text-slate-700 px-2 py-0.5 rounded-md border border-slate-200">🚗 Secured Parking</span>
+                                    <span className="text-[10px] font-bold bg-emerald-50 text-emerald-800 px-2 py-0.5 rounded-md border border-emerald-200">⚡ Instant Slot Hold</span>
+                                </div>
+                            </div>
+                        </div>
+
                         {/* Title & Subtitle with Duration Hours Selector */}
                         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
                             <div>

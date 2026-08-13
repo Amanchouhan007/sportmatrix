@@ -119,6 +119,7 @@ export default function App() {
               <Route path="/" element={<WebsiteLayout><HomePage /></WebsiteLayout>} />
               <Route path="/turfs" element={<WebsiteLayout><AllTurfsPage /></WebsiteLayout>} />
               <Route path="/turfs/:id" element={<WebsiteLayout><TurfDetailPage /></WebsiteLayout>} />
+              <Route path="/turf/:id" element={<WebsiteLayout><TurfDetailPage /></WebsiteLayout>} />
               <Route path="/booking/:id" element={<WebsiteLayout><SlotBookingPage /></WebsiteLayout>} />
               <Route path="/tournaments" element={<WebsiteLayout><TournamentListPage /></WebsiteLayout>} />
               <Route path="/tournaments/:id" element={<WebsiteLayout><TournamentDetailPage /></WebsiteLayout>} />
