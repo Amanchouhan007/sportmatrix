@@ -83,7 +83,7 @@ export default function TurfCard({ turf, onMouseEnter, onMouseLeave, i = 0 }) {
                         type="button"
                         onClick={toggleLike}
                         title={isLiked ? 'Remove from Wishlist' : 'Add to Wishlist'}
-                        className={`absolute top-2 right-2 p-1.5 rounded-full backdrop-blur-md transition-all duration-200 z-20 shadow-md cursor-pointer ${
+                        className={`absolute top-2 right-2 p-1.5 rounded-full backdrop-blur-md transition-all duration-200 z-[2] shadow-md cursor-pointer ${
                             isLiked
                                 ? 'bg-white text-rose-500 scale-110 ring-2 ring-rose-300 shadow-rose-200'
                                 : 'bg-white/85 text-slate-400 hover:text-rose-500 hover:scale-105'
@@ -93,7 +93,7 @@ export default function TurfCard({ turf, onMouseEnter, onMouseLeave, i = 0 }) {
                     </button>
 
                     {promo && (
-                        <div className="absolute top-2 left-2 z-20 bg-[#C8FF2E] border border-[#B5F000] rounded-[8px] px-2 py-0.5 flex items-center gap-1 shadow-sm">
+                        <div className="absolute top-2 left-2 z-[2] bg-[#C8FF2E] border border-[#B5F000] rounded-[8px] px-2 py-0.5 flex items-center gap-1 shadow-sm">
                             <span className="text-[10px]">{promo.icon}</span>
                             <span className="text-[9px] font-black text-[#111827] uppercase tracking-wider">
                                 {promo.text.includes('•') ? promo.text.split('•')[1].trim() : promo.text}
@@ -101,7 +101,7 @@ export default function TurfCard({ turf, onMouseEnter, onMouseLeave, i = 0 }) {
                         </div>
                     )}
 
-                    <div className="absolute bottom-2 left-2 z-20 text-[9px] font-black text-white flex items-center gap-1.5 drop-shadow-md whitespace-nowrap bg-black/60 backdrop-blur-md px-2 py-0.5 rounded-full border border-white/20">
+                    <div className="absolute bottom-2 left-2 z-[2] text-[9px] font-black text-white flex items-center gap-1.5 drop-shadow-md whitespace-nowrap bg-black/60 backdrop-blur-md px-2 py-0.5 rounded-full border border-white/20">
                         <span className="w-1.5 h-1.5 rounded-full bg-[#C8FF2E] shadow-[0_0_8px_rgba(200,255,46,0.8)] animate-pulse"></span>
                         Open till 11 PM
                     </div>

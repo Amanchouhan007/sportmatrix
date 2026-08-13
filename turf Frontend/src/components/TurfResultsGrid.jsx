@@ -135,8 +135,8 @@ export default function TurfResultsGrid({ turfs, searchValues, recentSearches = 
                 )}
 
 
-                {/* ── Header & Filters Control Bar ── */}
-                <div className="sticky top-[56px] z-30 bg-white flex flex-col lg:flex-row lg:items-center justify-between gap-3 mb-2 pb-1.5 pt-1 relative before:content-[''] before:absolute before:-top-8 before:-left-[100vw] before:-right-[100vw] before:h-8 before:bg-white before:pointer-events-none after:content-[''] after:absolute after:bottom-0 after:-left-[100vw] after:-right-[100vw] after:border-b after:border-[#E5E7EB] after:pointer-events-none">
+                {/* ── Header & Filters Control Bar (Natural Clean Scroll - Never Covers Cards) ── */}
+                <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pt-2 mb-8 pb-4 border-b border-[#E5E7EB]">
                     {/* Left: Heading & Count Pill */}
                     <div className="flex items-center gap-3 shrink-0">
                         <h2 className="text-[20px] md:text-[26px] font-black italic uppercase tracking-tight leading-none flex items-center gap-2 text-[#111827]">
@@ -201,10 +201,7 @@ export default function TurfResultsGrid({ turfs, searchValues, recentSearches = 
                 <div className={`flex flex-col lg:flex-row gap-6 relative ${viewMode === 'split' ? 'items-start' : ''}`}>
 
                     {/* Left Pane: Cards */}
-                    <div
-                        className={`w-full ${viewMode === 'split' ? 'lg:w-[55%] shrink-0' : 'lg:w-full'} overflow-y-auto`}
-                        style={{ maxHeight: 'calc(100vh - 220px)', scrollbarWidth: 'thin', scrollbarColor: 'rgba(255,255,255,0.08) transparent' }}
-                    >
+                    <div className={`w-full ${viewMode === 'split' ? 'lg:w-[55%] shrink-0 overflow-y-auto' : 'lg:w-full'}`}>
                         {sortedTurfs.length === 0 ? (
                             <div className="text-center py-20 bg-slate-900/40 border border-white/5 rounded-3xl p-10 backdrop-blur-md">
                                 <div className="text-5xl mb-4">🏟️</div>
@@ -213,7 +210,7 @@ export default function TurfResultsGrid({ turfs, searchValues, recentSearches = 
                                 <button onClick={onClear} className="px-6 py-3 bg-blue-600 hover:bg-blue-500 text-white font-black text-xs uppercase tracking-widest rounded-full transition-all shadow-lg shadow-blue-500/20">Reset Filters</button>
                             </div>
                         ) : (
-                            <div className={`grid gap-6 xl:gap-8 items-stretch pt-16 ${viewMode === 'split'
+                            <div className={`grid gap-6 xl:gap-8 items-stretch ${viewMode === 'split'
                                 ? 'grid-cols-1 sm:grid-cols-2'
                                 : 'grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5'
                                 }`}>
