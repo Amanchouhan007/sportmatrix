@@ -91,6 +91,11 @@ export default function TurfCard({ turf, onMouseEnter, onMouseLeave, i = 0 }) {
 
     const fallbackImage = '/images/turf1.png';
 
+    const handleViewDetails = (e) => {
+        if (e) e.stopPropagation();
+        navigate(`/turf/${turf.id}`)
+    }
+
     const handleBookNow = (e) => {
         if (e) e.stopPropagation();
         const promoParam = promo?.code ? `?promo=${promo.code}` : ''
@@ -102,7 +107,7 @@ export default function TurfCard({ turf, onMouseEnter, onMouseLeave, i = 0 }) {
             id={`turf-card-${turf.id}`}
             onMouseEnter={onMouseEnter}
             onMouseLeave={onMouseLeave}
-            onClick={handleBookNow}
+            onClick={handleViewDetails}
             style={{ animationDelay: `${i * 100}ms` }}
             className={`group relative flex flex-col h-full bg-white border border-[#E5E7EB] rounded-[18px] overflow-hidden transition-all duration-300 hover:-translate-y-[6px] hover:border-[#16A34A]/40 shadow-[0_15px_45px_rgba(0,0,0,0.08)] hover:shadow-[0_25px_60px_rgba(0,0,0,0.14)] cursor-pointer`}
         >
@@ -234,21 +239,33 @@ export default function TurfCard({ turf, onMouseEnter, onMouseLeave, i = 0 }) {
                     </div>
                 )}
 
-                <div className="border-t border-[#E5E7EB] pt-2 mt-auto flex items-center justify-between gap-2">
-                    <div className="flex flex-col">
+                <div className="border-t border-[#E5E7EB] pt-2 mt-auto flex items-center justify-between gap-1.5">
+                    <div className="flex flex-col min-w-0">
                         <span className="text-[8px] text-[#6B7280] uppercase tracking-widest font-black mb-0.5 leading-none">Starts From</span>
                         <div className="flex items-baseline text-[#111827]">
-                            <span className="text-[19px] font-black leading-none tracking-tight text-[#111827]">₹{Number(turf.price).toLocaleString('en-IN')}</span>
-                            <span className="text-[10px] text-[#6B7280] font-bold ml-1">/hr</span>
+                            <span className="text-[17px] sm:text-[18px] font-black leading-none tracking-tight text-[#111827]">₹{Number(turf.price).toLocaleString('en-IN')}</span>
+                            <span className="text-[9.5px] text-[#6B7280] font-bold ml-0.5">/hr</span>
                         </div>
                     </div>
 
-                    <button
-                        onClick={handleBookNow}
-                        className="px-4 py-2 rounded-[14px] text-[11px] font-black text-[#111827] bg-[#C8FF2E] hover:bg-[#B5F000] transition-all duration-300 shadow-[0_4px_15px_rgba(200,255,46,0.4)] hover:shadow-[0_6px_20px_rgba(200,255,46,0.6)] hover:scale-105 active:scale-95 flex-shrink-0 cursor-pointer border border-[#B5F000]"
-                    >
-                        Book Now
-                    </button>
+                    <div className="flex items-center gap-1.5 shrink-0">
+                        <button
+                            type="button"
+                            onClick={handleViewDetails}
+                            className="px-2.5 py-1.5 rounded-[12px] text-[10.5px] font-extrabold text-[#374151] bg-slate-100 hover:bg-slate-200 transition-all duration-200 border border-slate-300/80 hover:border-slate-400 cursor-pointer shadow-2xs hover:scale-105 active:scale-95"
+                            title="View Turf Details, Photos & Amenities"
+                        >
+                            ℹ️ Details
+                        </button>
+
+                        <button
+                            type="button"
+                            onClick={handleBookNow}
+                            className="px-3.5 py-1.5 rounded-[12px] text-[11px] font-black text-[#111827] bg-[#C8FF2E] hover:bg-[#B5F000] transition-all duration-300 shadow-[0_3px_12px_rgba(200,255,46,0.35)] hover:shadow-[0_5px_18px_rgba(200,255,46,0.55)] hover:scale-105 active:scale-95 cursor-pointer border border-[#B5F000]"
+                        >
+                            Book Now
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>

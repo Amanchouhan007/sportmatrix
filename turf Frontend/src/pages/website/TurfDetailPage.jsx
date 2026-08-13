@@ -1,12 +1,14 @@
 import { useState, useRef, useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { HiLocationMarker, HiStar, HiArrowLeft, HiShieldCheck, HiClock, HiPhone, HiMail, HiLightBulb, HiCheckCircle, HiX } from 'react-icons/hi'
-import { MdSportsCricket, MdWifi, MdLocalParking, MdLocalDrink, MdOutlineHealthAndSafety, MdSportsFootball, MdLock, MdWc } from 'react-icons/md'
-import { RiShieldStarFill } from 'react-icons/ri'
 import SlotGrid from '../../components/ui/SlotGrid'
 import { useToast } from '../../components/ui/Toast'
 import { useAuth } from '../../context/AuthContext'
-import MediaUploadModal from '../../components/MediaUploadModal'
+import TurfHeroGallery from '../../components/turf-detail/TurfHeroGallery'
+import TurfHeaderInfo from '../../components/turf-detail/TurfHeaderInfo'
+import TurfDirectionsMap from '../../components/turf-detail/TurfDirectionsMap'
+import TurfReviewsSection from '../../components/turf-detail/TurfReviewsSection'
+import TurfBookingSuccessModal from '../../components/turf-detail/TurfBookingSuccessModal'
 
 const defaultTurfData = {
     id: 1, name: 'SportZone Arena', location: 'Andheri West, Mumbai', rating: 4.8, reviews: 124,
@@ -28,34 +30,29 @@ const defaultTurfData = {
 }
 
 const allTurfsList = [
-    { id: 1, name: 'SportZone Arena', location: 'Andheri West, Mumbai', city: 'Mumbai', rating: 4.8, price: 1200, image: '/images/turf1.png', sports: ['Cricket', 'Football'], amenities: ['Floodlights', 'Parking', 'Washroom', 'Drinking Water'], lat: 19.1136, lng: 72.8697 },
-    { id: 2, name: 'Champion Cricket Ground', location: 'Koramangala, Bangalore', city: 'Bangalore', rating: 4.9, price: 1500, image: '/images/turf2.png', sports: ['Cricket'], amenities: ['Floodlights', 'Seating', 'Drinking Water'], lat: 12.9352, lng: 77.6245 },
-    { id: 3, name: 'GameVault Center', location: 'Koramangala, Bangalore', city: 'Bangalore', rating: 4.9, price: 1200, image: '/images/turf3.png', sports: ['Football', 'Cricket'], amenities: ['Floodlights', 'Parking', 'Washroom', 'Seating', 'Drinking Water'], lat: 12.9352, lng: 77.6245 },
-    { id: 4, name: 'ProKick Stadium', location: 'Indiranagar, Bangalore', city: 'Bangalore', rating: 4.7, price: 1400, image: '/images/turf4.png', sports: ['Football'], amenities: ['Floodlights', 'Parking', 'Washroom'], lat: 12.9698, lng: 77.7500 },
-    { id: 5, name: 'ProPlay Arena', location: 'Vashi, Navi Mumbai', city: 'Mumbai', rating: 4.5, price: 1000, image: '/images/turf4.png', sports: ['Football'], amenities: ['Floodlights', 'Parking'], lat: 19.0330, lng: 73.0297 },
+    { id: 13, name: 'Spike Cricket Turf', location: 'Bhawarkua, Indore', city: 'Indore', rating: 4.6, price: 500, image: '/images/turf1.png', sports: ['Cricket'], amenities: ['Floodlights', 'Parking', 'Washroom'], lat: 22.6953, lng: 75.8690 },
     { id: 6, name: 'Royal Cricket Ground', location: 'Vijay Nagar, Indore', city: 'Indore', rating: 4.7, price: 1000, image: '/images/turf5.png', sports: ['Cricket'], amenities: ['Floodlights', 'Parking', 'Drinking Water'], lat: 22.7533, lng: 75.8937 },
-    { id: 7, name: 'DunkZone', location: 'Bandra, Mumbai', city: 'Mumbai', rating: 4.3, price: 750, image: '/images/turf2.png', sports: ['Football'], amenities: ['Floodlights', 'Parking'], lat: 19.0596, lng: 72.8295 },
-    { id: 8, name: 'PixelArena', location: 'HSR Layout, Bangalore', city: 'Bangalore', rating: 4.8, price: 1500, image: '/images/turf6.png', sports: ['Football', 'Cricket'], amenities: ['Floodlights', 'Parking', 'Washroom', 'Seating', 'Drinking Water', 'AC'], lat: 12.9121, lng: 77.6446 },
-    { id: 9, name: 'Skyline Football Turf', location: 'Powai, Mumbai', city: 'Mumbai', rating: 4.6, price: 1400, image: '/images/turf6.png', sports: ['Football'], amenities: ['Floodlights', 'Washroom'], lat: 19.1176, lng: 72.9060 },
+    { id: 14, name: 'Indore Sports Complex', location: 'LIG Colony, Indore', city: 'Indore', rating: 4.9, price: 1200, image: '/images/turf3.png', sports: ['Cricket'], amenities: ['Floodlights', 'Parking', 'Seating', 'Washroom', 'AC'], lat: 22.7380, lng: 75.8916 },
+    { id: 15, name: 'Rajiv Gandhi Stadium Turf', location: 'Navlakha, Indore', city: 'Indore', rating: 4.5, price: 700, image: '/images/turf4.png', sports: ['Cricket'], amenities: ['Floodlights', 'Parking', 'Seating', 'Drinking Water'], lat: 22.7000, lng: 75.8752 },
+    { id: 16, name: 'Champion Turf Ground', location: 'Palasia, Indore', city: 'Indore', rating: 4.8, price: 900, image: '/images/turf2.png', sports: ['Cricket'], amenities: ['Floodlights', 'Parking', 'Seating', 'Drinking Water'], lat: 22.7244, lng: 75.8839 },
+    { id: 17, name: 'Skyline Sports Hub', location: 'Super Corridor, Indore', city: 'Indore', rating: 4.7, price: 1100, image: '/images/turf6.png', sports: ['Cricket'], amenities: ['Floodlights', 'Parking', 'Washroom', 'Cafeteria'], lat: 22.7650, lng: 75.8300 },
+    { id: 18, name: 'GreenField Arena', location: 'Rau, Indore', city: 'Indore', rating: 4.6, price: 800, image: '/images/turf7.png', sports: ['Cricket'], amenities: ['Floodlights', 'Parking', 'Seating'], lat: 22.6300, lng: 75.8050 },
+    { id: 19, name: 'Annapurna Sports Arena', location: 'Annapurna, Indore', city: 'Indore', rating: 4.5, price: 650, image: '/images/turf1.png', sports: ['Cricket'], amenities: ['Floodlights', 'Parking', 'Washroom'], lat: 22.7010, lng: 75.8320 },
+    // Other cities
+    { id: 1, name: 'SportZone Arena', location: 'Andheri West, Mumbai', city: 'Mumbai', rating: 4.8, price: 1200, image: '/images/turf1.png', sports: ['Cricket'], amenities: ['Floodlights', 'Parking', 'Washroom', 'Drinking Water'], lat: 19.1136, lng: 72.8697 },
+    { id: 2, name: 'Champion Cricket Ground', location: 'Koramangala, Bangalore', city: 'Bangalore', rating: 4.9, price: 1500, image: '/images/turf2.png', sports: ['Cricket'], amenities: ['Floodlights', 'Seating', 'Drinking Water'], lat: 12.9352, lng: 77.6245 },
+    { id: 3, name: 'GameVault Cricket Center', location: 'Koramangala, Bangalore', city: 'Bangalore', rating: 4.9, price: 1200, image: '/images/turf3.png', sports: ['Cricket'], amenities: ['Floodlights', 'Parking', 'Washroom', 'Seating', 'Drinking Water'], lat: 12.9352, lng: 77.6245 },
+    { id: 4, name: 'ProKick Cricket Turf', location: 'Indiranagar, Bangalore', city: 'Bangalore', rating: 4.7, price: 1400, image: '/images/turf4.png', sports: ['Cricket'], amenities: ['Floodlights', 'Parking', 'Washroom'], lat: 12.9698, lng: 77.7500 },
+    { id: 5, name: 'ProPlay Cricket Arena', location: 'Vashi, Navi Mumbai', city: 'Mumbai', rating: 4.5, price: 1000, image: '/images/turf4.png', sports: ['Cricket'], amenities: ['Floodlights', 'Parking'], lat: 19.0330, lng: 73.0297 },
+    { id: 7, name: 'DunkZone Cricket Turf', location: 'Bandra, Mumbai', city: 'Mumbai', rating: 4.3, price: 750, image: '/images/turf2.png', sports: ['Cricket'], amenities: ['Floodlights', 'Parking'], lat: 19.0596, lng: 72.8295 },
+    { id: 8, name: 'PixelArena Cricket', location: 'HSR Layout, Bangalore', city: 'Bangalore', rating: 4.8, price: 1500, image: '/images/turf6.png', sports: ['Cricket'], amenities: ['Floodlights', 'Parking', 'Washroom', 'Seating', 'Drinking Water', 'AC'], lat: 12.9121, lng: 77.6446 },
+    { id: 9, name: 'Skyline Cricket Turf', location: 'Powai, Mumbai', city: 'Mumbai', rating: 4.6, price: 1400, image: '/images/turf6.png', sports: ['Cricket'], amenities: ['Floodlights', 'Washroom'], lat: 19.1176, lng: 72.9060 },
     { id: 10, name: 'StrikeZone Cricket', location: 'Noida, Delhi', city: 'Delhi', rating: 4.6, price: 850, image: '/images/turf7.png', sports: ['Cricket'], amenities: ['Floodlights', 'Parking', 'Washroom', 'Drinking Water'], lat: 28.5355, lng: 77.3910 },
     { id: 11, name: 'Master Blaster Cricket', location: 'Saket, Delhi', city: 'Delhi', rating: 4.8, price: 1100, image: '/images/turf7.png', sports: ['Cricket'], amenities: ['Floodlights', 'Equipment'], lat: 28.5244, lng: 77.2167 },
-    { id: 12, name: 'Pune Football Arena', location: 'Kothrud, Pune', city: 'Pune', rating: 4.5, price: 1000, image: '/images/turf2.png', sports: ['Football'], amenities: ['Floodlights', 'Parking', 'Washroom', 'Seating'], lat: 18.5074, lng: 73.8077 },
-    { id: 13, name: 'Spike Football Turf', location: 'Bhawarkua, Indore', city: 'Indore', rating: 4.6, price: 500, image: '/images/turf1.png', sports: ['Football'], amenities: ['Floodlights', 'Parking', 'Washroom'], lat: 22.6953, lng: 75.8690 },
-    { id: 14, name: 'Indore Sports Complex', location: 'LIG Colony, Indore', city: 'Indore', rating: 4.9, price: 1200, image: '/images/turf3.png', sports: ['Football', 'Cricket'], amenities: ['Floodlights', 'Parking', 'Seating', 'Washroom', 'AC'], lat: 22.7380, lng: 75.8916 },
-    { id: 15, name: 'Rajiv Gandhi Stadium Turf', location: 'Navlakha, Indore', city: 'Indore', rating: 4.5, price: 700, image: '/images/turf3.png', sports: ['Football', 'Cricket'], amenities: ['Floodlights', 'Parking', 'Seating', 'Drinking Water'], lat: 22.7000, lng: 75.8752 },
+    { id: 12, name: 'Pune Cricket Arena', location: 'Kothrud, Pune', city: 'Pune', rating: 4.5, price: 1000, image: '/images/turf2.png', sports: ['Cricket'], amenities: ['Floodlights', 'Parking', 'Washroom', 'Seating'], lat: 18.5074, lng: 73.8077 },
 ]
 
-/* ── Features Data ── */
-const features = [
-    { icon: HiLightBulb, label: 'LED Floodlights', desc: 'High-lumen LED arena lighting for night sessions' },
-    { icon: MdSportsFootball, label: 'FIFA-Grade Turf', desc: 'Certified synthetic grass surface for pro gameplay' },
-    { icon: MdLocalParking, label: 'Secured Parking', desc: 'Guarded parking lot with 50+ vehicle capacity' },
-    { icon: MdLock, label: 'Pro Locker Rooms', desc: 'Premium changing rooms with individual lockers' },
-    { icon: MdLocalDrink, label: 'Hydration Station', desc: 'Free RO drinking water & energy drink counter' },
-    { icon: MdWifi, label: 'High-Speed Wi-Fi', desc: '100 Mbps dedicated Wi-Fi across the facility' },
-    { icon: MdOutlineHealthAndSafety, label: 'First Aid & Med-Bay', desc: 'On-site medical kit & emergency support' },
-    { icon: MdWc, label: 'Washroom Access', desc: 'Clean, hygienic washrooms maintained hourly' },
-]
+
 
 /* ── Reviews Data ── */
 const reviewsData = [
@@ -130,7 +127,7 @@ export default function TurfDetailPage() {
     const slots = generateSlots(activeTurf.price, duration)
     const videoRef = useRef(null)
 
-    const defaultFallbackImage = activeTurf.image || 'https://images.unsplash.com/photo-1574629810360-7efbbe195018?auto=format&fit=crop&w=800&q=80';
+    const defaultFallbackImage = activeTurf.image || '/images/turf1.png';
 
     const initialMedia = [
         { type: 'image', url: defaultFallbackImage, thumbnail: defaultFallbackImage },
@@ -452,104 +449,14 @@ export default function TurfDetailPage() {
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 xl:gap-12">
                     {/* Left Side: Sticky Media Gallery */}
                     <div className="lg:col-span-6 xl:col-span-6">
-                        <div className="sticky top-28 space-y-4">
-                            {/* Main Media Display */}
-                            <div className="w-full h-[350px] md:h-[480px] rounded-[20px] overflow-hidden bg-slate-100 border border-[#E5E7EB] relative group shadow-[0_15px_45px_rgba(0,0,0,0.08)]">
-                                {activeMedia.type === 'video' ? (
-                                    <div className="w-full h-full relative">
-                                        <video
-                                            ref={videoRef}
-                                            src={activeMedia.url}
-                                            className="w-full h-full object-cover"
-                                            controls
-                                            poster={activeMedia.thumbnail}
-                                            autoPlay
-                                            muted
-                                        />
-                                    </div>
-                                ) : (
-                                    <img
-                                        src={activeMedia.url}
-                                        alt={turfData.name}
-                                        onError={(e) => {
-                                            e.currentTarget.onerror = null;
-                                            e.currentTarget.src = defaultFallbackImage;
-                                        }}
-                                        className="w-full h-full object-cover"
-                                    />
-                                )}
-                                <div className="absolute top-4 left-4 flex items-center gap-2 px-3 py-1.5 bg-white/90 backdrop-blur-md border border-[#E5E7EB] rounded-full shadow-xs">
-                                    <div className="w-2 h-2 rounded-full bg-[#16A34A] animate-pulse shadow-xs" />
-                                    <span className="text-[10px] font-black tracking-widest text-[#111827] uppercase">Live Feed</span>
-                                </div>
-                                {promo && (
-                                    <div className="absolute top-4 right-4 z-20 bg-white/90 backdrop-blur-md border border-[#E5E7EB] rounded-2xl px-3 py-2 flex flex-col shadow-xs pointer-events-none">
-                                        <span className="text-[10px] font-black text-amber-700 uppercase tracking-tight flex items-center gap-1.5 leading-none mb-1">
-                                            <span className="text-[12px]">{promo.icon}</span> {promo.text.includes('•') ? promo.text.split('•')[0].trim() : 'SPECIAL OFFER'}
-                                        </span>
-                                        <span className="text-[9px] font-bold text-[#111827] uppercase tracking-widest leading-none">
-                                            {promo.text.includes('•') ? promo.text.split('•')[1].trim() : promo.text}
-                                        </span>
-                                    </div>
-                                )}
-
-                                {/* Delete active photo/video action for owner/admin */}
-                                {(user?.role === 'TURF_OWNER' || user?.role === 'SUPER_ADMIN') && (
-                                    <button
-                                        onClick={handleDeleteActiveMedia}
-                                        className="absolute bottom-4 right-4 z-20 px-3 py-1.5 bg-red-500 hover:bg-red-600 backdrop-blur-md text-white text-[10px] font-black uppercase tracking-wider rounded-full transition-all flex items-center gap-1 shadow-sm hover:scale-105 cursor-pointer"
-                                        title="Delete this photo/video permanently"
-                                    >
-                                        <span>🗑️ Delete {activeMedia.type === 'video' ? 'Video' : 'Photo'}</span>
-                                    </button>
-                                )}
-                            </div>
-
-                             {/* Thumbnails */}
-                            <div className="flex gap-3 overflow-x-auto pb-2 custom-scrollbar">
-                                {turfData.media.map((media, i) => (
-                                    <button
-                                        key={i}
-                                        onClick={() => setSelectedMediaId(i)}
-                                        className={`flex-shrink-0 w-24 h-24 rounded-2xl overflow-hidden cursor-pointer transition-all relative border ${selectedMediaId === i ? 'border-[#16A34A] ring-2 ring-[#16A34A]/20 opacity-100 shadow-sm' : 'border-[#E5E7EB] opacity-60 hover:opacity-100'
-                                            }`}
-                                    >
-                                        {media.type === 'video' ? (
-                                            <div className="w-full h-full relative bg-slate-900">
-                                                <video src={media.url} className="w-full h-full object-cover" muted />
-                                                <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
-                                                    <span className="w-7 h-7 rounded-full bg-white/90 border border-[#E5E7EB] flex items-center justify-center text-[#111827] text-xs pl-0.5 shadow-xs">▶</span>
-                                                </div>
-                                            </div>
-                                        ) : (
-                                            <img
-                                                src={media.thumbnail || media.url || defaultFallbackImage}
-                                                alt={`Thumbnail ${i + 1}`}
-                                                onError={(e) => {
-                                                    e.currentTarget.onerror = null;
-                                                    e.currentTarget.src = defaultFallbackImage;
-                                                }}
-                                                className="w-full h-full object-cover"
-                                            />
-                                        )}
-                                    </button>
-                                ))}
-                            </div>
-
-                            {/* Media Upload / Manage Action */}
-                            <button
-                                onClick={() => setIsMediaModalOpen(true)}
-                                className="w-full py-3 px-4 bg-[#F7F9FC] hover:bg-green-50/60 border border-[#E5E7EB] hover:border-[#16A34A] text-[#111827] font-black text-xs uppercase tracking-wider rounded-[14px] transition-all flex items-center justify-between shadow-xs group cursor-pointer"
-                            >
-                                <span className="flex items-center gap-2">
-                                    <span>📸 🎥</span>
-                                    <span>Upload Photos & Videos</span>
-                                </span>
-                                <span className="text-[10px] bg-[#C8FF2E] border border-[#B5F000] px-2.5 py-1 rounded-full text-[#111827] font-black group-hover:bg-[#B5F000] transition-colors">
-                                    + Add / Manage
-                                </span>
-                            </button>
-                        </div>
+                        <TurfHeroGallery
+                            activeMedia={activeMedia}
+                            turfData={turfData}
+                            selectedMediaId={selectedMediaId}
+                            setSelectedMediaId={setSelectedMediaId}
+                            defaultFallbackImage={defaultFallbackImage}
+                            promo={promo}
+                        />
                     </div>
 
                     {/* Right Side: Information & Booking */}
@@ -1450,148 +1357,16 @@ export default function TurfDetailPage() {
                 ══════════════════════════════════════════════ */}
                 <div className="mt-16 space-y-16">
 
-                    {/* ── SECTION: WHAT THIS PLACE OFFERS ── */}
-                    <section className="relative">
-                        <SectionLabel accent="emerald">What This Place Offers</SectionLabel>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                            {features.map((f, i) => (
-                                <div
-                                    key={i}
-                                    className="group bg-white border border-[#E5E7EB] rounded-[18px] p-5 flex items-start gap-4 hover:border-[#16A34A]/40 hover:shadow-[0_15px_40px_rgba(0,0,0,0.06)] transition-all duration-300 hover:-translate-y-0.5"
-                                >
-                                    <div className="w-11 h-11 bg-green-50 border border-green-200 rounded-2xl flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform duration-300">
-                                        <f.icon className="w-5 h-5 text-[#16A34A]" />
-                                    </div>
-                                    <div>
-                                        <h3 className="text-xs font-black uppercase text-[#111827] tracking-wider mb-1">{f.label}</h3>
-                                        <p className="text-xs text-[#6B7280] font-semibold leading-relaxed">{f.desc}</p>
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    </section>
-
                     {/* ── SECTION: LOCATION & DIRECTIONS ── */}
-                    <section className="relative">
-                        <SectionLabel accent="blue">Location & Directions</SectionLabel>
-                        <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
-                            {/* Live Interactive Google Map Embed */}
-                            <div className="lg:col-span-3 relative rounded-[20px] overflow-hidden border border-[#E5E7EB] bg-white min-h-[350px] lg:h-auto group shadow-sm flex flex-col">
-                                <iframe
-                                    title={`Google Map - ${turfData.name}`}
-                                    width="100%"
-                                    height="100%"
-                                    className="w-full h-full min-h-[320px] rounded-[20px] border-0 filter contrast-105"
-                                    loading="lazy"
-                                    allowFullScreen
-                                    src={`https://maps.google.com/maps?q=${turfData.coordinates?.lat || 19.1136},${turfData.coordinates?.lng || 72.8697}&t=&z=15&ie=UTF-8&iwloc=&output=embed`}
-                                />
-                                <div className="p-4 bg-white/95 backdrop-blur border-t border-[#E5E7EB] flex flex-wrap items-center justify-between gap-3 z-10">
-                                    <div className="flex items-center gap-2 text-[#111827] text-xs font-bold truncate max-w-md">
-                                        <HiLocationMarker className="text-[#16A34A] w-5 h-5 shrink-0" />
-                                        <span className="truncate">{turfData.fullAddress}</span>
-                                    </div>
-                                    <a
-                                        href={`https://www.google.com/maps/dir/?api=1&destination=${turfData.coordinates?.lat || 19.1136},${turfData.coordinates?.lng || 72.8697}`}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="px-5 py-2.5 bg-[#C8FF2E] hover:bg-[#B5F000] text-[#111827] font-black text-xs uppercase tracking-wider rounded-full transition-all flex items-center gap-2 shadow-xs border border-[#B5F000]"
-                                    >
-                                        <span>Open in Google Maps</span>
-                                        <span className="text-base leading-none">↗</span>
-                                    </a>
-                                </div>
-                            </div>
-
-                            {/* Address & Landmarks */}
-                            <div className="lg:col-span-2 space-y-4">
-                                <div className="bg-white border border-[#E5E7EB] rounded-[18px] p-6 shadow-xs">
-                                    <h3 className="text-xs font-black uppercase text-[#16A34A] tracking-widest mb-3">Full Address</h3>
-                                    <p className="text-sm text-[#111827] font-bold leading-relaxed">{turfData.fullAddress}</p>
-                                </div>
-
-                                <div className="bg-white border border-[#E5E7EB] rounded-[18px] p-6 shadow-xs">
-                                    <h3 className="text-xs font-black uppercase text-[#16A34A] tracking-widest mb-3">Nearby Landmarks</h3>
-                                    <ul className="space-y-2.5">
-                                        {turfData.landmarks.map((lm, i) => (
-                                            <li key={i} className="flex items-center gap-2.5">
-                                                <span className="w-1.5 h-1.5 rounded-full bg-[#16A34A] shrink-0" />
-                                                <span className="text-xs text-[#4B5563] font-bold">{lm}</span>
-                                            </li>
-                                        ))}
-                                    </ul>
-                                </div>
-
-                                <div className="bg-white border border-[#E5E7EB] rounded-[18px] p-6 shadow-xs">
-                                    <h3 className="text-xs font-black uppercase text-[#16A34A] tracking-widest mb-2">Operating Hours</h3>
-                                    <div className="flex items-center gap-2.5">
-                                        <HiClock className="w-5 h-5 text-[#16A34A]" />
-                                        <span className="text-sm text-[#111827] font-black">{turfData.timing}</span>
-                                    </div>
-                                    <p className="text-xs text-[#6B7280] font-semibold mt-2">Open all days including weekends & public holidays</p>
-                                </div>
-                            </div>
-                        </div>
-                    </section>
+                    <TurfDirectionsMap turfData={turfData} />
 
                     {/* ── SECTION: REVIEWS ── */}
-                    <section className="relative">
-                        <SectionLabel accent="amber">Player Reviews</SectionLabel>
-                        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                            {/* Rating Summary Card */}
-                            <div className="bg-white border border-[#E5E7EB] rounded-[20px] p-7 flex flex-col items-center justify-center text-center shadow-xs">
-                                <div className="text-5xl font-black text-[#111827] mb-2">{turfData.rating}</div>
-                                <div className="flex gap-1 mb-3">
-                                    {[1, 2, 3, 4, 5].map(s => (
-                                        <HiStar key={s} className={`w-5 h-5 ${s <= Math.round(turfData.rating) ? 'text-amber-400' : 'text-slate-200'}`} />
-                                    ))}
-                                </div>
-                                <p className="text-xs text-[#6B7280] font-bold uppercase tracking-widest mb-6">Based on {totalReviews} reviews</p>
-
-                                {/* Rating Bars */}
-                                <div className="w-full space-y-2.5">
-                                    {ratingBreakdown.map(r => (
-                                        <div key={r.stars} className="flex items-center gap-3">
-                                            <span className="text-xs font-bold text-[#6B7280] w-3 text-right">{r.stars}</span>
-                                            <HiStar className="w-4 h-4 text-amber-400" />
-                                            <div className="flex-1 h-2.5 bg-slate-100 rounded-full overflow-hidden">
-                                                <div
-                                                    className="h-full bg-amber-400 rounded-full transition-all duration-700"
-                                                    style={{ width: `${(r.count / totalReviews) * 100}%` }}
-                                                />
-                                            </div>
-                                            <span className="text-xs font-bold text-[#6B7280] w-8 text-right">{r.count}</span>
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
-
-                            {/* Individual Reviews */}
-                            <div className="lg:col-span-2 space-y-4">
-                                {reviewsData.map(r => (
-                                    <div key={r.id} className="group bg-white border border-[#E5E7EB] rounded-[18px] p-5 hover:border-[#16A34A]/40 transition-all duration-300 shadow-xs">
-                                        <div className="flex items-start justify-between mb-3">
-                                            <div className="flex items-center gap-3">
-                                                <div className="w-10 h-10 rounded-full bg-slate-100 border border-[#E5E7EB] flex items-center justify-center text-lg">
-                                                    {r.avatar}
-                                                </div>
-                                                <div>
-                                                    <h4 className="text-sm font-black text-[#111827] mb-0.5">{r.name}</h4>
-                                                    <p className="text-xs text-[#6B7280] font-semibold">{r.date}</p>
-                                                </div>
-                                            </div>
-                                            <div className="flex gap-0.5">
-                                                {[1, 2, 3, 4, 5].map(s => (
-                                                    <HiStar key={s} className={`w-3.5 h-3.5 ${s <= r.rating ? 'text-amber-400' : 'text-slate-200'}`} />
-                                                ))}
-                                            </div>
-                                        </div>
-                                        <p className="text-xs sm:text-sm text-[#4B5563] leading-relaxed font-semibold">{r.text}</p>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-                    </section>
+                    <TurfReviewsSection
+                        ratingBreakdown={ratingBreakdown}
+                        totalReviews={totalReviews}
+                        turfData={turfData}
+                        reviewsList={reviewsData.map(r => ({ id: r.id, author: r.name, date: r.date, rating: r.rating, comment: r.text }))}
+                    />
 
                     {/* ── SECTION: MEET YOUR HOST ── */}
                     <section className="relative pb-10">
@@ -1613,7 +1388,7 @@ export default function TurfDetailPage() {
                                     )}
                                     {hostData.superhost && (
                                         <span className="inline-flex items-center gap-1 text-[11px] font-black uppercase tracking-wider text-purple-700 bg-purple-50 border border-purple-200 px-3 py-1 rounded-full">
-                                            <RiShieldStarFill className="w-3.5 h-3.5 text-purple-600" /> Superhost
+                                            <HiStar className="w-3.5 h-3.5 text-purple-600" /> Superhost
                                         </span>
                                     )}
                                 </div>
@@ -1677,76 +1452,17 @@ export default function TurfDetailPage() {
                 </div>
             </div>
             {/* Deployment Confirmation Modal */}
-            {bookingSuccessModal && deploymentDetails && (
-                <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/65 backdrop-blur-sm p-4">
-                    <div className="bg-white border border-[#E5E7EB] rounded-[24px] p-6 sm:p-8 max-w-md w-full shadow-2xl relative animate-in fade-in zoom-in-95 duration-200">
-                        <button
-                            onClick={() => setBookingSuccessModal(false)}
-                            className="absolute top-4 right-4 text-[#6B7280] hover:text-[#111827] transition-colors cursor-pointer"
-                        >
-                            <HiX className="w-5 h-5" />
-                        </button>
-
-                        <div className="w-12 h-12 rounded-full bg-green-50 border border-green-200 flex items-center justify-center mb-4 text-[#16A34A] mx-auto">
-                            <HiCheckCircle className="w-8 h-8" />
-                        </div>
-
-                        <h3 className="text-xl font-black italic text-center text-[#111827] tracking-wider uppercase mb-1">
-                            BOOKING CONFIRMED
-                        </h3>
-                        <p className="text-xs text-center text-[#16A34A] font-bold uppercase tracking-widest mb-6">
-                            Slot Successfully Locked
-                        </p>
-
-                        <div className="bg-[#F7F9FC] border border-[#E5E7EB] rounded-2xl p-4 space-y-3 mb-6 text-xs font-medium">
-                            <div className="flex justify-between border-b border-[#E5E7EB] pb-2">
-                                <span className="text-[#6B7280]">Booking ID</span>
-                                <span className="text-[#16A34A] font-mono font-bold">{deploymentDetails.deploymentId}</span>
-                            </div>
-                            <div className="flex justify-between border-b border-[#E5E7EB] pb-2">
-                                <span className="text-[#6B7280]">Sport</span>
-                                <span className="text-[#111827] font-bold">{deploymentDetails.sport}</span>
-                            </div>
-                            <div className="flex justify-between border-b border-[#E5E7EB] pb-2">
-                                <span className="text-[#6B7280]">Date & Time</span>
-                                <span className="text-[#111827] font-bold">{deploymentDetails.date} @ {deploymentDetails.time}</span>
-                            </div>
-                            <div className="flex justify-between pt-1">
-                                <span className="text-[#6B7280] font-bold uppercase">Total Amount</span>
-                                <span className="text-[#16A34A] text-sm font-black">₹{deploymentDetails.amount}</span>
-                            </div>
-                        </div>
-
-                        <div className="flex flex-col sm:flex-row gap-3">
-                            <button
-                                onClick={() => {
-                                    setBookingSuccessModal(false)
-                                    navigate('/customer/bookings')
-                                }}
-                                className="flex-1 py-3 px-4 bg-[#C8FF2E] hover:bg-[#B5F000] text-[#111827] font-black tracking-wider text-xs uppercase rounded-full transition-colors cursor-pointer text-center border border-[#B5F000]"
-                            >
-                                View My Bookings
-                            </button>
-                            <button
-                                onClick={() => {
-                                    setBookingSuccessModal(false)
-                                    setSelectedSlot(null)
-                                }}
-                                className="flex-1 py-3 px-4 bg-white hover:bg-slate-50 text-[#111827] font-bold text-xs uppercase tracking-wider rounded-full transition-colors cursor-pointer text-center border border-[#E5E7EB]"
-                            >
-                                Book Another
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
-
-            {/* Media Upload Modal */}
-            <MediaUploadModal
-                isOpen={isMediaModalOpen}
-                onClose={() => setIsMediaModalOpen(false)}
-                currentMedia={turfData.media}
-                onSaveMedia={handleSaveMedia}
+            <TurfBookingSuccessModal
+                isOpen={bookingSuccessModal && !!deploymentDetails}
+                onClose={() => setBookingSuccessModal(false)}
+                turfData={turfData}
+                selectedDateObj={selectedDateObj}
+                currentSlot={currentSlot}
+                totalRent={totalRent}
+                paymentMode={paymentMode}
+                bookingId={deploymentDetails?.deploymentId || bookingId}
+                navigate={navigate}
+                setSelectedSlot={setSelectedSlot}
             />
         </div>
     )

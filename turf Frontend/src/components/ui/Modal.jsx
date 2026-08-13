@@ -1,11 +1,17 @@
 import { useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import { HiX } from 'react-icons/hi'
 
 export default function Modal({ isOpen, onClose, title, children, size = 'md' }) {
     useEffect(() => {
-        if (isOpen) document.body.style.overflow = 'hidden'
-        else document.body.style.overflow = ''
-        return () => { document.body.style.overflow = '' }
+        if (isOpen) {
+            document.body.style.overflow = 'hidden'
+        } else {
+            document.body.style.overflow = ''
+        }
+        return () => {
+            document.body.style.overflow = ''
+        }
     }, [isOpen])
 
     if (!isOpen) return null
@@ -19,50 +25,39 @@ export default function Modal({ isOpen, onClose, title, children, size = 'md' })
         enterprise: 'max-w-[900px]'
     }
 
-    if (size === 'page') {
-        return (
-            <div className="fixed inset-0 z-[100]" style={{ left: '256px' }}>
-                <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-[10px]" style={{ left: '256px' }} onClick={onClose} />
-                <div className="relative bg-white h-full w-full flex flex-col fade-up overflow-hidden">
-                    <div className="flex items-center justify-between px-8 py-6 border-b border-slate-100 shrink-0">
-                        <h3 className="text-[32px] font-black text-slate-900 tracking-tight leading-none">{title}</h3>
-                        <button onClick={onClose} className="w-10 h-10 rounded-full hover:bg-slate-100 text-slate-400 hover:text-slate-700 hover:rotate-90 transition-all duration-300 flex items-center justify-center cursor-pointer">
-                            <HiX className="w-5 h-5" />
-                        </button>
-                    </div>
-                    <div className="flex-1 overflow-y-auto px-8 py-6">{children}</div>
-                </div>
-            </div>
-        )
-    }
+    const isEnterprise = size === 'enterprise' || size === 'lg' || size === 'xl'
 
-    const isEnterprise = size === 'enterprise' || size === 'lg'
-
-    return (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6 md:p-8">
-            {/* Overlay: rgba(15,23,42,0.40) + backdrop-blur 10px */}
+    const modalContent = (
+        <div className="fixed inset-0 z-[999999] flex items-center justify-center p-4 sm:p-6 md:p-8">
+            {/* Full-screen Backdrop: Blurs Top Nav Bar, Left Sidebar & All Page Content */}
             <div 
-                className="fixed inset-0 bg-slate-900/40 backdrop-blur-[10px] transition-opacity duration-300" 
+                className="fixed inset-0 bg-slate-950/65 transition-all duration-300 animate-in fade-in" 
+                style={{ 
+                    backdropFilter: 'blur(16px)', 
+                    WebkitBackdropFilter: 'blur(16px)' 
+                }}
                 onClick={onClose} 
             />
 
             {/* Modal Dialog Box */}
             <div 
-                style={isEnterprise ? {
-                    background: 'rgba(255, 255, 255, 0.92)',
-                    backdropFilter: 'blur(20px)',
-                    WebkitBackdropFilter: 'blur(20px)',
-                    border: '1px solid rgba(255, 255, 255, 0.7)',
-                    boxShadow: '0 30px 80px rgba(15, 23, 42, 0.15)'
-                } : {}}
-                className={`relative bg-white ${isEnterprise ? 'rounded-[28px]' : 'rounded-2xl shadow-2xl'} w-full ${sizes[size] || 'max-w-[900px]'} max-h-[90vh] overflow-hidden fade-up flex flex-col z-10`}
+                style={{
+                    background: 'rgba(255, 255, 255, 0.96)',
+                    backdropFilter: 'blur(24px)',
+                    WebkitBackdropFilter: 'blur(24px)',
+                    border: '1px solid rgba(255, 255, 255, 0.8)',
+                    boxShadow: '0 30px 90px rgba(15, 23, 42, 0.35)'
+                }}
+                className={`relative bg-white/95 rounded-[24px] w-full ${sizes[size] || 'max-w-[900px]'} max-h-[86vh] overflow-hidden flex flex-col z-10 my-auto shadow-2xl animate-in zoom-in-95 duration-200`}
             >
                 {/* Modal Header */}
-                <div className="flex items-center justify-between px-8 py-6 border-b border-slate-100/80 shrink-0">
-                    <h3 className="text-[28px] sm:text-[32px] font-black text-slate-900 tracking-tight leading-none">{title}</h3>
+                <div className="flex items-center justify-between px-6 sm:px-8 py-5 sm:py-6 border-b border-slate-200/80 shrink-0 bg-slate-50/50">
+                    <h3 className="text-lg sm:text-xl md:text-2xl font-black text-slate-900 tracking-tight leading-snug pr-4">
+                        {title}
+                    </h3>
                     <button 
                         onClick={onClose} 
-                        className="w-10 h-10 rounded-full hover:bg-slate-100/80 text-slate-400 hover:text-slate-800 hover:rotate-90 transition-all duration-300 flex items-center justify-center cursor-pointer shrink-0"
+                        className="w-10 h-10 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-slate-900 transition-all duration-200 flex items-center justify-center cursor-pointer shrink-0 border border-slate-200/60"
                         aria-label="Close modal"
                     >
                         <HiX className="w-5 h-5" />
@@ -70,10 +65,12 @@ export default function Modal({ isOpen, onClose, title, children, size = 'md' })
                 </div>
 
                 {/* Modal Body */}
-                <div className="px-8 py-6 overflow-y-auto max-h-[calc(90vh-90px)]" style={{ scrollbarWidth: 'thin' }}>
+                <div className="px-6 sm:px-8 py-6 overflow-y-auto max-h-[calc(86vh-85px)] custom-scrollbar">
                     {children}
                 </div>
             </div>
         </div>
     )
+
+    return createPortal(modalContent, document.body)
 }

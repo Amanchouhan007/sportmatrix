@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { HiTrash, HiPlus, HiPencil, HiCheckCircle, HiBan } from 'react-icons/hi'
+import { HiTrash, HiPlus, HiPencil, HiCheckCircle, HiBan, HiPhotograph, HiVideoCamera, HiUpload, HiStar, HiX, HiPlay } from 'react-icons/hi'
 
 import Button from '../../components/ui/Button'
 import Modal from '../../components/ui/Modal'
@@ -67,6 +67,113 @@ export default function SportsManagement() {
         const saved = localStorage.getItem('turf_umpire_enabled')
         return saved !== null ? saved === 'true' : true
     })
+
+    // Turf Media Gallery (Photos & Videos) Admin State
+    const [isMediaModalOpen, setIsMediaModalOpen] = useState(false)
+    const [mediaTab, setMediaTab] = useState('image') // 'image' | 'video'
+    const [mediaList, setMediaList] = useState(() => {
+        try {
+            const saved = localStorage.getItem('turf_media_custom')
+            return saved ? JSON.parse(saved) : [
+                { id: 'm1', type: 'image', url: '/images/turf1.png', title: 'Main Arena Floodlight View', isCover: true },
+                { id: 'm2', type: 'image', url: '/images/turf2.png', title: 'Synthetic Grass Pitch', isCover: false },
+                { id: 'm3', type: 'video', url: 'https://www.w3schools.com/html/mov_bbb.mp4', title: 'Full Arena Night Drone View', poster: '/images/turf3.png', isCover: false }
+            ]
+        } catch (e) {
+            return []
+        }
+    })
+
+    const [imageForm, setImageForm] = useState({ title: '', url: '' })
+    const [videoForm, setVideoForm] = useState({ title: '', url: '', poster: '' })
+
+    const handleFileUpload = (e, type) => {
+        const file = e.target.files?.[0]
+        if (!file) return
+        const reader = new FileReader()
+        reader.onloadend = () => {
+            if (type === 'image') {
+                setImageForm(prev => ({ ...prev, url: reader.result }))
+                addToast({ message: `Image "${file.name}" loaded. Click "Upload & Save Photo" below.`, type: 'info' })
+            } else if (type === 'video') {
+                setVideoForm(prev => ({ ...prev, url: reader.result }))
+                addToast({ message: `Video "${file.name}" loaded. Click "Upload & Save Video" below.`, type: 'info' })
+            }
+        }
+        reader.readAsDataURL(file)
+    }
+
+    const handleAddImage = (e) => {
+        e.preventDefault()
+        if (!imageForm.url.trim()) {
+            addToast({ message: 'Please select an image file or enter an image URL', type: 'error' })
+            return
+        }
+        const newItem = {
+            id: `m_${Date.now()}`,
+            type: 'image',
+            url: imageForm.url.trim(),
+            title: imageForm.title.trim() || 'Turf Photo',
+            isCover: mediaList.length === 0
+        }
+        const updated = [newItem, ...mediaList]
+        setMediaList(updated)
+        persistMedia(updated)
+        setImageForm({ title: '', url: '' })
+        addToast({ message: '📷 New photo added to turf gallery successfully!', type: 'success' })
+    }
+
+    const handleAddVideo = (e) => {
+        e.preventDefault()
+        if (!videoForm.url.trim()) {
+            addToast({ message: 'Please select a video file or enter a video URL', type: 'error' })
+            return
+        }
+        const newItem = {
+            id: `m_${Date.now()}`,
+            type: 'video',
+            url: videoForm.url.trim(),
+            title: videoForm.title.trim() || 'Turf Gameplay Video',
+            poster: videoForm.poster.trim() || '/images/turf1.png',
+            isCover: false
+        }
+        const updated = [newItem, ...mediaList]
+        setMediaList(updated)
+        persistMedia(updated)
+        setVideoForm({ title: '', url: '', poster: '' })
+        addToast({ message: '📹 New video added to turf gallery successfully!', type: 'success' })
+    }
+
+    const handleDeleteMedia = (id) => {
+        const updated = mediaList.filter(m => m.id !== id)
+        setMediaList(updated)
+        persistMedia(updated)
+        addToast({ message: 'Media item removed from gallery', type: 'info' })
+    }
+
+    const handleSetCover = (id) => {
+        const updated = mediaList.map(m => ({
+            ...m,
+            isCover: m.id === id
+        }))
+        setMediaList(updated)
+        persistMedia(updated)
+        addToast({ message: 'Main cover photo updated for turf page!', type: 'success' })
+    }
+
+    const persistMedia = (list) => {
+        try {
+            localStorage.setItem('turf_media_custom', JSON.stringify(list))
+            if (selectedBranchId) {
+                localStorage.setItem(`turf_media_${selectedBranchId}`, JSON.stringify(list))
+            }
+            for (let i = 1; i <= 20; i++) {
+                localStorage.setItem(`turf_media_${i}`, JSON.stringify(list))
+            }
+        } catch (e) {
+            console.error('Error saving media:', e)
+        }
+    }
 
     const handleToggleUmpireService = () => {
         const nextState = !isUmpireEnabled
@@ -441,9 +548,17 @@ export default function SportsManagement() {
                         </div>
                     )}
                 </div>
-                <Button onClick={() => { resetForm(); setEditMode(false); setModal(true); }} className="shadow-lg shadow-primary-500/10 cursor-pointer">
-                    <HiPlus className="w-5 h-5 mr-1" /> Add New Sport
-                </Button>
+                <div className="flex flex-wrap items-center gap-3">
+                    <Button
+                        onClick={() => setIsMediaModalOpen(true)}
+                        className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold cursor-pointer flex items-center gap-2 shadow-md"
+                    >
+                        <HiPhotograph className="w-5 h-5" /> Turf Gallery (Photos & Videos)
+                    </Button>
+                    <Button onClick={() => { resetForm(); setEditMode(false); setModal(true); }} className="shadow-lg shadow-primary-500/10 cursor-pointer">
+                        <HiPlus className="w-5 h-5 mr-1" /> Add New Sport
+                    </Button>
+                </div>
             </div>
 
             {/* 📊 TURF RATE CARD & DYNAMIC PRICING MATRIX */}
@@ -854,6 +969,220 @@ export default function SportsManagement() {
                             setQuickPricingModal(false);
                         }}>
                             Save Rates & Sync Booking Page
+                        </Button>
+                    </div>
+                </div>
+            </Modal>
+
+            {/* 📸 ADMIN TURF GALLERY (PHOTOS & VIDEOS UPLOADER) MODAL */}
+            <Modal
+                isOpen={isMediaModalOpen}
+                onClose={() => setIsMediaModalOpen(false)}
+                title="📸 Turf Media Gallery — Upload Photos & Videos"
+                size="xl"
+            >
+                <div className="space-y-6">
+                    {/* Media Type Selector Tabs */}
+                    <div className="flex items-center gap-2 bg-slate-100 p-1.5 rounded-2xl border border-slate-200">
+                        <button
+                            type="button"
+                            onClick={() => setMediaTab('image')}
+                            className={`flex-1 py-2.5 px-4 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center justify-center gap-2 cursor-pointer ${
+                                mediaTab === 'image'
+                                    ? 'bg-emerald-600 text-white shadow-sm'
+                                    : 'text-slate-600 hover:text-slate-900'
+                            }`}
+                        >
+                            <HiPhotograph className="w-4 h-4" /> Upload Turf Photos
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => setMediaTab('video')}
+                            className={`flex-1 py-2.5 px-4 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center justify-center gap-2 cursor-pointer ${
+                                mediaTab === 'video'
+                                    ? 'bg-emerald-600 text-white shadow-sm'
+                                    : 'text-slate-600 hover:text-slate-900'
+                            }`}
+                        >
+                            <HiVideoCamera className="w-4 h-4" /> Upload Turf Videos & Reels
+                        </button>
+                    </div>
+
+                    {/* PHOTO UPLOAD FORM */}
+                    {mediaTab === 'image' && (
+                        <form onSubmit={handleAddImage} className="bg-slate-50 border border-slate-200 rounded-2xl p-4 space-y-4">
+                            <h3 className="text-xs font-black uppercase text-slate-800 tracking-wider flex items-center gap-2">
+                                <HiUpload className="w-4 h-4 text-emerald-600" /> Upload New Turf Photo
+                            </h3>
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label className="block text-xs font-bold text-slate-700 mb-1">
+                                        Select Image File (Local PC)
+                                    </label>
+                                    <input
+                                        type="file"
+                                        accept="image/*"
+                                        onChange={(e) => handleFileUpload(e, 'image')}
+                                        className="w-full text-xs text-slate-600 file:mr-3 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-extrabold file:bg-emerald-600 file:text-white hover:file:bg-emerald-700 cursor-pointer bg-white border border-slate-200 rounded-xl p-1"
+                                    />
+                                </div>
+                                <Input
+                                    label="Photo Title / Description"
+                                    placeholder="e.g. Floodlight Arena Night View"
+                                    value={imageForm.title}
+                                    onChange={(e) => setImageForm({ ...imageForm, title: e.target.value })}
+                                />
+                            </div>
+
+                            <Input
+                                label="OR Image Web URL (Optional)"
+                                placeholder="https://domain.com/path-to-turf-photo.jpg"
+                                value={imageForm.url}
+                                onChange={(e) => setImageForm({ ...imageForm, url: e.target.value })}
+                            />
+
+                            {/* Image Preview Box */}
+                            {imageForm.url && (
+                                <div className="relative rounded-2xl overflow-hidden border border-emerald-300 max-h-48 bg-slate-900 flex items-center justify-center">
+                                    <img src={imageForm.url} alt="Preview" className="max-h-48 object-contain" />
+                                    <span className="absolute top-2 left-2 bg-emerald-600 text-white text-[10px] font-black px-2.5 py-1 rounded-full uppercase">
+                                        Photo Preview Ready
+                                    </span>
+                                </div>
+                            )}
+
+                            <div className="flex justify-end">
+                                <Button type="submit" className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold cursor-pointer">
+                                    <HiPlus className="w-4 h-4 mr-1" /> Add Photo to Turf Gallery
+                                </Button>
+                            </div>
+                        </form>
+                    )}
+
+                    {/* VIDEO UPLOAD FORM */}
+                    {mediaTab === 'video' && (
+                        <form onSubmit={handleAddVideo} className="bg-slate-50 border border-slate-200 rounded-2xl p-4 space-y-4">
+                            <h3 className="text-xs font-black uppercase text-slate-800 tracking-wider flex items-center gap-2">
+                                <HiVideoCamera className="w-4 h-4 text-emerald-600" /> Upload New Turf Video / Drone Tour
+                            </h3>
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label className="block text-xs font-bold text-slate-700 mb-1">
+                                        Select Video File (MP4, WEBM)
+                                    </label>
+                                    <input
+                                        type="file"
+                                        accept="video/*"
+                                        onChange={(e) => handleFileUpload(e, 'video')}
+                                        className="w-full text-xs text-slate-600 file:mr-3 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-extrabold file:bg-emerald-600 file:text-white hover:file:bg-emerald-700 cursor-pointer bg-white border border-slate-200 rounded-xl p-1"
+                                    />
+                                </div>
+                                <Input
+                                    label="Video Title / Description"
+                                    placeholder="e.g. 4K Drone View of Box Turf"
+                                    value={videoForm.title}
+                                    onChange={(e) => setVideoForm({ ...videoForm, title: e.target.value })}
+                                />
+                            </div>
+
+                            <Input
+                                label="OR Video Stream / YouTube MP4 URL"
+                                placeholder="https://domain.com/video-tour.mp4"
+                                value={videoForm.url}
+                                onChange={(e) => setVideoForm({ ...videoForm, url: e.target.value })}
+                            />
+
+                            {/* Video Preview Box */}
+                            {videoForm.url && (
+                                <div className="relative rounded-2xl overflow-hidden border border-emerald-300 max-h-56 bg-slate-900 flex items-center justify-center p-2">
+                                    <video src={videoForm.url} controls className="max-h-48 rounded-xl" />
+                                </div>
+                            )}
+
+                            <div className="flex justify-end">
+                                <Button type="submit" className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold cursor-pointer">
+                                    <HiPlus className="w-4 h-4 mr-1" /> Add Video to Turf Gallery
+                                </Button>
+                            </div>
+                        </form>
+                    )}
+
+                    {/* LIVE MEDIA GALLERY GRID PREVIEW & MANAGEMENT */}
+                    <div className="space-y-3 pt-2">
+                        <div className="flex items-center justify-between">
+                            <h3 className="text-xs font-black uppercase text-slate-800 tracking-wider">
+                                Active Media Gallery ({mediaList.length} Items)
+                            </h3>
+                            <span className="text-[10px] bg-emerald-100 text-emerald-800 font-bold px-2.5 py-1 rounded-full">
+                                Auto-Synced with Booking Page
+                            </span>
+                        </div>
+
+                        {mediaList.length === 0 ? (
+                            <div className="p-8 text-center bg-slate-50 border border-slate-200 rounded-2xl text-slate-500 text-xs font-medium">
+                                No turf media uploaded yet. Use the form above to add photos and videos.
+                            </div>
+                        ) : (
+                            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 max-h-96 overflow-y-auto pr-1">
+                                {mediaList.map((item) => (
+                                    <div key={item.id} className="relative group bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-xs hover:border-emerald-500 transition-all flex flex-col justify-between">
+                                        <div className="relative aspect-video bg-slate-900 flex items-center justify-center overflow-hidden">
+                                            {item.type === 'video' ? (
+                                                <video src={item.url} poster={item.poster} className="w-full h-full object-cover" />
+                                            ) : (
+                                                <img src={item.url} alt={item.title} className="w-full h-full object-cover" />
+                                            )}
+
+                                            <span className={`absolute top-2 left-2 text-[10px] font-black px-2 py-0.5 rounded-full flex items-center gap-1 text-white shadow-xs ${
+                                                item.type === 'video' ? 'bg-amber-600' : 'bg-emerald-600'
+                                            }`}>
+                                                {item.type === 'video' ? <HiVideoCamera className="w-3 h-3" /> : <HiPhotograph className="w-3 h-3" />}
+                                                {item.type === 'video' ? 'VIDEO' : 'PHOTO'}
+                                            </span>
+
+                                            {item.isCover && (
+                                                <span className="absolute top-2 right-2 bg-yellow-400 text-slate-900 text-[10px] font-black px-2 py-0.5 rounded-full flex items-center gap-1 shadow-xs">
+                                                    <HiStar className="w-3 h-3 text-slate-900" /> MAIN COVER
+                                                </span>
+                                            )}
+                                        </div>
+
+                                        <div className="p-3 bg-white space-y-2">
+                                            <p className="text-xs font-bold text-slate-800 truncate">{item.title}</p>
+                                            <div className="flex items-center justify-between pt-1 border-t border-slate-100">
+                                                {item.type === 'image' && !item.isCover && (
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => handleSetCover(item.id)}
+                                                        className="text-[10px] font-bold text-emerald-700 hover:text-emerald-900 hover:underline cursor-pointer"
+                                                    >
+                                                        Set Main Cover
+                                                    </button>
+                                                )}
+                                                <button
+                                                    type="button"
+                                                    onClick={() => handleDeleteMedia(item.id)}
+                                                    className="text-[10px] font-bold text-rose-600 hover:text-rose-800 hover:underline flex items-center gap-0.5 ml-auto cursor-pointer"
+                                                >
+                                                    <HiTrash className="w-3 h-3" /> Delete
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+
+                    <div className="flex justify-end pt-3 border-t border-slate-200">
+                        <Button onClick={() => {
+                            persistMedia(mediaList);
+                            addToast({ message: `Turf media gallery saved and synced with public website!`, type: 'success' });
+                            setIsMediaModalOpen(false);
+                        }} className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold cursor-pointer">
+                            Done & Sync to Turf Website
                         </Button>
                     </div>
                 </div>
