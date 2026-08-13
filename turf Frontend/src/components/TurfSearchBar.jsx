@@ -302,11 +302,11 @@ export default function TurfSearchBar({ onSearch, values, onChange, onClear }) {
         <div className="w-full max-w-[880px] mx-auto relative z-40 select-none">
             <div 
                 style={{
-                    background: 'rgba(255, 255, 255, 0.95)',
-                    border: '1px solid rgba(95, 210, 120, 0.12)',
-                    boxShadow: '0 20px 45px rgba(20, 80, 20, 0.08)'
+                    background: 'rgba(255, 255, 255, 0.98)',
+                    border: '1px solid rgba(22, 163, 74, 0.25)',
+                    boxShadow: '0 20px 45px rgba(22, 163, 74, 0.08), 0 4px 12px rgba(0, 0, 0, 0.03)'
                 }}
-                className="relative rounded-[16px] lg:rounded-full p-1 flex flex-col lg:flex-row items-stretch justify-between lg:h-[60px] gap-1.5 lg:gap-0 transition-all duration-300 hover:border-[#16A34A]/40 focus-within:border-[#16A34A]"
+                className="relative rounded-[16px] lg:rounded-full p-1 flex flex-col lg:flex-row items-stretch justify-between lg:h-[60px] gap-1.5 lg:gap-0 transition-all duration-300 hover:border-[#16A34A]/60 focus-within:border-[#16A34A]"
             >
                 
                 {/* 1. CITY */}
@@ -436,8 +436,8 @@ export default function TurfSearchBar({ onSearch, values, onChange, onClear }) {
                                         type="button"
                                         className={`px-3 py-1 rounded-full text-[10px] font-black transition-all border shadow-xs cursor-pointer ${
                                             date === opt.v
-                                                ? 'bg-[#C8FF2E] text-[#111827] border-[#B5F000] shadow-[0_2px_8px_rgba(200,255,46,0.35)]'
-                                                : 'bg-white hover:bg-[#C8FF2E] text-[#111827] border-[#E5E7EB] hover:border-[#B5F000]'
+                                                ? 'bg-[#16A34A] text-white border-[#15803D] shadow-[0_2px_8px_rgba(22,163,74,0.35)]'
+                                                : 'bg-white hover:bg-emerald-50 text-[#111827] border-[#E5E7EB] hover:border-[#16A34A]'
                                         }`}
                                         onClick={() => selectDate(opt.v)}
                                     >
@@ -537,8 +537,9 @@ export default function TurfSearchBar({ onSearch, values, onChange, onClear }) {
                 <div className="flex items-center shrink-0 justify-center h-full pl-1.5 pr-0.5 py-0.5 mt-1 lg:mt-0">
                     <button
                         onClick={() => onSearch?.({ location, sport, date, time, players })}
-                        className="w-full lg:w-auto h-full px-6 py-2 bg-[#C8FF2E] hover:bg-[#B5F000] text-[#111827] font-black rounded-full transition-all shadow-[0_6px_18px_rgba(200,255,46,0.35)] hover:shadow-[0_8px_22px_rgba(200,255,46,0.5)] hover:scale-[1.04] active:scale-95 flex items-center justify-center cursor-pointer min-h-[44px] lg:min-h-full border border-[#B5F000]"
+                        className="w-full lg:w-auto h-full px-7 py-2 bg-[#16A34A] hover:bg-[#15803D] text-white font-black rounded-full transition-all shadow-[0_6px_20px_rgba(22,163,74,0.35)] hover:shadow-[0_8px_25px_rgba(22,163,74,0.5)] hover:scale-[1.04] active:scale-95 flex items-center justify-center gap-1.5 cursor-pointer min-h-[44px] lg:min-h-full border border-[#15803D]"
                     >
+                        <IoSearch className="w-4 h-4 text-white shrink-0" />
                         <span className="text-[12px] font-black uppercase tracking-wider">SEARCH</span>
                     </button>
                 </div>

@@ -260,8 +260,9 @@ export default function TournamentSearchBar() {
                 {/* SEARCH BUTTON */}
                 <div className="flex items-center shrink-0 justify-center h-full p-1 mt-2 md:mt-0 md:col-span-2 lg:col-span-1 lg:mt-0">
                     <button
-                        className="w-full lg:w-auto h-full px-8 py-3 bg-[#C8FF2E] hover:bg-[#B5F000] text-[#111827] border border-[#B5F000] font-black text-xs uppercase tracking-wider rounded-xl transition-all shadow-sm active:scale-95 flex items-center justify-center cursor-pointer min-h-[44px] lg:min-h-full"
+                        className="w-full lg:w-auto h-full px-8 py-3 bg-[#16A34A] hover:bg-[#15803D] text-white border border-[#15803D] font-black text-xs uppercase tracking-wider rounded-xl transition-all shadow-[0_6px_20px_rgba(22,163,74,0.35)] hover:shadow-[0_8px_25px_rgba(22,163,74,0.5)] active:scale-95 flex items-center justify-center gap-1.5 cursor-pointer min-h-[44px] lg:min-h-full"
                     >
+                        <IoSearch className="w-4 h-4 text-white shrink-0" />
                         Search
                     </button>
                 </div>
