@@ -1,5 +1,5 @@
 import { lazy, Suspense } from 'react'
-import { BrowserRouter, Routes, Route } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { ToastProvider } from './components/ui/Toast'
 import PageLoader from './components/ui/PageLoader'
 import { AuthProvider } from './context/AuthContext'
@@ -128,8 +128,8 @@ export default function App() {
               <Route path="/tournaments/:id" element={<WebsiteLayout><TournamentDetailPage /></WebsiteLayout>} />
               <Route path="/membership" element={<WebsiteLayout><MembershipPage /></WebsiteLayout>} />
               <Route path="/leaderboard" element={<WebsiteLayout><PlayerLeaderboardPage /></WebsiteLayout>} />
+              <Route path="/leaderboards" element={<Navigate to="/leaderboard" replace />} />
               <Route path="/contact" element={<WebsiteLayout><ContactPage /></WebsiteLayout>} />
-              <Route path="/leaderboards" element={<WebsiteLayout><PlayerLeaderboardPage /></WebsiteLayout>} />
 
               {/* Super Admin Dashboard */}
               <Route path="/super-admin" element={<ProtectedRoute allowedRoles={['SUPER_ADMIN']}><DashboardLayout role="superadmin" /></ProtectedRoute>}>
@@ -236,8 +236,8 @@ export default function App() {
               </Route>
 
               {/* Official Umpire & Live Match Referee Portal */}
-              <Route path="/umpire" element={<UmpireDashboard />} />
-              <Route path="/umpire/*" element={<UmpireDashboard />} />
+              <Route path="/umpire" element={<ProtectedRoute allowedRoles={['UMPIRE', 'SUPER_ADMIN', 'OWNER', 'STAFF']}><UmpireDashboard /></ProtectedRoute>} />
+              <Route path="/umpire/*" element={<ProtectedRoute allowedRoles={['UMPIRE', 'SUPER_ADMIN', 'OWNER', 'STAFF']}><UmpireDashboard /></ProtectedRoute>} />
 
               {/* 404 */}
               <Route path="*" element={<NotFoundPage />} />

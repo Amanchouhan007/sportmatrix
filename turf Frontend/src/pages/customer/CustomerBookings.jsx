@@ -23,19 +23,23 @@ export default function CustomerBookings() {
             const currentEmail = (user?.email || '').toLowerCase()
             const currentUserId = user?.id || ''
             const currentPhone = user?.phone || user?.mobile || ''
+            const cleanCurrentPhone = currentPhone.replace(/\D/g, '').slice(-10)
 
             return parsed.filter(b => {
                 const bEmail = (b.userEmail || '').toLowerCase()
                 const bUserId = b.userId || ''
                 const bPhone = b.customerPhone || b.phone || ''
+                const cleanBPhone = bPhone.replace(/\D/g, '').slice(-10)
 
                 // Check exact email match
                 if (currentEmail && bEmail && bEmail === currentEmail) return true
                 // Check exact user ID match
                 if (currentUserId && bUserId && bUserId === currentUserId) return true
-                // Check phone match
-                if (currentPhone && bPhone && bPhone === currentPhone) return true
-                // If the booking has no user attached and current user is default demo customer
+                // Check sanitized phone match (e.g. "+91 98765 43210" matches "9876543210")
+                if (cleanCurrentPhone && cleanBPhone && cleanBPhone === cleanCurrentPhone) return true
+                // Check guest email match derived from phone (e.g. "9876543210@guest.com")
+                if (cleanCurrentPhone && bEmail && bEmail.includes(cleanCurrentPhone)) return true
+                // Fallback for demo customer profile or unassigned guest booking
                 if (!bEmail && !bUserId && currentEmail === 'customer@gmail.com') return true
 
                 return false
@@ -102,7 +106,8 @@ export default function CustomerBookings() {
                 if (user?.email) queryParams.append('userEmail', user.email)
                 if (user?.role) queryParams.append('role', user.role)
 
-                const res = await fetch(`http://localhost:5000/api/v1/bookings/history?${queryParams.toString()}`, {
+                const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000/api/v1'
+                const res = await fetch(`${baseUrl}/bookings/history?${queryParams.toString()}`, {
                     headers: token ? { 'Authorization': `Bearer ${token}` } : {}
                 })
                 const data = await res.json()

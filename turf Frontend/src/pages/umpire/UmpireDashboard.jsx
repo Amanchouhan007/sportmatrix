@@ -273,11 +273,7 @@ export default function UmpireDashboard() {
     const [tossDecision, setTossDecision] = useState({
         winnerTeam: '',
         electedTo: 'bat', // 'bat' | 'bowl'
-        tossMode: 'system', // 'system' | 'manual'
-        callingTeam: '',
-        callingCall: 'HEADS', // 'HEADS' | 'TAILS'
-        coinFlipping: false,
-        coinResult: null // 'HEADS' | 'TAILS'
+        tossMode: 'manual'
     })
 
     // Official Payment Receipt Modal State
@@ -401,34 +397,8 @@ export default function UmpireDashboard() {
         setTossDecision({
             winnerTeam: match.teamA?.name || '',
             electedTo: 'bat',
-            tossMode: 'system',
-            callingTeam: match.teamA?.name || '',
-            callingCall: 'HEADS',
-            coinFlipping: false,
-            coinResult: null
+            tossMode: 'manual'
         })
-    }
-
-    // Flip Coin Simulation (System Toss Mode)
-    const handleFlipCoin = () => {
-        setTossDecision(prev => ({ ...prev, coinFlipping: true, coinResult: null }))
-        setTimeout(() => {
-            const result = Math.random() > 0.5 ? 'HEADS' : 'TAILS'
-            const caller = tossDecision.callingTeam || tossMatch?.teamA?.name || ''
-            const call = tossDecision.callingCall || 'HEADS'
-            const isCallerWinner = call === result
-            const winner = isCallerWinner
-                ? caller
-                : (caller === tossMatch?.teamA?.name ? tossMatch?.teamB?.name : tossMatch?.teamA?.name)
-
-            setTossDecision(prev => ({
-                ...prev,
-                coinFlipping: false,
-                coinResult: result,
-                winnerTeam: winner
-            }))
-            if (addToast) addToast(`🪙 Coin Result: ${result}! Toss won by ${winner}!`, 'info')
-        }, 1000)
     }
 
     // Confirm Toss Decision & Launch Live Scoring Desk
@@ -442,7 +412,7 @@ export default function UmpireDashboard() {
             ? winner
             : (winner === tossMatch.teamA?.name ? tossMatch.teamB?.name : tossMatch.teamA?.name)
         
-        const tossSummaryText = `${winner} won toss (${tossDecision.tossMode === 'system' ? 'System Coin' : 'Manual'}) & elected to ${isBatting ? 'Bat' : 'Bowl'} first`
+        const tossSummaryText = `${winner} won toss & elected to ${isBatting ? 'Bat' : 'Bowl'} first`
 
         const updatedMatches = matches.map(m => {
             if (m.id === tossMatch.id) {
@@ -1367,104 +1337,15 @@ export default function UmpireDashboard() {
                             </div>
                         </div>
 
-                        {/* TOSS METHOD SELECTOR TOGGLE (System Flip vs Manual Toss) */}
-                        <div className="space-y-1.5">
-                            <label className="text-xs font-black uppercase text-slate-700 tracking-wider block">
-                                Choose Toss Mode:
-                            </label>
-                            <div className="grid grid-cols-2 gap-2 bg-slate-100 p-1 rounded-2xl border border-slate-200">
-                                <button
-                                    type="button"
-                                    onClick={() => setTossDecision(prev => ({ ...prev, tossMode: 'system' }))}
-                                    className={`py-2 px-3 rounded-xl text-xs font-black transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
-                                        tossDecision.tossMode === 'system'
-                                            ? 'bg-white text-amber-900 shadow-sm border border-amber-300 font-extrabold'
-                                            : 'text-slate-600 hover:text-slate-900'
-                                    }`}
-                                >
-                                    <span>🪙 System Coin Toss (Digital Flip)</span>
-                                </button>
-                                <button
-                                    type="button"
-                                    onClick={() => setTossDecision(prev => ({ ...prev, tossMode: 'manual' }))}
-                                    className={`py-2 px-3 rounded-xl text-xs font-black transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
-                                        tossDecision.tossMode === 'manual'
-                                            ? 'bg-white text-emerald-900 shadow-sm border border-emerald-300 font-extrabold'
-                                            : 'text-slate-600 hover:text-slate-900'
-                                    }`}
-                                >
-                                    <span>✋ Manual Toss (On-Field Coin)</span>
-                                </button>
+                        {/* MANUAL ON-FIELD TOSS SELECTION */}
+                        <div className="bg-emerald-50/60 border-2 border-emerald-300/80 rounded-2xl p-4 space-y-2">
+                            <div className="text-xs font-black text-emerald-950 uppercase tracking-wider flex items-center gap-1.5">
+                                <span>✋</span> Manual On-Field Coin Toss Selection
                             </div>
+                            <p className="text-[11px] text-slate-600 font-medium">
+                                Coin flipped on the ground by captain. Select the verified winner team and decision below:
+                            </p>
                         </div>
-
-                        {/* MODE A: SYSTEM DIGITAL COIN TOSS */}
-                        {tossDecision.tossMode === 'system' ? (
-                            <div className="bg-gradient-to-br from-amber-50 to-yellow-50 border-2 border-amber-300/80 rounded-2xl p-4 text-center space-y-4">
-                                <div className="flex flex-col sm:flex-row items-center justify-between text-xs text-left bg-white p-3 rounded-xl border border-amber-200 gap-2">
-                                    <div>
-                                        <span className="text-[10px] font-black uppercase text-slate-400 block">Calling Captain & Call</span>
-                                        <div className="flex items-center gap-2 mt-1">
-                                            <select
-                                                value={tossDecision.callingTeam}
-                                                onChange={e => setTossDecision(prev => ({ ...prev, callingTeam: e.target.value }))}
-                                                className="bg-slate-50 border border-slate-300 rounded-lg text-xs font-black px-2.5 py-1 text-slate-900 outline-none"
-                                            >
-                                                <option value={tossMatch.teamA?.name}>{tossMatch.teamA?.name}</option>
-                                                <option value={tossMatch.teamB?.name}>{tossMatch.teamB?.name}</option>
-                                            </select>
-                                            <select
-                                                value={tossDecision.callingCall}
-                                                onChange={e => setTossDecision(prev => ({ ...prev, callingCall: e.target.value }))}
-                                                className="bg-amber-100 border border-amber-300 rounded-lg text-xs font-mono font-black px-2.5 py-1 text-amber-950 outline-none"
-                                            >
-                                                <option value="HEADS">HEADS</option>
-                                                <option value="TAILS">TAILS</option>
-                                            </select>
-                                        </div>
-                                    </div>
-                                    <button
-                                        type="button"
-                                        disabled={tossDecision.coinFlipping}
-                                        onClick={handleFlipCoin}
-                                        className="px-4 py-2 rounded-xl bg-amber-400 hover:bg-amber-500 active:scale-95 text-slate-950 font-black text-xs uppercase tracking-wider transition-all cursor-pointer shadow-sm disabled:opacity-50 whitespace-nowrap self-stretch sm:self-auto"
-                                    >
-                                        {tossDecision.coinFlipping ? 'Flipping...' : '🪙 Spin Coin'}
-                                    </button>
-                                </div>
-
-                                {/* Animated Coin Display */}
-                                <div className="flex items-center justify-center gap-3">
-                                    <div className={`w-16 h-16 rounded-full bg-gradient-to-br from-amber-400 via-yellow-400 to-amber-500 shadow-lg border-2 border-amber-300 flex items-center justify-center text-3xl font-black text-slate-950 transition-transform ${
-                                        tossDecision.coinFlipping ? 'animate-spin' : ''
-                                    }`}>
-                                        🪙
-                                    </div>
-                                    <div className="text-left">
-                                        <span className="text-[10px] font-black uppercase tracking-wider text-amber-900 block">
-                                            System Coin Toss Result
-                                        </span>
-                                        <div className="text-base font-black text-[#111827]">
-                                            {tossDecision.coinFlipping 
-                                                ? 'Spinning Coin in Air...' 
-                                                : tossDecision.coinResult 
-                                                ? `Landed on: ${tossDecision.coinResult}!` 
-                                                : 'Ready for Flip'}
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        ) : (
-                            /* MODE B: MANUAL ON-FIELD TOSS */
-                            <div className="bg-emerald-50/60 border-2 border-emerald-300/80 rounded-2xl p-4 space-y-2">
-                                <div className="text-xs font-black text-emerald-950 uppercase tracking-wider flex items-center gap-1.5">
-                                    <span>✋</span> Manual On-Field Coin Toss Selection
-                                </div>
-                                <p className="text-[11px] text-slate-600 font-medium">
-                                    If coin was flipped on the ground by captain, select the verified winner team and decision below:
-                                </p>
-                            </div>
-                        )}
 
                         {/* Step 1: Who won the toss? */}
                         <div className="space-y-2">
@@ -1562,7 +1443,7 @@ export default function UmpireDashboard() {
                         <div className="p-3.5 bg-emerald-50 border border-emerald-300 rounded-2xl text-xs font-bold text-emerald-950 flex items-center gap-2.5 shadow-2xs">
                             <span className="text-xl">📢</span>
                             <div>
-                                <strong>{tossDecision.winnerTeam || tossMatch.teamA?.name}</strong> won the toss ({tossDecision.tossMode === 'system' ? 'System Coin' : 'Manual'}) and elected to <strong className="uppercase underline text-emerald-900">{tossDecision.electedTo === 'bat' ? 'BAT' : 'BOWL'}</strong> first!
+                                <strong>{tossDecision.winnerTeam || tossMatch.teamA?.name}</strong> won the toss and elected to <strong className="uppercase underline text-emerald-900">{tossDecision.electedTo === 'bat' ? 'BAT' : 'BOWL'}</strong> first!
                             </div>
                         </div>
 
