@@ -2,6 +2,7 @@ import { NavLink, useNavigate, useLocation } from 'react-router-dom'
 import { useState, useEffect } from 'react'
 import { HiMenu, HiX } from 'react-icons/hi'
 import Button from '../components/ui/Button'
+import FloatingActions from '../components/tournaments/FloatingActions'
 
 const navLinks = [
     { label: 'Home', to: '/' },
@@ -200,6 +201,9 @@ export default function WebsiteLayout({ children }) {
                     </div>
                 </div>
             </footer>
+
+            {/* Floating Actions Desk */}
+            <FloatingActions />
         </div>
     )
 }

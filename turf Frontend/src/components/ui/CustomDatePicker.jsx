@@ -1,9 +1,12 @@
 import { useState, useRef, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import { FiCalendar, FiChevronLeft, FiChevronRight, FiX } from 'react-icons/fi'
 
 export default function CustomDatePicker({ value, onChange, placeholder = 'Select date', label, align = 'right', className = '' }) {
     const [isOpen, setIsOpen] = useState(false)
+    const [coords, setCoords] = useState({ top: 0, left: 0, width: 0, positionAbove: false })
     const containerRef = useRef(null)
+    const buttonRef = useRef(null)
 
     // Current displayed month & year in calendar popup
     const initialDate = value ? new Date(value) : new Date()
@@ -19,14 +22,47 @@ export default function CustomDatePicker({ value, onChange, placeholder = 'Selec
     }, [value])
 
     useEffect(() => {
+        const updateCoords = () => {
+            if (isOpen && buttonRef.current) {
+                const rect = buttonRef.current.getBoundingClientRect()
+                const spaceBelow = window.innerHeight - rect.bottom
+                const positionAbove = spaceBelow < 300 && rect.top > 300
+                setCoords({
+                    top: positionAbove ? rect.top : rect.bottom,
+                    left: align === 'right' ? Math.max(10, rect.right - 260) : rect.left,
+                    width: rect.width,
+                    positionAbove
+                })
+            }
+        }
+
+        if (isOpen) {
+            updateCoords()
+            window.addEventListener('scroll', updateCoords, true)
+            window.addEventListener('resize', updateCoords)
+        }
+
+        return () => {
+            window.removeEventListener('scroll', updateCoords, true)
+            window.removeEventListener('resize', updateCoords)
+        }
+    }, [isOpen, align])
+
+    useEffect(() => {
         const handleClickOutside = (e) => {
-            if (containerRef.current && !containerRef.current.contains(e.target)) {
+            if (
+                containerRef.current &&
+                !containerRef.current.contains(e.target) &&
+                !e.target.closest('.custom-datepicker-portal')
+            ) {
                 setIsOpen(false)
             }
         }
-        document.addEventListener('mousedown', handleClickOutside)
+        if (isOpen) {
+            document.addEventListener('mousedown', handleClickOutside)
+        }
         return () => document.removeEventListener('mousedown', handleClickOutside)
-    }, [])
+    }, [isOpen])
 
     const year = viewDate.getFullYear()
     const month = viewDate.getMonth()
@@ -62,15 +98,23 @@ export default function CustomDatePicker({ value, onChange, placeholder = 'Selec
         return d.toLocaleDateString('en-US', { day: '2-digit', month: 'short', year: 'numeric' })
     }
 
-    const selectedDateStr = value ? new Date(value).toISOString().split('T')[0] : ''
-    const todayStr = new Date().toISOString().split('T')[0]
-    const alignClass = align === 'left' ? 'left-0' : 'right-0'
+    const getLocalDateStr = (d) => {
+        if (!d || isNaN(d.getTime())) return ''
+        const y = d.getFullYear()
+        const m = String(d.getMonth() + 1).padStart(2, '0')
+        const day = String(d.getDate()).padStart(2, '0')
+        return `${y}-${m}-${day}`
+    }
+
+    const selectedDateStr = value ? getLocalDateStr(new Date(value)) : ''
+    const todayStr = getLocalDateStr(new Date())
 
     return (
         <div ref={containerRef} className={`relative ${className}`}>
             {label && <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 block">{label}</label>}
             
             <button
+                ref={buttonRef}
                 type="button"
                 onClick={() => setIsOpen(!isOpen)}
                 className={`h-[42px] px-3.5 rounded-xl border ${
@@ -94,8 +138,15 @@ export default function CustomDatePicker({ value, onChange, placeholder = 'Selec
                 )}
             </button>
 
-            {isOpen && (
-                <div className={`absolute top-full ${alignClass} mt-2 z-[9999] w-64 max-w-[90vw] bg-white border border-slate-200/90 rounded-2xl shadow-[0_20px_45px_rgba(0,0,0,0.14)] p-3.5 animate-in fade-in zoom-in-95 duration-150`}>
+            {isOpen && createPortal(
+                <div
+                    className="custom-datepicker-portal fixed z-[999999] w-64 max-w-[90vw] bg-white border border-slate-200/90 rounded-2xl shadow-[0_20px_45px_rgba(0,0,0,0.18)] p-3.5 animate-in fade-in zoom-in-95 duration-150"
+                    style={{
+                        top: coords.positionAbove ? 'auto' : `${coords.top + 6}px`,
+                        bottom: coords.positionAbove ? `${window.innerHeight - coords.top + 6}px` : 'auto',
+                        left: `${coords.left}px`
+                    }}
+                >
                     {/* Month / Year Header */}
                     <div className="flex items-center justify-between pb-3 border-b border-slate-100 mb-3">
                         <button type="button" onClick={handlePrevMonth} className="p-1.5 rounded-xl text-slate-500 hover:bg-emerald-50 hover:text-[#16A34A] transition-colors cursor-pointer">
@@ -175,7 +226,8 @@ export default function CustomDatePicker({ value, onChange, placeholder = 'Selec
                             ● Today
                         </button>
                     </div>
-                </div>
+                </div>,
+                document.body
             )}
         </div>
     )

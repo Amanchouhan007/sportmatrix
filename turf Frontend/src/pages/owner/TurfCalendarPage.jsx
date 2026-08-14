@@ -182,8 +182,9 @@ export default function TurfCalendarPage() {
         }
     }, [turfs, selectedTurfId])
 
+    const todayStr = new Date().toISOString().split('T')[0]
     const [selectedSportFilter, setSelectedSportFilter] = useState('ALL') // 'ALL' or sportId
-    const [currentDate, setCurrentDate] = useState('2026-08-08')
+    const [currentDate, setCurrentDate] = useState(todayStr)
     const [viewMode, setViewMode] = useState('Day') // 'Day' | 'Week' | 'Month'
 
     // ── Slots & Bookings Master State ──
@@ -344,7 +345,33 @@ export default function TurfCalendarPage() {
 
     // Filtered slots for current date & turf
     const activeSlots = useMemo(() => {
-        return slotsData.filter(s => s.turfId === selectedTurfId && s.date === currentDate)
+        const directMatch = slotsData.filter(s => s.turfId === selectedTurfId && s.date === currentDate)
+        if (directMatch.length > 0) return directMatch
+
+        return TIME_SLOTS.map(t => {
+            if (t.id === '08:00') {
+                return { id: `slot-${selectedTurfId}-${currentDate}-08:00`, turfId: selectedTurfId, date: currentDate, timeId: '08:00', status: 'Booked', bookedSportId: 'sp-cricket', booking: { id: 'BK-901', customerName: 'Rahul Sharma', phone: '+91 98765 12345', email: 'rahul@gmail.com', sportName: 'Cricket 🏏', amount: 1000, paidAmount: 1000, paymentStatus: 'Paid', paymentMethod: 'UPI', status: 'Confirmed', invoiceNo: 'INV-2026-081' } }
+            }
+            if (t.id === '09:00') {
+                return { id: `slot-${selectedTurfId}-${currentDate}-09:00`, turfId: selectedTurfId, date: currentDate, timeId: '09:00', status: 'Blocked', blockReason: 'Maintenance', blockNotes: 'Ground leveling & net repair' }
+            }
+            if (t.id === '17:00') {
+                return { id: `slot-${selectedTurfId}-${currentDate}-17:00`, turfId: selectedTurfId, date: currentDate, timeId: '17:00', status: 'Available', customPrices: { 'sp-cricket': 1500, 'sp-football': 1800 }, surgeTag: '🔥 Peak Rate (+₹500)', isPeak: true }
+            }
+            if (t.id === '18:00') {
+                return { id: `slot-${selectedTurfId}-${currentDate}-18:00`, turfId: selectedTurfId, date: currentDate, timeId: '18:00', status: 'Booked', bookedSportId: 'sp-football', booking: { id: 'BK-902', customerName: 'Vikramaditya Roy', phone: '+91 98111 22334', email: 'vikram@gmail.com', sportName: 'Football ⚽', amount: 1200, paidAmount: 1200, paymentStatus: 'Paid', paymentMethod: 'Card', status: 'Confirmed', invoiceNo: 'INV-2026-082' } }
+            }
+            return {
+                id: `slot-${selectedTurfId}-${currentDate}-${t.id}`,
+                turfId: selectedTurfId,
+                date: currentDate,
+                timeId: t.id,
+                timeLabel: t.label,
+                endTimeLabel: t.endLabel,
+                status: 'Available',
+                allowedSports: ['sp-cricket', 'sp-football']
+            }
+        })
     }, [slotsData, selectedTurfId, currentDate])
 
     // Dynamic Time Slots calculation (renders ONLY generated slots for currentDate when present, or base TIME_SLOTS if none generated)
@@ -436,13 +463,21 @@ export default function TurfCalendarPage() {
 
     // Date Navigation Handlers
     const handleNavigateDate = (direction) => {
-        const curr = new Date(currentDate)
+        const todayFormatted = new Date().toISOString().split('T')[0]
         if (direction === 'today') {
-            setCurrentDate('2026-08-08')
+            setCurrentDate(todayFormatted)
+            return
+        }
+        const curr = new Date(currentDate)
+        if (isNaN(curr.getTime())) {
+            setCurrentDate(todayFormatted)
             return
         }
         curr.setDate(curr.getDate() + (direction === 'next' ? 1 : -1))
-        setCurrentDate(curr.toISOString().split('T')[0])
+        const y = curr.getFullYear()
+        const m = String(curr.getMonth() + 1).padStart(2, '0')
+        const d = String(curr.getDate()).padStart(2, '0')
+        setCurrentDate(`${y}-${m}-${d}`)
     }
 
     // Cell Click Handler (Sport + Time Slot)

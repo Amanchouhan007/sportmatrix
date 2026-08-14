@@ -38,20 +38,21 @@ const generateUpcomingDays = () => {
     const fullDayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
     const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
 
-    const baseDate = new Date(2026, 7, 9)
+    const baseDate = new Date()
 
-    for (let i = 0; i < 9; i++) {
+    for (let i = 0; i < 14; i++) {
         const d = new Date(baseDate)
         d.setDate(baseDate.getDate() + i)
+        const fullDateString = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
         days.push({
-            id: `date-${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`,
-            fullDateString: `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`,
-            dayShort: dayNames[d.getDay()],
+            id: `date-${fullDateString}`,
+            fullDateString,
+            dayShort: i === 0 ? 'TODAY' : dayNames[d.getDay()],
             dayFull: fullDayNames[d.getDay()],
             dateNum: d.getDate(),
             monthShort: monthNames[d.getMonth()],
             year: d.getFullYear(),
-            formattedLabel: `${fullDayNames[d.getDay()].toUpperCase()}, ${d.getDate()} ${monthNames[d.getMonth()].toUpperCase()}`
+            formattedLabel: `${i === 0 ? 'TODAY' : fullDayNames[d.getDay()].toUpperCase()}, ${d.getDate()} ${monthNames[d.getMonth()].toUpperCase()}`
         })
     }
     return days
