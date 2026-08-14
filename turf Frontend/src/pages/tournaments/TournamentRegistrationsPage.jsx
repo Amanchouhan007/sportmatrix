@@ -131,15 +131,15 @@ export default function TournamentRegistrationsPage() {
 
                     {r.status === 'Pending' && (
                         <>
-                            <button 
-                                onClick={() => handleUpdateStatus(r.id, 'Approved')} 
+                            <button
+                                onClick={() => handleUpdateStatus(r.id, 'Approved')}
                                 className="p-1.5 text-emerald-600 hover:bg-emerald-50 rounded-lg cursor-pointer font-bold text-xs flex items-center"
                                 title="Approve Registration"
                             >
                                 <HiCheckCircle className="w-5 h-5" />
                             </button>
-                            <button 
-                                onClick={() => handleUpdateStatus(r.id, 'Rejected')} 
+                            <button
+                                onClick={() => handleUpdateStatus(r.id, 'Rejected')}
                                 className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg cursor-pointer font-bold text-xs flex items-center"
                                 title="Reject Registration"
                             >
