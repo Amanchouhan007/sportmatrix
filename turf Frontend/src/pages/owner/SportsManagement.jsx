@@ -5,6 +5,7 @@ import Button from '../../components/ui/Button'
 import Modal from '../../components/ui/Modal'
 import Input from '../../components/ui/Input'
 import Select from '../../components/ui/Select'
+import CustomSelect from '../../components/ui/CustomSelect'
 import Badge from '../../components/ui/Badge'
 import SkeletonLoader from '../../components/ui/SkeletonLoader'
 import EmptyState from '../../components/ui/EmptyState'
@@ -877,18 +878,14 @@ export default function SportsManagement() {
                             <label className="block text-xs font-black uppercase text-slate-700 mb-1">
                                 Select Turf / Branch
                             </label>
-                            <select 
+                            <CustomSelect 
                                 value={selectedBranchId} 
-                                onChange={(e) => {
-                                    setSelectedBranchId(e.target.value);
-                                    localStorage.setItem('selectedBranchId', e.target.value);
+                                onChange={(val) => {
+                                    setSelectedBranchId(val);
+                                    localStorage.setItem('selectedBranchId', val);
                                 }}
-                                className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm font-semibold bg-white focus:outline-none focus:border-[#16A34A]"
-                            >
-                                {branches.map(b => (
-                                    <option key={b._id} value={b._id}>{b.branchName} ({b.branchCode})</option>
-                                ))}
-                            </select>
+                                options={branches.map(b => ({ value: b._id, label: `${b.branchName} (${b.branchCode})` }))}
+                            />
                         </div>
                     )}
 

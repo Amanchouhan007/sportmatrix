@@ -4,6 +4,7 @@ import Badge from '../../components/ui/Badge'
 import Button from '../../components/ui/Button'
 import Modal from '../../components/ui/Modal'
 import Input from '../../components/ui/Input'
+import Select from '../../components/ui/Select'
 import ConfirmDialog from '../../components/ui/ConfirmDialog'
 
 const initialPlayers = [
@@ -106,28 +107,30 @@ export default function PlayerManagement() {
                     <Input label="Player Name" value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} />
                     <Input label="Sport" value={formData.sport} onChange={e => setFormData({ ...formData, sport: e.target.value })} />
                     <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-1.5">
-                            <label className="text-sm font-medium text-surface-700">Skill Level</label>
-                            <select className="w-full px-4 py-2.5 border border-surface-200 rounded-xl text-sm outline-none focus:border-primary-500 bg-white" 
-                                value={formData.skill} onChange={e => setFormData({ ...formData, skill: e.target.value })}>
-                                <option>Expert</option>
-                                <option>Advanced</option>
-                                <option>Intermediate</option>
-                                <option>Beginner</option>
-                            </select>
-                        </div>
+                        <Select
+                            label="Skill Level"
+                            value={formData.skill}
+                            onChange={e => setFormData({ ...formData, skill: e.target.value })}
+                            options={[
+                                { value: 'Expert', label: 'Expert' },
+                                { value: 'Advanced', label: 'Advanced' },
+                                { value: 'Intermediate', label: 'Intermediate' },
+                                { value: 'Beginner', label: 'Beginner' }
+                            ]}
+                        />
                         <Input label="Matches" type="number" value={formData.matches} onChange={e => setFormData({ ...formData, matches: e.target.value })} />
                     </div>
                     <div className="grid grid-cols-2 gap-4">
                         <Input label="Rating" type="number" step="0.1" value={formData.rating} onChange={e => setFormData({ ...formData, rating: e.target.value })} />
-                        <div className="space-y-1.5">
-                            <label className="text-sm font-medium text-surface-700">Status</label>
-                            <select className="w-full px-4 py-2.5 border border-surface-200 rounded-xl text-sm outline-none focus:border-primary-500 bg-white" 
-                                value={formData.status} onChange={e => setFormData({ ...formData, status: e.target.value })}>
-                                <option>Active</option>
-                                <option>Inactive</option>
-                            </select>
-                        </div>
+                        <Select
+                            label="Status"
+                            value={formData.status}
+                            onChange={e => setFormData({ ...formData, status: e.target.value })}
+                            options={[
+                                { value: 'Active', label: 'Active' },
+                                { value: 'Inactive', label: 'Inactive' }
+                            ]}
+                        />
                     </div>
                     <div className="flex gap-3 justify-end mt-4">
                         <Button variant="secondary" onClick={() => setModal(false)}>Cancel</Button>

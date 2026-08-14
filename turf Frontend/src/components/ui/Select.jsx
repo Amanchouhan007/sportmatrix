@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, Children } from 'react'
+import { createPortal } from 'react-dom'
 import { HiChevronDown, HiCheck } from 'react-icons/hi'
 
 export default function Select({
@@ -14,18 +15,54 @@ export default function Select({
     disabled = false
 }) {
     const [isOpen, setIsOpen] = useState(false)
+    const [coords, setCoords] = useState({ top: 0, left: 0, width: 0, positionAbove: false })
     const containerRef = useRef(null)
+    const buttonRef = useRef(null)
+
+    // Calculate dynamic coordinates when open or on scroll/resize
+    useEffect(() => {
+        const updateCoords = () => {
+            if (isOpen && buttonRef.current) {
+                const rect = buttonRef.current.getBoundingClientRect()
+                const spaceBelow = window.innerHeight - rect.bottom
+                const positionAbove = spaceBelow < 220 && rect.top > 220
+                setCoords({
+                    top: positionAbove ? rect.top : rect.bottom,
+                    left: rect.left,
+                    width: rect.width,
+                    positionAbove
+                })
+            }
+        }
+
+        if (isOpen) {
+            updateCoords()
+            window.addEventListener('scroll', updateCoords, true)
+            window.addEventListener('resize', updateCoords)
+        }
+
+        return () => {
+            window.removeEventListener('scroll', updateCoords, true)
+            window.removeEventListener('resize', updateCoords)
+        }
+    }, [isOpen])
 
     // Close dropdown when clicking outside
     useEffect(() => {
         const handleClickOutside = (e) => {
-            if (containerRef.current && !containerRef.current.contains(e.target)) {
+            if (
+                containerRef.current &&
+                !containerRef.current.contains(e.target) &&
+                !e.target.closest('.custom-select-portal')
+            ) {
                 setIsOpen(false)
             }
         }
-        document.addEventListener('mousedown', handleClickOutside)
+        if (isOpen) {
+            document.addEventListener('mousedown', handleClickOutside)
+        }
         return () => document.removeEventListener('mousedown', handleClickOutside)
-    }, [])
+    }, [isOpen])
 
     // Parse options from either `options` prop or `<option>` JSX children
     const parsedOptions = (options && options.length > 0)
@@ -70,7 +107,7 @@ export default function Select({
     }
 
     return (
-        <div ref={containerRef} className={`relative inline-block text-left ${isOpen ? 'z-[99999]' : 'z-10'} ${className}`}>
+        <div ref={containerRef} className={`relative w-full text-left ${className}`}>
             {label && (
                 <label htmlFor={id} className="block text-[10px] font-black uppercase tracking-wider text-slate-500 mb-1.5">
                     {label}
@@ -78,6 +115,7 @@ export default function Select({
             )}
 
             <button
+                ref={buttonRef}
                 type="button"
                 id={id}
                 disabled={disabled}
@@ -102,8 +140,18 @@ export default function Select({
                 />
             </button>
 
-            {isOpen && !disabled && (
-                <div className="absolute top-full left-0 mt-2 min-w-full w-max max-w-xs z-[99999] bg-white border border-slate-200/90 rounded-2xl shadow-[0_20px_45px_rgba(0,0,0,0.14)] p-1.5 max-h-60 overflow-y-auto space-y-1 animate-in fade-in zoom-in-95 duration-150 custom-scrollbar">
+            {isOpen && !disabled && createPortal(
+                <div
+                    className="custom-select-portal fixed bg-white border border-slate-200/90 rounded-2xl shadow-[0_20px_45px_rgba(0,0,0,0.18)] p-1.5 max-h-60 overflow-y-auto space-y-1 animate-in fade-in zoom-in-95 duration-150 custom-scrollbar"
+                    style={{
+                        zIndex: 999999,
+                        top: coords.positionAbove ? 'auto' : `${coords.top + 6}px`,
+                        bottom: coords.positionAbove ? `${window.innerHeight - coords.top + 6}px` : 'auto',
+                        left: `${coords.left}px`,
+                        width: `${Math.max(coords.width, 160)}px`,
+                        minWidth: `${coords.width}px`
+                    }}
+                >
                     {parsedOptions.length === 0 ? (
                         <div className="px-3 py-2.5 text-xs font-bold text-slate-400 text-center">No options available</div>
                     ) : (
@@ -126,7 +174,8 @@ export default function Select({
                             )
                         })
                     )}
-                </div>
+                </div>,
+                document.body
             )}
 
             {error && <p className="text-rose-500 text-[11px] mt-1 font-bold">{error}</p>}

@@ -4,6 +4,7 @@ import Button from '../../components/ui/Button'
 import Modal from '../../components/ui/Modal'
 import Input from '../../components/ui/Input'
 import Select from '../../components/ui/Select'
+import CustomSelect from '../../components/ui/CustomSelect'
 import EmptyState from '../../components/ui/EmptyState'
 import { useToast } from '../../components/ui/Toast'
 import { useAuth } from '../../context/AuthContext'
@@ -953,21 +954,19 @@ export default function SlotManagement() {
                                 value={newSlot.slotName}
                                 onChange={(e) => setNewSlot({ ...newSlot, slotName: e.target.value })}
                             />
-                            <div>
-                                <label className="block text-xs font-bold text-surface-700 mb-1.5 uppercase tracking-wider">Slot Type *</label>
-                                <select
-                                    value={newSlot.slotType}
-                                    onChange={(e) => setNewSlot({ ...newSlot, slotType: e.target.value })}
-                                    className="w-full p-2.5 text-xs font-extrabold bg-white border border-surface-200 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none text-surface-900 cursor-pointer shadow-sm"
-                                >
-                                    <option value="Regular">Regular</option>
-                                    <option value="Peak">🔥 Peak</option>
-                                    <option value="Tournament">🏆 Tournament</option>
-                                    <option value="Practice">🎯 Practice</option>
-                                    <option value="Maintenance">🛠️ Maintenance</option>
-                                    <option value="Private">🔒 Private</option>
-                                </select>
-                            </div>
+                            <Select
+                                label="Slot Type *"
+                                value={newSlot.slotType}
+                                onChange={(e) => setNewSlot({ ...newSlot, slotType: e.target.value })}
+                                options={[
+                                    { value: 'Regular', label: 'Regular' },
+                                    { value: 'Peak', label: '🔥 Peak' },
+                                    { value: 'Tournament', label: '🏆 Tournament' },
+                                    { value: 'Practice', label: '🎯 Practice' },
+                                    { value: 'Maintenance', label: '🛠️ Maintenance' },
+                                    { value: 'Private', label: '🔒 Private' }
+                                ]}
+                            />
                         </div>
 
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -1067,19 +1066,17 @@ export default function SlotManagement() {
                             <span className="text-emerald-600">3.</span> Recurrence Configuration
                         </div>
                         <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
-                            <div>
-                                <label className="block text-xs font-bold text-surface-700 mb-1.5 uppercase tracking-wider">Repeat</label>
-                                <select
-                                    value={newSlot.repeat}
-                                    onChange={(e) => setNewSlot({ ...newSlot, repeat: e.target.value })}
-                                    className="w-full p-2.5 text-xs font-extrabold bg-white border border-surface-200 rounded-xl outline-none text-surface-900 cursor-pointer"
-                                >
-                                    <option value="One Time">One Time</option>
-                                    <option value="Daily">Daily</option>
-                                    <option value="Weekly">Weekly</option>
-                                    <option value="Monthly">Monthly</option>
-                                </select>
-                            </div>
+                            <Select
+                                label="Repeat"
+                                value={newSlot.repeat}
+                                onChange={(e) => setNewSlot({ ...newSlot, repeat: e.target.value })}
+                                options={[
+                                    { value: 'One Time', label: 'One Time' },
+                                    { value: 'Daily', label: 'Daily' },
+                                    { value: 'Weekly', label: 'Weekly' },
+                                    { value: 'Monthly', label: 'Monthly' }
+                                ]}
+                            />
                             <Input
                                 label="Repeat Interval"
                                 type="number"

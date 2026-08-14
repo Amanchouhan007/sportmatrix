@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom'
 import { HiLocationMarker, HiStar, HiSearch, HiFilter, HiX, HiRefresh, HiOutlineClock, HiSparkles, HiCurrencyRupee, HiCalendar, HiSortAscending, HiChevronUp, HiPlus, HiDotsHorizontal } from 'react-icons/hi'
 import TurfSearchBar from '../../components/TurfSearchBar'
 import TurfCard from '../../components/TurfCard'
+import CustomSelect from '../../components/ui/CustomSelect'
 
 const allTurfs = [
     { id: 1, name: 'SportZone Arena', location: 'Andheri West, Mumbai', city: 'Mumbai', sport: 'Cricket', sports: ['Cricket'], rating: 4.8, reviews: 124, price: 1200, amenities: ['Floodlights', 'Parking', 'Washroom', 'Drinking Water'], image: '/images/turf1.png' },
@@ -261,16 +262,16 @@ export default function AllTurfsPage() {
                                         </button>
                                     ))}
                                 </div>
-                                <select
+                                <CustomSelect
                                     value={sortBy}
-                                    onChange={e => setSortBy(e.target.value)}
-                                    className="w-full px-3 py-2 bg-white border border-[#E5E7EB] rounded-xl text-xs font-bold text-[#111827] outline-none cursor-pointer shadow-xs"
-                                >
-                                    <option value="rating">Best Rated</option>
-                                    <option value="reviews">Most Booked</option>
-                                    <option value="price-low">Lowest Price</option>
-                                    <option value="price-high">Highest Price</option>
-                                </select>
+                                    onChange={val => setSortBy(val)}
+                                    options={[
+                                        { value: 'rating', label: 'Best Rated ⭐' },
+                                        { value: 'reviews', label: 'Most Booked 🔥' },
+                                        { value: 'price-low', label: 'Lowest Price 💰' },
+                                        { value: 'price-high', label: 'Highest Price 💎' }
+                                    ]}
+                                />
                             </div>
                         </div>
                     </div>

@@ -442,16 +442,16 @@ export default function TurfLeadCRMPage() {
                             {/* Category Selector */}
                             <div>
                                 <label className="text-[10px] font-black uppercase text-slate-500 mb-1 block">Lead Category</label>
-                                <select
+                                <CustomSelect
                                     value={formRole}
-                                    onChange={(e) => setFormRole(e.target.value)}
-                                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 font-bold text-slate-900 outline-none focus:border-[#16A34A]"
-                                >
-                                    <option value="team">🏏 Team / Captain</option>
-                                    <option value="organizer">🏆 Tournament Organization</option>
-                                    <option value="player">⚡ Individual Player</option>
-                                    <option value="umpire">🚩 Umpire / Referee</option>
-                                </select>
+                                    onChange={(val) => setFormRole(val)}
+                                    options={[
+                                        { value: 'team', label: '🏏 Team / Captain' },
+                                        { value: 'organizer', label: '🏆 Tournament Organization' },
+                                        { value: 'player', label: '⚡ Individual Player' },
+                                        { value: 'umpire', label: '🚩 Umpire / Referee' }
+                                    ]}
+                                />
                             </div>
 
                             {/* Dynamic Full Name / Captain / Organizer Name */}
@@ -498,15 +498,11 @@ export default function TurfLeadCRMPage() {
                             {/* Turf Branch Selector */}
                             <div>
                                 <label className="text-[10px] font-black uppercase text-slate-500 mb-1 block">Assign Turf Branch</label>
-                                <select
+                                <CustomSelect
                                     value={formTurfBranch}
-                                    onChange={(e) => setFormTurfBranch(e.target.value)}
-                                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 font-bold text-slate-900 outline-none focus:border-[#16A34A]"
-                                >
-                                    {AVAILABLE_TURF_BRANCHES.map(b => (
-                                        <option key={b} value={b}>🏟️ {b}</option>
-                                    ))}
-                                </select>
+                                    onChange={(val) => setFormTurfBranch(val)}
+                                    options={AVAILABLE_TURF_BRANCHES.map(b => ({ value: b, label: `🏟️ ${b}` }))}
+                                />
                             </div>
 
                             <div>
