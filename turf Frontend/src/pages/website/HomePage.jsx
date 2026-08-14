@@ -254,107 +254,132 @@ const resolveOriginCoordinates = (locString, userGPS, explicitCoords) => {
                         />
                     </div>
 
-                    {/* ── SPECIAL CRICKET MODES & USP ATTRACTION BAR (Enlarged & Ultra Catchy 4-Card Layout with FULL TEXT) ── */}
-                    <div className="mt-5 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5 xl:gap-4 w-full select-none">
-                        {/* 1. 🔥 DARE MATCH™ */}
+                    {/* ── SPECIAL CRICKET MODES & USP ATTRACTION BAR (Enlarged & Ultra Catchy 5-Card Layout with FULL TEXT) ── */}
+                    <div className="mt-5 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 w-full select-none">
+                        {/* 1. 💳 FULL PAY™ */}
+                        <button
+                            type="button"
+                            onClick={() => navigate('/booking/1?mode=full')}
+                            className="group relative overflow-hidden w-full flex items-center gap-2.5 p-3 sm:p-3.5 rounded-[18px] bg-gradient-to-br from-emerald-500/15 via-green-500/10 to-teal-500/10 border-2 border-emerald-400/80 hover:border-emerald-500 shadow-md hover:shadow-[0_10px_25px_rgba(16,185,129,0.35)] transition-all duration-300 cursor-pointer hover:scale-[1.02] hover:-translate-y-1 active:scale-95 text-left shimmer-sweep min-h-[88px]"
+                        >
+                            <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-xl bg-gradient-to-br from-[#16A34A] to-emerald-700 text-white shadow-[0_0_14px_rgba(22,163,74,0.6)] flex items-center justify-center text-xl sm:text-2xl shrink-0 group-hover:scale-110 group-hover:-rotate-6 transition-transform">
+                                💳
+                            </div>
+                            <div className="flex flex-col min-w-0 flex-1 leading-tight">
+                                <div className="flex items-center justify-between gap-1 mb-1">
+                                    <span className="text-[11px] sm:text-xs font-black text-emerald-950 uppercase tracking-tight whitespace-nowrap">Full Pay™</span>
+                                    <span className="bg-[#16A34A] text-white font-black text-[7.5px] sm:text-[8px] px-1.5 py-0.5 rounded-full uppercase tracking-wider shrink-0 shadow-2xs">
+                                        FASTEST
+                                    </span>
+                                </div>
+                                <span className="text-xs sm:text-[13px] font-black text-[#111827] leading-snug group-hover:text-[#16A34A] transition-colors">
+                                    "Tera Bhai Dega Pura Bill!"
+                                </span>
+                                <span className="text-[9.5px] sm:text-[10px] text-emerald-900/85 font-bold leading-tight mt-0.5 truncate">
+                                    Instant Booking & Share ⚡
+                                </span>
+                            </div>
+                        </button>
+
+                        {/* 2. 🔥 DARE MATCH™ */}
                         <button
                             type="button"
                             onClick={() => {
                                 setIsChallengeVisible(true)
                                 navigate('/booking/1?mode=dare&pay=opponent')
                             }}
-                            className="group relative overflow-hidden w-full flex items-center gap-3 p-3.5 sm:p-4 rounded-[20px] bg-gradient-to-br from-orange-500/15 via-amber-500/10 to-red-500/10 border-2 border-orange-400/80 hover:border-orange-500 shadow-md hover:shadow-[0_12px_30px_rgba(249,115,22,0.45)] transition-all duration-300 cursor-pointer hover:scale-[1.02] hover:-translate-y-1 active:scale-95 text-left shimmer-sweep min-h-[92px]"
+                            className="group relative overflow-hidden w-full flex items-center gap-2.5 p-3 sm:p-3.5 rounded-[18px] bg-gradient-to-br from-orange-500/15 via-amber-500/10 to-red-500/10 border-2 border-orange-400/80 hover:border-orange-500 shadow-md hover:shadow-[0_10px_25px_rgba(249,115,22,0.35)] transition-all duration-300 cursor-pointer hover:scale-[1.02] hover:-translate-y-1 active:scale-95 text-left shimmer-sweep min-h-[88px]"
                         >
-                            <div className="w-12 h-12 sm:w-13 sm:h-13 rounded-2xl bg-gradient-to-br from-orange-500 to-red-600 text-white shadow-[0_0_18px_rgba(249,115,22,0.7)] flex items-center justify-center text-2xl sm:text-3xl shrink-0 group-hover:scale-110 group-hover:rotate-6 transition-transform animate-fire-float">
+                            <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-xl bg-gradient-to-br from-orange-500 to-red-600 text-white shadow-[0_0_14px_rgba(249,115,22,0.6)] flex items-center justify-center text-xl sm:text-2xl shrink-0 group-hover:scale-110 group-hover:rotate-6 transition-transform animate-fire-float">
                                 🔥
                             </div>
-                            <div className="flex flex-col min-w-0 leading-tight">
-                                <div className="flex items-center gap-1.5 mb-1">
-                                    <span className="text-xs font-black text-orange-950 uppercase tracking-tight whitespace-nowrap">Dare Match™</span>
-                                    <span className="bg-gradient-to-r from-red-600 to-orange-500 text-white font-black text-[8.5px] px-1.5 py-0.5 rounded-full uppercase tracking-wider animate-pulse shrink-0 shadow-2xs">
+                            <div className="flex flex-col min-w-0 flex-1 leading-tight">
+                                <div className="flex items-center justify-between gap-1 mb-1">
+                                    <span className="text-[11px] sm:text-xs font-black text-orange-950 uppercase tracking-tight whitespace-nowrap">Dare Match™</span>
+                                    <span className="bg-gradient-to-r from-red-600 to-orange-500 text-white font-black text-[7.5px] sm:text-[8px] px-1.5 py-0.5 rounded-full uppercase tracking-wider animate-pulse shrink-0 shadow-2xs">
                                         ₹0 FREE
                                     </span>
                                 </div>
-                                <span className="text-[13.5px] sm:text-[14px] font-black text-[#111827] leading-tight group-hover:text-orange-600 transition-colors">
-                                    Winner Plays FREE!
+                                <span className="text-xs sm:text-[13px] font-black text-[#111827] leading-snug group-hover:text-orange-600 transition-colors">
+                                    "Dum Hai Toh Harake Dikha!"
                                 </span>
-                                <span className="text-[10.5px] sm:text-[11px] text-orange-900/85 font-bold leading-tight mt-0.5">
-                                    Loser Bharega Pura Bill ⚡
+                                <span className="text-[9.5px] sm:text-[10px] text-orange-900/85 font-bold leading-tight mt-0.5 truncate">
+                                    Winner FREE, Loser Bharega Bill ⚡
                                 </span>
                             </div>
                         </button>
 
-                        {/* 2. 🤝 50:50 MATCH SPLIT™ */}
+                        {/* 3. 🤝 50:50 MATCH SPLIT™ */}
                         <button
                             type="button"
                             onClick={() => navigate('/booking/1?mode=split50')}
-                            className="group relative overflow-hidden w-full flex items-center gap-3 p-3.5 sm:p-4 rounded-[20px] bg-gradient-to-br from-emerald-500/15 via-teal-500/10 to-emerald-500/10 border-2 border-emerald-400/80 hover:border-emerald-500 shadow-md hover:shadow-[0_12px_30px_rgba(16,185,129,0.45)] transition-all duration-300 cursor-pointer hover:scale-[1.02] hover:-translate-y-1 active:scale-95 text-left shimmer-sweep min-h-[92px]"
+                            className="group relative overflow-hidden w-full flex items-center gap-2.5 p-3 sm:p-3.5 rounded-[18px] bg-gradient-to-br from-emerald-500/15 via-teal-500/10 to-emerald-500/10 border-2 border-emerald-400/80 hover:border-emerald-500 shadow-md hover:shadow-[0_10px_25px_rgba(16,185,129,0.35)] transition-all duration-300 cursor-pointer hover:scale-[1.02] hover:-translate-y-1 active:scale-95 text-left shimmer-sweep min-h-[88px]"
                         >
-                            <div className="w-12 h-12 sm:w-13 sm:h-13 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-700 text-white shadow-[0_0_18px_rgba(16,185,129,0.7)] flex items-center justify-center text-2xl sm:text-3xl shrink-0 group-hover:scale-110 group-hover:-rotate-6 transition-transform">
+                            <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-700 text-white shadow-[0_0_14px_rgba(16,185,129,0.6)] flex items-center justify-center text-xl sm:text-2xl shrink-0 group-hover:scale-110 group-hover:-rotate-6 transition-transform">
                                 🤝
                             </div>
-                            <div className="flex flex-col min-w-0 leading-tight">
-                                <div className="flex items-center gap-1.5 mb-1">
-                                    <span className="text-xs font-black text-[#064E3B] uppercase tracking-tight whitespace-nowrap">50:50 Split™</span>
-                                    <span className="bg-[#10B981] text-white font-black text-[8.5px] px-1.5 py-0.5 rounded-full uppercase tracking-wider shrink-0 shadow-2xs">
+                            <div className="flex flex-col min-w-0 flex-1 leading-tight">
+                                <div className="flex items-center justify-between gap-1 mb-1">
+                                    <span className="text-[11px] sm:text-xs font-black text-[#064E3B] uppercase tracking-tight whitespace-nowrap">50:50 Split™</span>
+                                    <span className="bg-[#10B981] text-white font-black text-[7.5px] sm:text-[8px] px-1.5 py-0.5 rounded-full uppercase tracking-wider shrink-0 shadow-2xs">
                                         NO KHAT-PAT
                                     </span>
                                 </div>
-                                <span className="text-[13.5px] sm:text-[14px] font-black text-[#111827] leading-tight group-hover:text-[#10B981] transition-colors">
+                                <span className="text-xs sm:text-[13px] font-black text-[#111827] leading-snug group-hover:text-[#10B981] transition-colors">
                                     "Aadha Bill Tera, Aadha Mera!"
                                 </span>
-                                <span className="text-[10.5px] sm:text-[11px] text-emerald-900/85 font-bold leading-tight mt-0.5">
-                                    Dono Captains Ka 50:50 Turf Rent ⚡
+                                <span className="text-[9.5px] sm:text-[10px] text-emerald-900/85 font-bold leading-tight mt-0.5 truncate">
+                                    Dono Captains Ka 50:50 Rent ⚡
                                 </span>
                             </div>
                         </button>
 
-                        {/* 3. 👥 SQUAD UPI SPLIT™ */}
+                        {/* 4. 👥 SQUAD UPI SPLIT™ */}
                         <button
                             type="button"
                             onClick={() => navigate('/booking/1?mode=per_player')}
-                            className="group relative overflow-hidden w-full flex items-center gap-3 p-3.5 sm:p-4 rounded-[20px] bg-gradient-to-br from-blue-500/15 via-indigo-500/10 to-blue-500/10 border-2 border-blue-400/80 hover:border-blue-500 shadow-md hover:shadow-[0_12px_30px_rgba(59,130,246,0.45)] transition-all duration-300 cursor-pointer hover:scale-[1.02] hover:-translate-y-1 active:scale-95 text-left shimmer-sweep min-h-[92px]"
+                            className="group relative overflow-hidden w-full flex items-center gap-2.5 p-3 sm:p-3.5 rounded-[18px] bg-gradient-to-br from-blue-500/15 via-indigo-500/10 to-blue-500/10 border-2 border-blue-400/80 hover:border-blue-500 shadow-md hover:shadow-[0_10px_25px_rgba(59,130,246,0.35)] transition-all duration-300 cursor-pointer hover:scale-[1.02] hover:-translate-y-1 active:scale-95 text-left shimmer-sweep min-h-[88px]"
                         >
-                            <div className="w-12 h-12 sm:w-13 sm:h-13 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-700 text-white shadow-[0_0_18px_rgba(59,130,246,0.7)] flex items-center justify-center text-2xl sm:text-3xl shrink-0 group-hover:scale-110 group-hover:rotate-6 transition-transform">
+                            <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-700 text-white shadow-[0_0_14px_rgba(59,130,246,0.6)] flex items-center justify-center text-xl sm:text-2xl shrink-0 group-hover:scale-110 group-hover:rotate-6 transition-transform">
                                 👥
                             </div>
-                            <div className="flex flex-col min-w-0 leading-tight">
-                                <div className="flex items-center gap-1.5 mb-1">
-                                    <span className="text-xs font-black text-blue-950 uppercase tracking-tight whitespace-nowrap">Squad Split™</span>
-                                    <span className="bg-blue-600 text-white font-black text-[8.5px] px-1.5 py-0.5 rounded-full uppercase tracking-wider shrink-0 shadow-2xs">
+                            <div className="flex flex-col min-w-0 flex-1 leading-tight">
+                                <div className="flex items-center justify-between gap-1 mb-1">
+                                    <span className="text-[11px] sm:text-xs font-black text-blue-950 uppercase tracking-tight whitespace-nowrap">Squad Split™</span>
+                                    <span className="bg-blue-600 text-white font-black text-[7.5px] sm:text-[8px] px-1.5 py-0.5 rounded-full uppercase tracking-wider shrink-0 shadow-2xs">
                                         EQUAL PAY
                                     </span>
                                 </div>
-                                <span className="text-[13.5px] sm:text-[14px] font-black text-[#111827] leading-tight group-hover:text-blue-600 transition-colors">
+                                <span className="text-xs sm:text-[13px] font-black text-[#111827] leading-snug group-hover:text-blue-600 transition-colors">
                                     "Apna Hissa, Khud Bharo!"
                                 </span>
-                                <span className="text-[10.5px] sm:text-[11px] text-blue-900/85 font-bold leading-tight mt-0.5">
+                                <span className="text-[9.5px] sm:text-[10px] text-blue-900/85 font-bold leading-tight mt-0.5 truncate">
                                     Sabhi Players Ka Equal Share ⚡
                                 </span>
                             </div>
                         </button>
 
-                        {/* 4. 👑 HALL OF FAME & PLAYER SQUAD CONNECT™ */}
+                        {/* 5. 👑 HALL OF FAME & PLAYER SQUAD CONNECT™ */}
                         <button
                             type="button"
                             onClick={() => navigate('/leaderboard')}
-                            className="group relative overflow-hidden w-full flex items-center gap-3 p-3.5 sm:p-4 rounded-[20px] bg-gradient-to-br from-amber-500/15 via-yellow-500/10 to-amber-500/10 border-2 border-amber-400/80 hover:border-amber-500 shadow-md hover:shadow-[0_12px_30px_rgba(245,158,11,0.45)] transition-all duration-300 cursor-pointer hover:scale-[1.02] hover:-translate-y-1 active:scale-95 text-left shimmer-sweep min-h-[92px]"
+                            className="group relative overflow-hidden w-full flex items-center gap-2.5 p-3 sm:p-3.5 rounded-[18px] bg-gradient-to-br from-amber-500/15 via-yellow-500/10 to-amber-500/10 border-2 border-amber-400/80 hover:border-amber-500 shadow-md hover:shadow-[0_10px_25px_rgba(245,158,11,0.35)] transition-all duration-300 cursor-pointer hover:scale-[1.02] hover:-translate-y-1 active:scale-95 text-left shimmer-sweep min-h-[88px]"
                         >
-                            <div className="w-12 h-12 sm:w-13 sm:h-13 rounded-2xl bg-gradient-to-br from-amber-400 to-yellow-600 text-black shadow-[0_0_18px_rgba(245,158,11,0.7)] flex items-center justify-center text-2xl sm:text-3xl shrink-0 group-hover:scale-110 group-hover:-rotate-6 transition-transform">
+                            <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-xl bg-gradient-to-br from-amber-400 to-yellow-600 text-black shadow-[0_0_14px_rgba(245,158,11,0.6)] flex items-center justify-center text-xl sm:text-2xl shrink-0 group-hover:scale-110 group-hover:-rotate-6 transition-transform">
                                 👑
                             </div>
-                            <div className="flex flex-col min-w-0 leading-tight">
-                                <div className="flex items-center gap-1.5 mb-1">
-                                    <span className="text-xs font-black text-amber-950 uppercase tracking-tight whitespace-nowrap">Hall of Fame™</span>
-                                    <span className="bg-amber-500 text-black font-black text-[8.5px] px-1.5 py-0.5 rounded-full uppercase tracking-wider shrink-0 shadow-2xs">
-                                        CONNECT & PLAY
+                            <div className="flex flex-col min-w-0 flex-1 leading-tight">
+                                <div className="flex items-center justify-between gap-1 mb-1">
+                                    <span className="text-[11px] sm:text-xs font-black text-amber-950 uppercase tracking-tight whitespace-nowrap">Hall of Fame™</span>
+                                    <span className="bg-amber-500 text-black font-black text-[7.5px] sm:text-[8px] px-1.5 py-0.5 rounded-full uppercase tracking-wider shrink-0 shadow-2xs">
+                                        CONNECT
                                     </span>
                                 </div>
-                                <span className="text-[13.5px] sm:text-[14px] font-black text-[#111827] leading-tight group-hover:text-amber-600 transition-colors">
+                                <span className="text-xs sm:text-[13px] font-black text-[#111827] leading-snug group-hover:text-amber-600 transition-colors">
                                     "Khiladi Bulao, Match Khelao!"
                                 </span>
-                                <span className="text-[10.5px] sm:text-[11px] text-amber-900/85 font-bold leading-tight mt-0.5">
-                                    Direct WhatsApp & Squad Challenge 📲
+                                <span className="text-[9.5px] sm:text-[10px] text-amber-900/85 font-bold leading-tight mt-0.5 truncate">
+                                    Direct WhatsApp Challenge 📲
                                 </span>
                             </div>
                         </button>
