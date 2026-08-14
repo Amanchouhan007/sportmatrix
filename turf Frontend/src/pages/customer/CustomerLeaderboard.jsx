@@ -7,6 +7,7 @@ import {
 } from 'react-icons/hi'
 import { HiTrophy } from 'react-icons/hi2'
 import Badge from '../../components/ui/Badge'
+import CustomSelect from '../../components/ui/CustomSelect'
 import { useToast } from '../../components/ui/Toast'
 import { useAuth } from '../../context/AuthContext'
 import MatchScoreVerificationModal from '../../components/booking/MatchScoreVerificationModal'
@@ -1070,30 +1071,22 @@ export default function CustomerLeaderboard() {
 
                             {/* Indore Zone & Role */}
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                <div className="space-y-1">
-                                    <label className="text-xs font-bold text-slate-700">Indore Turf Area / Hub</label>
-                                    <select
+                                <div>
+                                    <CustomSelect
+                                        label="Indore Turf Area / Hub"
                                         value={formScore.zone}
-                                        onChange={e => setFormScore(prev => ({ ...prev, zone: e.target.value }))}
-                                        className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold text-[#111827] outline-none focus:border-[#16A34A] focus:bg-white"
-                                    >
-                                        {['Vijay Nagar', 'Palasia', 'Bhawarkua', 'Super Corridor', 'Rau', 'Annapurna', 'Scheme 54'].map(z => (
-                                            <option key={z} value={z}>{z}</option>
-                                        ))}
-                                    </select>
+                                        onChange={val => setFormScore(prev => ({ ...prev, zone: val }))}
+                                        options={['Vijay Nagar', 'Palasia', 'Bhawarkua', 'Super Corridor', 'Rau', 'Annapurna', 'Scheme 54'].map(z => ({ value: z, label: z }))}
+                                    />
                                 </div>
 
-                                <div className="space-y-1">
-                                    <label className="text-xs font-bold text-slate-700">Playing Role</label>
-                                    <select
+                                <div>
+                                    <CustomSelect
+                                        label="Playing Role"
                                         value={formScore.role}
-                                        onChange={e => setFormScore(prev => ({ ...prev, role: e.target.value }))}
-                                        className="w-full bg-slate-[#50] border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold text-[#111827] outline-none focus:border-[#16A34A] focus:bg-white"
-                                    >
-                                        {['Top-Order Batsman', 'All-Rounder', 'Fast Bowler', 'Spin Bowler', 'Wicketkeeper Batsman', 'Pinch Hitter'].map(r => (
-                                            <option key={r} value={r}>{r}</option>
-                                        ))}
-                                    </select>
+                                        onChange={val => setFormScore(prev => ({ ...prev, role: val }))}
+                                        options={['Top-Order Batsman', 'All-Rounder', 'Fast Bowler', 'Spin Bowler', 'Wicketkeeper Batsman', 'Pinch Hitter'].map(r => ({ value: r, label: r }))}
+                                    />
                                 </div>
                             </div>
 

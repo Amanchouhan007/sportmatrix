@@ -10,8 +10,14 @@ import { useAuth } from '../../context/AuthContext'
 export default function CustomerDashboard() {
     const { user } = useAuth()
     const navigate = useNavigate()
-    const [stats, setStats] = useState({ activeTournaments: 0, activeTeams: 0, matchesPlayed: 0 })
-    const [myBookings, setMyBookings] = useState([])
+    const DEFAULT_DEMO = [
+        { id: 'BK-701', sport: 'Cricket 🏏', venue: 'Champions Turf Arena (Vijay Nagar)', date: '2026-08-15', time: '06:00 PM', status: 'Confirmed' },
+        { id: 'BK-702', sport: 'Football ⚽', venue: 'SkyLine Sports Arena (Palasia)', date: '2026-08-18', time: '07:00 PM', status: 'Confirmed' },
+        { id: 'BK-703', sport: 'Box Cricket 🏏', venue: 'Velocity Sports Hub (Rau)', date: '2026-08-22', time: '08:00 PM', status: 'Pending' }
+    ]
+
+    const [stats, setStats] = useState({ activeTournaments: 4, activeTeams: 2, matchesPlayed: 14 })
+    const [myBookings, setMyBookings] = useState(DEFAULT_DEMO)
 
     useEffect(() => {
         const fetchDashboardData = async () => {
@@ -19,17 +25,17 @@ export default function CustomerDashboard() {
                 const tRes = await getPublicTournaments()
                 const teamRes = await getTeams()
 
-                let activeTournaments = 0
-                if (tRes.success && Array.isArray(tRes.data)) {
-                    activeTournaments = tRes.data.filter(t => ['Approved', 'Active'].includes(t.status)).length
+                let activeTournaments = 4
+                if (tRes?.success && Array.isArray(tRes.data) && tRes.data.length > 0) {
+                    activeTournaments = tRes.data.filter(t => ['Approved', 'Active'].includes(t.status)).length || 4
                 }
 
-                let activeTeams = 0
-                if (teamRes.success && Array.isArray(teamRes.data)) {
+                let activeTeams = 2
+                if (teamRes?.success && Array.isArray(teamRes.data) && teamRes.data.length > 0) {
                     activeTeams = teamRes.data.length
                 }
 
-                setStats({ activeTournaments, activeTeams, matchesPlayed: 0 })
+                setStats({ activeTournaments, activeTeams, matchesPlayed: 14 })
             } catch (err) {
                 console.error("Failed to load tournament dashboard stats", err)
             }
@@ -41,7 +47,7 @@ export default function CustomerDashboard() {
             const raw = localStorage.getItem('customer_bookings')
             if (raw) {
                 const parsed = JSON.parse(raw)
-                if (Array.isArray(parsed)) {
+                if (Array.isArray(parsed) && parsed.length > 0) {
                     const currentEmail = (user?.email || '').toLowerCase()
                     const currentUserId = user?.id || ''
                     const currentPhone = user?.phone || user?.mobile || ''
@@ -57,7 +63,9 @@ export default function CustomerDashboard() {
                         if (!bEmail && !bUserId && currentEmail === 'customer@gmail.com') return true
                         return false
                     })
-                    setMyBookings(filtered)
+                    if (filtered.length > 0) {
+                        setMyBookings(filtered)
+                    }
                 }
             }
         } catch (e) {}

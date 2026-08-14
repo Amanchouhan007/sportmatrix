@@ -4,6 +4,7 @@ import Card from '../../components/ui/Card'
 import Button from '../../components/ui/Button'
 import Input from '../../components/ui/Input'
 import Select from '../../components/ui/Select'
+import CustomDatePicker from '../../components/ui/CustomDatePicker'
 import { useToast } from '../../components/ui/Toast'
 import { createDiscountOffer } from '../../services/discountService'
 import {
@@ -468,17 +469,17 @@ export default function CreateDiscountOffer() {
 
                                 {/* Validity Range */}
                                 <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 pt-2">
-                                    <Input
-                                        type="date"
+                                    <CustomDatePicker
                                         label="Start Date *"
                                         value={formData.startDate}
-                                        onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
+                                        onChange={(val) => setFormData({ ...formData, startDate: val })}
+                                        align="left"
                                     />
-                                    <Input
-                                        type="date"
+                                    <CustomDatePicker
                                         label="End Date *"
                                         value={formData.endDate}
-                                        onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
+                                        onChange={(val) => setFormData({ ...formData, endDate: val })}
+                                        align="left"
                                     />
                                     <Input
                                         type="time"

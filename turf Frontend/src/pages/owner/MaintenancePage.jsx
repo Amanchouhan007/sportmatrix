@@ -5,6 +5,7 @@ import Button from '../../components/ui/Button'
 import Modal from '../../components/ui/Modal'
 import Input from '../../components/ui/Input'
 import Select from '../../components/ui/Select'
+import CustomDatePicker from '../../components/ui/CustomDatePicker'
 import Card from '../../components/ui/Card'
 import { useToast } from '../../components/ui/Toast'
 import { HiExclamation, HiPlus, HiRefresh } from 'react-icons/hi'
@@ -177,11 +178,11 @@ export default function MaintenancePage() {
                             value={newTask.assignee}
                             onChange={(e) => setNewTask({ ...newTask, assignee: e.target.value })}
                         />
-                        <Input
+                        <CustomDatePicker
                             label="Target Deadline"
-                            type="date"
                             value={newTask.due}
-                            onChange={(e) => setNewTask({ ...newTask, due: e.target.value })}
+                            onChange={(val) => setNewTask({ ...newTask, due: val })}
+                            align="right"
                         />
                     </div>
 

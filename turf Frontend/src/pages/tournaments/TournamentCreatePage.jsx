@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import Card from '../../components/ui/Card'
 import Input from '../../components/ui/Input'
 import Select from '../../components/ui/Select'
+import CustomDatePicker from '../../components/ui/CustomDatePicker'
 import Button from '../../components/ui/Button'
 import { useToast } from '../../components/ui/Toast'
 import { HiCalendar, HiCurrencyRupee, HiUserGroup, HiUpload, HiArrowLeft, HiCog, HiPhone, HiUser } from 'react-icons/hi'
@@ -273,35 +274,32 @@ export default function TournamentCreatePage({ role = 'owner' }) {
                     </h2>
 
                     <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                        <Input
+                        <CustomDatePicker
                             label="Registration Start Date *"
-                            type="date"
                             value={form.registrationStartDate}
-                            onChange={(e) => setForm({ ...form, registrationStartDate: e.target.value })}
-                            required
+                            onChange={(val) => setForm({ ...form, registrationStartDate: val })}
+                            align="left"
                         />
 
-                        <Input
+                        <CustomDatePicker
                             label="Registration Last Date"
-                            type="date"
                             value={form.registrationLastDate}
-                            onChange={(e) => setForm({ ...form, registrationLastDate: e.target.value })}
+                            onChange={(val) => setForm({ ...form, registrationLastDate: val })}
+                            align="left"
                         />
 
-                        <Input
+                        <CustomDatePicker
                             label="Start Date *"
-                            type="date"
                             value={form.startDate}
-                            onChange={(e) => setForm({ ...form, startDate: e.target.value })}
-                            required
+                            onChange={(val) => setForm({ ...form, startDate: val })}
+                            align="left"
                         />
 
-                        <Input
+                        <CustomDatePicker
                             label="End Date *"
-                            type="date"
                             value={form.endDate}
-                            onChange={(e) => setForm({ ...form, endDate: e.target.value })}
-                            required
+                            onChange={(val) => setForm({ ...form, endDate: val })}
+                            align="right"
                         />
                     </div>
 

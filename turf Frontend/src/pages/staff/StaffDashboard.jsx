@@ -4,17 +4,19 @@ import DataTable from '../../components/ui/DataTable'
 import Badge from '../../components/ui/Badge'
 import Button from '../../components/ui/Button'
 import Modal from '../../components/ui/Modal'
+import CustomDatePicker from '../../components/ui/CustomDatePicker'
 
 // Initial data for today's bookings
 const initialBookings = [
-    { id: 'BK-001', customer: 'Rahul K.', sport: 'Cricket', time: '10:00 AM', court: 'Turf A', amount: 800, status: 'Confirmed' },
-    { id: 'BK-002', customer: 'Priya S.', sport: 'Football', time: '11:30 AM', court: 'Turf B', amount: 900, status: 'Pending' },
-    { id: 'BK-003', customer: 'Arjun M.', sport: 'Football', time: '02:00 PM', court: 'Court 1', amount: 400, status: 'Confirmed' },
-    { id: 'BK-004', customer: 'Walk-in', sport: 'Cricket', time: '04:30 PM', court: 'Turf A', amount: 1200, status: 'Pending' },
+    { id: 'BK-001', customer: 'Rahul K.', sport: 'Cricket', time: '10:00 AM', court: 'Turf A', amount: 800, status: 'Confirmed', date: '2026-08-14' },
+    { id: 'BK-002', customer: 'Priya S.', sport: 'Football', time: '11:30 AM', court: 'Turf B', amount: 900, status: 'Pending', date: '2026-08-14' },
+    { id: 'BK-003', customer: 'Arjun M.', sport: 'Football', time: '02:00 PM', court: 'Court 1', amount: 400, status: 'Confirmed', date: '2026-08-14' },
+    { id: 'BK-004', customer: 'Walk-in', sport: 'Cricket', time: '04:30 PM', court: 'Turf A', amount: 1200, status: 'Pending', date: '2026-08-14' },
 ]
 
 export default function StaffDashboard() {
     const [bookings] = useState(initialBookings)
+    const [selectedDate, setSelectedDate] = useState('2026-08-14')
     const [selectedBooking, setSelectedBooking] = useState(null)
     const [isViewOpen, setIsViewOpen] = useState(false)
 
@@ -70,9 +72,20 @@ export default function StaffDashboard() {
 
     return (
         <div className="space-y-6">
-            <div>
-                <h1 className="text-2xl font-bold text-surface-900">Staff Dashboard</h1>
-                <p className="text-surface-500 text-sm mt-1">Today&apos;s operations overview</p>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div>
+                    <h1 className="text-2xl font-bold text-surface-900">Staff Operations Desk</h1>
+                    <p className="text-surface-500 text-sm mt-1">Assigned duties, booking verification & shift schedule</p>
+                </div>
+                <div className="w-full sm:w-60">
+                    <CustomDatePicker
+                        label="Shift / Duty Date"
+                        value={selectedDate}
+                        onChange={(val) => setSelectedDate(val)}
+                        placeholder="Select Date"
+                        align="right"
+                    />
+                </div>
             </div>
             
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
@@ -83,7 +96,9 @@ export default function StaffDashboard() {
             </div>
             
             <div>
-                <h2 className="text-lg font-semibold text-surface-900 mb-4">Today&apos;s Schedule</h2>
+                <div className="flex items-center justify-between mb-4">
+                    <h2 className="text-lg font-bold text-surface-900">Shift Schedule ({selectedDate || 'Today'})</h2>
+                </div>
                 <DataTable columns={columns} data={bookings} />
             </div>
 

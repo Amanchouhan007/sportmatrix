@@ -18,15 +18,41 @@ export default function CustomerTeams() {
         fetchTeams()
     }, [])
 
+    const DEFAULT_DEMO_TEAMS = [
+        {
+            id: 'team-demo-1',
+            team_name: 'Vijay Nagar Blasters',
+            tournament_title: 'Indore Super League Cricket',
+            players: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11],
+            captain_name: 'Rahul Sharma (You)',
+            wins: 14,
+            losses: 3,
+            rank: '#1 Indore Hub'
+        },
+        {
+            id: 'team-demo-2',
+            team_name: 'Palasia Strikers FC',
+            tournament_title: 'MP Turf Football Championship',
+            players: [1, 2, 3, 4, 5, 6, 7],
+            captain_name: 'Priya Verma',
+            wins: 9,
+            losses: 2,
+            rank: '#3 Regional'
+        }
+    ]
+
     const fetchTeams = async () => {
         setLoading(true)
         try {
             const res = await getTeams()
-            if (res.success && Array.isArray(res.data)) {
+            if (res.success && Array.isArray(res.data) && res.data.length > 0) {
                 setTeamsList(res.data)
+            } else {
+                setTeamsList(DEFAULT_DEMO_TEAMS)
             }
         } catch (error) {
             console.error('Error fetching teams:', error)
+            setTeamsList(DEFAULT_DEMO_TEAMS)
         } finally {
             setLoading(false)
         }

@@ -95,16 +95,16 @@ export default function CustomDatePicker({ value, onChange, placeholder = 'Selec
             </button>
 
             {isOpen && (
-                <div className={`absolute top-full ${alignClass} mt-2 z-50 w-64 bg-white/95 backdrop-blur-xl border border-slate-200/90 rounded-2xl shadow-[0_20px_45px_rgba(0,0,0,0.12)] p-3.5 animate-in fade-in zoom-in-95 duration-150`}>
+                <div className={`absolute top-full ${alignClass} mt-2 z-[9999] w-64 max-w-[90vw] bg-white border border-slate-200/90 rounded-2xl shadow-[0_20px_45px_rgba(0,0,0,0.14)] p-3.5 animate-in fade-in zoom-in-95 duration-150`}>
                     {/* Month / Year Header */}
                     <div className="flex items-center justify-between pb-3 border-b border-slate-100 mb-3">
-                        <button type="button" onClick={handlePrevMonth} className="p-1.5 rounded-lg text-slate-500 hover:bg-slate-100 hover:text-slate-900 cursor-pointer">
+                        <button type="button" onClick={handlePrevMonth} className="p-1.5 rounded-xl text-slate-500 hover:bg-emerald-50 hover:text-[#16A34A] transition-colors cursor-pointer">
                             <FiChevronLeft className="w-4 h-4" />
                         </button>
                         <span className="text-xs font-black uppercase tracking-wider text-slate-900">
                             {monthNames[month]} {year}
                         </span>
-                        <button type="button" onClick={handleNextMonth} className="p-1.5 rounded-lg text-slate-500 hover:bg-slate-100 hover:text-slate-900 cursor-pointer">
+                        <button type="button" onClick={handleNextMonth} className="p-1.5 rounded-xl text-slate-500 hover:bg-emerald-50 hover:text-[#16A34A] transition-colors cursor-pointer">
                             <FiChevronRight className="w-4 h-4" />
                         </button>
                     </div>
@@ -112,7 +112,7 @@ export default function CustomDatePicker({ value, onChange, placeholder = 'Selec
                     {/* Day Names */}
                     <div className="grid grid-cols-7 text-center mb-2">
                         {['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'].map((d) => (
-                            <span key={d} className="text-[10px] font-black text-[#16A34A] uppercase">{d}</span>
+                            <span key={d} className="text-[10px] font-black text-[#16A34A] uppercase tracking-wider">{d}</span>
                         ))}
                     </div>
 
@@ -140,10 +140,10 @@ export default function CustomDatePicker({ value, onChange, placeholder = 'Selec
                                     onClick={() => handleSelectDay(dayNum)}
                                     className={`h-8 w-8 rounded-xl text-xs font-bold transition-all flex items-center justify-center mx-auto cursor-pointer ${
                                         isSelected
-                                            ? 'bg-[#16A34A] text-white font-black shadow-sm ring-2 ring-[#16A34A]/30 scale-105'
+                                            ? 'bg-[#16A34A] text-white font-black shadow-md ring-2 ring-[#16A34A]/30 scale-105'
                                             : isToday
-                                            ? 'bg-amber-100 text-amber-800 border border-amber-300 font-extrabold'
-                                            : 'text-slate-700 hover:bg-slate-100 hover:text-[#16A34A]'
+                                            ? 'bg-amber-100 text-amber-900 border border-amber-300 font-extrabold'
+                                            : 'text-slate-700 hover:bg-emerald-50 hover:text-[#16A34A]'
                                     }`}
                                 >
                                     {dayNum}
@@ -160,7 +160,7 @@ export default function CustomDatePicker({ value, onChange, placeholder = 'Selec
                                 onChange('')
                                 setIsOpen(false)
                             }}
-                            className="text-slate-400 hover:text-slate-700 font-semibold cursor-pointer"
+                            className="text-slate-400 hover:text-slate-700 font-bold transition-colors cursor-pointer"
                         >
                             Clear
                         </button>
@@ -170,9 +170,9 @@ export default function CustomDatePicker({ value, onChange, placeholder = 'Selec
                                 onChange(todayStr)
                                 setIsOpen(false)
                             }}
-                            className="text-[#16A34A] hover:underline font-bold cursor-pointer"
+                            className="text-[#16A34A] hover:underline font-black cursor-pointer uppercase tracking-wider text-[10px]"
                         >
-                            Today
+                            ● Today
                         </button>
                     </div>
                 </div>

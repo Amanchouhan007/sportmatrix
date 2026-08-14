@@ -70,7 +70,7 @@ export default function Select({
     }
 
     return (
-        <div ref={containerRef} className={`relative inline-block text-left ${isOpen ? 'z-50' : 'z-10'} ${className}`}>
+        <div ref={containerRef} className={`relative inline-block text-left ${isOpen ? 'z-[99999]' : 'z-10'} ${className}`}>
             {label && (
                 <label htmlFor={id} className="block text-[10px] font-black uppercase tracking-wider text-slate-500 mb-1.5">
                     {label}
@@ -82,13 +82,13 @@ export default function Select({
                 id={id}
                 disabled={disabled}
                 onClick={() => setIsOpen(!isOpen)}
-                className={`w-full bg-white border ${
+                className={`w-full h-[42px] bg-white border ${
                     isOpen
                         ? 'border-[#16A34A] ring-2 ring-[#16A34A]/20 shadow-md'
                         : error
                         ? 'border-rose-500 text-rose-600'
                         : 'border-slate-200 hover:border-[#16A34A] hover:bg-slate-50/60'
-                } rounded-2xl px-4 py-2.5 text-xs font-black text-slate-900 flex items-center justify-between gap-3 transition-all duration-200 cursor-pointer shadow-xs ${
+                } rounded-2xl px-4 py-2 text-xs font-black text-slate-900 flex items-center justify-between gap-3 transition-all duration-200 cursor-pointer shadow-xs ${
                     disabled ? 'opacity-50 cursor-not-allowed bg-slate-100' : ''
                 }`}
             >
@@ -103,7 +103,7 @@ export default function Select({
             </button>
 
             {isOpen && !disabled && (
-                <div className="absolute top-full left-0 mt-2 min-w-full w-max max-w-xs z-[9999] bg-white border border-slate-200 rounded-2xl shadow-[0_20px_45px_rgba(0,0,0,0.14)] p-1.5 max-h-60 overflow-y-auto space-y-1 animate-in fade-in zoom-in-95 duration-150 custom-scrollbar">
+                <div className="absolute top-full left-0 mt-2 min-w-full w-max max-w-xs z-[99999] bg-white border border-slate-200/90 rounded-2xl shadow-[0_20px_45px_rgba(0,0,0,0.14)] p-1.5 max-h-60 overflow-y-auto space-y-1 animate-in fade-in zoom-in-95 duration-150 custom-scrollbar">
                     {parsedOptions.length === 0 ? (
                         <div className="px-3 py-2.5 text-xs font-bold text-slate-400 text-center">No options available</div>
                     ) : (

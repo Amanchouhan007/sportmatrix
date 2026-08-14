@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react'
 import Input from '../../components/ui/Input'
+import CustomDatePicker from '../../components/ui/CustomDatePicker'
 import { useToast } from '../../components/ui/Toast'
 import { useAuth } from '../../context/AuthContext'
 import { 
@@ -369,19 +370,19 @@ export default function GlobalAnalytics() {
                     </div>
 
                     {range === 'CUSTOM' && (
-                        <div className="flex items-center gap-2 bg-white h-11 px-3 rounded-xl border border-slate-200/90 shadow-2xs animate-fade-in">
-                            <input
-                                type="date"
+                        <div className="flex items-center gap-2 bg-white px-2 py-1 rounded-2xl border border-slate-200/90 shadow-2xs animate-fade-in">
+                            <CustomDatePicker
                                 value={startDate}
-                                onChange={e => setStartDate(e.target.value)}
-                                className="py-1 px-2 text-xs font-bold text-slate-800 border border-slate-200 rounded-lg outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 bg-slate-50"
+                                onChange={val => setStartDate(val)}
+                                placeholder="Start Date"
+                                align="left"
                             />
                             <span className="text-slate-400 text-xs font-bold">to</span>
-                            <input
-                                type="date"
+                            <CustomDatePicker
                                 value={endDate}
-                                onChange={e => setEndDate(e.target.value)}
-                                className="py-1 px-2 text-xs font-bold text-slate-800 border border-slate-200 rounded-lg outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 bg-slate-50"
+                                onChange={val => setEndDate(val)}
+                                placeholder="End Date"
+                                align="right"
                             />
                         </div>
                     )}

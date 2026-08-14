@@ -5,6 +5,8 @@ import Button from '../../components/ui/Button'
 import Modal from '../../components/ui/Modal'
 import Input from '../../components/ui/Input'
 import Select from '../../components/ui/Select'
+import CustomSelect from '../../components/ui/CustomSelect'
+import CustomDatePicker from '../../components/ui/CustomDatePicker'
 import { useToast } from '../../components/ui/Toast'
 
 // Initial data for demonstration
@@ -102,15 +104,15 @@ export default function StaffTournaments() {
             render: (v, r) => (
                 <div className="flex items-center gap-2">
                     <Badge variant={v === 'Live' ? 'success' : v === 'Finished' ? 'primary' : 'warning'} dot>{v}</Badge>
-                    <select 
-                        className="text-[10px] bg-surface-50 border-none rounded p-1 cursor-pointer"
+                    <CustomSelect 
                         value={v}
-                        onChange={(e) => handleUpdateStatus(r.id, e.target.value)}
-                    >
-                        <option value="Upcoming">Upcoming</option>
-                        <option value="Live">Live</option>
-                        <option value="Finished">Finished</option>
-                    </select>
+                        onChange={(val) => handleUpdateStatus(r.id, val)}
+                        options={[
+                            { value: 'Upcoming', label: 'Upcoming' },
+                            { value: 'Live', label: 'Live' },
+                            { value: 'Finished', label: 'Finished' }
+                        ]}
+                    />
                 </div>
             ) 
         },
@@ -156,7 +158,12 @@ export default function StaffTournaments() {
                             value={newTournament.sport} 
                             onChange={(e) => setNewTournament({...newTournament, sport: e.target.value})}
                         />
-                        <Input label="Date" type="date" required value={newTournament.date} onChange={(e) => setNewTournament({...newTournament, date: e.target.value})} />
+                        <CustomDatePicker
+                            label="Date *"
+                            value={newTournament.date}
+                            onChange={(val) => setNewTournament({...newTournament, date: val})}
+                            align="left"
+                        />
                     </div>
                     <Input label="Total Matches" type="number" required value={newTournament.totalMatches} onChange={(e) => setNewTournament({...newTournament, totalMatches: e.target.value})} />
                     <div className="flex justify-end gap-3 pt-4">

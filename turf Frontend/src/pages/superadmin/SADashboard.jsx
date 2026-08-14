@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import Badge from '../../components/ui/Badge'
 import Input from '../../components/ui/Input'
+import CustomDatePicker from '../../components/ui/CustomDatePicker'
 import { useToast } from '../../components/ui/Toast'
 import { useAuth } from '../../context/AuthContext'
 import { 
@@ -262,19 +263,19 @@ export default function SADashboard() {
                     </div>
 
                     {range === 'CUSTOM' && (
-                        <div className="flex items-center gap-2 bg-white h-11 px-3 rounded-xl border border-slate-200/90 shadow-2xs animate-fade-in">
-                            <Input
-                                type="date"
+                        <div className="flex items-center gap-2 bg-white px-2 py-1 rounded-2xl border border-slate-200/90 shadow-2xs animate-fade-in">
+                            <CustomDatePicker
                                 value={startDate}
-                                onChange={e => setStartDate(e.target.value)}
-                                className="w-32 py-1 text-xs"
+                                onChange={val => setStartDate(val)}
+                                placeholder="Start Date"
+                                align="left"
                             />
                             <span className="text-slate-400 text-xs font-semibold">to</span>
-                            <Input
-                                type="date"
+                            <CustomDatePicker
                                 value={endDate}
-                                onChange={e => setEndDate(e.target.value)}
-                                className="w-32 py-1 text-xs"
+                                onChange={val => setEndDate(val)}
+                                placeholder="End Date"
+                                align="right"
                             />
                         </div>
                     )}

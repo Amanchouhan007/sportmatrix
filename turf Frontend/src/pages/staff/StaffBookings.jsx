@@ -5,6 +5,7 @@ import Badge from '../../components/ui/Badge'
 import Modal from '../../components/ui/Modal'
 import Input from '../../components/ui/Input'
 import Select from '../../components/ui/Select'
+import CustomDatePicker from '../../components/ui/CustomDatePicker'
 import { useToast } from '../../components/ui/Toast'
 
 const initialBookings = [
@@ -197,12 +198,11 @@ export default function StaffBookings() {
                         />
                     </div>
                     <div className="grid grid-cols-3 gap-4">
-                        <Input 
-                            label="Date" 
-                            type="date" 
-                            required
+                        <CustomDatePicker 
+                            label="Date *" 
                             value={formData.date}
-                            onChange={(e) => setFormData({...formData, date: e.target.value})}
+                            onChange={(val) => setFormData({...formData, date: val})}
+                            align="left"
                         />
                         <Input 
                             label="Start Time" 

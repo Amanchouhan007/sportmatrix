@@ -8,6 +8,45 @@ import Input from '../../components/ui/Input'
 import ConfirmDialog from '../../components/ui/ConfirmDialog'
 import { useAuth } from '../../context/AuthContext'
 
+const DEFAULT_DEMO_BOOKINGS = [
+    {
+        id: 'BK-701',
+        venue: 'Champions Turf Arena (Vijay Nagar)',
+        court: 'Turf Pitch A',
+        sport: 'Cricket 🏏',
+        date: '2026-08-15',
+        time: '06:00 PM - 07:00 PM',
+        amount: '₹1,200',
+        status: 'Confirmed',
+        paymentMethod: 'UPI (Paid)',
+        createdOn: '2026-08-10'
+    },
+    {
+        id: 'BK-702',
+        venue: 'SkyLine Sports Arena (Palasia)',
+        court: 'Main Arena',
+        sport: 'Football ⚽',
+        date: '2026-08-18',
+        time: '07:00 PM - 08:00 PM',
+        amount: '₹1,400',
+        status: 'Confirmed',
+        paymentMethod: 'Card (Paid)',
+        createdOn: '2026-08-11'
+    },
+    {
+        id: 'BK-703',
+        venue: 'Velocity Sports Hub (Rau)',
+        court: 'Box Cricket Ground 1',
+        sport: 'Box Cricket 🏏',
+        date: '2026-08-22',
+        time: '08:00 PM - 09:00 PM',
+        amount: '₹1,000',
+        status: 'Pending',
+        paymentMethod: 'Cash at Venue',
+        createdOn: '2026-08-12'
+    }
+]
+
 export default function CustomerBookings() {
     const { user } = useAuth()
     const navigate = useNavigate()
@@ -16,16 +55,16 @@ export default function CustomerBookings() {
     const getMyBookingsFromStorage = () => {
         try {
             const raw = localStorage.getItem('customer_bookings')
-            if (!raw) return []
+            if (!raw) return DEFAULT_DEMO_BOOKINGS
             const parsed = JSON.parse(raw)
-            if (!Array.isArray(parsed)) return []
+            if (!Array.isArray(parsed) || parsed.length === 0) return DEFAULT_DEMO_BOOKINGS
             
             const currentEmail = (user?.email || '').toLowerCase()
             const currentUserId = user?.id || ''
             const currentPhone = user?.phone || user?.mobile || ''
             const cleanCurrentPhone = currentPhone.replace(/\D/g, '').slice(-10)
 
-            return parsed.filter(b => {
+            const matched = parsed.filter(b => {
                 const bEmail = (b.userEmail || '').toLowerCase()
                 const bUserId = b.userId || ''
                 const bPhone = b.customerPhone || b.phone || ''
@@ -44,8 +83,10 @@ export default function CustomerBookings() {
 
                 return false
             })
+
+            return matched.length > 0 ? matched : DEFAULT_DEMO_BOOKINGS
         } catch (e) {
-            return []
+            return DEFAULT_DEMO_BOOKINGS
         }
     }
 

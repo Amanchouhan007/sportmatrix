@@ -6,6 +6,7 @@ import Modal from '../../components/ui/Modal'
 import Card from '../../components/ui/Card'
 import { useToast } from '../../components/ui/Toast'
 import { useAuth } from '../../context/AuthContext'
+import CustomDatePicker from '../../components/ui/CustomDatePicker'
 import { 
     HiTicket, HiCalendar, HiCurrencyRupee, HiSearch, HiCheckCircle, 
     HiBan, HiUser, HiChevronLeft, HiChevronRight, HiClock, HiLocationMarker,
@@ -340,11 +341,11 @@ export default function BookingManagement() {
                         />
                     </div>
 
-                    <input
-                        type="date"
+                    <CustomDatePicker
                         value={filterDate}
-                        onChange={(e) => setFilterDate(e.target.value)}
-                        className="px-3 py-2 bg-surface-50 border border-surface-200 rounded-2xl text-xs font-semibold outline-none focus:border-emerald-500 shadow-soft"
+                        onChange={(val) => setFilterDate(val)}
+                        placeholder="All Dates"
+                        align="right"
                     />
 
                     {(searchQuery || filterDate || filterStatus !== 'All') && (

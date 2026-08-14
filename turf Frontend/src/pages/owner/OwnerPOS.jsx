@@ -4,6 +4,7 @@ import Card from '../../components/ui/Card'
 import Button from '../../components/ui/Button'
 import Input from '../../components/ui/Input'
 import Select from '../../components/ui/Select'
+import CustomDatePicker from '../../components/ui/CustomDatePicker'
 import Badge from '../../components/ui/Badge'
 import { useToast } from '../../components/ui/Toast'
 import { 
@@ -626,11 +627,11 @@ export default function OwnerPOS() {
 
                                 {/* BOOKING DATE & BOOKING TYPE */}
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                    <Input
+                                    <CustomDatePicker
                                         label="Booking Date"
-                                        type="date"
                                         value={booking.date}
-                                        onChange={(e) => setBooking({ ...booking, date: e.target.value })}
+                                        onChange={(val) => setBooking({ ...booking, date: val })}
+                                        align="left"
                                     />
                                     <Select
                                         label="Booking Type"

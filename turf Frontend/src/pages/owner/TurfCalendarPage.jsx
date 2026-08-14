@@ -6,6 +6,7 @@ import Badge from '../../components/ui/Badge'
 import Modal from '../../components/ui/Modal'
 import Input from '../../components/ui/Input'
 import Select from '../../components/ui/Select'
+import CustomDatePicker from '../../components/ui/CustomDatePicker'
 import { useToast } from '../../components/ui/Toast'
 import { useAuth } from '../../context/AuthContext'
 import { 
@@ -912,7 +913,7 @@ export default function TurfCalendarPage() {
                         <div className="flex items-center bg-white p-1 rounded-xl border border-slate-200/80 gap-1 text-xs font-bold shadow-2xs">
                             <button
                                 onClick={() => handleNavigateDate('today')}
-                                className="px-3 py-1.5 rounded-lg bg-slate-50 text-slate-800 hover:text-emerald-600 transition-all font-extrabold cursor-pointer border border-slate-200/60"
+                                className="px-3 py-1.5 rounded-lg bg-emerald-50 text-[#16A34A] hover:bg-emerald-100 transition-all font-black cursor-pointer border border-emerald-200/60"
                             >
                                 Today
                             </button>
@@ -923,9 +924,12 @@ export default function TurfCalendarPage() {
                             >
                                 <HiChevronLeft className="w-4 h-4" />
                             </button>
-                            <span className="px-2 text-xs font-black text-slate-900 font-mono">
-                                {currentDate}
-                            </span>
+                            <CustomDatePicker
+                                value={currentDate}
+                                onChange={(val) => val && setCurrentDate(val)}
+                                placeholder="Select date"
+                                align="right"
+                            />
                             <button
                                 onClick={() => handleNavigateDate('next')}
                                 className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-600 hover:text-slate-900 transition-colors cursor-pointer"

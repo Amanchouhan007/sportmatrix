@@ -4,10 +4,12 @@ import { getCrmLeads, saveCrmLead, deleteCrmLead, AVAILABLE_TURF_BRANCHES } from
 import OfferBroadcastModal from '../../components/crm/OfferBroadcastModal'
 import { useToast } from '../../components/ui/Toast'
 import CustomSelect from '../../components/ui/CustomSelect'
+import CustomDatePicker from '../../components/ui/CustomDatePicker'
 
 export default function TurfLeadCRMPage() {
     const [leads, setLeads] = useState([])
     const [selectedBranch, setSelectedBranch] = useState('all') // 'all' | specific turf branch
+    const [selectedDate, setSelectedDate] = useState('')
     const [activeTab, setActiveTab] = useState('all') // 'all' | 'team' | 'player' | 'umpire' | 'organizer'
     const [searchQuery, setSearchQuery] = useState('')
     const [selectedLeadIds, setSelectedLeadIds] = useState([])
@@ -129,11 +131,12 @@ export default function TurfLeadCRMPage() {
     const filteredLeads = leads.filter(lead => {
         const matchesBranch = selectedBranch === 'all' || lead.turfBranch === selectedBranch
         const matchesTab = activeTab === 'all' || lead.role === activeTab
+        const matchesDate = !selectedDate || (lead.createdAt && lead.createdAt.includes(selectedDate))
         const matchesSearch = 
             lead.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
             lead.phone?.includes(searchQuery) ||
             lead.teamName?.toLowerCase().includes(searchQuery.toLowerCase())
-        return matchesBranch && matchesTab && matchesSearch
+        return matchesBranch && matchesTab && matchesDate && matchesSearch
     })
 
     // Checkbox toggles
@@ -243,8 +246,8 @@ export default function TurfLeadCRMPage() {
             {/* Controls Bar: Turf Selector, Tabs & Search */}
             <div className="flex flex-col gap-3 bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
                 <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
-                    {/* Turf Branch Selector */}
-                    <div className="flex items-center gap-2 min-w-[240px]">
+                    {/* Turf Branch & Date Selectors */}
+                    <div className="flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto">
                         <CustomSelect
                             label="🏟️ Turf Branch"
                             value={selectedBranch}
@@ -253,19 +256,27 @@ export default function TurfLeadCRMPage() {
                                 value: b,
                                 label: b === 'all' ? '🌐 All Turf Branches' : `🏟️ ${b}`
                             }))}
-                            className="w-full"
+                            className="w-full sm:w-60"
+                        />
+                        <CustomDatePicker
+                            label="📅 Filter Date"
+                            value={selectedDate}
+                            onChange={(val) => setSelectedDate(val)}
+                            placeholder="All Dates"
+                            align="left"
+                            className="w-full sm:w-48"
                         />
                     </div>
 
                     {/* Search Bar */}
-                    <div className="relative w-full sm:w-72">
-                        <HiSearch className="absolute left-3.5 top-2.5 text-slate-400 w-4 h-4" />
+                    <div className="relative w-full sm:w-64 self-end">
+                        <HiSearch className="absolute left-3.5 top-3 text-slate-400 w-4 h-4" />
                         <input
                             type="text"
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
-                            placeholder="Search captain name, phone, team..."
-                            className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-9 pr-4 py-1.5 text-xs font-medium text-slate-900 outline-none focus:border-[#16A34A] focus:bg-white"
+                            placeholder="Search captain name, phone..."
+                            className="w-full h-[42px] bg-slate-50 border border-slate-200 rounded-2xl pl-9 pr-4 py-1.5 text-xs font-medium text-slate-900 outline-none focus:border-[#16A34A] focus:bg-white"
                         />
                     </div>
                 </div>

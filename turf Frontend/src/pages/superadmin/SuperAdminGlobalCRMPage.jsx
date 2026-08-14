@@ -4,11 +4,13 @@ import { getCrmLeads } from '../../services/crmService'
 import OfferBroadcastModal from '../../components/crm/OfferBroadcastModal'
 import { useToast } from '../../components/ui/Toast'
 import CustomSelect from '../../components/ui/CustomSelect'
+import CustomDatePicker from '../../components/ui/CustomDatePicker'
 
 export default function SuperAdminGlobalCRMPage() {
     const [leads, setLeads] = useState([])
     const [selectedBranch, setSelectedBranch] = useState('all')
     const [selectedRole, setSelectedRole] = useState('all')
+    const [selectedDate, setSelectedDate] = useState('')
     const [searchQuery, setSearchQuery] = useState('')
     const [selectedLeadIds, setSelectedLeadIds] = useState([])
     const [isBroadcastModalOpen, setIsBroadcastModalOpen] = useState(false)
@@ -59,11 +61,12 @@ export default function SuperAdminGlobalCRMPage() {
     const filteredLeads = leads.filter(lead => {
         const matchesBranch = selectedBranch === 'all' || lead.turfBranch === selectedBranch
         const matchesRole = selectedRole === 'all' || lead.role === selectedRole
+        const matchesDate = !selectedDate || (lead.createdAt && lead.createdAt.includes(selectedDate))
         const matchesSearch = 
             lead.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
             lead.phone?.includes(searchQuery) ||
             lead.teamName?.toLowerCase().includes(searchQuery.toLowerCase())
-        return matchesBranch && matchesRole && matchesSearch
+        return matchesBranch && matchesRole && matchesDate && matchesSearch
     })
 
     const isAllSelected = filteredLeads.length > 0 && filteredLeads.every(l => selectedLeadIds.includes(l.id))
@@ -130,7 +133,7 @@ export default function SuperAdminGlobalCRMPage() {
             </div>
 
             {/* Filter Controls Bar */}
-            <div className="grid sm:grid-cols-3 gap-3 bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
+            <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3 bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
                 <div>
                     <CustomSelect
                         label="Filter by Venue / Branch"
@@ -159,6 +162,16 @@ export default function SuperAdminGlobalCRMPage() {
                 </div>
 
                 <div>
+                    <CustomDatePicker
+                        label="Filter by Creation Date"
+                        value={selectedDate}
+                        onChange={(val) => setSelectedDate(val)}
+                        placeholder="All Dates"
+                        align="left"
+                    />
+                </div>
+
+                <div>
                     <label className="text-[10px] font-black uppercase tracking-wider text-slate-400 mb-1 block">Search Contacts</label>
                     <div className="relative">
                         <HiSearch className="absolute left-3.5 top-2.5 text-slate-400 w-4 h-4" />
@@ -167,7 +180,7 @@ export default function SuperAdminGlobalCRMPage() {
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
                             placeholder="Search name, phone, team..."
-                            className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-9 pr-4 py-2 text-xs font-medium text-slate-900 outline-none focus:border-[#16A34A]"
+                            className="w-full h-[42px] bg-slate-50 border border-slate-200 rounded-2xl pl-9 pr-4 py-2 text-xs font-medium text-slate-900 outline-none focus:border-[#16A34A]"
                         />
                     </div>
                 </div>
