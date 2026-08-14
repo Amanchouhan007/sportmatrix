@@ -251,6 +251,7 @@ export default function CommissionManagement() {
                                                 <Button
                                                     size="xs"
                                                     variant="primary"
+                                                    className="px-4 py-1.5 text-xs font-bold shadow-xs"
                                                     onClick={() => handleMarkPaid(item.bookingId)}
                                                 >
                                                     Mark Paid

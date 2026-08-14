@@ -204,25 +204,25 @@ export default function OwnerMyAdvertisements() {
 
 
 
-            {/* 3. Ultra-Clean Single-Line Toolbar */}
-            <div className="p-3 bg-white border border-surface-200/80 rounded-2xl shadow-soft relative overflow-visible z-20">
-                <div className="flex flex-col sm:flex-row items-center justify-between gap-2.5 overflow-visible">
+            {/* 3. Ultra-Clean Toolbar (Fits Inside Card) */}
+            <div className="p-3 bg-white border border-surface-200/80 rounded-2xl shadow-soft relative overflow-hidden z-20">
+                <div className="flex flex-col lg:flex-row items-center justify-between gap-2 overflow-x-auto no-scrollbar">
                     {/* Search Input */}
-                    <div className="relative flex-1 min-w-[240px] max-w-md">
-                        <span className="absolute inset-y-0 left-0 flex items-center pl-3.5 pointer-events-none text-surface-400">
-                            <FiSearch className="w-4 h-4" />
+                    <div className="relative flex-1 min-w-[200px] max-w-sm w-full">
+                        <span className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-surface-400">
+                            <FiSearch className="w-3.5 h-3.5" />
                         </span>
                         <input
                             type="text"
                             placeholder="Search campaign name or ID..."
                             value={search}
                             onChange={(e) => setSearch(e.target.value)}
-                            className="w-full pl-9 pr-4 py-2 rounded-xl border border-surface-200 bg-white text-surface-900 text-xs sm:text-sm outline-none transition-all duration-200 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500/20 placeholder:text-surface-400 font-medium shadow-sm"
+                            className="w-full pl-8 pr-3 py-1.5 rounded-xl border border-surface-200 bg-white text-surface-900 text-xs outline-none transition-all duration-200 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500/20 placeholder:text-surface-400 font-medium shadow-2xs"
                         />
                     </div>
 
-                    {/* All Filter & Action Items in 1 Single Line */}
-                    <div className="flex flex-row items-center gap-2 shrink-0">
+                    {/* All Filter & Action Items in Single Row */}
+                    <div className="flex items-center gap-1.5 shrink-0 flex-wrap sm:flex-nowrap">
                         <Select
                             value={typeFilter}
                             onChange={(e) => setTypeFilter(e.target.value)}
@@ -232,7 +232,7 @@ export default function OwnerMyAdvertisements() {
                                 { value: 'Discount Offer', label: '🟣 Discount' },
                                 { value: 'Impression Ad', label: '🟠 Impression' }
                             ]}
-                            className="w-40 text-xs font-semibold"
+                            className="w-32 text-xs font-semibold"
                         />
 
                         <Select
@@ -244,23 +244,23 @@ export default function OwnerMyAdvertisements() {
                                 { value: 'Pending', label: '🟡 Pending' },
                                 { value: 'Expired', label: '⚫ Expired' }
                             ]}
-                            className="w-36 text-xs font-semibold"
+                            className="w-28 text-xs font-semibold"
                         />
 
                         {/* View Switcher Buttons */}
-                        <div className="flex items-center gap-0.5 bg-surface-100 p-1 rounded-xl border border-surface-200/80 shrink-0">
+                        <div className="flex items-center gap-0.5 bg-surface-100 p-0.5 rounded-xl border border-surface-200/80 shrink-0">
                             <button
                                 onClick={() => setViewMode('card')}
-                                className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                                    viewMode === 'card' ? 'bg-emerald-600 text-white shadow-sm' : 'text-surface-600 hover:text-surface-900'
+                                className={`flex items-center gap-1 px-2 py-1 rounded-lg text-[11px] font-bold transition-all cursor-pointer ${
+                                    viewMode === 'card' ? 'bg-emerald-600 text-white shadow-xs' : 'text-surface-600 hover:text-surface-900'
                                 }`}
                             >
                                 <FiGrid className="w-3 h-3" /> Cards
                             </button>
                             <button
                                 onClick={() => setViewMode('table')}
-                                className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                                    viewMode === 'table' ? 'bg-emerald-600 text-white shadow-sm' : 'text-surface-600 hover:text-surface-900'
+                                className={`flex items-center gap-1 px-2 py-1 rounded-lg text-[11px] font-bold transition-all cursor-pointer ${
+                                    viewMode === 'table' ? 'bg-emerald-600 text-white shadow-xs' : 'text-surface-600 hover:text-surface-900'
                                 }`}
                             >
                                 <FiList className="w-3 h-3" /> Table
@@ -269,22 +269,22 @@ export default function OwnerMyAdvertisements() {
 
                         <button
                             onClick={handleExportCSV}
-                            className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-white hover:bg-surface-50 border border-surface-200/80 text-xs font-bold text-surface-700 hover:text-emerald-600 transition-all cursor-pointer shadow-sm shrink-0"
+                            className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-white hover:bg-surface-50 border border-surface-200/80 text-[11px] font-bold text-surface-700 hover:text-emerald-600 transition-all cursor-pointer shadow-2xs shrink-0"
                         >
-                            <FiDownload className="w-3.5 h-3.5 text-emerald-600" /> Export
+                            <FiDownload className="w-3 h-3 text-emerald-600" /> Export
                         </button>
 
                         <button
                             onClick={() => setAds([...INITIAL_OWNER_ADS])}
-                            className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-white hover:bg-surface-50 border border-surface-200/80 text-xs font-bold text-surface-700 hover:text-indigo-600 transition-all cursor-pointer shadow-sm shrink-0"
+                            className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-white hover:bg-surface-50 border border-surface-200/80 text-[11px] font-bold text-surface-700 hover:text-indigo-600 transition-all cursor-pointer shadow-2xs shrink-0"
                         >
-                            <FiRefreshCw className="w-3.5 h-3.5 text-indigo-600" /> Refresh
+                            <FiRefreshCw className="w-3 h-3 text-indigo-600" /> Refresh
                         </button>
 
                         <Button
                             variant="primary"
                             onClick={() => navigate('/admin/ads/create')}
-                            className="shadow-md shadow-emerald-500/20 flex items-center gap-1 text-xs font-bold px-3 py-1.5 shrink-0"
+                            className="shadow-sm shadow-emerald-500/20 flex items-center gap-1 text-[11px] font-extrabold px-3 py-1.5 rounded-xl shrink-0"
                         >
                             <FiPlus className="w-3.5 h-3.5" /> Campaign
                         </Button>
