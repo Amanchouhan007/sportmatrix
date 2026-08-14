@@ -17,10 +17,14 @@ export const fallbackPublicTournaments = [
         location: 'Vijay Nagar, Indore',
         date: '15 Aug - 20 Aug 2026',
         maxTeams: 16,
+        max_teams: 16,
         registrations: 12,
-        prize: '₹50,000',
+        prize: '50,000',
+        prizePool: '50,000',
+        prize_pool: '50,000',
         entryFee: '500',
-        status: 'Active'
+        entry_fee: '500',
+        status: 'Approved'
     },
     {
         id: 't_002',
@@ -33,10 +37,14 @@ export const fallbackPublicTournaments = [
         location: 'Bhawarkua, Indore',
         date: '22 Aug - 25 Aug 2026',
         maxTeams: 8,
+        max_teams: 8,
         registrations: 5,
-        prize: '₹30,000',
+        prize: '30,000',
+        prizePool: '30,000',
+        prize_pool: '30,000',
         entryFee: '800',
-        status: 'Active'
+        entry_fee: '800',
+        status: 'Approved'
     },
     {
         id: 't_003',
@@ -49,10 +57,14 @@ export const fallbackPublicTournaments = [
         location: 'Andheri West, Mumbai',
         date: '01 Sep - 05 Sep 2026',
         maxTeams: 12,
+        max_teams: 12,
         registrations: 9,
-        prize: '₹75,000',
+        prize: '75,000',
+        prizePool: '75,000',
+        prize_pool: '75,000',
         entryFee: '1000',
-        status: 'Upcoming'
+        entry_fee: '1000',
+        status: 'Approved'
     },
     {
         id: 't_004',
@@ -65,10 +77,14 @@ export const fallbackPublicTournaments = [
         location: 'Koramangala, Bangalore',
         date: '10 Sep - 12 Sep 2026',
         maxTeams: 16,
+        max_teams: 16,
         registrations: 12,
-        prize: '₹40,000',
+        prize: '40,000',
+        prizePool: '40,000',
+        prize_pool: '40,000',
         entryFee: '600',
-        status: 'Upcoming'
+        entry_fee: '600',
+        status: 'Approved'
     }
 ];
 

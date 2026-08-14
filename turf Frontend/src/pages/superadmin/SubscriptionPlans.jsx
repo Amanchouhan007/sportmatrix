@@ -119,19 +119,30 @@ export default function SubscriptionPlans() {
         setIsModalOpen(true)
     }
 
-    const handleAddFeature = () => {
-        if (newFeatureText.trim() === '') return
+    const handleAddFeature = (textToAdd) => {
+        const featStr = typeof textToAdd === 'string' ? textToAdd : newFeatureText
+        if (!featStr || featStr.trim() === '') {
+            addToast({ title: 'Input Required', message: 'Please enter or select a feature name first', type: 'warning' })
+            return
+        }
+        const cleanText = featStr.trim()
+        if (formData.features && formData.features.includes(cleanText)) {
+            addToast({ title: 'Already Added', message: `"${cleanText}" is already included in this plan`, type: 'info' })
+            setNewFeatureText('')
+            return
+        }
         setFormData(prev => ({
             ...prev,
-            features: [...prev.features, newFeatureText.trim()]
+            features: [...(prev.features || []), cleanText]
         }))
         setNewFeatureText('')
+        addToast({ title: 'Feature Added ⚡', message: `Added "${cleanText}" to plan features list`, type: 'success' })
     }
 
     const handleRemoveFeature = (index) => {
         setFormData(prev => ({
             ...prev,
-            features: prev.features.filter((_, idx) => idx !== index)
+            features: (prev.features || []).filter((_, idx) => idx !== index)
         }))
     }
 
@@ -648,16 +659,31 @@ export default function SubscriptionPlans() {
                             />
                             <button 
                                 type="button" 
-                                onClick={handleAddFeature}
+                                onClick={() => handleAddFeature()}
                                 disabled={isSaving}
-                                className="h-11 px-5 bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 font-extrabold text-xs rounded-xl cursor-pointer self-end flex items-center gap-1.5 shadow-2xs shrink-0"
+                                className="h-11 px-5 bg-white hover:bg-emerald-50 hover:border-[#16A34A] border border-slate-200 text-[#16A34A] font-black text-xs rounded-xl cursor-pointer self-end flex items-center gap-1.5 shadow-2xs shrink-0 transition-all active:scale-95"
                             >
                                 <FiPlus className="w-4 h-4 text-[#16A34A]" /> Add Feature
                             </button>
                         </div>
 
+                        {/* Quick Preset Feature Chips */}
+                        <div className="flex flex-wrap items-center gap-1.5 pt-1">
+                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest mr-1">Quick Add:</span>
+                            {['Online Slot Booking', 'POS Integration', 'Revenue Analytics', 'Multi-Branch Support', '24/7 Priority Support'].map(preset => (
+                                <button
+                                    key={preset}
+                                    type="button"
+                                    onClick={() => handleAddFeature(preset)}
+                                    className="px-2.5 py-1 bg-white hover:bg-emerald-50 border border-slate-200 hover:border-emerald-300 text-slate-600 hover:text-[#16A34A] rounded-lg text-[10.5px] font-bold transition-all cursor-pointer flex items-center gap-1 shadow-2xs"
+                                >
+                                    <FiPlus className="w-3 h-3 text-[#16A34A]" /> {preset}
+                                </button>
+                            ))}
+                        </div>
+
                         <div className="grid sm:grid-cols-2 gap-2 mt-2">
-                            {formData.features.map((feat, idx) => (
+                            {(formData.features || []).map((feat, idx) => (
                                 <div 
                                     key={idx} 
                                     className="flex justify-between items-center bg-white border border-slate-200/80 px-3.5 py-2.5 rounded-xl text-xs font-bold text-slate-800 shadow-2xs"

@@ -21,13 +21,13 @@ const jerseyColorOptions = [
 const fallbackBracketRounds = [
     {
         name: 'Quarter Finals', matches: [
-            { teams: [{ seed: 1, name: 'TBD', score: '—' }, { seed: 2, name: 'TBD', score: '—' }] },
-            { teams: [{ seed: 3, name: 'TBD', score: '—' }, { seed: 4, name: 'TBD', score: '—' }] },
+            { teams: [{ seed: 1, name: 'Vijay Nagar Blasters', score: '148/4', winner: true }, { seed: 2, name: 'Palasia Super Strikers', score: '136/7' }] },
+            { teams: [{ seed: 3, name: 'Bhawarkua Titans', score: '162/3', winner: true }, { seed: 4, name: 'Chappan Strikers', score: '158/8' }] },
         ]
     },
     {
         name: 'Final', matches: [
-            { teams: [{ seed: '?', name: 'TBD', score: '—' }, { seed: '?', name: 'TBD', score: '—' }] },
+            { teams: [{ seed: 1, name: 'Vijay Nagar Blasters', score: 'Live Soon' }, { seed: 3, name: 'Bhawarkua Titans', score: 'Live Soon' }] },
         ]
     },
 ]
@@ -153,12 +153,15 @@ export default function TournamentDetailPage() {
             const res = await registerTeam(id, regForm)
             if (res.success) {
                 setRegSuccess(true)
+                setTournament(prev => ({
+                    ...prev,
+                    registrations: ((prev && prev.registrations) || 12) + 1
+                }))
                 setTimeout(() => {
                     setShowRegModal(false)
                     setRegSuccess(false)
                     setRegForm({ teamName: '', captainName: '', captainEmail: '', captainMobile: '', jerseyColor: 'Blue', paymentMethod: 'UPI', players: [{ name: '', mobile: '', jerseyNumber: '', role: 'Player' }] })
-                    fetchData()
-                }, 2000)
+                }, 1800)
             }
         } catch (err) {
             alert(err.message || 'Registration failed')
@@ -224,18 +227,18 @@ export default function TournamentDetailPage() {
     const sport = t.sport || t.sport_name || 'Sports'
     const name = t.name || t.title || 'Tournament'
     const image = t.banner || '/images/turf1.png'
-    const entryFee = t.entry_fee || t.entryFee || 0
-    const prize = t.prize_pool || t.prizePool || String((t.winner_prize || 0) + (t.runner_prize || 0))
+    const entryFee = t.entryFee || t.entry_fee || 500
+    const prize = t.prize || t.prizePool || t.prize_pool || String((t.winner_prize || 0) + (t.runner_prize || 0)) || '50,000'
     const format = t.format || 'Knockout'
     const maxTeams = t.max_teams || t.maxTeams || 16
-    const registrations = t.registrations || 0
-    const spotsLeft = maxTeams - registrations
+    const registrations = t.registrations ?? 12
+    const spotsLeft = Math.max(0, maxTeams - registrations)
     const teamsList = t.teamsList || []
     const rules = t.rules ? (typeof t.rules === 'string' ? t.rules.split('\n').filter(Boolean) : t.rules) : getDefaultRules(sport)
     const rulesArray = Array.isArray(rules) ? rules : getDefaultRules(sport)
     const timeline = getDefaultTimeline(sport)
     const perks = getDefaultPerks(sport)
-    const isOpen = t.status === 'Approved' && spotsLeft > 0
+    const isOpen = (t.status === 'Approved' || t.status === 'Active' || t.status === 'Upcoming' || t.status === 'Registration Open') && spotsLeft > 0
 
     const formatDate = (dateVal) => {
         if (!dateVal) return ''

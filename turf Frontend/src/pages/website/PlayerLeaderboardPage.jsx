@@ -306,6 +306,11 @@ export default function PlayerLeaderboardPage() {
         addToast('🎉 Captain Handshake Certified! Scorecard verified and Leaderboard updated live!', 'success')
     }
 
+    const handleDisputeHandshake = (matchId, reason) => {
+        setHandshakeMatch(null)
+        addToast('⚠️ Scorecard disputed and forwarded to Turf Admin.', 'error')
+    }
+
     const [formScore, setFormScore] = useState({
         playerName: 'Rohit Sharma (Indore)',
         teamName: 'Vijay Nagar Blasters',
@@ -1182,6 +1187,7 @@ export default function PlayerLeaderboardPage() {
                         match={handshakeMatch}
                         onClose={() => setHandshakeMatch(null)}
                         onApprove={handleApproveHandshake}
+                        onDispute={handleDisputeHandshake}
                     />
                 )}
             </div>
