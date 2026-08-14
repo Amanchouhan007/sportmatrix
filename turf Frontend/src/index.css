@@ -1,7 +1,13 @@
 @import "tailwindcss";
 
 @theme {
-  /* ── Premium Color System ── */
+  /* ── Brand Design System Tokens ── */
+  --color-brand-primary: #10b981;
+  --color-brand-primary-dark: #065f46;
+  --color-brand-neon: #c8ff2e;
+  --color-brand-neon-hover: #b5f000;
+  --color-brand-dark: #0f172a;
+
   --color-primary-50: #ecfdf5;
   --color-primary-100: #d1fae5;
   --color-primary-200: #a7f3d0;

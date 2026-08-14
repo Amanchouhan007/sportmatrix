@@ -22,6 +22,7 @@ import {
 import { HiTrophy } from 'react-icons/hi2'
 import { useToast } from '../../components/ui/Toast'
 import { useAuth } from '../../context/AuthContext'
+import { addOrUpdateLeaderboardPlayer } from '../../services/leaderboardService'
 
 // Initial Assigned Umpire Matches Data for Indore Turfs
 const INITIAL_MATCHES = [
@@ -272,9 +273,15 @@ export default function UmpireDashboard() {
     const [tossDecision, setTossDecision] = useState({
         winnerTeam: '',
         electedTo: 'bat', // 'bat' | 'bowl'
+        tossMode: 'system', // 'system' | 'manual'
+        callingTeam: '',
+        callingCall: 'HEADS', // 'HEADS' | 'TAILS'
         coinFlipping: false,
         coinResult: null // 'HEADS' | 'TAILS'
     })
+
+    // Official Payment Receipt Modal State
+    const [receiptModalMatch, setReceiptModalMatch] = useState(null)
 
     useEffect(() => {
         try {
@@ -341,36 +348,31 @@ export default function UmpireDashboard() {
         setMatchHistory(updatedHistory)
 
         // 🌟 Push Official Umpire-Certified Performance to Indore Leaderboard!
-        const newLeaderboardEntry = {
-            id: `ply_umpire_${Date.now()}`,
+        const isBatsmanMvp = currentScore.mvpPlayer?.toLowerCase().includes(batsmanName.toLowerCase())
+        addOrUpdateLeaderboardPlayer({
             name: batsmanName,
-            avatar: '🔥',
             team: match.teamA?.name || 'Indore Blasters',
-            city: 'Indore',
-            sport: 'Cricket',
-            role: 'Captain & Top Batsman',
-            matches: 35,
-            runs: 1540 + batsmanRuns,
-            battingAvg: 56.5,
-            strikeRate: calculatedSR || 185.0,
-            wickets: 18 + bowlerWkts,
-            economy: 7.20,
-            winRate: '84.0%',
-            mvps: 13,
-            highestScore: `${batsmanRuns}*`,
-            bestBowling: `${bowlerWkts}/18`,
-            verificationTier: 'Tier 2', // 1.5x Umpire Tier
-            tierMultiplier: 1.5,
-            trustScore: 99,
-            badges: ['⚖️ Paid Umpire Verified (1.5x)', '⭐ Match MVP', '🔥 Official Certified'],
-            contact: currentScore.mvpPhone || match.teamA?.phone
-        }
+            newRuns: batsmanRuns,
+            newBalls: batsmanBalls,
+            newWickets: 0,
+            isMvp: isBatsmanMvp,
+            verificationTier: 'Tier 2',
+            role: 'Batsman'
+        })
 
-        try {
-            const existingCustom = JSON.parse(localStorage.getItem('indore_custom_leaderboard_players') || '[]')
-            const updatedCustom = [newLeaderboardEntry, ...existingCustom.filter(p => p.name !== batsmanName)]
-            localStorage.setItem('indore_custom_leaderboard_players', JSON.stringify(updatedCustom))
-        } catch (e) {}
+        if (bowlerName && bowlerName.toLowerCase() !== batsmanName.toLowerCase()) {
+            const isBowlerMvp = currentScore.mvpPlayer?.toLowerCase().includes(bowlerName.toLowerCase())
+            addOrUpdateLeaderboardPlayer({
+                name: bowlerName,
+                team: match.teamB?.name || 'Indore Kings',
+                newRuns: 0,
+                newBalls: 0,
+                newWickets: bowlerWkts,
+                isMvp: isBowlerMvp,
+                verificationTier: 'Tier 2',
+                role: 'Bowler'
+            })
+        }
 
         const updatedMatches = matches.map(m => {
             if (m.id === match.id) {
@@ -399,23 +401,34 @@ export default function UmpireDashboard() {
         setTossDecision({
             winnerTeam: match.teamA?.name || '',
             electedTo: 'bat',
+            tossMode: 'system',
+            callingTeam: match.teamA?.name || '',
+            callingCall: 'HEADS',
             coinFlipping: false,
             coinResult: null
         })
     }
 
-    // Flip Coin Simulation
+    // Flip Coin Simulation (System Toss Mode)
     const handleFlipCoin = () => {
         setTossDecision(prev => ({ ...prev, coinFlipping: true, coinResult: null }))
         setTimeout(() => {
             const result = Math.random() > 0.5 ? 'HEADS' : 'TAILS'
+            const caller = tossDecision.callingTeam || tossMatch?.teamA?.name || ''
+            const call = tossDecision.callingCall || 'HEADS'
+            const isCallerWinner = call === result
+            const winner = isCallerWinner
+                ? caller
+                : (caller === tossMatch?.teamA?.name ? tossMatch?.teamB?.name : tossMatch?.teamA?.name)
+
             setTossDecision(prev => ({
                 ...prev,
                 coinFlipping: false,
-                coinResult: result
+                coinResult: result,
+                winnerTeam: winner
             }))
-            if (addToast) addToast(`🪙 Coin Result: ${result}!`, 'info')
-        }, 800)
+            if (addToast) addToast(`🪙 Coin Result: ${result}! Toss won by ${winner}!`, 'info')
+        }, 1000)
     }
 
     // Confirm Toss Decision & Launch Live Scoring Desk
@@ -429,7 +442,7 @@ export default function UmpireDashboard() {
             ? winner
             : (winner === tossMatch.teamA?.name ? tossMatch.teamB?.name : tossMatch.teamA?.name)
         
-        const tossSummaryText = `${winner} won toss & elected to ${isBatting ? 'Bat' : 'Bowl'} first`
+        const tossSummaryText = `${winner} won toss (${tossDecision.tossMode === 'system' ? 'System Coin' : 'Manual'}) & elected to ${isBatting ? 'Bat' : 'Bowl'} first`
 
         const updatedMatches = matches.map(m => {
             if (m.id === tossMatch.id) {
@@ -467,14 +480,18 @@ export default function UmpireDashboard() {
         }
     }
 
-    // Confirm Payment Received on Ground via QR Code
+    // Confirm Payment Received on Ground via QR Code & Generate Receipt
     const handleConfirmPayment = (match) => {
         if (!match) return
+        const receiptNo = `REC-UMP-${Math.floor(10000 + Math.random() * 90000)}`
+        const timestamp = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
         const updatedMatches = matches.map(m => {
             if (m.id === match.id) {
                 return {
                     ...m,
-                    paymentStatus: 'Payment Received'
+                    paymentStatus: 'Payment Received',
+                    receiptNo: receiptNo,
+                    paidAt: timestamp
                 }
             }
             return m
@@ -494,8 +511,14 @@ export default function UmpireDashboard() {
         setMatchHistory(updatedHistory)
 
         setQrModalMatch(null)
+        setReceiptModalMatch({
+            ...match,
+            receiptNo,
+            paidAt: timestamp,
+            paymentStatus: 'Payment Received'
+        })
         if (addToast) {
-            addToast(`✅ ₹${match.umpireFee || 300} Payment Marked as Received on Ground!`, 'success')
+            addToast(`✅ ₹${match.umpireFee || 300} Payment Marked as Received! Receipt Generated: ${receiptNo}`, 'success')
         }
     }
 
@@ -1303,15 +1326,15 @@ export default function UmpireDashboard() {
             </div>
 
             {/* ═══════════════════════════════════════════════════
-                🪙 OFFICIAL TOSS CEREMONY MODAL
+                🪙 OFFICIAL TOSS CEREMONY MODAL (System Flip & Manual Toggle)
             ═══════════════════════════════════════════════════ */}
             {tossMatch && (
-                <div className="fixed inset-0 z-[999999] flex items-center justify-center bg-black/75 backdrop-blur-md p-4 animate-in fade-in overflow-y-auto">
+                <div className="fixed inset-0 z-[999999] flex items-center justify-center bg-black/80 backdrop-blur-md p-4 animate-in fade-in overflow-y-auto">
                     <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl max-w-lg w-full p-6 space-y-5 my-auto max-h-[95vh] overflow-y-auto">
                         {/* Modal Header */}
                         <div className="flex items-center justify-between border-b border-slate-100 pb-3">
                             <div className="flex items-center gap-2.5">
-                                <div className="w-10 h-10 rounded-2xl bg-amber-100 text-amber-900 text-xl flex items-center justify-center font-black shrink-0 border border-amber-300">
+                                <div className="w-11 h-11 rounded-2xl bg-amber-100 text-amber-900 text-2xl flex items-center justify-center font-black shrink-0 border border-amber-300 shadow-xs">
                                     🪙
                                 </div>
                                 <div>
@@ -1344,43 +1367,110 @@ export default function UmpireDashboard() {
                             </div>
                         </div>
 
-                        {/* Interactive Coin Flip Animation Card */}
-                        <div className="bg-gradient-to-br from-amber-50 to-yellow-50 border-2 border-amber-300/80 rounded-2xl p-4 text-center space-y-3">
-                            <div className="flex items-center justify-center gap-3">
-                                <div className={`w-14 h-14 rounded-full bg-gradient-to-br from-amber-400 via-yellow-400 to-amber-500 shadow-md border-2 border-amber-300 flex items-center justify-center text-2xl font-black text-slate-950 transition-all ${
-                                    tossDecision.coinFlipping ? 'animate-spin' : ''
-                                }`}>
-                                    🪙
+                        {/* TOSS METHOD SELECTOR TOGGLE (System Flip vs Manual Toss) */}
+                        <div className="space-y-1.5">
+                            <label className="text-xs font-black uppercase text-slate-700 tracking-wider block">
+                                Choose Toss Mode:
+                            </label>
+                            <div className="grid grid-cols-2 gap-2 bg-slate-100 p-1 rounded-2xl border border-slate-200">
+                                <button
+                                    type="button"
+                                    onClick={() => setTossDecision(prev => ({ ...prev, tossMode: 'system' }))}
+                                    className={`py-2 px-3 rounded-xl text-xs font-black transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
+                                        tossDecision.tossMode === 'system'
+                                            ? 'bg-white text-amber-900 shadow-sm border border-amber-300 font-extrabold'
+                                            : 'text-slate-600 hover:text-slate-900'
+                                    }`}
+                                >
+                                    <span>🪙 System Coin Toss (Digital Flip)</span>
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => setTossDecision(prev => ({ ...prev, tossMode: 'manual' }))}
+                                    className={`py-2 px-3 rounded-xl text-xs font-black transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
+                                        tossDecision.tossMode === 'manual'
+                                            ? 'bg-white text-emerald-900 shadow-sm border border-emerald-300 font-extrabold'
+                                            : 'text-slate-600 hover:text-slate-900'
+                                    }`}
+                                >
+                                    <span>✋ Manual Toss (On-Field Coin)</span>
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* MODE A: SYSTEM DIGITAL COIN TOSS */}
+                        {tossDecision.tossMode === 'system' ? (
+                            <div className="bg-gradient-to-br from-amber-50 to-yellow-50 border-2 border-amber-300/80 rounded-2xl p-4 text-center space-y-4">
+                                <div className="flex flex-col sm:flex-row items-center justify-between text-xs text-left bg-white p-3 rounded-xl border border-amber-200 gap-2">
+                                    <div>
+                                        <span className="text-[10px] font-black uppercase text-slate-400 block">Calling Captain & Call</span>
+                                        <div className="flex items-center gap-2 mt-1">
+                                            <select
+                                                value={tossDecision.callingTeam}
+                                                onChange={e => setTossDecision(prev => ({ ...prev, callingTeam: e.target.value }))}
+                                                className="bg-slate-50 border border-slate-300 rounded-lg text-xs font-black px-2.5 py-1 text-slate-900 outline-none"
+                                            >
+                                                <option value={tossMatch.teamA?.name}>{tossMatch.teamA?.name}</option>
+                                                <option value={tossMatch.teamB?.name}>{tossMatch.teamB?.name}</option>
+                                            </select>
+                                            <select
+                                                value={tossDecision.callingCall}
+                                                onChange={e => setTossDecision(prev => ({ ...prev, callingCall: e.target.value }))}
+                                                className="bg-amber-100 border border-amber-300 rounded-lg text-xs font-mono font-black px-2.5 py-1 text-amber-950 outline-none"
+                                            >
+                                                <option value="HEADS">HEADS</option>
+                                                <option value="TAILS">TAILS</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <button
+                                        type="button"
+                                        disabled={tossDecision.coinFlipping}
+                                        onClick={handleFlipCoin}
+                                        className="px-4 py-2 rounded-xl bg-amber-400 hover:bg-amber-500 active:scale-95 text-slate-950 font-black text-xs uppercase tracking-wider transition-all cursor-pointer shadow-sm disabled:opacity-50 whitespace-nowrap self-stretch sm:self-auto"
+                                    >
+                                        {tossDecision.coinFlipping ? 'Flipping...' : '🪙 Spin Coin'}
+                                    </button>
                                 </div>
-                                <div className="text-left">
-                                    <span className="text-[10px] font-black uppercase tracking-wider text-amber-900 block">
-                                        Indore Box Cricket Coin Flip
-                                    </span>
-                                    <div className="text-base font-black text-[#111827]">
-                                        {tossDecision.coinFlipping 
-                                            ? 'Flipping Coin in the Air...' 
-                                            : tossDecision.coinResult 
-                                            ? `Landed on: ${tossDecision.coinResult}!` 
-                                            : 'Ready for Coin Flip'}
+
+                                {/* Animated Coin Display */}
+                                <div className="flex items-center justify-center gap-3">
+                                    <div className={`w-16 h-16 rounded-full bg-gradient-to-br from-amber-400 via-yellow-400 to-amber-500 shadow-lg border-2 border-amber-300 flex items-center justify-center text-3xl font-black text-slate-950 transition-transform ${
+                                        tossDecision.coinFlipping ? 'animate-spin' : ''
+                                    }`}>
+                                        🪙
+                                    </div>
+                                    <div className="text-left">
+                                        <span className="text-[10px] font-black uppercase tracking-wider text-amber-900 block">
+                                            System Coin Toss Result
+                                        </span>
+                                        <div className="text-base font-black text-[#111827]">
+                                            {tossDecision.coinFlipping 
+                                                ? 'Spinning Coin in Air...' 
+                                                : tossDecision.coinResult 
+                                                ? `Landed on: ${tossDecision.coinResult}!` 
+                                                : 'Ready for Flip'}
+                                        </div>
                                     </div>
                                 </div>
                             </div>
-
-                            <button
-                                type="button"
-                                disabled={tossDecision.coinFlipping}
-                                onClick={handleFlipCoin}
-                                className="px-5 py-2.5 rounded-xl bg-amber-400 hover:bg-amber-500 active:scale-95 text-slate-950 font-black text-xs uppercase tracking-wider transition-all cursor-pointer shadow-sm disabled:opacity-50"
-                            >
-                                {tossDecision.coinFlipping ? 'Flipping...' : '🪙 Flip Official Coin'}
-                            </button>
-                        </div>
+                        ) : (
+                            /* MODE B: MANUAL ON-FIELD TOSS */
+                            <div className="bg-emerald-50/60 border-2 border-emerald-300/80 rounded-2xl p-4 space-y-2">
+                                <div className="text-xs font-black text-emerald-950 uppercase tracking-wider flex items-center gap-1.5">
+                                    <span>✋</span> Manual On-Field Coin Toss Selection
+                                </div>
+                                <p className="text-[11px] text-slate-600 font-medium">
+                                    If coin was flipped on the ground by captain, select the verified winner team and decision below:
+                                </p>
+                            </div>
+                        )}
 
                         {/* Step 1: Who won the toss? */}
                         <div className="space-y-2">
                             <label className="text-xs font-black uppercase text-slate-700 tracking-wider flex items-center justify-between">
                                 <span>1️⃣ Which Team Won The Toss?</span>
-                                <span className="text-[11px] text-emerald-700 font-bold">Select Winner</span>
+                                <span className="text-[11px] text-emerald-700 font-bold">Toss Winner</span>
                             </label>
                             <div className="grid grid-cols-2 gap-3">
                                 {/* Team A Option */}
@@ -1472,7 +1562,7 @@ export default function UmpireDashboard() {
                         <div className="p-3.5 bg-emerald-50 border border-emerald-300 rounded-2xl text-xs font-bold text-emerald-950 flex items-center gap-2.5 shadow-2xs">
                             <span className="text-xl">📢</span>
                             <div>
-                                <strong>{tossDecision.winnerTeam || tossMatch.teamA?.name}</strong> won the toss and elected to <strong className="uppercase underline text-emerald-900">{tossDecision.electedTo === 'bat' ? 'BAT' : 'BOWL'}</strong> first!
+                                <strong>{tossDecision.winnerTeam || tossMatch.teamA?.name}</strong> won the toss ({tossDecision.tossMode === 'system' ? 'System Coin' : 'Manual'}) and elected to <strong className="uppercase underline text-emerald-900">{tossDecision.electedTo === 'bat' ? 'BAT' : 'BOWL'}</strong> first!
                             </div>
                         </div>
 
@@ -1491,7 +1581,7 @@ export default function UmpireDashboard() {
                                 className="px-6 py-2.5 rounded-xl bg-[#C8FF2E] hover:bg-[#B5F000] text-slate-950 font-black text-xs uppercase tracking-wider shadow-md hover:scale-105 transition-all cursor-pointer flex items-center gap-2"
                             >
                                 <span>🏏</span>
-                                <span>Confirm Toss & Start Live Scoring</span>
+                                <span>Confirm Toss & Start Live Game</span>
                             </button>
                         </div>
                     </div>
@@ -1545,10 +1635,14 @@ export default function UmpireDashboard() {
                                 </div>
                                 <button
                                     type="button"
-                                    onClick={() => setQrModalMatch(null)}
-                                    className="w-full py-3 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-black text-xs uppercase tracking-wider cursor-pointer shadow-md transition-all"
+                                    onClick={() => {
+                                        setQrModalMatch(null)
+                                        setReceiptModalMatch(qrModalMatch)
+                                    }}
+                                    className="w-full py-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs uppercase tracking-wider cursor-pointer shadow-md transition-all flex items-center justify-center gap-1.5"
                                 >
-                                    Close
+                                    <span>🧾</span>
+                                    <span>View Official Payment Receipt</span>
                                 </button>
                             </div>
                         ) : (
@@ -1561,6 +1655,79 @@ export default function UmpireDashboard() {
                                 <span>✓ Mark Payment as Received (₹{qrModalMatch.umpireFee || 300})</span>
                             </button>
                         )}
+                    </div>
+                </div>
+            )}
+
+            {/* ═══════════════════════════════════════════════════
+                🧾 OFFICIAL UMPIRE PAYMENT RECEIPT MODAL
+            ═══════════════════════════════════════════════════ */}
+            {receiptModalMatch && (
+                <div className="fixed inset-0 z-[999999] flex items-center justify-center bg-black/80 backdrop-blur-md p-4 animate-in fade-in">
+                    <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl max-w-md w-full p-6 text-center space-y-4">
+                        <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+                            <span className="text-xs font-black uppercase tracking-wider text-emerald-700 flex items-center gap-1.5">
+                                <span>🧾</span> OFFICIAL DUTY PAYMENT RECEIPT
+                            </span>
+                            <button
+                                type="button"
+                                onClick={() => setReceiptModalMatch(null)}
+                                className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-500 font-bold cursor-pointer"
+                            >
+                                <HiX className="w-5 h-5" />
+                            </button>
+                        </div>
+
+                        <div className="p-4 bg-emerald-50 border-2 border-emerald-400 rounded-2xl space-y-2 text-left">
+                            <div className="flex items-center justify-between border-b border-emerald-200 pb-2">
+                                <span className="text-[10px] font-black uppercase tracking-wider text-emerald-800">Receipt No:</span>
+                                <span className="font-mono font-black text-xs text-slate-900 bg-white px-2 py-0.5 rounded border border-emerald-300">
+                                    {receiptModalMatch.receiptNo || 'REC-UMP-9842'}
+                                </span>
+                            </div>
+                            <div className="flex items-center justify-between text-xs">
+                                <span className="font-semibold text-slate-600">Match:</span>
+                                <span className="font-bold text-slate-900 truncate max-w-[200px]">{receiptModalMatch.title}</span>
+                            </div>
+                            <div className="flex items-center justify-between text-xs">
+                                <span className="font-semibold text-slate-600">Turf Venue:</span>
+                                <span className="font-bold text-slate-900">{receiptModalMatch.turf}</span>
+                            </div>
+                            <div className="flex items-center justify-between text-xs">
+                                <span className="font-semibold text-slate-600">Captain / Payer:</span>
+                                <span className="font-bold text-slate-900">{receiptModalMatch.teamA?.captain || 'Team Captain'}</span>
+                            </div>
+                            <div className="flex items-center justify-between text-xs">
+                                <span className="font-semibold text-slate-600">Umpire Fee:</span>
+                                <span className="font-mono font-black text-base text-emerald-700">₹{receiptModalMatch.umpireFee || 300}</span>
+                            </div>
+                            <div className="flex items-center justify-between text-xs pt-1 border-t border-emerald-200">
+                                <span className="font-semibold text-slate-600">Status:</span>
+                                <span className="px-2 py-0.5 bg-emerald-600 text-white font-black text-[10px] rounded uppercase tracking-wider">
+                                    ✓ PAID & VERIFIED
+                                </span>
+                            </div>
+                        </div>
+
+                        <div className="flex items-center gap-2 pt-2">
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    window.print()
+                                }}
+                                className="flex-1 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs cursor-pointer flex items-center justify-center gap-1.5"
+                            >
+                                <HiDownload className="w-4 h-4" />
+                                <span>Print Receipt</span>
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => setReceiptModalMatch(null)}
+                                className="flex-1 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs uppercase tracking-wider shadow-md cursor-pointer"
+                            >
+                                ✓ Done
+                            </button>
+                        </div>
                     </div>
                 </div>
             )}

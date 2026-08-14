@@ -220,6 +220,7 @@ export default function SuperAdminGlobalCRMPage() {
                                 <th className="py-3.5 px-4">Contact / Name</th>
                                 <th className="py-3.5 px-4">Category</th>
                                 <th className="py-3.5 px-4">Turf Branch</th>
+                                <th className="py-3.5 px-4">Booking Time / Slot</th>
                                 <th className="py-3.5 px-4">Team / Details</th>
                                 <th className="py-3.5 px-4">Status</th>
                                 <th className="py-3.5 px-4 text-right">SuperAdmin Action</th>
@@ -252,6 +253,12 @@ export default function SuperAdminGlobalCRMPage() {
                                         </td>
                                         <td className="py-3.5 px-4 font-semibold text-emerald-700">
                                             {lead.turfBranch}
+                                        </td>
+                                        <td className="py-3.5 px-4 whitespace-nowrap">
+                                            <div className="inline-flex items-center gap-1 text-[11px] font-bold text-slate-900 bg-slate-100 px-2.5 py-1 rounded-lg border border-slate-200">
+                                                <span className="text-emerald-600">⏰</span>
+                                                <span className="font-mono text-slate-800">{lead.preferredSlot || '6:00 PM (Today)'}</span>
+                                            </div>
                                         </td>
                                         <td className="py-3.5 px-4 text-slate-600">
                                             {lead.teamName || '—'}

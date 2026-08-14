@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import { useNavigate } from 'react-router-dom'
 import {
@@ -10,21 +10,7 @@ import Badge from '../../components/ui/Badge'
 import { useToast } from '../../components/ui/Toast'
 import { useAuth } from '../../context/AuthContext'
 import MatchScoreVerificationModal from '../../components/booking/MatchScoreVerificationModal'
-
-// Calculate Weighted Player Performance Score (PPS)
-const calculatePPS = (player, tierWeight = 1.0) => {
-    const battingAvgPart = (player.battingAvg || 0) * 0.30
-    const battingSrPart = (player.strikeRate || 0) * 0.15
-    const wicketsPerMatch = (player.wickets || 0) / Math.max(1, player.matches || 1)
-    const wicketsPart = wicketsPerMatch * 20
-    const economyFactor = Math.max(0, (10 - (player.economy || 7.0))) * 10
-    const winRatePart = (parseFloat(player.winRate) || 50) * 0.20
-    const mvpPart = (player.mvps || 0) * 12
-
-    const baseScore = battingAvgPart + battingSrPart + wicketsPart + economyFactor + winRatePart + mvpPart
-    const finalScore = baseScore * tierWeight
-    return Math.round(finalScore * 10) / 10
-}
+import { getLeaderboardPlayers, calculatePPS } from '../../services/leaderboardService'
 
 const mockLeaderboardPlayers = [
     {
@@ -244,14 +230,19 @@ export default function CustomerLeaderboard() {
     // Direct Score Submission Modal State
     const [isSubmitModalOpen, setIsSubmitModalOpen] = useState(false)
     const [handshakeMatch, setHandshakeMatch] = useState(null)
-    const [customPlayers, setCustomPlayers] = useState(() => {
-        try {
-            const saved = localStorage.getItem('indore_custom_leaderboard_players')
-            return saved ? JSON.parse(saved) : []
-        } catch (e) {
-            return []
+    const [playerList, setPlayerList] = useState(getLeaderboardPlayers)
+
+    useEffect(() => {
+        const handleRefresh = () => {
+            setPlayerList(getLeaderboardPlayers())
         }
-    })
+        window.addEventListener('leaderboardUpdated', handleRefresh)
+        window.addEventListener('storage', handleRefresh)
+        return () => {
+            window.removeEventListener('leaderboardUpdated', handleRefresh)
+            window.removeEventListener('storage', handleRefresh)
+        }
+    }, [])
 
     const demoPendingMatch = {
         id: 'MTC-IND-98432',
@@ -421,11 +412,9 @@ export default function CustomerLeaderboard() {
 
     // Process & Rank Players with PPS Formula
     const rankedPlayers = useMemo(() => {
-        let localPlayerList = [...customPlayers, ...mockLeaderboardPlayers]
-
-        let processed = localPlayerList
+        let processed = playerList
             .map(p => {
-                let tierMultiplier = p.tierMultiplier || 1.0
+                let tierMultiplier = p.tierMultiplier || (p.verificationTier === 'Tier 3' ? 2.0 : p.verificationTier === 'Tier 2' ? 1.5 : 1.0)
                 if (selectedTier === 'tier1') tierMultiplier = 1.0
                 else if (selectedTier === 'tier2') tierMultiplier = 1.5
                 else if (selectedTier === 'tier3') tierMultiplier = 2.0
@@ -474,7 +463,7 @@ export default function CustomerLeaderboard() {
             })
 
         return processed
-    }, [customPlayers, selectedCity, selectedTier, selectedCategory, searchQuery, viewScope, activeCustomerProfile])
+    }, [playerList, viewScope, activeCustomerProfile, selectedCity, selectedTier, selectedCategory, searchQuery])
 
     const top3 = rankedPlayers.slice(0, 3)
 

@@ -117,6 +117,7 @@ export default function SlotBookingPage() {
 
     // Step state: 1 to 4 (Directly starts on Step 1: Date & Time as requested)
     const [activeStep, setActiveStep] = useState(1)
+    const [maxStepReached, setMaxStepReached] = useState(1)
 
     // Step 1: Date & Slot
     const dateList = generateUpcomingDays()
@@ -414,10 +415,34 @@ export default function SlotBookingPage() {
     const [validationErrors, setValidationErrors] = useState({})
 
     const handleStepHeaderClick = (targetStep) => {
-        // Top step bar only allows going BACK to already completed steps
-        if (targetStep < activeStep) {
+        // Top step bar only allows navigating to already completed / reached steps
+        if (targetStep <= maxStepReached) {
             setActiveStep(targetStep)
+        } else {
+            if (addToast) addToast('Please complete the current step before proceeding to future steps!', 'warning')
         }
+    }
+
+    const handleGoToStep2 = () => {
+        if (!selectedDateObj) {
+            if (addToast) addToast('Please select a date to proceed!', 'error')
+            return
+        }
+        if (!selectedSlotTime) {
+            if (addToast) addToast('Please select a time slot to proceed!', 'error')
+            return
+        }
+        setActiveStep(2)
+        setMaxStepReached(prev => Math.max(prev, 2))
+    }
+
+    const handleGoToStep3 = () => {
+        if (!paymentMode) {
+            if (addToast) addToast('Please select a payment mode to proceed!', 'error')
+            return
+        }
+        setActiveStep(3)
+        setMaxStepReached(prev => Math.max(prev, 3))
     }
 
     const handleProceedClick = () => {
@@ -534,6 +559,7 @@ export default function SlotBookingPage() {
 
         setIsSubmitting(false)
         setActiveStep(4)
+        setMaxStepReached(4)
         if (addToast) addToast('Match successfully created and invite dispatched!', 'success')
     }
 
@@ -577,18 +603,19 @@ export default function SlotBookingPage() {
                     {steps.map((step) => {
                         const isActive = activeStep === step.num
                         const isPast = activeStep > step.num
-                        const isFuture = step.num > activeStep
+                        const isUnlocked = step.num <= maxStepReached
 
                         return (
                             <button
                                 key={step.num}
-                                onClick={() => setActiveStep(step.num)}
-                                className={`px-5 py-2.5 rounded-full text-xs font-black uppercase tracking-wider whitespace-nowrap transition-all duration-200 cursor-pointer flex items-center gap-2 shadow-xs ${
+                                disabled={!isUnlocked}
+                                onClick={() => handleStepHeaderClick(step.num)}
+                                className={`px-5 py-2.5 rounded-full text-xs font-black uppercase tracking-wider whitespace-nowrap transition-all duration-200 flex items-center gap-2 shadow-xs ${
                                     isActive
-                                        ? 'bg-[#111827] text-white border border-[#111827] shadow-md'
-                                        : isPast
-                                        ? 'bg-white text-[#10B981] border border-emerald-300'
-                                        : 'bg-white text-slate-500 border border-[#E2E8F0] hover:text-[#111827] hover:border-slate-400'
+                                        ? 'bg-[#111827] text-white border border-[#111827] shadow-md cursor-default'
+                                        : isUnlocked
+                                        ? 'bg-white text-[#10B981] border border-emerald-300 hover:bg-emerald-50 cursor-pointer'
+                                        : 'bg-slate-100 text-slate-400 border border-slate-200 cursor-not-allowed opacity-60'
                                 }`}
                             >
                                 {isPast && <HiCheck className="w-3.5 h-3.5 text-[#10B981]" />}
@@ -994,7 +1021,7 @@ export default function SlotBookingPage() {
                             </div>
 
                             <button
-                                onClick={() => setActiveStep(2)}
+                                onClick={handleGoToStep2}
                                 className="w-full sm:w-auto px-8 py-3.5 rounded-xl bg-[#C8FF2E] hover:bg-[#B5F000] text-[#111827] font-black text-sm transition-all duration-200 shadow-[0_6px_20px_rgba(200,255,46,0.4)] border border-[#B5F000] cursor-pointer flex items-center justify-center gap-2 hover:scale-[1.02] active:scale-[0.98]"
                             >
                                 <span>Next: Payment mode →</span>
@@ -1172,7 +1199,7 @@ export default function SlotBookingPage() {
                             </button>
 
                             <button
-                                onClick={() => setActiveStep(3)}
+                                onClick={handleGoToStep3}
                                 className="px-8 py-3.5 rounded-xl bg-[#C8FF2E] hover:bg-[#B5F000] text-[#111827] font-black text-sm transition-all duration-200 shadow-[0_6px_20px_rgba(200,255,46,0.4)] border border-[#B5F000] cursor-pointer flex items-center gap-2 hover:scale-[1.02] active:scale-[0.98]"
                             >
                                 <span>Next: Team details →</span>
