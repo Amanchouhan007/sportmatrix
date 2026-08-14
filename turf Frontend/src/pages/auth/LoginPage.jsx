@@ -61,6 +61,7 @@ export default function LoginPage() {
             superadmin: { email: 'superadmin@gmail.com', password: '123456' },
             owner: { email: 'owner@gmail.com', password: '123456' },
             staff: { email: 'staff@gmail.com', password: '123' },
+            umpire: { email: 'umpire@gmail.com', password: '123' },
             customer: { email: 'customer@gmail.com', password: '123' }
         };
 
@@ -116,6 +117,7 @@ export default function LoginPage() {
                 SUPER_ADMIN: '/super-admin',
                 OWNER: '/admin',
                 STAFF: '/staff',
+                UMPIRE: '/umpire',
                 CUSTOMER: '/customer'
             };
 
@@ -123,7 +125,8 @@ export default function LoginPage() {
             const targetRoute = roleRoutes[userRole] || (
                 userRole.includes('OWNER') ? '/admin' :
                     userRole.includes('STAFF') ? '/staff' :
-                        userRole.includes('CUSTOMER') ? '/customer' : '/super-admin'
+                        userRole.includes('UMPIRE') ? '/umpire' :
+                            userRole.includes('CUSTOMER') ? '/customer' : '/super-admin'
             );
 
             navigate(targetRoute);
@@ -141,6 +144,7 @@ export default function LoginPage() {
         { k: 'superadmin', l: 'Super Admin', icon: HiShieldCheck },
         { k: 'owner', l: 'Admin', icon: HiOfficeBuilding },
         { k: 'staff', l: 'Staff', icon: HiUserGroup },
+        { k: 'umpire', l: '⚖️ Umpire', icon: HiLightningBolt },
         { k: 'customer', l: 'Customer', icon: HiUser },
     ];
 
@@ -337,7 +341,7 @@ export default function LoginPage() {
                                     <HiBadgeCheck className="w-3 h-3" /> Quick Demo
                                 </span>
                             </div>
-                            <div className="grid grid-cols-2 gap-2.5">
+                            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                                 {rolesConfig.map((r) => {
                                     const RoleIcon = r.icon;
                                     const isActive = form.role === r.k;
@@ -346,16 +350,16 @@ export default function LoginPage() {
                                             key={r.k}
                                             type="button"
                                             onClick={() => handleRoleChange(r.k)}
-                                            className={`py-2.5 px-3 rounded-xl border text-xs font-black transition-all uppercase tracking-wider flex items-center justify-between cursor-pointer ${isActive
+                                            className={`py-2 px-2.5 rounded-xl border text-[11px] font-black transition-all uppercase tracking-wider flex items-center justify-between cursor-pointer ${isActive
                                                     ? 'bg-[#C8FF2E] border-[#B5F000] text-slate-900 shadow-md scale-[1.02]'
                                                     : 'bg-slate-50 border-slate-200 text-slate-600 hover:border-slate-300 hover:text-slate-900 hover:bg-slate-100/80'
                                                 }`}
                                         >
                                             <div className="flex items-center gap-1.5 overflow-hidden">
-                                                <RoleIcon className={`w-4 h-4 shrink-0 ${isActive ? 'text-[#16A34A]' : 'text-slate-400'}`} />
+                                                <RoleIcon className={`w-3.5 h-3.5 shrink-0 ${isActive ? 'text-[#16A34A]' : 'text-slate-400'}`} />
                                                 <span className="truncate">{r.l}</span>
                                             </div>
-                                            <span className={`w-2 h-2 rounded-full shrink-0 ${isActive ? 'bg-[#16A34A]' : 'bg-slate-300'}`} />
+                                            <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${isActive ? 'bg-[#16A34A]' : 'bg-slate-300'}`} />
                                         </button>
                                     );
                                 })}

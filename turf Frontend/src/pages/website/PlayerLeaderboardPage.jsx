@@ -510,7 +510,7 @@ export default function PlayerLeaderboardPage() {
                         <button
                             type="button"
                             onClick={() => setIsSubmitModalOpen(true)}
-                            className="bg-[#C8FF2E] hover:bg-[#b8f51a] text-[#111827] font-black text-xs uppercase tracking-wider px-6 py-3 rounded-2xl shadow-md hover:scale-105 transition-all cursor-pointer flex items-center gap-2"
+                            className="bg-[#C8FF2E] hover:bg-[#b8f51a] text-[#111827] font-black text-xs uppercase tracking-wider px-5 py-3 rounded-2xl shadow-md hover:scale-105 transition-all cursor-pointer flex items-center gap-2"
                         >
                             <span>📝</span>
                             <span>Submit Match Score</span>
@@ -519,10 +519,19 @@ export default function PlayerLeaderboardPage() {
                         <button
                             type="button"
                             onClick={() => setHandshakeMatch(demoPendingMatch)}
-                            className="bg-white/15 hover:bg-white/25 border border-white/40 text-white font-bold text-xs uppercase tracking-wider px-5 py-3 rounded-2xl transition-all cursor-pointer flex items-center gap-2"
+                            className="bg-white/15 hover:bg-white/25 border border-white/40 text-white font-bold text-xs uppercase tracking-wider px-4 py-3 rounded-2xl transition-all cursor-pointer flex items-center gap-2"
                         >
                             <span>🤝</span>
-                            <span>Captain Handshake (Review Match)</span>
+                            <span>Captain Handshake</span>
+                        </button>
+
+                        <button
+                            type="button"
+                            onClick={() => navigate('/umpire')}
+                            className="bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-xs uppercase tracking-wider px-4 py-3 rounded-2xl shadow-md transition-all cursor-pointer flex items-center gap-2 hover:scale-105"
+                        >
+                            <span>⚖️</span>
+                            <span>Umpire Scoring Desk</span>
                         </button>
                     </div>
                 </div>

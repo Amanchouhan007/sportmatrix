@@ -63,6 +63,9 @@ const StaffRefunds = lazy(() => import('./pages/staff/StaffRefunds'))
 const StaffMaintenance = lazy(() => import('./pages/staff/StaffMaintenance'))
 const StaffEquipment = lazy(() => import('./pages/staff/StaffEquipment'))
 
+// Lazy Umpire & Referee Desk
+const UmpireDashboard = lazy(() => import('./pages/umpire/UmpireDashboard'))
+
 // Lazy Customer
 const CustomerDashboard = lazy(() => import('./pages/customer/CustomerDashboard'))
 const CustomerBookings = lazy(() => import('./pages/customer/CustomerBookings'))
@@ -231,6 +234,10 @@ export default function App() {
                 <Route path="wallet" element={<CustomerWallet />} />
                 <Route path="profile" element={<CustomerProfile />} />
               </Route>
+
+              {/* Official Umpire & Live Match Referee Portal */}
+              <Route path="/umpire" element={<UmpireDashboard />} />
+              <Route path="/umpire/*" element={<UmpireDashboard />} />
 
               {/* 404 */}
               <Route path="*" element={<NotFoundPage />} />

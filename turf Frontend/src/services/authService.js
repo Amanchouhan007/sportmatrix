@@ -18,6 +18,7 @@ export const loginUser = async (email, password, selectedRole) => {
         superadmin: 'SUPER_ADMIN',
         owner: 'OWNER',
         staff: 'STAFF',
+        umpire: 'UMPIRE',
         customer: 'CUSTOMER'
     };
 
@@ -30,6 +31,8 @@ export const loginUser = async (email, password, selectedRole) => {
         userRole = 'OWNER';
     } else if (email.includes('staff')) {
         userRole = 'STAFF';
+    } else if (email.includes('umpire') || email.includes('referee')) {
+        userRole = 'UMPIRE';
     } else if (email.includes('customer')) {
         userRole = 'CUSTOMER';
     }

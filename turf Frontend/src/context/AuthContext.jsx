@@ -40,6 +40,7 @@ export const AuthProvider = ({ children }) => {
                 superadmin: 'SUPER_ADMIN',
                 owner: 'OWNER',
                 staff: 'STAFF',
+                umpire: 'UMPIRE',
                 customer: 'CUSTOMER'
             };
 
