@@ -31,7 +31,7 @@ const getSlotTimeRangeText = (slotTime, durationHours = 1) => {
     return `${slotTime} (${durationHours} Hr)`
 }
 
-// Generate upcoming days starting from Sat 9 Aug
+// Generate 31 upcoming days starting from today
 const generateUpcomingDays = () => {
     const days = []
     const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
@@ -40,7 +40,7 @@ const generateUpcomingDays = () => {
 
     const baseDate = new Date()
 
-    for (let i = 0; i < 14; i++) {
+    for (let i = 0; i < 31; i++) {
         const d = new Date(baseDate)
         d.setDate(baseDate.getDate() + i)
         const fullDateString = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
@@ -593,13 +593,12 @@ export default function SlotBookingPage() {
                                     key={step.num}
                                     disabled={!isUnlocked}
                                     onClick={() => handleStepHeaderClick(step.num)}
-                                    className={`px-5 py-2.5 rounded-full text-xs font-black uppercase tracking-wider whitespace-nowrap transition-all duration-200 flex items-center gap-2 shadow-xs ${
-                                        isActive
+                                    className={`px-5 py-2.5 rounded-full text-xs font-black uppercase tracking-wider whitespace-nowrap transition-all duration-200 flex items-center gap-2 shadow-xs ${isActive
                                             ? 'bg-[#111827] text-white border border-[#111827] shadow-md cursor-default'
                                             : isUnlocked
-                                            ? 'bg-white text-[#10B981] border border-emerald-300 hover:bg-emerald-50 cursor-pointer'
-                                            : 'bg-slate-100 text-slate-400 border border-slate-200 cursor-not-allowed opacity-60'
-                                    }`}
+                                                ? 'bg-white text-[#10B981] border border-emerald-300 hover:bg-emerald-50 cursor-pointer'
+                                                : 'bg-slate-100 text-slate-400 border border-slate-200 cursor-not-allowed opacity-60'
+                                        }`}
                                 >
                                     {isPast && <HiCheck className="w-3.5 h-3.5 text-[#10B981]" />}
                                     <span>{step.label}</span>
@@ -751,11 +750,10 @@ export default function SlotBookingPage() {
                                                                 if (addToast) addToast(`🎉 Offer "${c.code}" applied! ${c.title}`, 'success')
                                                             }
                                                         }}
-                                                        className={`p-2.5 rounded-xl border transition-all cursor-pointer flex items-center justify-between gap-1.5 select-none ${
-                                                            isThisApplied
+                                                        className={`p-2.5 rounded-xl border transition-all cursor-pointer flex items-center justify-between gap-1.5 select-none ${isThisApplied
                                                                 ? 'bg-[#ECFDF5] border-[#10B981] text-[#065F46]'
                                                                 : 'bg-slate-50 border-slate-200 hover:border-slate-300 text-slate-700'
-                                                        }`}
+                                                            }`}
                                                     >
                                                         <div className="min-w-0">
                                                             <div className="font-mono font-black text-xs text-[#111827] truncate">{c.code}</div>
@@ -838,11 +836,10 @@ export default function SlotBookingPage() {
                                                     <button
                                                         key={hr}
                                                         onClick={() => setDurationHours(hr)}
-                                                        className={`px-4 py-1.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer ${
-                                                            durationHours === hr
+                                                        className={`px-4 py-1.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer ${durationHours === hr
                                                                 ? 'bg-[#111827] text-white shadow-xs'
                                                                 : 'text-slate-500 hover:text-[#111827]'
-                                                        }`}
+                                                            }`}
                                                     >
                                                         {hr} {hr === 1 ? 'hr' : 'hrs'}
                                                     </button>
@@ -861,11 +858,10 @@ export default function SlotBookingPage() {
                                                     <button
                                                         key={d.id}
                                                         onClick={() => setSelectedDateObj(d)}
-                                                        className={`flex-shrink-0 w-20 py-3.5 px-2 rounded-2xl flex flex-col items-center justify-center transition-all duration-200 cursor-pointer ${
-                                                            isSelected
+                                                        className={`flex-shrink-0 w-20 py-3.5 px-2 rounded-2xl flex flex-col items-center justify-center transition-all duration-200 cursor-pointer ${isSelected
                                                                 ? 'bg-[#111827] text-white border-2 border-[#10B981] shadow-md scale-[1.02]'
                                                                 : 'bg-white border border-[#E2E8F0] text-slate-500 hover:border-slate-400'
-                                                        }`}
+                                                            }`}
                                                     >
                                                         <span className={`text-xs font-bold mb-0.5 ${isSelected ? 'text-slate-300' : 'text-slate-500'}`}>{d.dayShort}</span>
                                                         <span className={`text-2xl font-black my-0.5 ${isSelected ? 'text-white' : 'text-[#111827]'}`}>{d.dateNum}</span>
@@ -907,17 +903,16 @@ export default function SlotBookingPage() {
                                                         key={slot.id}
                                                         disabled={isDisabled}
                                                         onClick={() => setSelectedSlotTime(slot.id)}
-                                                        className={`py-3.5 px-3 rounded-2xl text-center flex flex-col items-center justify-center gap-1 min-h-[72px] transition-all duration-200 ${
-                                                            isSelected
+                                                        className={`py-3.5 px-3 rounded-2xl text-center flex flex-col items-center justify-center gap-1 min-h-[72px] transition-all duration-200 ${isSelected
                                                                 ? 'bg-[#10B981] text-white border-2 border-[#059669] shadow-lg shadow-emerald-500/20 scale-[1.02] cursor-pointer'
                                                                 : isBooked
-                                                                ? 'bg-[#F8FAFC] text-slate-300 border border-slate-100 opacity-75 cursor-not-allowed'
-                                                                : isMaintenance
-                                                                ? 'bg-[#FEFCE8] text-[#854D0E] border-2 border-[#FDE047] cursor-not-allowed'
-                                                                : isStaffUnavail
-                                                                ? 'bg-[#F1F5F9] text-slate-600 border-2 border-slate-200 cursor-not-allowed'
-                                                                : 'bg-[#ECFDF5] border-2 border-[#10B981] hover:bg-emerald-100/60 text-slate-900 cursor-pointer shadow-xs'
-                                                        }`}
+                                                                    ? 'bg-[#F8FAFC] text-slate-300 border border-slate-100 opacity-75 cursor-not-allowed'
+                                                                    : isMaintenance
+                                                                        ? 'bg-[#FEFCE8] text-[#854D0E] border-2 border-[#FDE047] cursor-not-allowed'
+                                                                        : isStaffUnavail
+                                                                            ? 'bg-[#F1F5F9] text-slate-600 border-2 border-slate-200 cursor-not-allowed'
+                                                                            : 'bg-[#ECFDF5] border-2 border-[#10B981] hover:bg-emerald-100/60 text-slate-900 cursor-pointer shadow-xs'
+                                                            }`}
                                                     >
                                                         <span className={`text-sm sm:text-base font-black tracking-tight ${isSelected ? 'text-white' : isBooked ? 'text-slate-300 line-through' : isMaintenance ? 'text-[#854D0E]' : isStaffUnavail ? 'text-slate-700' : 'text-[#111827]'}`}>
                                                             {slot.time}
@@ -946,15 +941,13 @@ export default function SlotBookingPage() {
 
                                     {/* Verified Umpire Add-on Card */}
                                     {isTurfUmpireAvailable && (
-                                        <div className={`p-4 rounded-2xl border transition-all duration-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 ${
-                                            hasVerifiedUmpire
+                                        <div className={`p-4 rounded-2xl border transition-all duration-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 ${hasVerifiedUmpire
                                                 ? 'bg-emerald-50/80 border-[#10B981] shadow-md shadow-emerald-500/10'
                                                 : 'bg-white border border-slate-200 hover:border-emerald-300'
-                                        }`}>
+                                            }`}>
                                             <div className="flex items-center gap-3">
-                                                <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-xl shrink-0 ${
-                                                    hasVerifiedUmpire ? 'bg-[#10B981] text-white' : 'bg-slate-100 text-slate-700'
-                                                }`}>
+                                                <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-xl shrink-0 ${hasVerifiedUmpire ? 'bg-[#10B981] text-white' : 'bg-slate-100 text-slate-700'
+                                                    }`}>
                                                     ⚖️
                                                 </div>
                                                 <div>
@@ -968,11 +961,10 @@ export default function SlotBookingPage() {
                                             <button
                                                 type="button"
                                                 onClick={() => setHasVerifiedUmpire(!hasVerifiedUmpire)}
-                                                className={`px-4 py-2 rounded-xl font-black text-xs transition-all cursor-pointer shrink-0 ${
-                                                    hasVerifiedUmpire
+                                                className={`px-4 py-2 rounded-xl font-black text-xs transition-all cursor-pointer shrink-0 ${hasVerifiedUmpire
                                                         ? 'bg-emerald-700 hover:bg-emerald-800 text-white shadow-xs'
                                                         : 'bg-[#10B981] hover:bg-emerald-600 text-white shadow-md shadow-emerald-500/20'
-                                                }`}
+                                                    }`}
                                             >
                                                 {hasVerifiedUmpire ? '✓ Added (+₹300)' : '+ Add ₹300'}
                                             </button>
@@ -1258,9 +1250,8 @@ export default function SlotBookingPage() {
                             </div>
 
                             {/* Umpire Option in Step 3 */}
-                            <div className={`p-4 rounded-xl border-2 transition-all flex items-center justify-between gap-3 ${
-                                hasVerifiedUmpire ? 'bg-emerald-50/80 border-emerald-500' : 'bg-slate-50 border-slate-200'
-                            }`}>
+                            <div className={`p-4 rounded-xl border-2 transition-all flex items-center justify-between gap-3 ${hasVerifiedUmpire ? 'bg-emerald-50/80 border-emerald-500' : 'bg-slate-50 border-slate-200'
+                                }`}>
                                 <div className="flex items-center gap-2.5">
                                     <span className="text-xl">⚖️</span>
                                     <div>
@@ -1271,9 +1262,8 @@ export default function SlotBookingPage() {
                                 <button
                                     type="button"
                                     onClick={() => setHasVerifiedUmpire(!hasVerifiedUmpire)}
-                                    className={`px-3 py-1.5 rounded-lg text-xs font-black transition-all ${
-                                        hasVerifiedUmpire ? 'bg-emerald-700 text-white' : 'bg-[#10B981] text-white hover:bg-emerald-600'
-                                    }`}
+                                    className={`px-3 py-1.5 rounded-lg text-xs font-black transition-all ${hasVerifiedUmpire ? 'bg-emerald-700 text-white' : 'bg-[#10B981] text-white hover:bg-emerald-600'
+                                        }`}
                                 >
                                     {hasVerifiedUmpire ? '✓ Selected' : '+ Add'}
                                 </button>
