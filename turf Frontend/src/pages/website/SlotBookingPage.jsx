@@ -31,7 +31,7 @@ const getSlotTimeRangeText = (slotTime, durationHours = 1) => {
     return `${slotTime} (${durationHours} Hr)`
 }
 
-// Generate upcoming days starting from Sat 9 Aug
+// Generate 31 upcoming days starting from today
 const generateUpcomingDays = () => {
     const days = []
     const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
@@ -40,7 +40,7 @@ const generateUpcomingDays = () => {
 
     const baseDate = new Date()
 
-    for (let i = 0; i < 14; i++) {
+    for (let i = 0; i < 31; i++) {
         const d = new Date(baseDate)
         d.setDate(baseDate.getDate() + i)
         const fullDateString = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
@@ -713,37 +713,69 @@ export default function SlotBookingPage() {
                         </div>
 
                         {/* SELECT DATE Section */}
-                        <div className="mb-10">
-                            <h2 className="text-xs font-black uppercase tracking-widest text-slate-400 mb-3">
-                                SELECT DATE
-                            </h2>
+                        <div className="mb-8 sm:mb-10">
+                            <div className="flex items-center justify-between mb-2 sm:mb-3">
+                                <h2 className="text-xs font-black uppercase tracking-widest text-slate-400">
+                                    SELECT DATE
+                                </h2>
+                                <span className="text-[10px] text-slate-400 font-semibold hidden sm:block">
+                                    {dateList.length} days available
+                                </span>
+                            </div>
 
-                            {/* Horizontal date cards */}
-                            <div className="flex gap-3 overflow-x-auto pb-3 pt-1 no-scrollbar">
+                            {/* Responsive horizontal date strip */}
+                            <div
+                                className="flex gap-2 sm:gap-3 overflow-x-auto pb-2 pt-1"
+                                style={{
+                                    scrollSnapType: 'x mandatory',
+                                    WebkitOverflowScrolling: 'touch',
+                                    scrollbarWidth: 'none',
+                                    msOverflowStyle: 'none',
+                                }}
+                            >
                                 {dateList.map((d) => {
                                     const isSelected = selectedDateObj.id === d.id
+                                    const isToday = d.dayShort === 'TODAY'
                                     return (
                                         <button
                                             key={d.id}
                                             onClick={() => setSelectedDateObj(d)}
-                                            className={`flex-shrink-0 w-20 py-4 px-2 rounded-[20px] flex flex-col items-center justify-center transition-all duration-200 cursor-pointer ${
-                                                isSelected
-                                                    ? 'bg-[#111827] text-white border-2 border-[#10B981] shadow-md scale-[1.02]'
-                                                    : 'bg-white border border-[#E2E8F0] text-slate-500 hover:border-slate-400 shadow-xs'
-                                            }`}
+                                            style={{ scrollSnapAlign: 'start' }}
+                                            className={`flex-shrink-0 flex flex-col items-center justify-center transition-all duration-200 cursor-pointer
+                                                w-14 sm:w-18 md:w-20
+                                                py-3 sm:py-3.5 md:py-4
+                                                px-1 sm:px-2
+                                                rounded-2xl sm:rounded-[20px]
+                                                ${
+                                                    isSelected
+                                                        ? 'bg-[#111827] text-white border-2 border-[#10B981] shadow-lg scale-105'
+                                                        : isToday
+                                                            ? 'bg-emerald-50 border-2 border-emerald-300 text-emerald-700 hover:border-emerald-500'
+                                                            : 'bg-white border border-[#E2E8F0] text-slate-500 hover:border-slate-400 hover:shadow-sm'
+                                                }`}
                                         >
-                                            <span className={`text-xs font-bold mb-1 ${isSelected ? 'text-slate-300' : 'text-slate-500'}`}>
+                                            <span className={`text-[9px] sm:text-[10px] font-black mb-0.5 sm:mb-1 tracking-wide ${
+                                                isSelected ? 'text-emerald-400' : isToday ? 'text-emerald-600' : 'text-slate-400'
+                                            }`}>
                                                 {d.dayShort}
                                             </span>
-                                            <span className={`text-3xl font-black my-0.5 ${isSelected ? 'text-white' : 'text-[#111827]'}`}>
+                                            <span className={`text-xl sm:text-2xl md:text-3xl font-black leading-none my-0.5 ${
+                                                isSelected ? 'text-white' : isToday ? 'text-emerald-700' : 'text-[#111827]'
+                                            }`}>
                                                 {d.dateNum}
                                             </span>
-                                            <span className={`text-xs font-bold mt-1 ${isSelected ? 'text-slate-300' : 'text-slate-500'}`}>
+                                            <span className={`text-[9px] sm:text-[10px] font-bold mt-0.5 sm:mt-1 ${
+                                                isSelected ? 'text-slate-300' : isToday ? 'text-emerald-500' : 'text-slate-400'
+                                            }`}>
                                                 {d.monthShort}
                                             </span>
                                         </button>
                                     )
                                 })}
+                            </div>
+                            {/* Slim scroll progress bar */}
+                            <div className="mt-2 h-[2px] bg-slate-100 rounded-full overflow-hidden">
+                                <div className="h-full w-1/3 bg-gradient-to-r from-emerald-400 to-emerald-600 rounded-full" />
                             </div>
                         </div>
 
