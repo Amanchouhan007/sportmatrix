@@ -259,7 +259,10 @@ const resolveOriginCoordinates = (locString, userGPS, explicitCoords) => {
                         {/* 1. 💳 FULL PAY™ */}
                         <button
                             type="button"
-                            onClick={() => navigate('/booking/1?mode=full')}
+                            onClick={() => {
+                                const nearbyId = filteredTurfs[0]?.id || 6
+                                navigate(`/booking/${nearbyId}?mode=full`)
+                            }}
                             className="group relative overflow-hidden w-full flex items-center gap-2.5 p-3 sm:p-3.5 rounded-[18px] bg-gradient-to-br from-emerald-500/15 via-green-500/10 to-teal-500/10 border-2 border-emerald-400/80 hover:border-emerald-500 shadow-md hover:shadow-[0_10px_25px_rgba(16,185,129,0.35)] transition-all duration-300 cursor-pointer hover:scale-[1.02] hover:-translate-y-1 active:scale-95 text-left shimmer-sweep min-h-[88px]"
                         >
                             <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-xl bg-gradient-to-br from-[#16A34A] to-emerald-700 text-white shadow-[0_0_14px_rgba(22,163,74,0.6)] flex items-center justify-center text-xl sm:text-2xl shrink-0 group-hover:scale-110 group-hover:-rotate-6 transition-transform">
@@ -285,8 +288,9 @@ const resolveOriginCoordinates = (locString, userGPS, explicitCoords) => {
                         <button
                             type="button"
                             onClick={() => {
+                                const nearbyId = filteredTurfs[0]?.id || 6
                                 setIsChallengeVisible(true)
-                                navigate('/booking/1?mode=dare&pay=opponent')
+                                navigate(`/booking/${nearbyId}?mode=dare&pay=opponent`)
                             }}
                             className="group relative overflow-hidden w-full flex items-center gap-2.5 p-3 sm:p-3.5 rounded-[18px] bg-gradient-to-br from-orange-500/15 via-amber-500/10 to-red-500/10 border-2 border-orange-400/80 hover:border-orange-500 shadow-md hover:shadow-[0_10px_25px_rgba(249,115,22,0.35)] transition-all duration-300 cursor-pointer hover:scale-[1.02] hover:-translate-y-1 active:scale-95 text-left shimmer-sweep min-h-[88px]"
                         >
@@ -312,7 +316,10 @@ const resolveOriginCoordinates = (locString, userGPS, explicitCoords) => {
                         {/* 3. 🤝 50:50 MATCH SPLIT™ */}
                         <button
                             type="button"
-                            onClick={() => navigate('/booking/1?mode=split50')}
+                            onClick={() => {
+                                const nearbyId = filteredTurfs[0]?.id || 6
+                                navigate(`/booking/${nearbyId}?mode=split50`)
+                            }}
                             className="group relative overflow-hidden w-full flex items-center gap-2.5 p-3 sm:p-3.5 rounded-[18px] bg-gradient-to-br from-emerald-500/15 via-teal-500/10 to-emerald-500/10 border-2 border-emerald-400/80 hover:border-emerald-500 shadow-md hover:shadow-[0_10px_25px_rgba(16,185,129,0.35)] transition-all duration-300 cursor-pointer hover:scale-[1.02] hover:-translate-y-1 active:scale-95 text-left shimmer-sweep min-h-[88px]"
                         >
                             <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-700 text-white shadow-[0_0_14px_rgba(16,185,129,0.6)] flex items-center justify-center text-xl sm:text-2xl shrink-0 group-hover:scale-110 group-hover:-rotate-6 transition-transform">
@@ -337,7 +344,10 @@ const resolveOriginCoordinates = (locString, userGPS, explicitCoords) => {
                         {/* 4. 👥 SQUAD UPI SPLIT™ */}
                         <button
                             type="button"
-                            onClick={() => navigate('/booking/1?mode=per_player')}
+                            onClick={() => {
+                                const nearbyId = filteredTurfs[0]?.id || 6
+                                navigate(`/booking/${nearbyId}?mode=per_player`)
+                            }}
                             className="group relative overflow-hidden w-full flex items-center gap-2.5 p-3 sm:p-3.5 rounded-[18px] bg-gradient-to-br from-blue-500/15 via-indigo-500/10 to-blue-500/10 border-2 border-blue-400/80 hover:border-blue-500 shadow-md hover:shadow-[0_10px_25px_rgba(59,130,246,0.35)] transition-all duration-300 cursor-pointer hover:scale-[1.02] hover:-translate-y-1 active:scale-95 text-left shimmer-sweep min-h-[88px]"
                         >
                             <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-700 text-white shadow-[0_0_14px_rgba(59,130,246,0.6)] flex items-center justify-center text-xl sm:text-2xl shrink-0 group-hover:scale-110 group-hover:rotate-6 transition-transform">
@@ -388,6 +398,7 @@ const resolveOriginCoordinates = (locString, userGPS, explicitCoords) => {
                     {/* FLOATING SIDE LIVE CRICKET CHALLENGE POPUP (Dynamic to Indore / Active City) */}
                     {isChallengeVisible && (
                         <LiveCricketChallengeCard
+                            turfId={filteredTurfs[0]?.id || 6}
                             challengerTeam={dynamicChallenger}
                             venueName={dynamicDareVenue}
                             matchTime="Tonight, 8:00 PM – 9:00 PM"
