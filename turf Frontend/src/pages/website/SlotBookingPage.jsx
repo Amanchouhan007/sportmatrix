@@ -573,461 +573,439 @@ export default function SlotBookingPage() {
     ]
 
     return (
-        <div className="min-h-screen text-[#111827] font-sans pt-20 pb-28 px-4 sm:px-6 md:px-8">
-            <div className="max-w-4xl mx-auto">
+        <div className="min-h-screen bg-[#F8FAFC] text-[#111827] font-sans pt-20 pb-28 px-4 sm:px-6 md:px-8">
+            <div className="max-w-7xl mx-auto">
 
-                {/* ═══════════════════════════════════════════════════
-                    BACK TO ALL TURFS QUICK NAVIGATION BAR
-                ═══════════════════════════════════════════════════ */}
-                <div className="flex items-center justify-between mb-6">
-                    <button
-                        onClick={() => navigate(-1)}
-                        className="inline-flex items-center gap-2 text-xs font-black uppercase tracking-wider text-slate-700 hover:text-[#16A34A] transition-colors cursor-pointer group bg-white border border-[#E2E8F0] hover:border-slate-400 px-5 py-2.5 rounded-full shadow-xs"
-                    >
-                        <HiArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
-                        <span>BACK TO TURF DETAILS</span>
-                    </button>
 
-                    <button
-                        onClick={() => setIsVenueModalOpen(true)}
-                        className="inline-flex items-center gap-2 text-xs font-black uppercase tracking-wider text-[#065F46] hover:text-emerald-900 bg-[#ECFDF5] hover:bg-emerald-100 border border-emerald-300 hover:border-emerald-400 px-5 py-2.5 rounded-full shadow-xs transition-all cursor-pointer hover:scale-[1.02] active:scale-[0.98]"
-                    >
-                        <span>🏟️</span>
-                        <span>SWITCH TURF VENUE</span>
-                        <span className="text-emerald-700 text-sm font-black">▾</span>
-                    </button>
-                </div>
 
                 {/* ═══════════════════════════════════════════════════
                     TOP STEP NAVIGATION BAR (Landing Page Style)
                 ═══════════════════════════════════════════════════ */}
-                <div className="flex items-center gap-2 sm:gap-3 overflow-x-auto pb-4 pt-1 no-scrollbar mb-8 border-b border-[#E2E8F0]">
-                    {steps.map((step) => {
-                        const isActive = activeStep === step.num
-                        const isPast = activeStep > step.num
-                        const isUnlocked = step.num <= maxStepReached
+                <div className="bg-white border border-[#E2E8F0] rounded-2xl p-2.5 mb-8 shadow-xs flex items-center justify-between gap-2 overflow-x-auto no-scrollbar">
+                    <div className="flex items-center gap-2 overflow-x-auto no-scrollbar">
+                        {steps.map((step) => {
+                            const isActive = activeStep === step.num
+                            const isPast = activeStep > step.num
+                            const isUnlocked = step.num <= maxStepReached
 
-                        return (
-                            <button
-                                key={step.num}
-                                disabled={!isUnlocked}
-                                onClick={() => handleStepHeaderClick(step.num)}
-                                className={`px-5 py-2.5 rounded-full text-xs font-black uppercase tracking-wider whitespace-nowrap transition-all duration-200 flex items-center gap-2 shadow-xs ${
-                                    isActive
-                                        ? 'bg-[#111827] text-white border border-[#111827] shadow-md cursor-default'
-                                        : isUnlocked
-                                        ? 'bg-white text-[#10B981] border border-emerald-300 hover:bg-emerald-50 cursor-pointer'
-                                        : 'bg-slate-100 text-slate-400 border border-slate-200 cursor-not-allowed opacity-60'
-                                }`}
-                            >
-                                {isPast && <HiCheck className="w-3.5 h-3.5 text-[#10B981]" />}
-                                <span>{step.label}</span>
-                            </button>
-                        )
-                    })}
+                            return (
+                                <button
+                                    key={step.num}
+                                    disabled={!isUnlocked}
+                                    onClick={() => handleStepHeaderClick(step.num)}
+                                    className={`px-5 py-2.5 rounded-full text-xs font-black uppercase tracking-wider whitespace-nowrap transition-all duration-200 flex items-center gap-2 shadow-xs ${
+                                        isActive
+                                            ? 'bg-[#111827] text-white border border-[#111827] shadow-md cursor-default'
+                                            : isUnlocked
+                                            ? 'bg-white text-[#10B981] border border-emerald-300 hover:bg-emerald-50 cursor-pointer'
+                                            : 'bg-slate-100 text-slate-400 border border-slate-200 cursor-not-allowed opacity-60'
+                                    }`}
+                                >
+                                    {isPast && <HiCheck className="w-3.5 h-3.5 text-[#10B981]" />}
+                                    <span>{step.label}</span>
+                                </button>
+                            )
+                        })}
+                    </div>
+
+                    <button
+                        onClick={() => setIsVenueModalOpen(true)}
+                        className="inline-flex items-center gap-1.5 text-xs font-black uppercase tracking-wider text-[#065F46] bg-[#ECFDF5] hover:bg-emerald-100 border border-emerald-300 px-4 py-2 rounded-xl transition-all cursor-pointer shrink-0"
+                    >
+                        <span>🏟️</span>
+                        <span>SWITCH TURF</span>
+                        <span className="text-[#065F46]">▾</span>
+                    </button>
                 </div>
 
                 {/* ═══════════════════════════════════════════════════
-                    STEP 1: DATE & TIME (Starts Directly Here)
+                    STEP 1: DATE & TIME (2-Column Dashboard Layout)
                 ═══════════════════════════════════════════════════ */}
                 {activeStep === 1 && (
                     <div className="animate-in fade-in duration-200">
-                        {/* Turf Photo & Specs Quick Preview Banner */}
-                        <div className="mb-6 p-4 rounded-2xl bg-white border border-[#E5E7EB] shadow-sm flex flex-col sm:flex-row items-center gap-4">
-                            <div className="relative w-full sm:w-44 h-28 rounded-xl overflow-hidden shrink-0 group">
-                                <img
-                                    src={selectedVenue.image || '/images/turf1.png'}
-                                    alt={selectedVenue.name}
-                                    className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
-                                    onError={(e) => { e.currentTarget.src = '/images/turf1.png' }}
-                                />
-                                <span className="absolute bottom-1.5 left-1.5 bg-black/75 text-[#C8FF2E] text-[10px] font-black px-2 py-0.5 rounded-md backdrop-blur-xs flex items-center gap-1">
-                                    <span>⭐</span> {selectedVenue.rating || '4.8'}
-                                </span>
-                            </div>
-                            <div className="flex-1 w-full flex flex-col justify-between">
-                                <div>
-                                    <div className="flex flex-wrap items-center justify-between gap-2">
-                                        <h3 className="text-base sm:text-lg font-black text-[#111827] leading-snug">{selectedVenue.name}</h3>
-                                        <button
-                                            type="button"
-                                            onClick={() => navigate(`/turf/${selectedVenue.id}`)}
-                                            className="text-[11px] font-extrabold text-[#065F46] bg-[#ECFDF5] hover:bg-emerald-100 border border-emerald-300 px-3 py-1 rounded-full transition-all cursor-pointer inline-flex items-center gap-1 shadow-2xs hover:scale-105"
-                                        >
-                                            <span>🖼️ View Photos & Specs</span>
-                                            <span>→</span>
-                                        </button>
-                                    </div>
-                                    <p className="text-xs text-[#6B7280] font-semibold mt-0.5">
-                                        📍 {selectedVenue.location}, {selectedVenue.city || 'Indore'} · Starts ₹{selectedVenue.price?.toLocaleString('en-IN')}/hr
-                                    </p>
-                                </div>
-                                <div className="flex flex-wrap items-center gap-1.5 mt-2.5">
-                                    <span className="text-[10px] font-bold bg-slate-100 text-slate-700 px-2 py-0.5 rounded-md border border-slate-200">🏏 Box Cricket Turf</span>
-                                    <span className="text-[10px] font-bold bg-slate-100 text-slate-700 px-2 py-0.5 rounded-md border border-slate-200">💡 LED Floodlights</span>
-                                    <span className="text-[10px] font-bold bg-slate-100 text-slate-700 px-2 py-0.5 rounded-md border border-slate-200">🚗 Secured Parking</span>
-                                    <span className="text-[10px] font-bold bg-emerald-50 text-emerald-800 px-2 py-0.5 rounded-md border border-emerald-200">⚡ Instant Slot Hold</span>
-                                </div>
-                            </div>
-                        </div>
+                        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
 
-                        {/* Title & Subtitle with Duration Hours Selector */}
-                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
-                            <div>
-                                <h1 className="text-3xl sm:text-4xl font-black text-[#111827] tracking-tight mb-1">
-                                    Pick date & time slot
-                                </h1>
-                                <div className="flex flex-wrap items-center gap-2 text-xs font-semibold text-slate-500">
-                                    <span>{selectedVenue.name} — {selectedVenue.location} · ₹{selectedVenue.price.toLocaleString('en-IN')}/hr</span>
-                                    <button
-                                        onClick={() => setIsVenueModalOpen(true)}
-                                        className="text-xs font-black text-[#065F46] bg-[#ECFDF5] border border-emerald-300 px-3 py-1 rounded-full hover:bg-emerald-100 cursor-pointer transition-all inline-flex items-center gap-1 shadow-xs hover:scale-105"
-                                    >
-                                        <span>Switch Turf</span>
-                                        <span>▾</span>
-                                    </button>
-                                </div>
-                            </div>
+                            {/* ── LEFT SIDEBAR (Col-Span 4 ~33% Width) ── */}
+                            <div className="lg:col-span-4 space-y-6">
 
-                            {/* Duration Hours Selector */}
-                            <div className="flex items-center gap-2.5">
-                                <span className="text-xs font-black tracking-wider text-slate-500 uppercase">
-                                    DURATION:
-                                </span>
-                                <div className="flex items-center bg-[#F1F5F9] border border-slate-200 rounded-full p-1 shadow-xs">
-                                    {[1, 2, 3].map((hr) => (
-                                        <button
-                                            key={hr}
-                                            onClick={() => setDurationHours(hr)}
-                                            className={`px-5 py-2 rounded-full text-xs font-black uppercase tracking-wider transition-all cursor-pointer ${
-                                                durationHours === hr
-                                                    ? 'bg-[#111827] text-white shadow-xs'
-                                                    : 'text-slate-500 hover:text-[#111827]'
-                                            }`}
-                                        >
-                                            {hr} {hr === 1 ? 'HOUR' : 'HOURS'}
-                                        </button>
-                                    ))}
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* SELECT DATE Section */}
-                        <div className="mb-10">
-                            <h2 className="text-xs font-black uppercase tracking-widest text-slate-400 mb-3">
-                                SELECT DATE
-                            </h2>
-
-                            {/* Horizontal date cards */}
-                            <div className="flex gap-3 overflow-x-auto pb-3 pt-1 no-scrollbar">
-                                {dateList.map((d) => {
-                                    const isSelected = selectedDateObj.id === d.id
-                                    return (
-                                        <button
-                                            key={d.id}
-                                            onClick={() => setSelectedDateObj(d)}
-                                            className={`flex-shrink-0 w-20 py-4 px-2 rounded-[20px] flex flex-col items-center justify-center transition-all duration-200 cursor-pointer ${
-                                                isSelected
-                                                    ? 'bg-[#111827] text-white border-2 border-[#10B981] shadow-md scale-[1.02]'
-                                                    : 'bg-white border border-[#E2E8F0] text-slate-500 hover:border-slate-400 shadow-xs'
-                                            }`}
-                                        >
-                                            <span className={`text-xs font-bold mb-1 ${isSelected ? 'text-slate-300' : 'text-slate-500'}`}>
-                                                {d.dayShort}
-                                            </span>
-                                            <span className={`text-3xl font-black my-0.5 ${isSelected ? 'text-white' : 'text-[#111827]'}`}>
-                                                {d.dateNum}
-                                            </span>
-                                            <span className={`text-xs font-bold mt-1 ${isSelected ? 'text-slate-300' : 'text-slate-500'}`}>
-                                                {d.monthShort}
-                                            </span>
-                                        </button>
-                                    )
-                                })}
-                            </div>
-                        </div>
-
-                        {/* AVAILABLE SLOTS Section */}
-                        <div className="mb-8">
-                            <div className="flex items-center justify-between mb-4">
-                                <h2 className="text-xs font-black uppercase tracking-widest text-[#6B7280]">
-                                    AVAILABLE SLOTS — {selectedDateObj.formattedLabel}
-                                </h2>
-                                <div className="flex items-center gap-4 text-[10px] uppercase tracking-wider font-bold">
-                                    <span className="flex items-center gap-1.5 text-slate-500">
-                                        <span className="w-2.5 h-2.5 rounded-sm bg-white border border-slate-300" /> Available
-                                    </span>
-                                    <span className="flex items-center gap-1.5 text-[#16A34A]">
-                                        <span className="w-2.5 h-2.5 rounded-sm bg-[#16A34A]" /> Selected
-                                    </span>
-                                    <span className="flex items-center gap-1.5 text-slate-400">
-                                        <span className="w-2.5 h-2.5 rounded-sm bg-slate-200 border border-slate-300 line-through" /> Booked
-                                    </span>
-                                </div>
-                            </div>
-
-                            {/* Slot Grid (4 columns) */}
-                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
-                                {allTimeSlots.map((slot) => {
-                                    const isSelected = selectedSlotTime === slot.id
-                                    const isBooked = slot.status === 'booked'
-                                    const isMaintenance = slot.status === 'maintenance'
-                                    const isStaffUnavail = slot.status === 'staff_unavailable'
-                                    const isDisabled = isBooked || isMaintenance || isStaffUnavail
-
-                                    return (
-                                        <button
-                                            key={slot.id}
-                                            disabled={isDisabled}
-                                            onClick={() => setSelectedSlotTime(slot.id)}
-                                            className={`py-3.5 px-3 rounded-[22px] text-center flex flex-col items-center justify-center gap-1 min-h-[72px] transition-all duration-200 ${
-                                                isSelected
-                                                    ? 'bg-[#10B981] text-white border-2 border-[#059669] shadow-lg shadow-emerald-500/20 scale-[1.02] cursor-pointer'
-                                                    : isBooked
-                                                    ? 'bg-[#F8FAFC] text-slate-300 border border-slate-100 opacity-75 cursor-not-allowed'
-                                                    : isMaintenance
-                                                    ? 'bg-[#FEFCE8] text-[#854D0E] border-2 border-[#FDE047] cursor-not-allowed'
-                                                    : isStaffUnavail
-                                                    ? 'bg-[#F1F5F9] text-slate-600 border-2 border-slate-200 cursor-not-allowed'
-                                                    : 'bg-[#ECFDF5] border-2 border-[#10B981] hover:bg-emerald-100/60 text-slate-900 cursor-pointer shadow-xs'
-                                            }`}
-                                        >
-                                            <span className={`text-sm sm:text-base font-black tracking-tight ${isSelected ? 'text-white' : isBooked ? 'text-slate-300 line-through' : isMaintenance ? 'text-[#854D0E]' : isStaffUnavail ? 'text-slate-700' : 'text-[#111827]'}`}>
-                                                {slot.time}
-                                            </span>
-
-                                            {isMaintenance ? (
-                                                <span className="text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full bg-[#FEF08A] text-[#854D0E] border border-[#FACC15] flex items-center gap-1">
-                                                    🛠️ MAINTENANCE
-                                                </span>
-                                            ) : isStaffUnavail ? (
-                                                <span className="text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full bg-[#E2E8F0] text-slate-700 border border-slate-300 flex items-center gap-1">
-                                                    🚫 STAFF UNAVAIL
-                                                </span>
-                                            ) : isBooked ? (
-                                                <span className="text-[11px] font-bold text-slate-400">Booked</span>
-                                            ) : (
-                                                <span className={`text-[11px] font-black px-2.5 py-0.5 rounded-full font-mono ${isSelected ? 'bg-white/20 text-white' : 'bg-[#D1FAE5] text-[#065F46]'}`}>
-                                                    ₹{slot.price}/hr
-                                                </span>
-                                            )}
-                                        </button>
-                                    )
-                                })}
-                            </div>
-
-                            {/* Selected Slot Summary Line with Dynamic Discount Breakdown */}
-                            {selectedSlotTime && (
-                                <div className="mt-4 bg-[#F8FAFC] border border-[#E2E8F0] p-4 sm:p-5 rounded-[20px] shadow-xs flex flex-wrap items-center gap-2 text-xs sm:text-sm font-semibold text-slate-600">
-                                    <span>Selected Slot: </span>
-                                    <strong className="text-[#111827] font-black text-sm sm:text-base">
-                                        {allTimeSlots.find(s => s.id === selectedSlotTime)?.time || selectedSlotTime} ({durationHours} {durationHours > 1 ? 'Hours' : 'Hour'})
-                                    </strong>
-                                    {hasVerifiedUmpire && (
-                                        <span className="text-[10px] font-black bg-emerald-100 text-[#065F46] px-2 py-0.5 rounded-full border border-emerald-300">
-                                            ⚖️ Umpire Included (+₹300)
-                                        </span>
-                                    )}
-                                    <span className="text-slate-300 mx-1">·</span>
-                                    <span>Slot Rate: </span>
-                                    <span className="text-slate-800 font-bold font-mono">₹{currentSlotPrice.toLocaleString('en-IN')}/hr</span>
-
-                                    {hasVerifiedUmpire && (
-                                        <>
-                                            <span className="text-slate-300 mx-1">·</span>
-                                            <span>Umpire Add-on: </span>
-                                            <span className="text-emerald-700 font-bold font-mono">+₹300</span>
-                                        </>
-                                    )}
-
-                                    {appliedOffer && discountAmount > 0 && (
-                                        <>
-                                            <span className="text-slate-300 mx-1">·</span>
-                                            <span className="bg-emerald-100 text-emerald-800 font-black text-xs px-2.5 py-0.5 rounded-full border border-emerald-300 flex items-center gap-1">
-                                                🏷️ {appliedOffer.code} Applied: -₹{discountAmount.toLocaleString('en-IN')}
-                                            </span>
-                                        </>
-                                    )}
-
-                                    <span className="text-slate-300 mx-1">·</span>
-                                    <span>Total Rent: </span>
-                                    {appliedOffer && discountAmount > 0 && (
-                                        <span className="text-slate-400 line-through text-xs font-mono">₹{grossRent.toLocaleString('en-IN')}</span>
-                                    )}
-                                    <span className="text-[#10B981] font-black text-base sm:text-lg font-mono">₹{totalRent.toLocaleString('en-IN')}</span>
-                                </div>
-                            )}
-
-                            {/* ── AVAILABLE TURF OFFERS & COUPONS SECTION ── */}
-                            <div className="mt-5 p-4 sm:p-5 rounded-2xl bg-gradient-to-br from-amber-500/5 via-orange-500/5 to-rose-500/5 border-2 border-orange-200/80 shadow-xs">
-                                <div className="flex items-center justify-between gap-2 mb-3">
-                                    <div className="flex items-center gap-2">
-                                        <span className="text-xl animate-bounce">🏷️</span>
-                                        <div>
-                                            <h4 className="text-sm font-black text-[#111827]">Available Turf Offers & Coupons</h4>
-                                            <p className="text-[11px] text-slate-500 font-medium">Turf owner special match discounts & promos</p>
+                                {/* 1. TURF INFORMATION CARD */}
+                                <div className="bg-white border border-[#E5E7EB] rounded-3xl p-5 shadow-sm space-y-4">
+                                    {/* Large Turf Photo with Rating Badge */}
+                                    <div className="relative aspect-[16/10] w-full rounded-2xl overflow-hidden group">
+                                        <img
+                                            src={selectedVenue.image || '/images/turf1.png'}
+                                            alt={selectedVenue.name}
+                                            className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                                            onError={(e) => { e.currentTarget.src = '/images/turf1.png' }}
+                                        />
+                                        <div className="absolute top-3 right-3 bg-black/80 backdrop-blur-md text-[#C8FF2E] text-xs font-black px-2.5 py-1 rounded-full border border-emerald-400/30 flex items-center gap-1 shadow-md">
+                                            <span>⭐</span> {selectedVenue.rating || '4.8'}
                                         </div>
                                     </div>
-                                    {appliedOffer && (
-                                        <button
-                                            type="button"
-                                            onClick={() => {
-                                                setAppliedOffer(null)
-                                                setCouponInput('')
-                                                if (addToast) addToast('Coupon removed', 'info')
-                                            }}
-                                            className="text-[11px] font-bold text-rose-600 hover:text-rose-700 bg-rose-50 px-2.5 py-1 rounded-lg border border-rose-200 cursor-pointer transition-colors"
-                                        >
-                                            ✕ Remove Code
-                                        </button>
-                                    )}
+
+                                    {/* Venue Details */}
+                                    <div>
+                                        <div className="flex items-center justify-between gap-2">
+                                            <h3 className="text-xl font-black text-[#111827] tracking-tight leading-snug">{selectedVenue.name}</h3>
+                                            <span className="text-sm font-black text-[#065F46] font-mono">
+                                                ₹{selectedVenue.price?.toLocaleString('en-IN')}<span className="text-[10px] text-slate-500 font-sans font-normal">/hr</span>
+                                            </span>
+                                        </div>
+                                        <p className="text-xs text-slate-500 font-medium flex items-center gap-1.5 mt-1">
+                                            <HiLocationMarker className="text-[#10B981] shrink-0" />
+                                            <span>{selectedVenue.location}, {selectedVenue.city || 'Indore'}</span>
+                                        </p>
+                                    </div>
+
+                                    {/* Amenities & Facility Badges */}
+                                    <div className="pt-2 border-t border-slate-100 space-y-2">
+                                        <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 block">TURF AMENITIES & SPECS</span>
+                                        <div className="grid grid-cols-2 gap-2 text-xs">
+                                            <div className="bg-slate-100 p-2.5 rounded-xl border border-slate-200 flex items-center gap-2 text-slate-700">
+                                                <span>🏏</span> <span className="font-semibold text-[11px]">Box Cricket</span>
+                                            </div>
+                                            <div className="bg-slate-100 p-2.5 rounded-xl border border-slate-200 flex items-center gap-2 text-slate-700">
+                                                <span>💡</span> <span className="font-semibold text-[11px]">LED Lights</span>
+                                            </div>
+                                            <div className="bg-slate-100 p-2.5 rounded-xl border border-slate-200 flex items-center gap-2 text-slate-700">
+                                                <span>🚗</span> <span className="font-semibold text-[11px]">Secured Parking</span>
+                                            </div>
+                                            <div className="bg-emerald-50 p-2.5 rounded-xl border border-emerald-200 flex items-center gap-2 text-emerald-800">
+                                                <span>⚡</span> <span className="font-semibold text-[11px]">Instant Hold</span>
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
 
-                                {/* Custom Coupon Input */}
-                                <div className="flex items-center gap-2 mb-3.5">
-                                    <div className="relative flex-1">
+                                {/* 2. COUPONS & PAYMENT (RE-THOUGHT) CARD */}
+                                <div className="bg-white border border-[#E5E7EB] rounded-3xl p-5 shadow-sm space-y-4">
+                                    <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                                        <div className="flex items-center gap-2">
+                                            <span className="text-xl">🏷️</span>
+                                            <div>
+                                                <h4 className="text-sm font-black text-[#111827]">Coupons & Payment (Re-thought)</h4>
+                                                <p className="text-[10px] text-slate-500 font-medium">Available turf promo codes & payment options</p>
+                                            </div>
+                                        </div>
+                                        {appliedOffer && (
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    setAppliedOffer(null)
+                                                    setCouponInput('')
+                                                    if (addToast) addToast('Coupon removed', 'info')
+                                                }}
+                                                className="text-[10px] font-bold text-rose-600 hover:text-rose-700 bg-rose-50 px-2 py-0.5 rounded-md border border-rose-200 cursor-pointer transition-colors"
+                                            >
+                                                ✕ Remove
+                                            </button>
+                                        )}
+                                    </div>
+
+                                    {/* Custom Coupon Input */}
+                                    <div className="flex items-center gap-2">
                                         <input
                                             type="text"
                                             value={couponInput}
                                             onChange={(e) => setCouponInput(e.target.value.toUpperCase())}
-                                            placeholder="ENTER PROMO CODE (e.g. SM200, CRICKET20)"
-                                            className="w-full px-3.5 py-2 text-xs font-bold uppercase rounded-xl border border-slate-300 focus:border-orange-500 focus:ring-1 focus:ring-orange-500 bg-white placeholder:normal-case placeholder:font-normal"
+                                            placeholder="Enter coupon code..."
+                                            className="w-full bg-white border border-slate-300 rounded-xl px-3.5 py-2 text-xs font-bold text-[#111827] uppercase outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 placeholder:normal-case placeholder:font-normal placeholder:text-slate-400"
                                         />
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                if (!couponInput.trim()) return
+                                                const code = couponInput.trim().toUpperCase()
+                                                const found = availableCoupons.find(c => c.code === code)
+                                                if (found) {
+                                                    setAppliedOffer(found)
+                                                    if (addToast) addToast(`🎉 Offer "${found.code}" applied! ${found.title}`, 'success')
+                                                } else {
+                                                    setAppliedOffer({ code, title: `Promo ${code}`, discount: 150, type: 'flat', icon: '🎁', tag: 'OFFER' })
+                                                    if (addToast) addToast(`🎉 Code "${code}" applied! ₹150 discount added.`, 'success')
+                                                }
+                                            }}
+                                            className="px-4 py-2 bg-[#111827] hover:bg-slate-800 text-white font-black text-xs uppercase tracking-wider rounded-xl transition-all cursor-pointer shadow-sm shrink-0"
+                                        >
+                                            APPLY &gt;
+                                        </button>
+                                    </div>
+
+                                    {/* Available Coupons Chips */}
+                                    <div>
+                                        <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 block mb-2">Available Coupons</span>
+                                        <div className="grid grid-cols-2 gap-2">
+                                            {availableCoupons.map((c) => {
+                                                const isThisApplied = appliedOffer?.code === c.code
+                                                return (
+                                                    <div
+                                                        key={c.code}
+                                                        onClick={() => {
+                                                            if (isThisApplied) {
+                                                                setAppliedOffer(null)
+                                                                setCouponInput('')
+                                                                if (addToast) addToast('Coupon removed', 'info')
+                                                            } else {
+                                                                setAppliedOffer(c)
+                                                                setCouponInput(c.code)
+                                                                if (addToast) addToast(`🎉 Offer "${c.code}" applied! ${c.title}`, 'success')
+                                                            }
+                                                        }}
+                                                        className={`p-2.5 rounded-xl border transition-all cursor-pointer flex items-center justify-between gap-1.5 select-none ${
+                                                            isThisApplied
+                                                                ? 'bg-[#ECFDF5] border-[#10B981] text-[#065F46]'
+                                                                : 'bg-slate-50 border-slate-200 hover:border-slate-300 text-slate-700'
+                                                        }`}
+                                                    >
+                                                        <div className="min-w-0">
+                                                            <div className="font-mono font-black text-xs text-[#111827] truncate">{c.code}</div>
+                                                            <div className="text-[9px] text-slate-500 font-medium truncate">{c.title}</div>
+                                                        </div>
+                                                        <span className="text-[9px] font-black px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-800 border border-emerald-200 shrink-0">
+                                                            {c.tag}
+                                                        </span>
+                                                    </div>
+                                                )
+                                            })}
+                                        </div>
+                                    </div>
+
+                                    {/* Accepted Payment Methods Indicator */}
+                                    <div className="pt-2 border-t border-slate-100">
+                                        <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 block mb-2">Payment Methods</span>
+                                        <div className="flex items-center gap-2 text-xs font-bold text-slate-500 flex-wrap">
+                                            <span className="bg-slate-100 border border-slate-200 px-2.5 py-1 rounded-md text-[#111827] font-mono text-[11px]">VISA</span>
+                                            <span className="bg-slate-100 border border-slate-200 px-2.5 py-1 rounded-md text-[#111827] font-mono text-[11px]">MasterCard</span>
+                                            <span className="bg-slate-100 border border-slate-200 px-2.5 py-1 rounded-md text-[#111827] font-mono text-[11px]">GPay / UPI</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                            </div>
+
+                            {/* ── RIGHT MAIN BOOKING WORKSPACE (Col-Span 8 ~67% Width) ── */}
+                            <div className="lg:col-span-8 space-y-6">
+
+                                {/* Top Mini Venue Banner Card */}
+                                <div className="bg-white border border-[#E5E7EB] rounded-3xl p-4 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-4">
+                                    <div className="flex items-center gap-3.5 w-full sm:w-auto">
+                                        <img
+                                            src={selectedVenue.image || '/images/turf1.png'}
+                                            alt={selectedVenue.name}
+                                            className="w-16 h-12 rounded-xl object-cover border border-slate-200 shrink-0"
+                                            onError={(e) => { e.currentTarget.src = '/images/turf1.png' }}
+                                        />
+                                        <div>
+                                            <div className="flex items-center gap-2">
+                                                <h3 className="font-black text-base text-[#111827]">{selectedVenue.name}</h3>
+                                                <span className="bg-slate-100 text-[#111827] text-[10px] font-bold px-2 py-0.5 rounded-full border border-slate-200">⭐ {selectedVenue.rating || '4.8'}</span>
+                                            </div>
+                                            <p className="text-xs text-slate-500 font-medium">📍 {selectedVenue.location}, {selectedVenue.city || 'Indore'} · Starts ₹{selectedVenue.price?.toLocaleString('en-IN')}/hr</p>
+                                        </div>
                                     </div>
                                     <button
                                         type="button"
-                                        onClick={() => {
-                                            if (!couponInput.trim()) return
-                                            const code = couponInput.trim().toUpperCase()
-                                            const found = availableCoupons.find(c => c.code === code)
-                                            if (found) {
-                                                setAppliedOffer(found)
-                                                if (addToast) addToast(`🎉 Offer "${found.code}" applied! ${found.title}`, 'success')
-                                            } else {
-                                                setAppliedOffer({ code, title: `Promo ${code}`, discount: 150, type: 'flat', icon: '🎁', tag: 'OFFER' })
-                                                if (addToast) addToast(`🎉 Code "${code}" applied! ₹150 discount added.`, 'success')
-                                            }
-                                        }}
-                                        className="px-5 py-2 bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white font-black text-xs rounded-xl shadow-sm cursor-pointer transition-all active:scale-95 whitespace-nowrap"
+                                        onClick={() => navigate(`/turf/${selectedVenue.id}`)}
+                                        className="text-xs font-black text-[#065F46] bg-[#ECFDF5] hover:bg-emerald-100 border border-emerald-300 px-4 py-2 rounded-xl transition-all cursor-pointer shrink-0"
                                     >
-                                        APPLY CODE
+                                        View Photos & Specs →
                                     </button>
                                 </div>
 
-                                {/* Quick Click Coupon Chips */}
-                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
-                                    {availableCoupons.map((c) => {
-                                        const isThisApplied = appliedOffer?.code === c.code
-                                        return (
-                                            <div
-                                                key={c.code}
-                                                onClick={() => {
-                                                    if (isThisApplied) {
-                                                        setAppliedOffer(null)
-                                                        setCouponInput('')
-                                                        if (addToast) addToast('Coupon removed', 'info')
-                                                    } else {
-                                                        setAppliedOffer(c)
-                                                        setCouponInput(c.code)
-                                                        if (addToast) addToast(`🎉 Offer "${c.code}" applied! ${c.title}`, 'success')
-                                                    }
-                                                }}
-                                                className={`p-3 rounded-xl border-2 transition-all cursor-pointer flex items-center justify-between gap-2 select-none ${
-                                                    isThisApplied
-                                                        ? 'bg-orange-50/90 border-orange-500 shadow-md shadow-orange-500/10 scale-[1.02]'
-                                                        : 'bg-white border-slate-200 hover:border-orange-300 hover:bg-orange-50/40'
+                                {/* Header Title & Duration Selector */}
+                                <div className="bg-white border border-[#E5E7EB] rounded-3xl p-6 shadow-sm space-y-6">
+                                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                                        <div>
+                                            <h1 className="text-2xl sm:text-3xl font-black text-[#111827] tracking-tight">
+                                                Pick date & time slot
+                                            </h1>
+                                            <div className="flex flex-wrap items-center gap-2 text-xs font-medium text-slate-500 mt-1">
+                                                <span>{selectedVenue.name} — {selectedVenue.location} · ₹{selectedVenue.price.toLocaleString('en-IN')}/hr</span>
+                                                <button
+                                                    onClick={() => setIsVenueModalOpen(true)}
+                                                    className="text-[11px] font-black text-[#065F46] bg-[#ECFDF5] border border-emerald-300 px-2.5 py-0.5 rounded-full hover:bg-emerald-100 cursor-pointer transition-all"
+                                                >
+                                                    Switch Turf ▾
+                                                </button>
+                                            </div>
+                                        </div>
+
+                                        {/* Duration Segmented Selector */}
+                                        <div className="flex items-center gap-2.5">
+                                            <span className="text-xs font-black tracking-wider text-slate-400 uppercase">DURATION:</span>
+                                            <div className="flex items-center bg-[#F1F5F9] border border-slate-200 rounded-2xl p-1 shadow-xs">
+                                                {[1, 2, 3].map((hr) => (
+                                                    <button
+                                                        key={hr}
+                                                        onClick={() => setDurationHours(hr)}
+                                                        className={`px-4 py-1.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer ${
+                                                            durationHours === hr
+                                                                ? 'bg-[#111827] text-white shadow-xs'
+                                                                : 'text-slate-500 hover:text-[#111827]'
+                                                        }`}
+                                                    >
+                                                        {hr} {hr === 1 ? 'hr' : 'hrs'}
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* ── SELECT DATE SECTION ── */}
+                                    <div>
+                                        <span className="text-xs font-black uppercase tracking-widest text-slate-400 block mb-3">SELECT DATE</span>
+                                        <div className="flex gap-3 overflow-x-auto pb-2 no-scrollbar">
+                                            {dateList.map((d) => {
+                                                const isSelected = selectedDateObj.id === d.id
+                                                return (
+                                                    <button
+                                                        key={d.id}
+                                                        onClick={() => setSelectedDateObj(d)}
+                                                        className={`flex-shrink-0 w-20 py-3.5 px-2 rounded-2xl flex flex-col items-center justify-center transition-all duration-200 cursor-pointer ${
+                                                            isSelected
+                                                                ? 'bg-[#111827] text-white border-2 border-[#10B981] shadow-md scale-[1.02]'
+                                                                : 'bg-white border border-[#E2E8F0] text-slate-500 hover:border-slate-400'
+                                                        }`}
+                                                    >
+                                                        <span className={`text-xs font-bold mb-0.5 ${isSelected ? 'text-slate-300' : 'text-slate-500'}`}>{d.dayShort}</span>
+                                                        <span className={`text-2xl font-black my-0.5 ${isSelected ? 'text-white' : 'text-[#111827]'}`}>{d.dateNum}</span>
+                                                        <span className={`text-[11px] font-bold mt-0.5 ${isSelected ? 'text-slate-300' : 'text-slate-500'}`}>{d.monthShort}</span>
+                                                    </button>
+                                                )
+                                            })}
+                                        </div>
+                                    </div>
+
+                                    {/* ── AVAILABLE SLOTS SECTION ── */}
+                                    <div>
+                                        <div className="flex items-center justify-between mb-4">
+                                            <span className="text-xs font-black uppercase tracking-widest text-slate-500">AVAILABLE SLOTS — {selectedDateObj.formattedLabel}</span>
+                                            <div className="flex flex-wrap items-center gap-3 text-[10px] uppercase tracking-wider font-bold">
+                                                <span className="flex items-center gap-1.5 text-slate-500">
+                                                    <span className="w-2.5 h-2.5 rounded-sm bg-white border border-slate-300" /> Available
+                                                </span>
+                                                <span className="flex items-center gap-1.5 text-[#16A34A]">
+                                                    <span className="w-2.5 h-2.5 rounded-sm bg-[#16A34A]" /> Selected
+                                                </span>
+                                                <span className="flex items-center gap-1.5 text-slate-400">
+                                                    <span className="w-2.5 h-2.5 rounded-sm bg-slate-200 border border-slate-300 line-through" /> Booked
+                                                </span>
+                                            </div>
+                                        </div>
+
+                                        {/* Slot Grid (4 Columns) */}
+                                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                                            {allTimeSlots.map((slot) => {
+                                                const isSelected = selectedSlotTime === slot.id
+                                                const isBooked = slot.status === 'booked'
+                                                const isMaintenance = slot.status === 'maintenance'
+                                                const isStaffUnavail = slot.status === 'staff_unavailable'
+                                                const isDisabled = isBooked || isMaintenance || isStaffUnavail
+
+                                                return (
+                                                    <button
+                                                        key={slot.id}
+                                                        disabled={isDisabled}
+                                                        onClick={() => setSelectedSlotTime(slot.id)}
+                                                        className={`py-3.5 px-3 rounded-2xl text-center flex flex-col items-center justify-center gap-1 min-h-[72px] transition-all duration-200 ${
+                                                            isSelected
+                                                                ? 'bg-[#10B981] text-white border-2 border-[#059669] shadow-lg shadow-emerald-500/20 scale-[1.02] cursor-pointer'
+                                                                : isBooked
+                                                                ? 'bg-[#F8FAFC] text-slate-300 border border-slate-100 opacity-75 cursor-not-allowed'
+                                                                : isMaintenance
+                                                                ? 'bg-[#FEFCE8] text-[#854D0E] border-2 border-[#FDE047] cursor-not-allowed'
+                                                                : isStaffUnavail
+                                                                ? 'bg-[#F1F5F9] text-slate-600 border-2 border-slate-200 cursor-not-allowed'
+                                                                : 'bg-[#ECFDF5] border-2 border-[#10B981] hover:bg-emerald-100/60 text-slate-900 cursor-pointer shadow-xs'
+                                                        }`}
+                                                    >
+                                                        <span className={`text-sm sm:text-base font-black tracking-tight ${isSelected ? 'text-white' : isBooked ? 'text-slate-300 line-through' : isMaintenance ? 'text-[#854D0E]' : isStaffUnavail ? 'text-slate-700' : 'text-[#111827]'}`}>
+                                                            {slot.time}
+                                                        </span>
+
+                                                        {isMaintenance ? (
+                                                            <span className="text-[9px] font-black uppercase px-2 py-0.5 rounded-full bg-[#FEF08A] text-[#854D0E] border border-[#FACC15]">
+                                                                🛠️ MAINTENANCE
+                                                            </span>
+                                                        ) : isStaffUnavail ? (
+                                                            <span className="text-[9px] font-black uppercase px-2 py-0.5 rounded-full bg-[#E2E8F0] text-slate-700 border border-slate-300">
+                                                                🚫 STAFF UNAVAIL
+                                                            </span>
+                                                        ) : isBooked ? (
+                                                            <span className="text-[10px] font-bold text-slate-400">Booked</span>
+                                                        ) : (
+                                                            <span className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded-full ${isSelected ? 'bg-white/20 text-white' : 'bg-[#D1FAE5] text-[#065F46]'}`}>
+                                                                ₹{slot.price}/hr
+                                                            </span>
+                                                        )}
+                                                    </button>
+                                                )
+                                            })}
+                                        </div>
+                                    </div>
+
+                                    {/* Verified Umpire Add-on Card */}
+                                    {isTurfUmpireAvailable && (
+                                        <div className={`p-4 rounded-2xl border transition-all duration-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 ${
+                                            hasVerifiedUmpire
+                                                ? 'bg-emerald-50/80 border-[#10B981] shadow-md shadow-emerald-500/10'
+                                                : 'bg-white border border-slate-200 hover:border-emerald-300'
+                                        }`}>
+                                            <div className="flex items-center gap-3">
+                                                <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-xl shrink-0 ${
+                                                    hasVerifiedUmpire ? 'bg-[#10B981] text-white' : 'bg-slate-100 text-slate-700'
+                                                }`}>
+                                                    ⚖️
+                                                </div>
+                                                <div>
+                                                    <div className="flex items-center gap-2 flex-wrap">
+                                                        <h4 className="text-sm font-black text-[#111827]">Add Verified Umpire & Live Scorer</h4>
+                                                        <span className="text-[9px] font-black uppercase px-2 py-0.5 rounded-full bg-emerald-100 text-[#065F46] border border-emerald-300">⭐ 1.5x Rank</span>
+                                                    </div>
+                                                    <p className="text-xs text-slate-500 font-medium mt-0.5">Official ball-by-ball scoring & dispute-free match ledger.</p>
+                                                </div>
+                                            </div>
+                                            <button
+                                                type="button"
+                                                onClick={() => setHasVerifiedUmpire(!hasVerifiedUmpire)}
+                                                className={`px-4 py-2 rounded-xl font-black text-xs transition-all cursor-pointer shrink-0 ${
+                                                    hasVerifiedUmpire
+                                                        ? 'bg-emerald-700 hover:bg-emerald-800 text-white shadow-xs'
+                                                        : 'bg-[#10B981] hover:bg-emerald-600 text-white shadow-md shadow-emerald-500/20'
                                                 }`}
                                             >
-                                                <div className="flex items-center gap-2.5 min-w-0">
-                                                    <span className="text-xl shrink-0">{c.icon}</span>
-                                                    <div className="min-w-0">
-                                                        <div className="flex items-center gap-1.5">
-                                                            <span className="font-mono font-black text-xs text-[#111827]">{c.code}</span>
-                                                            <span className="text-[8px] font-black px-1.5 py-0.2 rounded bg-orange-100 text-orange-800 uppercase shrink-0">
-                                                                {c.tag}
-                                                            </span>
-                                                        </div>
-                                                        <p className="text-[10px] text-slate-600 font-bold truncate mt-0.5">{c.title}</p>
-                                                    </div>
-                                                </div>
-                                                <span className={`text-[10px] font-black px-2.5 py-1 rounded-lg shrink-0 transition-colors ${
-                                                    isThisApplied ? 'bg-orange-600 text-white' : 'bg-slate-100 text-slate-700 hover:bg-orange-100'
-                                                }`}>
-                                                    {isThisApplied ? '✓ APPLIED' : '+ APPLY'}
-                                                </span>
-                                            </div>
-                                        )
-                                    })}
-                                </div>
-                            </div>
-
-                            {/* ADD VERIFIED UMPIRE BOOKING ADD-ON (Tier 2 Verification) - Only shown if Turf Owner enabled service */}
-                            {isTurfUmpireAvailable && (
-                                <div className={`mt-5 p-4 sm:p-5 rounded-2xl border-2 transition-all duration-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 ${
-                                    hasVerifiedUmpire 
-                                        ? 'bg-emerald-50/80 border-[#10B981] shadow-md shadow-emerald-500/10' 
-                                        : 'bg-white border-slate-200 hover:border-emerald-300 shadow-xs'
-                                }`}>
-                                    <div className="flex items-start gap-3.5">
-                                        <div className={`w-11 h-11 rounded-2xl flex items-center justify-center text-xl font-bold shrink-0 transition-colors ${
-                                            hasVerifiedUmpire ? 'bg-[#10B981] text-white shadow-md shadow-emerald-500/20' : 'bg-slate-100 text-slate-700'
-                                        }`}>
-                                            ⚖️
+                                                {hasVerifiedUmpire ? '✓ Added (+₹300)' : '+ Add ₹300'}
+                                            </button>
                                         </div>
+                                    )}
+
+                                    {/* Selected Summary Sticky Bottom Bar */}
+                                    <div className="bg-[#111827] text-white rounded-2xl p-4 sm:p-5 shadow-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                                         <div>
-                                            <div className="flex items-center gap-2 flex-wrap">
-                                                <h4 className="text-sm font-black text-[#111827]">Add Verified Umpire & Live Scorer</h4>
-                                                <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-full bg-emerald-100 text-[#065F46] border border-emerald-300">
-                                                    ⭐ 1.5x Rank Weight
-                                                </span>
+                                            <span className="text-[10px] font-black uppercase tracking-wider text-emerald-400 block mb-0.5">SELECTED BOOKING SUMMARY</span>
+                                            <div className="flex flex-wrap items-center gap-2 text-xs text-slate-300 font-medium">
+                                                <span>Today <strong className="text-white font-bold">{selectedDateObj.dateNum} {selectedDateObj.monthShort}</strong></span>
+                                                <span>•</span>
+                                                <span>Duration <strong className="text-white font-bold">{durationHours} HR</strong></span>
+                                                <span>•</span>
+                                                <span>Rate <strong className="text-white font-bold">₹{currentSlotPrice.toLocaleString('en-IN')}</strong></span>
+                                                <span>•</span>
+                                                <span>Total <strong className="text-[#C8FF2E] font-black text-base font-mono">₹{totalRent.toLocaleString('en-IN')}</strong></span>
                                             </div>
-                                            <p className="text-xs text-slate-500 font-medium mt-0.5">
-                                                Official ball-by-ball scoring, dispute-free result, guaranteed 1.5x verified player rating & MVP trophy badge.
-                                            </p>
                                         </div>
-                                    </div>
-                                    <button
-                                        type="button"
-                                        onClick={() => {
-                                            setHasVerifiedUmpire(!hasVerifiedUmpire)
-                                            if (addToast) addToast(!hasVerifiedUmpire ? '✓ Added Verified Umpire (+₹300) to booking!' : 'Removed Verified Umpire add-on', 'info')
-                                        }}
-                                        className={`px-5 py-2.5 rounded-xl font-black text-xs transition-all cursor-pointer whitespace-nowrap w-full sm:w-auto text-center ${
-                                            hasVerifiedUmpire 
-                                                ? 'bg-emerald-700 hover:bg-emerald-800 text-white shadow-xs' 
-                                                : 'bg-[#10B981] hover:bg-emerald-600 text-white shadow-md shadow-emerald-500/20'
-                                        }`}
-                                    >
-                                        {hasVerifiedUmpire ? '✓ Added (+₹300)' : '+ Add ₹300'}
-                                    </button>
-                                </div>
-                            )}
-                        </div>
 
-                        {/* Bottom Action Buttons */}
-                        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-8 border-t border-[#E5E7EB] mt-10">
-                            <div className="flex items-center gap-3 w-full sm:w-auto">
-                                <button
-                                    onClick={() => navigate(-1)}
-                                    className="flex-1 sm:flex-none px-6 py-3.5 rounded-xl bg-white hover:bg-slate-50 border border-[#E5E7EB] text-[#111827] font-bold text-sm transition-all duration-200 shadow-sm cursor-pointer flex items-center justify-center gap-2"
-                                >
-                                    <HiArrowLeft className="w-4 h-4" />
-                                    <span>Back to Turf Details</span>
-                                </button>
-                                <button
-                                    onClick={() => setIsVenueModalOpen(true)}
-                                    className="flex-1 sm:flex-none px-5 py-3.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-[#111827] font-bold text-sm transition-colors cursor-pointer text-center"
-                                >
-                                    Switch Venue
-                                </button>
+                                        <button
+                                            onClick={handleGoToStep2}
+                                            className="w-full sm:w-auto px-7 py-3 rounded-xl bg-[#C8FF2E] hover:bg-[#B5F000] text-[#111827] font-black text-sm transition-all duration-200 shadow-[0_6px_20px_rgba(200,255,46,0.4)] border border-[#B5F000] cursor-pointer flex items-center justify-center gap-2 hover:scale-[1.02] active:scale-[0.98]"
+                                        >
+                                            <span>Next: Payment mode →</span>
+                                        </button>
+                                    </div>
+
+                                </div>
+
                             </div>
 
-                            <button
-                                onClick={handleGoToStep2}
-                                className="w-full sm:w-auto px-8 py-3.5 rounded-xl bg-[#C8FF2E] hover:bg-[#B5F000] text-[#111827] font-black text-sm transition-all duration-200 shadow-[0_6px_20px_rgba(200,255,46,0.4)] border border-[#B5F000] cursor-pointer flex items-center justify-center gap-2 hover:scale-[1.02] active:scale-[0.98]"
-                            >
-                                <span>Next: Payment mode →</span>
-                            </button>
                         </div>
                     </div>
                 )}
