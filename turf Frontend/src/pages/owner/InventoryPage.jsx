@@ -142,7 +142,7 @@ export default function InventoryPage() {
         <div className="space-y-8 animate-in fade-in duration-500">
 
             {/* Header */}
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white/70 backdrop-blur-md p-6 rounded-3xl border border-surface-200/50 shadow-soft">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div>
                     <h1 className="text-2xl font-black text-surface-900 tracking-tight flex items-center gap-2">
                         <HiCube className="w-6 h-6 text-primary-500" /> Inventory Logs &amp; Controls
@@ -174,56 +174,61 @@ export default function InventoryPage() {
                 </Card>
             </div>
 
-            {/* Search & View toggle */}
-            <div className="flex flex-col sm:flex-row items-center gap-3">
-                <Input
-                    placeholder="Search items by name or category..."
-                    value={searchQuery}
-                    onChange={e => setSearchQuery(e.target.value)}
-                    className="flex-1"
-                />
-                <Button
-                    variant="outline"
-                    onClick={() => setViewMode(viewMode === 'table' ? 'cards' : 'table')}
-                    className="flex items-center gap-2 whitespace-nowrap"
-                >
-                    {viewMode === 'table'
-                        ? <><HiViewGrid className="w-4 h-4" /> Card View</>
-                        : <><HiViewList className="w-4 h-4" /> Table View</>
-                    }
-                </Button>
-            </div>
+            {/* Search, View Toggle & Main Content — Merged into 1 Card */}
+            <div className="bg-white rounded-3xl border border-surface-200/60 shadow-soft overflow-hidden">
+                {/* Search & View toggle */}
+                <div className="flex flex-col sm:flex-row items-center gap-3 p-4 border-b border-surface-200/60">
+                    <Input
+                        placeholder="Search items by name or category..."
+                        value={searchQuery}
+                        onChange={e => setSearchQuery(e.target.value)}
+                        className="flex-1"
+                    />
+                    <Button
+                        variant="outline"
+                        onClick={() => setViewMode(viewMode === 'table' ? 'cards' : 'table')}
+                        className="flex items-center gap-2 whitespace-nowrap"
+                    >
+                        {viewMode === 'table'
+                            ? <><HiViewGrid className="w-4 h-4" /> Card View</>
+                            : <><HiViewList className="w-4 h-4" /> Table View</>
+                        }
+                    </Button>
+                </div>
 
-            {/* Main content: table or card grid */}
-            {viewMode === 'table' ? (
-                <Card className="p-6">
-                    <DataTable columns={columns} data={filteredItems} />
-                </Card>
-            ) : (
-                <CardGrid items={filteredItems} renderCard={item => (
-                    <Card key={item.id} className="p-4 flex flex-col gap-2 hover:shadow-md transition-all border border-surface-200/60">
-                        <div className="flex items-center justify-between">
-                            <h3 className="font-bold text-sm text-surface-900 truncate">{item.name}</h3>
-                            <Badge variant={item.status === 'In Stock' ? 'success' : 'danger'} dot>{item.status}</Badge>
-                        </div>
-                        <Badge>{item.category}</Badge>
-                        <div className="text-xs text-surface-500 space-y-0.5 mt-1">
-                            <p>Stock: <span className="font-bold text-surface-800">{item.stock} units</span></p>
-                            <p>Value: <span className="font-bold text-surface-800">{item.value}</span></p>
-                            <p>Threshold: <span className="font-bold text-surface-800">{item.threshold} units</span></p>
-                        </div>
-                        <div className="w-full h-1.5 bg-surface-100 rounded-full overflow-hidden mt-1">
-                            <div
-                                className={`h-full ${item.status === 'Low Stock' ? 'bg-red-500' : 'bg-emerald-500'}`}
-                                style={{ width: `${Math.min(100, Math.round((item.stock / Math.max(item.stock, item.threshold * 2)) * 100))}%` }}
-                            />
-                        </div>
-                        <Button size="sm" variant="outline" onClick={() => handleRestockTrigger(item)} className="mt-1 w-full">
-                            <HiRefresh className="w-3 h-3 mr-1" /> Restock
-                        </Button>
-                    </Card>
-                )} />
-            )}
+                {/* Main content: table or card grid */}
+                {viewMode === 'table' ? (
+                    <div className="p-6">
+                        <DataTable columns={columns} data={filteredItems} />
+                    </div>
+                ) : (
+                    <div className="p-6">
+                        <CardGrid items={filteredItems} renderCard={item => (
+                            <Card key={item.id} className="p-4 flex flex-col gap-2 hover:shadow-md transition-all border border-surface-200/60">
+                                <div className="flex items-center justify-between">
+                                    <h3 className="font-bold text-sm text-surface-900 truncate">{item.name}</h3>
+                                    <Badge variant={item.status === 'In Stock' ? 'success' : 'danger'} dot>{item.status}</Badge>
+                                </div>
+                                <Badge>{item.category}</Badge>
+                                <div className="text-xs text-surface-500 space-y-0.5 mt-1">
+                                    <p>Stock: <span className="font-bold text-surface-800">{item.stock} units</span></p>
+                                    <p>Value: <span className="font-bold text-surface-800">{item.value}</span></p>
+                                    <p>Threshold: <span className="font-bold text-surface-800">{item.threshold} units</span></p>
+                                </div>
+                                <div className="w-full h-1.5 bg-surface-100 rounded-full overflow-hidden mt-1">
+                                    <div
+                                        className={`h-full ${item.status === 'Low Stock' ? 'bg-red-500' : 'bg-emerald-500'}`}
+                                        style={{ width: `${Math.min(100, Math.round((item.stock / Math.max(item.stock, item.threshold * 2)) * 100))}%` }}
+                                    />
+                                </div>
+                                <Button size="sm" variant="outline" onClick={() => handleRestockTrigger(item)} className="mt-1 w-full">
+                                    <HiRefresh className="w-3 h-3 mr-1" /> Restock
+                                </Button>
+                            </Card>
+                        )} />
+                    </div>
+                )}
+            </div>
 
             {/* Create Item Modal */}
             <Modal isOpen={modal} onClose={() => setModal(false)} title="Register Inventory Stock" size="sm">

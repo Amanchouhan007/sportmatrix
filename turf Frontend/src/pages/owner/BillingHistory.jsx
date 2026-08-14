@@ -23,9 +23,8 @@ const columns = [
 export default function BillingHistory() {
     return (
         <div className="space-y-4">
-            <div className="rounded-[28px] border border-slate-200/70 bg-gradient-to-r from-cyan-50 via-slate-50 to-rose-50 p-6 shadow-soft text-slate-900">
+            <div className="p-2 text-slate-900">
                 <div className="space-y-3">
-                    <p className="text-[10px] uppercase tracking-[0.35em] text-emerald-600 font-semibold">Owner Finance</p>
                     <h1 className="text-xl font-black tracking-tight">Billing History</h1>
                     <p className="max-w-xl text-sm text-slate-500">Premium ledger view for POS invoices and payment status across walk-in sales.</p>
                 </div>

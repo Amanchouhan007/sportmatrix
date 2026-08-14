@@ -177,13 +177,13 @@ export default function TournamentDashboard({ role = 'owner' }) {
 
     return (
         <div className="space-y-8 animate-in fade-in duration-500 max-w-[1600px] mx-auto pb-12">
-            
+
             {/* 1. HERO SECTION */}
             <div className="relative overflow-hidden bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-950 text-white rounded-[22px] p-6 sm:p-8 shadow-xl border border-indigo-900/40">
                 {/* Decorative Background Micro Graphics */}
                 <div className="absolute -top-24 -right-24 w-96 h-96 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none" />
                 <div className="absolute -bottom-24 -left-24 w-80 h-80 bg-blue-500/10 rounded-full blur-3xl pointer-events-none" />
-                
+
                 <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-6">
                     <div className="space-y-3 max-w-2xl">
                         <div className="flex items-center gap-2">
@@ -227,45 +227,6 @@ export default function TournamentDashboard({ role = 'owner' }) {
                     </div>
                 </div>
 
-                {/* Bottom Quick Metric Bar inside Hero */}
-                <div className="mt-6 pt-6 border-t border-white/10 grid grid-cols-2 sm:grid-cols-4 gap-4 text-xs">
-                    <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-lg bg-blue-500/20 text-blue-400 flex items-center justify-center font-bold">
-                            <HiPlay className="w-4 h-4" />
-                        </div>
-                        <div>
-                            <div className="text-slate-400 font-medium">Active Tournaments</div>
-                            <div className="text-white font-extrabold">{stats.approvedActive} Leagues Active</div>
-                        </div>
-                    </div>
-                    <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-lg bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-bold">
-                            <HiUserGroup className="w-4 h-4" />
-                        </div>
-                        <div>
-                            <div className="text-slate-400 font-medium">Total Registered</div>
-                            <div className="text-white font-extrabold">{stats.totalTeams} Teams Signed Up</div>
-                        </div>
-                    </div>
-                    <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-lg bg-amber-500/20 text-amber-400 flex items-center justify-center font-bold">
-                            <HiClock className="w-4 h-4" />
-                        </div>
-                        <div>
-                            <div className="text-slate-400 font-medium">Pending Review</div>
-                            <div className="text-white font-extrabold">{stats.pendingApprovals} Approvals Pending</div>
-                        </div>
-                    </div>
-                    <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-lg bg-purple-500/20 text-purple-400 flex items-center justify-center font-bold">
-                            <HiCurrencyRupee className="w-4 h-4" />
-                        </div>
-                        <div>
-                            <div className="text-slate-400 font-medium">Platform Revenue</div>
-                            <div className="text-white font-extrabold">₹{stats.totalRevenue.toLocaleString()}</div>
-                        </div>
-                    </div>
-                </div>
             </div>
 
             {/* 2. QUICK ACTION TILES BAR */}
@@ -302,7 +263,7 @@ export default function TournamentDashboard({ role = 'owner' }) {
 
             {/* 3. PREMIUM KPI CARDS */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-                
+
                 {/* KPI 1 */}
                 <div className="relative bg-white/85 backdrop-blur-md rounded-[18px] p-5 border border-slate-200/80 border-t-4 border-t-blue-500 shadow-sm hover:shadow-md transition-all duration-200 hover:-translate-y-0.5 space-y-3">
                     <div className="flex items-center justify-between">
@@ -414,7 +375,7 @@ export default function TournamentDashboard({ role = 'owner' }) {
 
             {/* 4. ANALYTICS CHARTS SECTION */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                
+
                 {/* Revenue & Registrations Area Chart */}
                 <div className="lg:col-span-2 bg-white/80 backdrop-blur-md p-6 rounded-[18px] border border-slate-200/70 shadow-sm flex flex-col justify-between">
                     <div className="flex items-center justify-between mb-4">
@@ -496,7 +457,7 @@ export default function TournamentDashboard({ role = 'owner' }) {
 
             {/* 5. LIVE MATCHES & GROUND AVAILABILITY GRID */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                
+
                 {/* Live Match Widget */}
                 <div className="lg:col-span-2 bg-white/80 backdrop-blur-md p-6 rounded-[18px] border border-slate-200/70 shadow-sm space-y-4">
                     <div className="flex items-center justify-between">
@@ -569,11 +530,10 @@ export default function TournamentDashboard({ role = 'owner' }) {
                                     <div className="font-bold text-slate-900">{grd.name}</div>
                                     <div className="text-[11px] text-slate-500 font-medium">{grd.occupiedBy}</div>
                                 </div>
-                                <span className={`px-2.5 py-1 rounded-lg text-[10px] font-bold border ${
-                                    grd.type === 'Occupied' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
-                                    grd.type === 'Available' ? 'bg-blue-50 text-blue-700 border-blue-200' :
-                                    'bg-amber-50 text-amber-700 border-amber-200'
-                                }`}>
+                                <span className={`px-2.5 py-1 rounded-lg text-[10px] font-bold border ${grd.type === 'Occupied' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
+                                        grd.type === 'Available' ? 'bg-blue-50 text-blue-700 border-blue-200' :
+                                            'bg-amber-50 text-amber-700 border-amber-200'
+                                    }`}>
                                     {grd.type}
                                 </span>
                             </div>
@@ -640,7 +600,7 @@ export default function TournamentDashboard({ role = 'owner' }) {
 
             {/* 7. RECENT ACTIVITY, NOTIFICATIONS & LEADERBOARD GRID */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                
+
                 {/* Recent Registration Activity */}
                 <div className="bg-white/80 backdrop-blur-md p-6 rounded-[18px] border border-slate-200/70 shadow-sm space-y-4">
                     <div className="flex items-center justify-between">
@@ -726,7 +686,7 @@ export default function TournamentDashboard({ role = 'owner' }) {
 
             {/* 8. SEASON TIMELINE & WEATHER SUMMARY WIDGET */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                
+
                 {/* Season Timeline */}
                 <div className="lg:col-span-2 bg-white/80 backdrop-blur-md p-6 rounded-[18px] border border-slate-200/70 shadow-sm space-y-4">
                     <h3 className="font-extrabold text-slate-900 text-base flex items-center gap-2">
@@ -734,11 +694,10 @@ export default function TournamentDashboard({ role = 'owner' }) {
                     </h3>
                     <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 pt-2">
                         {TIMELINE_STEPS.map((step, idx) => (
-                            <div key={idx} className={`p-4 rounded-xl border text-xs space-y-1 relative ${
-                                step.completed ? 'bg-emerald-50/60 border-emerald-200 text-emerald-950' :
-                                step.current ? 'bg-indigo-50/80 border-indigo-300 text-indigo-950 shadow-soft ring-2 ring-indigo-500/20' :
-                                'bg-slate-50/70 border-slate-200 text-slate-600'
-                            }`}>
+                            <div key={idx} className={`p-4 rounded-xl border text-xs space-y-1 relative ${step.completed ? 'bg-emerald-50/60 border-emerald-200 text-emerald-950' :
+                                    step.current ? 'bg-indigo-50/80 border-indigo-300 text-indigo-950 shadow-soft ring-2 ring-indigo-500/20' :
+                                        'bg-slate-50/70 border-slate-200 text-slate-600'
+                                }`}>
                                 <div className="font-black text-[10px] uppercase tracking-wider text-slate-500">{step.step}</div>
                                 <div className="font-bold text-sm text-slate-900">{step.title}</div>
                                 <div className="text-[11px] text-slate-500">{step.desc}</div>

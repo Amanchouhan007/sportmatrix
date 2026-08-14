@@ -525,7 +525,7 @@ export default function SportsManagement() {
     return (
         <div className="space-y-8 animate-in fade-in duration-500">
             {/* Header with optional branch selection dropdown */}
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white/70 backdrop-blur-md p-6 rounded-3xl border border-surface-200/50 shadow-soft">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div className="flex flex-col md:flex-row md:items-start md:items-center gap-4">
                     <div>
                         <h1 className="text-2xl font-black text-surface-900 tracking-tight flex items-center gap-2">
