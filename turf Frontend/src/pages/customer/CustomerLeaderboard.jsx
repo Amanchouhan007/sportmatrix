@@ -9,9 +9,7 @@ import { HiTrophy } from 'react-icons/hi2'
 import Badge from '../../components/ui/Badge'
 import CustomSelect from '../../components/ui/CustomSelect'
 import { useToast } from '../../components/ui/Toast'
-import { useAuth } from '../../context/AuthContext'
 import MatchScoreVerificationModal from '../../components/booking/MatchScoreVerificationModal'
-import FloatingActions from '../../components/tournaments/FloatingActions'
 import { getLeaderboardPlayers, calculatePPS } from '../../services/leaderboardService'
 
 const mockLeaderboardPlayers = [
@@ -1245,9 +1243,6 @@ export default function CustomerLeaderboard() {
                     onDispute={handleDisputeHandshake}
                 />
             )}
-
-            {/* Floating Action Buttons */}
-            <FloatingActions />
         </div>
     )
 }

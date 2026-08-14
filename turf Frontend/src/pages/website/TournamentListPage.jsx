@@ -5,7 +5,6 @@ import TournamentHero from '../../components/tournaments/TournamentHero';
 import TournamentSearchBar from '../../components/tournaments/TournamentSearchBar';
 import TournamentCardPremium from '../../components/tournaments/TournamentCardPremium';
 import TournamentLowerSections from '../../components/tournaments/TournamentLowerSections';
-import FloatingActions from '../../components/tournaments/FloatingActions';
 
 export default function TournamentListPage() {
     const [filter, setFilter] = useState('All');
@@ -99,9 +98,6 @@ export default function TournamentListPage() {
                 {/* 5. LOWER SECTIONS (AI, Calendar, FAQ, etc) */}
                 <TournamentLowerSections />
             </div>
-
-            {/* 6. FLOATING ACTIONS & STICKY BAR */}
-            <FloatingActions />
         </div>
     );
 }
