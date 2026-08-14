@@ -1569,79 +1569,31 @@ export default function SlotBookingPage() {
                                     </div>
                                 )}
 
-                                {/* Score Entry & Settlement Widget */}
-                                <div className="bg-slate-900 text-white rounded-2xl p-5 border border-slate-800 space-y-4 mt-4">
-                                    <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-                                        <div>
-                                            <h3 className="text-sm font-black uppercase tracking-wider text-[#C8FF2E] flex items-center gap-2">
-                                                <span>⚽</span> Match Day Score Submission & Settlement
-                                            </h3>
-                                            <p className="text-xs text-slate-400 mt-0.5">
-                                                {paymentMode === 'dare'
-                                                    ? 'Submit final scores to determine winner deposit refund & loser charge.'
-                                                    : 'Submit final scores to record match outcome in official leaderboard & ledger.'}
-                                            </p>
-                                        </div>
-                                        <span className={`text-xs px-2.5 py-1 rounded-full font-bold border ${scoreSubmitted ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30' : 'bg-amber-500/20 text-amber-300 border-amber-500/30'}`}>
-                                            {scoreSubmitted ? '✓ Result Verified' : 'Awaiting Scores'}
-                                        </span>
-                                    </div>
-
-                                    {!scoreSubmitted ? (
-                                        <div className="space-y-3">
-                                            <div className="grid grid-cols-2 gap-3 text-xs">
-                                                <div className="bg-slate-800/80 p-3 rounded-xl border border-slate-700">
-                                                    <label className="text-[10px] font-black uppercase text-slate-400 block mb-1">{teamAName} Score</label>
-                                                    <input
-                                                        type="number"
-                                                        value={scoreTeamA}
-                                                        onChange={(e) => setScoreTeamA(parseInt(e.target.value) || 0)}
-                                                        className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 font-mono text-base font-bold text-white outline-none focus:border-[#C8FF2E]"
-                                                    />
-                                                </div>
-                                                <div className="bg-slate-800/80 p-3 rounded-xl border border-slate-700">
-                                                    <label className="text-[10px] font-black uppercase text-slate-400 block mb-1">{teamBName} Score</label>
-                                                    <input
-                                                        type="number"
-                                                        value={scoreTeamB}
-                                                        onChange={(e) => setScoreTeamB(parseInt(e.target.value) || 0)}
-                                                        className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 font-mono text-base font-bold text-white outline-none focus:border-[#C8FF2E]"
-                                                    />
-                                                </div>
+                                {/* Post-Match Score Submission Info Notice */}
+                                {(paymentMode !== 'full' || hasOpponentTeam) && (
+                                    <div className="bg-slate-900 text-white rounded-2xl p-4 sm:p-5 border border-slate-800 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-md mt-4">
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-10 h-10 rounded-xl bg-emerald-500/20 text-[#C8FF2E] flex items-center justify-center text-xl shrink-0 border border-emerald-500/30">
+                                                ⚽
                                             </div>
-
-                                            <button
-                                                onClick={async () => {
-                                                    try {
-                                                        await fetch(`http://localhost:5000/api/v1/match-payments/${bookingId}/submit-score`, {
-                                                            method: 'POST',
-                                                            headers: { 'Content-Type': 'application/json' },
-                                                            body: JSON.stringify({ captainSide: 'A', teamAScore: scoreTeamA, teamBScore: scoreTeamB })
-                                                        });
-                                                        setScoreSubmitted(true);
-                                                        if (addToast) addToast('Score submitted to settlement engine!', 'success');
-                                                    } catch (e) {
-                                                        setScoreSubmitted(true);
-                                                        if (addToast) addToast('Score recorded!', 'success');
-                                                    }
-                                                }}
-                                                className="w-full py-2.5 bg-[#C8FF2E] hover:bg-[#B5F000] text-[#111827] font-black text-xs uppercase tracking-wider rounded-xl transition-all cursor-pointer shadow-md"
-                                            >
-                                                Submit Score & Process Settlement →
-                                            </button>
-                                        </div>
-                                    ) : (
-                                        <div className="bg-emerald-950/60 border border-emerald-800/60 rounded-xl p-3.5 text-xs text-emerald-200 flex items-center justify-between">
                                             <div>
-                                                <span className="font-bold block text-white text-sm">Score Submitted: {teamAName} {scoreTeamA} - {scoreTeamB} {teamBName}</span>
-                                                <span className="text-[11px] text-emerald-300">Dual-captain verification active. Outcome recorded in financial ledger.</span>
+                                                <div className="text-xs font-black uppercase tracking-wider text-[#C8FF2E] flex items-center gap-2">
+                                                    <span>Match Status: Booked & Scheduled</span>
+                                                    <span className="bg-emerald-500/20 text-emerald-300 text-[10px] px-2 py-0.5 rounded-full border border-emerald-500/30 font-mono">Confirmed</span>
+                                                </div>
+                                                <p className="text-xs text-slate-300 mt-1 font-medium leading-relaxed">
+                                                    You can submit match scores & process leaderboards after match completion under your <strong className="text-white font-bold">My Matches</strong> section.
+                                                </p>
                                             </div>
-                                            <span className="text-xs bg-emerald-500/20 text-emerald-300 font-mono font-bold px-2.5 py-1 rounded-md border border-emerald-500/30">
-                                                {scoreTeamA > scoreTeamB ? `${teamAName} WIN` : scoreTeamB > scoreTeamA ? `${teamBName} WIN` : 'DRAW'}
-                                            </span>
                                         </div>
-                                    )}
-                                </div>
+                                        <button
+                                            onClick={() => navigate('/customer/matches')}
+                                            className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs rounded-xl border border-slate-700 transition-colors cursor-pointer shrink-0"
+                                        >
+                                            View My Matches →
+                                        </button>
+                                    </div>
+                                )}
                             </div>
                         </div>
 
