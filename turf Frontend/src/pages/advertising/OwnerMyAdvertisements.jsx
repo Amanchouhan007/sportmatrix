@@ -107,12 +107,17 @@ export default function OwnerMyAdvertisements() {
         const fetchLiveAds = async () => {
             try {
                 const res = await fetch('http://localhost:5000/api/v1/ads');
+                if (!res.ok) throw new Error('Network response was not ok');
                 const data = await res.json();
                 if (data.success && Array.isArray(data.data) && data.data.length > 0) {
                     setAds(data.data);
+                } else {
+                    console.warn('Backend returned empty or invalid data, using mock ads');
+                    setAds(INITIAL_OWNER_ADS);
                 }
             } catch (err) {
-                console.error('Error fetching live ad campaigns:', err);
+                console.error('Error fetching live ad campaigns, falling back to mock data:', err);
+                setAds(INITIAL_OWNER_ADS);
             }
         };
         fetchLiveAds();
@@ -396,10 +401,7 @@ export default function OwnerMyAdvertisements() {
                                         <span className="text-surface-900 font-bold">₹{ad.budgetSpent.toLocaleString()} / ₹{ad.budgetTotal.toLocaleString()} ({budgetPercent}%)</span>
                                     </div>
                                     <div className="w-full bg-surface-200/80 h-2.5 rounded-full overflow-hidden">
-                                        <div
-                                            className="h-full bg-gradient-to-r from-emerald-500 to-teal-600 rounded-full transition-all duration-500"
-                                            style={{ width: `${budgetPercent}%` }}
-                                        ></div>
+                                        <div className="h-full bg-gradient-to-r from-emerald-500 to-teal-600 rounded-full transition-all duration-500" style={{ width: `${budgetPercent}%` }}></div>
                                     </div>
                                 </div>
 
