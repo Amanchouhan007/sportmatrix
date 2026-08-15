@@ -114,22 +114,7 @@ export default function TurfCardPremium({ turf, onMouseEnter, onClick, isActive 
                         </span>
                     </div>
 
-                    {/* Amenities */}
-                    <div className="flex items-center gap-1 mb-1">
-                        {[
-                            { icon: '💡', label: 'Floodlights' },
-                            { icon: '🅿️', label: 'Parking' },
-                            { icon: '👕', label: 'Changing Room' },
-                            { icon: '🚰', label: 'Drinking Water' }
-                        ].map((amenity, i) => (
-                            <div key={i} className="group/tooltip relative flex items-center justify-center w-4 h-4 rounded-sm bg-white/5 hover:bg-white/10 border border-white/5 transition-colors cursor-help">
-                                <span className="text-[8px] grayscale brightness-150 opacity-80">{amenity.icon}</span>
-                                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 px-1.5 py-0.5 bg-slate-800 text-slate-200 text-[8px] font-black tracking-wide rounded opacity-0 group-hover/tooltip:opacity-100 pointer-events-none transition-opacity whitespace-nowrap z-50 shadow-xl border border-white/10">
-                                    {amenity.label}
-                                </div>
-                            </div>
-                        ))}
-                    </div>
+
                 </div>
 
                 <div className="flex items-end justify-between mt-auto pt-1">

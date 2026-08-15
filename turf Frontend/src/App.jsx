@@ -19,6 +19,7 @@ const NotFoundPage = lazy(() => import('./pages/NotFoundPage'))
 
 // Lazy Public Website
 const AllTurfsPage = lazy(() => import('./pages/website/AllTurfsPage'))
+const GuestBookingPage = lazy(() => import('./pages/guest/GuestBookingPage'))
 const TurfDetailPage = lazy(() => import('./pages/website/TurfDetailPage'))
 const SlotBookingPage = lazy(() => import('./pages/website/SlotBookingPage'))
 const TournamentListPage = lazy(() => import('./pages/website/TournamentListPage'))
@@ -124,6 +125,7 @@ export default function App() {
               <Route path="/turfs/:id" element={<WebsiteLayout><TurfDetailPage /></WebsiteLayout>} />
               <Route path="/turf/:id" element={<WebsiteLayout><TurfDetailPage /></WebsiteLayout>} />
               <Route path="/booking/:id" element={<WebsiteLayout><SlotBookingPage /></WebsiteLayout>} />
+              <Route path="/guest/book" element={<WebsiteLayout><GuestBookingPage /></WebsiteLayout>} />
               <Route path="/tournaments" element={<WebsiteLayout><TournamentListPage /></WebsiteLayout>} />
               <Route path="/tournaments/:id" element={<WebsiteLayout><TournamentDetailPage /></WebsiteLayout>} />
               <Route path="/membership" element={<WebsiteLayout><MembershipPage /></WebsiteLayout>} />

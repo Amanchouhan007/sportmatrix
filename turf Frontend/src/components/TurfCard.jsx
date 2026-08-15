@@ -211,8 +211,7 @@ export default function TurfCard({ turf, onMouseEnter, onMouseLeave, i = 0 }) {
                                     <strong className="text-[#111827] font-bold">📏 {sqft} Sq.Ft</strong>
                                     <span className="text-slate-300 mx-1">•</span>
                                     <span>Turf</span>
-                                    <span className="text-slate-300 mx-1">•</span>
-                                    <span>{(turf.amenities || ['Parking', 'Washroom']).slice(0, 3).join(', ')}</span>
+                                    <span>Pro Synthetic Turf Arena</span>
                                 </>
                             );
                         })()}

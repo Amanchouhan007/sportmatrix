@@ -28,12 +28,12 @@ export default function TeamPaymentModesSection({ onSelectMode, selectedMode = '
             badgeBg: 'bg-[#B8F52A] text-[#121614] font-black border-[#B8F52A]',
             isDare: true,
             title: 'Dare Match — "Dum Hai Toh Harake Dikha!"',
-            desc: '"Winner Plays FREE, Loser Bharega Pura Bill!" Both teams enter with ₹100 deposit. Settle after match result.',
-            example: 'Winner: Full refund · Loser: Pays ₹1,200 · Draw: Split ₹600 each',
+            desc: '"Winner Plays FREE, Loser Bharega Pura Bill!" Both teams enter with 30% deposit. Settle after match result.',
+            example: '30% Deposit each · Winner: Full refund · Loser: Pays total match fee · Draw: Split 50-50',
             cta: '🔥 Accept the Dare',
             subText: 'Play first. Settle after the result.',
             steps: [
-                '1. Both teams deposit ₹100 security amount to lock match.',
+                '1. Both teams deposit 30% security amount to lock match.',
                 '2. Play the match at the turf venue.',
                 '3. Match winner gets full deposit refund; losing team settles the ₹1,200 match fee.'
             ]

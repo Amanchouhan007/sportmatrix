@@ -16,11 +16,11 @@ export default function Modal({ isOpen, onClose, title, children, size = 'md' })
 
     if (!isOpen) return null
 
-    const sizes = { 
-        sm: 'max-w-md', 
-        md: 'max-w-lg', 
-        lg: 'max-w-2xl', 
-        xl: 'max-w-4xl', 
+    const sizes = {
+        sm: 'max-w-md',
+        md: 'max-w-lg',
+        lg: 'max-w-2xl',
+        xl: 'max-w-4xl',
         full: 'max-w-6xl',
         enterprise: 'max-w-[900px]'
     }
@@ -30,17 +30,17 @@ export default function Modal({ isOpen, onClose, title, children, size = 'md' })
     const modalContent = (
         <div className="fixed inset-0 z-[999999] flex items-center justify-center p-4 sm:p-6 md:p-8">
             {/* Full-screen Backdrop: Blurs Top Nav Bar, Left Sidebar & All Page Content */}
-            <div 
-                className="fixed inset-0 bg-slate-950/65 transition-all duration-300 animate-in fade-in" 
-                style={{ 
-                    backdropFilter: 'blur(16px)', 
-                    WebkitBackdropFilter: 'blur(16px)' 
+            <div
+                className="fixed inset-0 bg-slate-950/65 transition-all duration-300 animate-in fade-in"
+                style={{
+                    backdropFilter: 'blur(16px)',
+                    WebkitBackdropFilter: 'blur(16px)'
                 }}
-                onClick={onClose} 
+                onClick={onClose}
             />
 
             {/* Modal Dialog Box */}
-            <div 
+            <div
                 style={{
                     background: 'rgba(255, 255, 255, 0.96)',
                     backdropFilter: 'blur(24px)',
@@ -55,8 +55,8 @@ export default function Modal({ isOpen, onClose, title, children, size = 'md' })
                     <h3 className="text-lg sm:text-xl md:text-2xl font-black text-slate-900 tracking-tight leading-snug pr-4">
                         {title}
                     </h3>
-                    <button 
-                        onClick={onClose} 
+                    <button
+                        onClick={onClose}
                         className="w-10 h-10 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-slate-900 transition-all duration-200 flex items-center justify-center cursor-pointer shrink-0 border border-slate-200/60"
                         aria-label="Close modal"
                     >

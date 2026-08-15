@@ -68,7 +68,17 @@ export default function CustomerDashboard() {
                     }
                 }
             }
-        } catch (e) {}
+        } catch (e) { }
+        // Load guest bookings (no auth)
+        try {
+            const rawGuest = localStorage.getItem('guest_bookings')
+            if (rawGuest) {
+                const guestBookings = JSON.parse(rawGuest)
+                if (Array.isArray(guestBookings) && guestBookings.length > 0) {
+                    setMyBookings(prev => [...prev, ...guestBookings])
+                }
+            }
+        } catch (e) { }
     }, [user?.email, user?.id])
 
     const upcomingBookings = myBookings.filter(b => b.status === 'Confirmed' || b.status === 'Pending')

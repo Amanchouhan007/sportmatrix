@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { HiCheck, HiCreditCard, HiUsers, HiOutlineCheckCircle } from 'react-icons/hi'
 import { useToast } from '../../components/ui/Toast'
@@ -26,61 +26,70 @@ const allAvailableTurfs = [
     { id: 6, name: 'Royal Cricket Ground', location: 'Vijay Nagar', city: 'Indore', price: 1000, rating: 4.7, sports: ['Cricket'], dimensions: '120 × 60 ft', squareFeet: '7,200 sq ft', image: '/images/turf5.png', gallery: ['/images/turf5.png', '/images/turf1.png', '/images/turf3.png', '/images/turf4.png', '/images/turf2.png'] },
     { id: 7, name: 'DunkZone Cricket Turf', location: 'Bandra', city: 'Mumbai', price: 750, rating: 4.3, sports: ['Cricket'], dimensions: '90 × 45 ft', squareFeet: '4,050 sq ft', image: '/images/turf2.png', gallery: ['/images/turf2.png', '/images/turf3.png', '/images/turf4.png', '/images/turf5.png', '/images/turf6.png'] },
     { id: 8, name: 'PixelArena Cricket', location: 'HSR Layout', city: 'Bangalore', price: 1500, rating: 4.8, sports: ['Cricket'], dimensions: '125 × 65 ft', squareFeet: '8,125 sq ft', image: '/images/turf6.png', gallery: ['/images/turf6.png', '/images/turf7.png', '/images/turf1.png', '/images/turf2.png', '/images/turf3.png'] },
-    { id: 9, name: 'Skyline Cricket Turf', location: 'Powai', city: 'Mumbai', price: 1400, rating: 4.6, sports: ['Cricket'], dimensions: '100 × 50 ft', squareFeet: '5,000 sq ft', image: '/images/turf6.png', gallery: ['/images/turf6.png', '/images/turf1.png', '/images/turf2.png', '/images/turf4.png', '/images/turf5.png'] },
-    { id: 10, name: 'StrikeZone Cricket', location: 'Noida', city: 'Delhi', price: 850, rating: 4.6, sports: ['Cricket'], dimensions: '90 × 45 ft', squareFeet: '4,050 sq ft', image: '/images/turf7.png', gallery: ['/images/turf7.png', '/images/turf1.png', '/images/turf2.png', '/images/turf3.png', '/images/turf5.png'] },
-    { id: 11, name: 'Master Blaster Cricket', location: 'Saket', city: 'Delhi', price: 1100, rating: 4.8, sports: ['Cricket'], dimensions: '105 × 52 ft', squareFeet: '5,460 sq ft', image: '/images/turf7.png', gallery: ['/images/turf7.png', '/images/turf3.png', '/images/turf4.png', '/images/turf5.png', '/images/turf6.png'] },
-    { id: 12, name: 'Pune Cricket Arena', location: 'Kothrud', city: 'Pune', price: 1000, rating: 4.5, sports: ['Cricket'], dimensions: '100 × 50 ft', squareFeet: '5,000 sq ft', image: '/images/turf2.png', gallery: ['/images/turf2.png', '/images/turf1.png', '/images/turf3.png', '/images/turf5.png', '/images/turf4.png'] },
-    { id: 13, name: 'Spike Cricket Turf', location: 'Bhawarkua', city: 'Indore', price: 500, rating: 4.6, sports: ['Cricket'], dimensions: '95 × 48 ft', squareFeet: '4,560 sq ft', image: '/images/turf1.png', gallery: ['/images/turf1.png', '/images/turf2.png', '/images/turf3.png', '/images/turf4.png', '/images/turf5.png'] },
-    { id: 14, name: 'Indore Sports Complex', location: 'LIG Colony', city: 'Indore', price: 1200, rating: 4.9, sports: ['Cricket'], dimensions: '115 × 58 ft', squareFeet: '6,670 sq ft', image: '/images/turf3.png', gallery: ['/images/turf3.png', '/images/turf4.png', '/images/turf5.png', '/images/turf1.png', '/images/turf2.png'] },
-    { id: 15, name: 'Rajiv Gandhi Stadium Turf', location: 'Navlakha', city: 'Indore', price: 700, rating: 4.5, sports: ['Cricket'], dimensions: '100 × 50 ft', squareFeet: '5,000 sq ft', image: '/images/turf4.png', gallery: ['/images/turf4.png', '/images/turf5.png', '/images/turf1.png', '/images/turf2.png', '/images/turf3.png'] },
+    { id: 1, name: 'SportZone Arena', location: 'Andheri West', city: 'Mumbai', price: 1200, rating: 4.8, image: '/images/turf1.png' },
+    { id: 2, name: 'Champion Cricket Ground', location: 'Koramangala', city: 'Bangalore', price: 1500, rating: 4.9, image: '/images/turf6.png' },
+    { id: 3, name: 'GameVault Cricket Center', location: 'Koramangala', city: 'Bangalore', price: 1200, rating: 4.9, image: '/images/turf2.png' },
+    { id: 4, name: 'ProKick Cricket Turf', location: 'Indiranagar', city: 'Bangalore', price: 1400, rating: 4.7, image: '/images/turf3.png' },
+    { id: 5, name: 'ProPlay Cricket Arena', location: 'Vashi', city: 'Mumbai', price: 1000, rating: 4.5, image: '/images/turf4.png' },
+    { id: 6, name: 'Royal Cricket Ground', location: 'Vijay Nagar', city: 'Indore', price: 1000, rating: 4.7, image: '/images/turf5.png' },
+    { id: 7, name: 'DunkZone Cricket Turf', location: 'Bandra', city: 'Mumbai', price: 750, rating: 4.3, image: '/images/turf2.png' },
 ]
 
-// Generate 31 upcoming days starting from today
+// Generate upcoming 8 days starting from today
 const generateUpcomingDays = () => {
-    const days = []
-    const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
-    const fullDayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
-    const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+    const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+    const list = []
+    const today = new Date()
 
-    const baseDate = new Date()
+    for (let i = 0; i < 8; i++) {
+        const d = new Date()
+        d.setDate(today.getDate() + i)
 
-    for (let i = 0; i < 31; i++) {
-        const d = new Date(baseDate)
-        d.setDate(baseDate.getDate() + i)
-        const fullDateString = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
-        days.push({
-            id: `date-${fullDateString}`,
+        const dayName = days[d.getDay()]
+        const monthName = months[d.getMonth()]
+        const dateNum = d.getDate()
+        const fullYear = d.getFullYear()
+        const fullDateString = `${fullYear}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(dateNum).padStart(2, '0')}`
+
+        list.push({
+            id: `d-${i + 1}`,
             fullDateString,
-            dayShort: i === 0 ? 'TODAY' : dayNames[d.getDay()],
-            dayFull: fullDayNames[d.getDay()],
-            dateNum: d.getDate(),
-            monthShort: monthNames[d.getMonth()],
-            year: d.getFullYear(),
-            formattedLabel: `${i === 0 ? 'TODAY' : fullDayNames[d.getDay()].toUpperCase()}, ${d.getDate()} ${monthNames[d.getMonth()].toUpperCase()}`
+            dayShort: i === 0 ? 'TODAY' : dayName,
+            dateNum,
+            monthShort: monthName,
+            formattedLabel: i === 0 ? `TODAY, ${dateNum} ${monthName.toUpperCase()}` : `${dayName.toUpperCase()}, ${dateNum} ${monthName.toUpperCase()}`,
         })
     }
-    return days
+    return list
 }
 
-// Available Time Slots matching exact grid with dynamic pricing
-const allTimeSlots = [
-    { id: '06:00', time: '6:00 AM', price: 1000, status: 'available' },
-    { id: '07:00', time: '7:00 AM', price: 1000, status: 'available' },
-    { id: '08:00', time: '8:00 AM', price: 1000, status: 'staff_unavailable' },
-    { id: '09:00', time: '9:00 AM', price: 1200, status: 'booked' },
-    { id: '10:00', time: '10:00 AM', price: 1200, status: 'available' },
-    { id: '11:00', time: '11:00 AM', price: 1200, status: 'available' },
-    { id: '12:00', time: '12:00 PM', price: 1200, status: 'maintenance' },
-    { id: '13:00', time: '1:00 PM', price: 1200, status: 'available' },
-    { id: '14:00', time: '2:00 PM', price: 1200, status: 'available' },
-    { id: '15:00', time: '3:00 PM', price: 1400, status: 'available' },
-    { id: '16:00', time: '4:00 PM', price: 1400, status: 'available' },
-    { id: '17:00', time: '5:00 PM', price: 1500, status: 'available' },
-    { id: '18:00', time: '6:00 PM', price: 1500, status: 'available' },
-    { id: '19:00', time: '7:00 PM', price: 1500, status: 'available' },
-    { id: '20:00', time: '8:00 PM', price: 1500, status: 'booked' },
-    { id: '21:00', time: '9:00 PM', price: 1500, status: 'available' },
-]
+// Generate dynamic time slots based on selected venue price
+const generateDynamicSlots = (basePrice = 1200) => {
+    const rawSlots = [
+        { id: '06:00', time: '6:00 AM', factor: 0.8, status: 'available' },
+        { id: '07:00', time: '7:00 AM', factor: 0.8, status: 'available' },
+        { id: '08:00', time: '8:00 AM', factor: 0.8, status: 'staff_unavailable' },
+        { id: '09:00', time: '9:00 AM', factor: 1.0, status: 'booked' },
+        { id: '10:00', time: '10:00 AM', factor: 1.0, status: 'available' },
+        { id: '11:00', time: '11:00 AM', factor: 1.0, status: 'available' },
+        { id: '12:00', time: '12:00 PM', factor: 1.0, status: 'maintenance' },
+        { id: '13:00', time: '1:00 PM', factor: 1.0, status: 'available' },
+        { id: '14:00', time: '2:00 PM', factor: 1.0, status: 'available' },
+        { id: '15:00', time: '3:00 PM', factor: 1.15, status: 'available' },
+        { id: '16:00', time: '4:00 PM', factor: 1.15, status: 'available' },
+        { id: '17:00', time: '5:00 PM', factor: 1.25, status: 'available' },
+        { id: '18:00', time: '6:00 PM', factor: 1.25, status: 'available' },
+        { id: '19:00', time: '7:00 PM', factor: 1.25, status: 'available' },
+        { id: '20:00', time: '8:00 PM', factor: 1.25, status: 'booked' },
+        { id: '21:00', time: '9:00 PM', factor: 1.25, status: 'available' },
+    ]
+
+    return rawSlots.map(s => ({
+        ...s,
+        price: Math.round((basePrice * s.factor) / 50) * 50
+    }))
+}
 
 export default function SlotBookingPage() {
     const { id } = useParams()
@@ -95,6 +104,11 @@ export default function SlotBookingPage() {
         const found = allAvailableTurfs.find(t => t.id === Number(id))
         return found || allAvailableTurfs[0]
     })
+
+    // Dynamic slot generation based on selectedVenue price
+    const allTimeSlots = useMemo(() => {
+        return generateDynamicSlots(selectedVenue?.price || 1200)
+    }, [selectedVenue?.price])
 
     // Active venue photo preview state & Lightbox Modal
     const [activePhotoUrl, setActivePhotoUrl] = useState(() => selectedVenue.image || '/images/turf1.png')
@@ -137,10 +151,12 @@ export default function SlotBookingPage() {
     // Coupons
     const [couponInput, setCouponInput] = useState('')
     const [appliedOffer, setAppliedOffer] = useState(null)
+    const [promoApplied, setPromoApplied] = useState(false)
     const availableOffers = [
         { code: 'SM200', flatDiscount: 200, minPrice: 800 },
-        { code: 'CRICKET20', discountPercent: 20, minPrice: 1000 }
-    ]
+        { code: 'CRICKET20', discountPercent: 20, minPrice: 1000 },
+        { code: 'EARLY250', flatDiscount: 250, minPrice: 800 }
+    ];
 
     // Step 2 Payment Modes: 'FULL_PAY' | 'DARE_TO_PLAY' | 'SPLIT_50_50' | 'PER_PLAYER'
     const [paymentMode, setPaymentMode] = useState(() => {
@@ -152,13 +168,45 @@ export default function SlotBookingPage() {
     })
 
     const [perPlayerCount, setPerPlayerCount] = useState(6)
-    const [isSubmitting, setIsSubmitting] = useState(false)
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [isPaymentConfirmed, setIsPaymentConfirmed] = useState(false);
     const [bookingResult, setBookingResult] = useState(null)
 
-    // Calculate totals
+    // Calculate totals with consecutive multi-hour pricing
+    const selectedSlotIndex = allTimeSlots.findIndex(s => s.id === selectedSlotTime)
+    const selectedConsecutiveSlots = selectedSlotIndex !== -1
+        ? allTimeSlots.slice(selectedSlotIndex, Math.min(allTimeSlots.length, selectedSlotIndex + durationHours))
+        : []
     const currentSlotObj = allTimeSlots.find(s => s.id === selectedSlotTime)
     const currentSlotPrice = currentSlotObj ? currentSlotObj.price : (selectedVenue.price || 1200)
-    const grossRent = (currentSlotPrice * durationHours) + (hasVerifiedUmpire ? 300 : 0)
+    const grossSlotRent = selectedConsecutiveSlots.reduce((sum, slot) => sum + (slot.price || currentSlotPrice), 0)
+    const grossRent = grossSlotRent + (hasVerifiedUmpire ? 300 : 0)
+
+    // Automatically adjust selected slot if current duration doesn't fit consecutive available slots
+    useEffect(() => {
+        const selectedIndex = allTimeSlots.findIndex(s => s.id === selectedSlotTime)
+        let isValid = selectedIndex !== -1
+        if (isValid) {
+            for (let i = 0; i < durationHours; i++) {
+                const nextSlot = allTimeSlots[selectedIndex + i]
+                if (!nextSlot || nextSlot.status !== 'available') {
+                    isValid = false
+                    break
+                }
+            }
+        }
+        if (!isValid) {
+            const firstValidSlot = allTimeSlots.find((s, idx) => {
+                return Array.from({ length: durationHours }).every((_, i) => {
+                    const candidate = allTimeSlots[idx + i]
+                    return candidate && candidate.status === 'available'
+                })
+            })
+            if (firstValidSlot) {
+                setSelectedSlotTime(firstValidSlot.id)
+            }
+        }
+    }, [durationHours])
 
     let discountAmount = 0
     if (appliedOffer) {
@@ -174,8 +222,9 @@ export default function SlotBookingPage() {
     let opponentShareAmount = 0
 
     if (paymentMode === 'DARE_TO_PLAY') {
-        myPaymentAmount = 100 // ₹100 deposit lock
-        opponentShareAmount = totalRent
+        const dareDeposit = Math.round(totalRent * 0.3)
+        myPaymentAmount = dareDeposit // 30% deposit lock
+        opponentShareAmount = dareDeposit // 30% deposit lock
     } else if (paymentMode === 'SPLIT_50_50') {
         myPaymentAmount = split50Amount
         opponentShareAmount = split50Amount
@@ -195,11 +244,26 @@ export default function SlotBookingPage() {
         }
     }
 
+    // Apply promo from URL query param on mount
+    useEffect(() => {
+        const promo = searchParams.get('promo')
+        if (promo && !promoApplied) {
+            const found = availableOffers.find(o => o.code.toUpperCase() === promo.toUpperCase())
+            if (found) {
+                setAppliedOffer(found)
+                setPromoApplied(true)
+                if (addToast) addToast(`Promo code ${found.code} applied!`, 'success')
+            } else {
+                if (addToast) addToast('Invalid promo code', 'error')
+            }
+        }
+    }, [searchParams, promoApplied])
+
     // Booking Lock Submission Handler
     const handleConfirmBooking = () => {
-        setIsSubmitting(true)
+        setIsSubmitting(true);
         setTimeout(() => {
-            setIsSubmitting(false)
+            setIsSubmitting(false);
             setBookingResult({
                 bookingId: `SM-${Math.floor(1000 + Math.random() * 9000)}`,
                 venueName: selectedVenue.name,
@@ -207,10 +271,11 @@ export default function SlotBookingPage() {
                 slotTime: selectedSlotTime,
                 amountPaid: myPaymentAmount,
                 paymentMode
-            })
-            setActiveStep(4)
-            if (addToast) addToast('⚡ Match Slot Locked Successfully!', 'success')
-        }, 1200)
+            });
+            setIsPaymentConfirmed(true);
+            setActiveStep(4);
+            if (addToast) addToast('⚡ Match Slot Locked Successfully!', 'success');
+        }, 1200);
     }
 
     // Share link copy
@@ -274,19 +339,19 @@ export default function SlotBookingPage() {
                         ].map((step) => {
                             const isActive = activeStep === step.num
                             const isPast = activeStep > step.num
+                            const isDisabled = (!isPaymentConfirmed && step.num !== 1) || (!isPast && !isActive)
                             return (
                                 <button
                                     key={step.num}
                                     type="button"
                                     onClick={() => isPast && setActiveStep(step.num)}
-                                    disabled={!isPast && !isActive}
-                                    className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center gap-1.5 whitespace-nowrap shrink-0 ${
-                                        isActive
+                                    disabled={isDisabled}
+                                    className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center gap-1.5 whitespace-nowrap shrink-0 ${isActive
                                             ? 'bg-[#111827] text-white shadow-xs'
                                             : isPast
-                                            ? 'bg-white text-[#10B981] border border-emerald-300 hover:bg-emerald-50 cursor-pointer'
-                                            : 'bg-slate-100 text-slate-400 border border-slate-200 cursor-not-allowed opacity-60'
-                                    }`}
+                                                ? 'bg-white text-[#10B981] border border-emerald-300 hover:bg-emerald-50 cursor-pointer'
+                                                : 'bg-slate-100 text-slate-400 border border-slate-200 cursor-not-allowed opacity-60'
+                                        }`}
                                 >
                                     {isPast && <HiCheck className="w-3.5 h-3.5 text-[#10B981]" />}
                                     <span>{step.label}</span>
@@ -381,6 +446,7 @@ export default function SlotBookingPage() {
                 ═══════════════════════════════════════════════════ */}
                 {activeStep === 3 && (
                     <BookingStep3Lock
+                        autoOpenModal={promoApplied}
                         selectedVenue={selectedVenue}
                         selectedDateObj={selectedDateObj}
                         selectedSlotTime={selectedSlotTime}
@@ -438,6 +504,8 @@ export default function SlotBookingPage() {
                     onSelectVenue={(venue) => {
                         setSelectedVenue(venue)
                         setActivePhotoUrl(venue.image || '/images/turf1.png')
+                        setIsVenueModalOpen(false)
+                        navigate(`/booking/${venue.id}`, { replace: true })
                     }}
                 />
 

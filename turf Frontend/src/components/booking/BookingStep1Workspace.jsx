@@ -172,21 +172,36 @@ export default function BookingStep1Workspace({
 
                     {/* Slot Grid (4 columns) */}
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
-                        {allTimeSlots.map((slot) => {
-                            const isSelected = selectedSlotTime === slot.id
+                        {allTimeSlots.map((slot, index) => {
+                            const selectedIndex = allTimeSlots.findIndex((s) => s.id === selectedSlotTime)
+                            const isSlotInSelectedRange = selectedIndex !== -1 && index >= selectedIndex && index < selectedIndex + durationHours
+                            const isRangeStart = index === selectedIndex
+                            const rangePosition = index - selectedIndex + 1
+
                             const isBooked = slot.status === 'booked'
                             const isMaintenance = slot.status === 'maintenance'
                             const isStaffUnavail = slot.status === 'staff_unavailable'
                             const isDisabled = isBooked || isMaintenance || isStaffUnavail
+
+                            // Check if starting at this slot can fulfill durationHours
+                            const canFulfillConsecutive = Array.from({ length: durationHours }).every((_, i) => {
+                                const candidate = allTimeSlots[index + i]
+                                return candidate && candidate.status === 'available'
+                            })
 
                             return (
                                 <button
                                     key={slot.id}
                                     type="button"
                                     disabled={isDisabled}
-                                    onClick={() => setSelectedSlotTime(slot.id)}
-                                    className={`py-3.5 px-3 rounded-[22px] text-center flex flex-col items-center justify-center gap-1 min-h-[72px] transition-all duration-200 ${
-                                        isSelected
+                                    onClick={() => {
+                                        if (!canFulfillConsecutive && durationHours > 1) {
+                                            return;
+                                        }
+                                        setSelectedSlotTime(slot.id)
+                                    }}
+                                    className={`py-3.5 px-3 rounded-[22px] text-center flex flex-col items-center justify-center gap-1 min-h-[76px] transition-all duration-200 ${
+                                        isSlotInSelectedRange
                                             ? 'bg-[#10B981] text-white border-2 border-[#059669] shadow-lg shadow-emerald-500/20 scale-[1.02] cursor-pointer'
                                             : isBooked
                                             ? 'bg-[#F8FAFC] text-slate-300 border border-slate-100 opacity-75 cursor-not-allowed'
@@ -194,10 +209,12 @@ export default function BookingStep1Workspace({
                                             ? 'bg-[#FEFCE8] text-[#854D0E] border-2 border-[#FDE047] cursor-not-allowed'
                                             : isStaffUnavail
                                             ? 'bg-[#F1F5F9] text-slate-600 border-2 border-slate-200 cursor-not-allowed'
+                                            : !canFulfillConsecutive && durationHours > 1
+                                            ? 'bg-slate-50 border border-slate-200 text-slate-400 opacity-60 cursor-not-allowed'
                                             : 'bg-[#ECFDF5] border-2 border-[#10B981] hover:bg-emerald-100/60 text-slate-900 cursor-pointer shadow-xs'
                                     }`}
                                 >
-                                    <span className={`text-sm sm:text-base font-black tracking-tight ${isSelected ? 'text-white' : isBooked ? 'text-slate-300 line-through' : isMaintenance ? 'text-[#854D0E]' : isStaffUnavail ? 'text-slate-700' : 'text-[#111827]'}`}>
+                                    <span className={`text-sm sm:text-base font-black tracking-tight ${isSlotInSelectedRange ? 'text-white' : isBooked ? 'text-slate-300 line-through' : isMaintenance ? 'text-[#854D0E]' : isStaffUnavail ? 'text-slate-700' : 'text-[#111827]'}`}>
                                         {slot.time}
                                     </span>
 
@@ -211,8 +228,16 @@ export default function BookingStep1Workspace({
                                         </span>
                                     ) : isBooked ? (
                                         <span className="text-[11px] font-bold text-slate-400">Booked</span>
+                                    ) : isSlotInSelectedRange && durationHours > 1 ? (
+                                        <span className={`text-[9px] font-black px-2 py-0.5 rounded-full uppercase tracking-wider ${isRangeStart ? 'bg-white text-[#065F46]' : 'bg-emerald-600 text-white'}`}>
+                                            {isRangeStart ? `START (1/${durationHours})` : `HOUR ${rangePosition}/${durationHours}`}
+                                        </span>
+                                    ) : !canFulfillConsecutive && durationHours > 1 ? (
+                                        <span className="text-[9px] font-bold text-slate-400">
+                                            UNAVAILABLE ({durationHours}h)
+                                        </span>
                                     ) : (
-                                        <span className={`text-[11px] font-black px-2.5 py-0.5 rounded-full font-mono ${isSelected ? 'bg-white/20 text-white' : 'bg-[#D1FAE5] text-[#065F46]'}`}>
+                                        <span className={`text-[11px] font-black px-2.5 py-0.5 rounded-full font-mono ${isSlotInSelectedRange ? 'bg-white/20 text-white' : 'bg-[#D1FAE5] text-[#065F46]'}`}>
                                             ₹{slot.price}/hr
                                         </span>
                                     )}

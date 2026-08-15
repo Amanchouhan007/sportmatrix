@@ -23,7 +23,7 @@ export default function TournamentAllPage({ role = 'owner' }) {
     const [tournaments, setTournaments] = useState(initialTournaments)
     const [activeTab, setActiveTab] = useState('ALL')
     const [searchTerm, setSearchTerm] = useState('')
-    
+
     // Approval & Rejection Modal
     const [reviewModal, setReviewModal] = useState({ open: false, tournament: null, remarks: '' })
     const [deleteConfirm, setDeleteConfirm] = useState({ open: false, id: null, title: '' })
@@ -74,19 +74,19 @@ export default function TournamentAllPage({ role = 'owner' }) {
     })
 
     const columns = [
-        { 
-            key: 'title', 
+        {
+            key: 'title',
             label: 'Tournament Name',
             render: (_, r) => (
                 <div>
                     <div className="font-extrabold text-surface-900">{r.title}</div>
                     <div className="text-[11px] text-surface-400 font-medium">{r.format} Format &bull; {r.sport}</div>
                 </div>
-            ) 
+            )
         },
         { key: 'date', label: 'Dates' },
-        { 
-            key: 'entryFee', 
+        {
+            key: 'entryFee',
             label: 'Entry Fee & Prize',
             render: (_, r) => (
                 <div className="text-xs">
@@ -121,14 +121,14 @@ export default function TournamentAllPage({ role = 'owner' }) {
                 return <Badge variant={badgeVariant} dot>{v}</Badge>
             }
         },
-        { 
-            key: 'action', 
-            label: 'Actions', 
+        {
+            key: 'action',
+            label: 'Actions',
             render: (_, r) => (
                 <div className="flex justify-end gap-1.5">
                     {r.status === 'Pending Approval' && role === 'owner' && (
-                        <button 
-                            onClick={() => setReviewModal({ open: true, tournament: r, remarks: '' })} 
+                        <button
+                            onClick={() => setReviewModal({ open: true, tournament: r, remarks: '' })}
                             className="px-2.5 py-1 text-xs font-bold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 rounded-lg transition-colors cursor-pointer"
                         >
                             Review
@@ -136,8 +136,8 @@ export default function TournamentAllPage({ role = 'owner' }) {
                     )}
 
                     {role === 'owner' && (
-                        <button 
-                            onClick={() => setDeleteConfirm({ open: true, id: r.id, title: r.title })} 
+                        <button
+                            onClick={() => setDeleteConfirm({ open: true, id: r.id, title: r.title })}
                             className="p-1.5 text-surface-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors cursor-pointer"
                             title="Delete Tournament"
                         >
@@ -145,7 +145,7 @@ export default function TournamentAllPage({ role = 'owner' }) {
                         </button>
                     )}
                 </div>
-            ) 
+            )
         },
     ]
 
@@ -173,11 +173,10 @@ export default function TournamentAllPage({ role = 'owner' }) {
                         <button
                             key={tab}
                             onClick={() => setActiveTab(tab)}
-                            className={`px-4 py-2 rounded-xl text-xs font-extrabold transition-all cursor-pointer whitespace-nowrap ${
-                                activeTab === tab
+                            className={`px-4 py-2 rounded-xl text-xs font-extrabold transition-all cursor-pointer whitespace-nowrap ${activeTab === tab
                                     ? 'bg-slate-900 text-white shadow-md'
                                     : 'bg-white text-surface-600 border border-surface-200 hover:bg-surface-100'
-                            }`}
+                                }`}
                         >
                             {tab.replace('_', ' ')}
                         </button>
@@ -229,13 +228,13 @@ export default function TournamentAllPage({ role = 'owner' }) {
                         </div>
 
                         <div className="flex gap-3 justify-end pt-4 border-t border-surface-100">
-                            <Button 
-                                variant="danger" 
+                            <Button
+                                variant="danger"
                                 onClick={() => handleReject(reviewModal.tournament, reviewModal.remarks)}
                             >
                                 Reject Tournament
                             </Button>
-                            <Button 
+                            <Button
                                 onClick={() => handleApprove(reviewModal.tournament, reviewModal.remarks)}
                             >
                                 Approve & Lock Turf Slots

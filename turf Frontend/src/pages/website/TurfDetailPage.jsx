@@ -9,6 +9,8 @@ import TurfHeaderInfo from '../../components/turf-detail/TurfHeaderInfo'
 import TurfDirectionsMap from '../../components/turf-detail/TurfDirectionsMap'
 import TurfReviewsSection from '../../components/turf-detail/TurfReviewsSection'
 import TurfBookingSuccessModal from '../../components/turf-detail/TurfBookingSuccessModal'
+import PaymentModal from '../../components/booking/PaymentModal'
+import VenueSwitchModal from '../../components/booking/VenueSwitchModal'
 
 const defaultTurfData = {
     id: 1, name: 'SportZone Arena', location: 'Andheri West, Mumbai', rating: 4.8, reviews: 124,
@@ -95,10 +97,11 @@ function SectionLabel({ children, accent = 'emerald' }) {
     )
 }
 
-const generateSlots = (hourlyPrice = 1200, durationHours = 1) => {
+const generateSlots = (hourlyPrice = 1200) => {
     const times = ['06:00', '07:00', '08:00', '09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00', '18:00', '19:00', '20:00', '21:00', '22:00']
     return times.map((t, i) => {
-        const slotPrice = Math.round((i >= 12 && i <= 20 ? hourlyPrice * 1.2 : hourlyPrice) * durationHours)
+        const factor = i < 5 ? 0.8 : (i >= 11 && i <= 16 ? 1.25 : 1.0)
+        const slotPrice = Math.round((hourlyPrice * factor) / 50) * 50
         return {
             id: i,
             time: t,
@@ -124,7 +127,7 @@ export default function TurfDetailPage() {
     const addToast = toastContext?.addToast
 
     const activeTurf = allTurfsList.find(t => t.id === Number(id)) || allTurfsList[0];
-    const slots = generateSlots(activeTurf.price, duration)
+    const slots = generateSlots(activeTurf.price)
     const videoRef = useRef(null)
 
     const defaultFallbackImage = activeTurf.image || '/images/turf1.png';
@@ -272,6 +275,9 @@ export default function TurfDetailPage() {
     ]);
     const [newTeammateName, setNewTeammateName] = useState('');
     const [showAddTeammateInput, setShowAddTeammateInput] = useState(false);
+    const [showPaymentModal, setShowPaymentModal] = useState(false);
+    const [isVenueModalOpen, setIsVenueModalOpen] = useState(false);
+    const [perPlayerCount, setPerPlayerCount] = useState(6);
 
     const [hasVerifiedUmpire, setHasVerifiedUmpire] = useState(false);
     const handleSelectSlot = (slotId) => {
@@ -289,8 +295,14 @@ export default function TurfDetailPage() {
         return activeTurf?.hasUmpireService !== false
     })()
 
+    const selectedSlotIndex = slots.findIndex(s => s.id === selectedSlot)
+    const selectedConsecutiveSlots = selectedSlotIndex !== -1
+        ? slots.slice(selectedSlotIndex, Math.min(slots.length, selectedSlotIndex + duration))
+        : []
+    const baseSlotPrice = slots[selectedSlotIndex]?.price || activeTurf.price || 1200
+    const grossSlotRent = selectedConsecutiveSlots.reduce((sum, slot) => sum + (slot.price || baseSlotPrice), 0)
     const umpireFee = (hasVerifiedUmpire && isTurfUmpireAvailable) ? 300 : 0;
-    const totalRent = ((activeTurf.price || 1200) * duration) + umpireFee;
+    const totalRent = (grossSlotRent || (baseSlotPrice * duration)) + umpireFee;
 
     useEffect(() => {
         setCustomSplitMyShare(Math.round(totalRent * 0.6))
@@ -307,6 +319,7 @@ export default function TurfDetailPage() {
         }
     }
 
+    const dareDepositAmount = Math.round(totalRent * 0.3);
     const myShare = paymentMode === 'full'
         ? totalRent
         : paymentMode === 'split-50'
@@ -314,13 +327,13 @@ export default function TurfDetailPage() {
             : paymentMode === 'custom'
                 ? customSplitMyShare
                 : paymentMode === 'dare'
-                    ? 100
-                    : Math.round(totalRent / 6);
+                    ? dareDepositAmount
+                    : Math.round(totalRent / perPlayerCount);
 
     const opponentShare = paymentMode === 'full' 
         ? 0 
         : paymentMode === 'dare'
-            ? 100
+            ? dareDepositAmount
             : Math.max(0, totalRent - myShare);
 
     const handleAddTeammate = () => {
@@ -498,20 +511,6 @@ export default function TurfDetailPage() {
 
                         <div className="h-px w-full bg-[#E5E7EB] mb-8" />
 
-                        {/* Amenities */}
-                        <div className="mb-10">
-                            <h2 className="text-[10px] font-black tracking-[0.25em] uppercase text-[#16A34A] mb-4 flex items-center gap-2">
-                                <span>✨</span> FACILITY AMENITIES
-                            </h2>
-                            <div className="flex flex-wrap gap-2">
-                                {turfData.amenities.map(a => (
-                                    <span key={a} className="px-3.5 py-1.5 bg-slate-50 border border-[#E5E7EB] text-xs font-bold tracking-wide text-[#111827] uppercase rounded-full hover:border-[#16A34A] transition-colors shadow-xs">
-                                        {a}
-                                    </span>
-                                ))}
-                            </div>
-                        </div>
-
                         {/* Sports & Pricing */}
                         <div className="mb-10">
                             <h2 className="text-[10px] font-black tracking-[0.25em] uppercase text-[#16A34A] mb-4 flex items-center gap-2">
@@ -553,16 +552,21 @@ export default function TurfDetailPage() {
                                     ].map(st => {
                                         const isActive = bookingStep === st.num
                                         const isPast = bookingStep > st.num
+                                        const isFuture = st.num > bookingStep
                                         return (
                                             <button
                                                 key={st.num}
-                                                onClick={() => setBookingStep(st.num)}
-                                                className={`px-5 py-2.5 rounded-full text-xs font-black uppercase tracking-wider whitespace-nowrap transition-all duration-200 cursor-pointer flex items-center gap-2 shadow-xs ${
+                                                type="button"
+                                                disabled={isFuture}
+                                                onClick={() => {
+                                                    if (isPast) setBookingStep(st.num)
+                                                }}
+                                                className={`px-5 py-2.5 rounded-full text-xs font-black uppercase tracking-wider whitespace-nowrap transition-all duration-200 flex items-center gap-2 shadow-xs ${
                                                     isActive
-                                                        ? 'bg-[#111827] text-white border border-[#111827] shadow-md'
+                                                        ? 'bg-[#111827] text-white border border-[#111827] shadow-md cursor-default'
                                                         : isPast
-                                                        ? 'bg-white text-[#10B981] border border-emerald-300'
-                                                        : 'bg-white text-slate-500 border border-[#E2E8F0] hover:text-[#111827] hover:border-slate-400'
+                                                        ? 'bg-white text-[#10B981] border border-emerald-300 hover:bg-emerald-50 cursor-pointer'
+                                                        : 'bg-slate-100 text-slate-400 border border-[#E2E8F0] cursor-not-allowed opacity-50 select-none'
                                                 }`}
                                             >
                                                 {isPast && <span>✓</span>}
@@ -583,10 +587,11 @@ export default function TurfDetailPage() {
                                                 <div className="flex flex-wrap items-center gap-2 text-xs font-semibold text-slate-500">
                                                     <span>{turfData.name} — {turfData.location} · ₹{(activeTurf.price || 1500).toLocaleString('en-IN')}/hr</span>
                                                     <button
-                                                        onClick={() => navigate('/turfs')}
-                                                        className="text-[11px] font-extrabold text-[#065F46] bg-[#ECFDF5] border border-emerald-300 px-2.5 py-0.5 rounded-md hover:bg-emerald-100 cursor-pointer transition-colors"
+                                                        onClick={() => setIsVenueModalOpen(true)}
+                                                        className="text-[11px] font-extrabold text-[#065F46] bg-[#ECFDF5] border border-emerald-300 px-2.5 py-0.5 rounded-md hover:bg-emerald-100 cursor-pointer transition-colors flex items-center gap-1"
                                                     >
-                                                        Switch Turf ▾
+                                                        <span>Switch Turf</span>
+                                                        <span>▾</span>
                                                     </button>
                                                 </div>
                                             </div>
@@ -655,12 +660,21 @@ export default function TurfDetailPage() {
                                             </div>
 
                                             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
-                                                {slots.map(s => {
-                                                    const isSel = selectedSlot === s.id || (selectedSlot === null && s.time === '18:00')
+                                                {slots.map((s, index) => {
+                                                    const selectedIndex = slots.findIndex(slotObj => slotObj.id === selectedSlot || (selectedSlot === null && slotObj.time === '18:00'))
+                                                    const isSlotInSelectedRange = selectedIndex !== -1 && index >= selectedIndex && index < selectedIndex + duration
+                                                    const isRangeStart = index === selectedIndex
+                                                    const rangePosition = index - selectedIndex + 1
+
                                                     const isBooked = s.status === 'booked'
                                                     const isMaintenance = s.status === 'maintenance' || s.id === 6
                                                     const isStaffUnavail = s.status === 'blocked' || s.id === 2
                                                     const isDisabled = isBooked || isMaintenance || isStaffUnavail
+
+                                                    const canFulfillConsecutive = Array.from({ length: duration }).every((_, i) => {
+                                                        const candidate = slots[index + i]
+                                                        return candidate && (candidate.status === 'available' || candidate.id === selectedSlot || (selectedSlot === null && candidate.time === '18:00'))
+                                                    })
 
                                                     const formattedTime = (t) => {
                                                         const [hStr, mStr] = t.split(':')
@@ -674,10 +688,14 @@ export default function TurfDetailPage() {
                                                     return (
                                                         <button
                                                             key={s.id}
-                                                            disabled={isDisabled}
-                                                            onClick={() => handleSelectSlot(s.id)}
-                                                            className={`py-3.5 px-3 rounded-[22px] text-center flex flex-col items-center justify-center gap-1 min-h-[72px] transition-all duration-200 ${
-                                                                isSel
+                                                            type="button"
+                                                            disabled={isDisabled && !isSlotInSelectedRange}
+                                                            onClick={() => {
+                                                                if (!canFulfillConsecutive && duration > 1) return;
+                                                                handleSelectSlot(s.id)
+                                                            }}
+                                                            className={`py-3.5 px-3 rounded-[22px] text-center flex flex-col items-center justify-center gap-1 min-h-[76px] transition-all duration-200 ${
+                                                                isSlotInSelectedRange
                                                                     ? 'bg-[#10B981] text-white border-2 border-[#059669] shadow-lg shadow-emerald-500/20 scale-[1.02] cursor-pointer'
                                                                     : isBooked
                                                                     ? 'bg-[#F8FAFC] text-slate-300 border border-slate-100 opacity-75 cursor-not-allowed'
@@ -685,10 +703,12 @@ export default function TurfDetailPage() {
                                                                     ? 'bg-[#FEFCE8] text-[#854D0E] border-2 border-[#FDE047] cursor-not-allowed'
                                                                     : isStaffUnavail
                                                                     ? 'bg-[#F1F5F9] text-slate-600 border-2 border-slate-200 cursor-not-allowed'
+                                                                    : !canFulfillConsecutive && duration > 1
+                                                                    ? 'bg-slate-50 border border-slate-200 text-slate-400 opacity-60 cursor-not-allowed'
                                                                     : 'bg-[#ECFDF5] border-2 border-[#10B981] hover:bg-emerald-100/60 text-slate-900 cursor-pointer shadow-xs'
                                                             }`}
                                                         >
-                                                            <span className={`text-sm sm:text-base font-black tracking-tight ${isSel ? 'text-white' : isBooked ? 'text-slate-300 line-through' : isMaintenance ? 'text-[#854D0E]' : isStaffUnavail ? 'text-slate-700' : 'text-[#111827]'}`}>
+                                                            <span className={`text-sm sm:text-base font-black tracking-tight ${isSlotInSelectedRange ? 'text-white' : isBooked ? 'text-slate-300 line-through' : isMaintenance ? 'text-[#854D0E]' : isStaffUnavail ? 'text-slate-700' : 'text-[#111827]'}`}>
                                                                 {formattedTime(s.time)}
                                                             </span>
 
@@ -702,8 +722,16 @@ export default function TurfDetailPage() {
                                                                 </span>
                                                             ) : isBooked ? (
                                                                 <span className="text-[11px] font-bold text-slate-400">Booked</span>
+                                                            ) : isSlotInSelectedRange && duration > 1 ? (
+                                                                <span className={`text-[9px] font-black px-2 py-0.5 rounded-full uppercase tracking-wider ${isRangeStart ? 'bg-white text-[#065F46]' : 'bg-emerald-600 text-white'}`}>
+                                                                    {isRangeStart ? `START (1/${duration})` : `HOUR ${rangePosition}/${duration}`}
+                                                                </span>
+                                                            ) : !canFulfillConsecutive && duration > 1 ? (
+                                                                <span className="text-[9px] font-bold text-slate-400">
+                                                                    UNAVAILABLE ({duration}h)
+                                                                </span>
                                                             ) : (
-                                                                <span className={`text-[11px] font-black px-2.5 py-0.5 rounded-full font-mono ${isSel ? 'bg-white/20 text-white' : 'bg-[#D1FAE5] text-[#065F46]'}`}>
+                                                                <span className={`text-[11px] font-black px-2.5 py-0.5 rounded-full font-mono ${isSlotInSelectedRange ? 'bg-white/20 text-white' : 'bg-[#D1FAE5] text-[#065F46]'}`}>
                                                                     ₹{s.price}/hr
                                                                 </span>
                                                             )}
@@ -829,12 +857,12 @@ export default function TurfDetailPage() {
                                                     id: 'dare',
                                                     icon: '🔥',
                                                     title: 'Dare to play — Loser pays all',
-                                                    desc: `Both teams pay ₹100 deposit. Winner gets full refund. Loser pays ₹${totalRent.toLocaleString('en-IN')}. Draw = split ₹${(totalRent / 2).toLocaleString('en-IN')} each.`,
+                                                    desc: `Both teams pay 30% deposit (₹${Math.round(totalRent * 0.3).toLocaleString('en-IN')}). Winner gets full deposit refund. Loser pays ₹${totalRent.toLocaleString('en-IN')}. Draw = split ₹${(totalRent / 2).toLocaleString('en-IN')} each.`,
                                                     badge: '🔥 POPULAR MATCH CHALLENGE',
                                                     details: {
-                                                        youPay: '₹100 Deposit',
+                                                        youPay: `₹${Math.round(totalRent * 0.3).toLocaleString('en-IN')} (30% Deposit)`,
                                                         youPaySub: 'Your Initial Share',
-                                                        opponentPay: '₹100 Deposit',
+                                                        opponentPay: `₹${Math.round(totalRent * 0.3).toLocaleString('en-IN')} (30% Deposit)`,
                                                         opponentPaySub: 'Opponent Required Share',
                                                         ruleTitle: 'CONDITION RULE',
                                                         rule: `Winner gets deposit refunded. Losing team pays full ₹${totalRent.toLocaleString('en-IN')}. Draw = split ₹${(totalRent / 2).toLocaleString('en-IN')} each.`
@@ -858,14 +886,14 @@ export default function TurfDetailPage() {
                                                     id: 'per-player',
                                                     icon: '👥',
                                                     title: 'Per player split',
-                                                    desc: `Each player pays their share. 2 players = ₹${(totalRent / 2).toLocaleString('en-IN')} each. Send payment links to teammates.`,
+                                                    desc: `Each player pays their equal share. ${perPlayerCount} players = ₹${Math.round(totalRent / perPlayerCount).toLocaleString('en-IN')} each.`,
                                                     details: {
-                                                        youPay: `₹${Math.round(totalRent / 2).toLocaleString('en-IN')} / player`,
-                                                        youPaySub: 'Your Player Share',
-                                                        opponentPay: `₹${Math.round(totalRent / 2).toLocaleString('en-IN')} / player`,
-                                                        opponentPaySub: 'Teammate Required Share',
+                                                        youPay: `₹${Math.round(totalRent / perPlayerCount).toLocaleString('en-IN')} / player`,
+                                                        youPaySub: `Your Share (1 of ${perPlayerCount})`,
+                                                        opponentPay: `₹${Math.round(totalRent / perPlayerCount).toLocaleString('en-IN')} / player`,
+                                                        opponentPaySub: 'Teammates Required Share',
                                                         ruleTitle: 'CONDITION RULE',
-                                                        rule: 'Minimum 4 players must complete payment before match is confirmed.'
+                                                        rule: `Rent divided equally across ${perPlayerCount} players. Payment links generated automatically for each slot.`
                                                     }
                                                 },
                                             ].map((opt) => {
@@ -907,6 +935,55 @@ export default function TurfDetailPage() {
                                                                     <p className="text-xs text-slate-500 font-medium mt-1 leading-relaxed">
                                                                         {opt.desc}
                                                                     </p>
+
+                                                                    {opt.id === 'per-player' && isSelected && (
+                                                                        <div className="mt-3 p-4 rounded-2xl bg-white border border-emerald-200 space-y-3" onClick={(e) => e.stopPropagation()}>
+                                                                            <div className="flex flex-wrap items-center justify-between gap-2">
+                                                                                <span className="text-xs font-black text-slate-700 uppercase tracking-wider">
+                                                                                    Select Total Players to Split Rent:
+                                                                                </span>
+                                                                                <span className="text-xs font-bold text-emerald-700 font-mono bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-200">
+                                                                                    ₹{Math.round(totalRent / perPlayerCount).toLocaleString('en-IN')} / player ({perPlayerCount} Players)
+                                                                                </span>
+                                                                            </div>
+
+                                                                            <div className="flex flex-wrap items-center gap-2">
+                                                                                {[2, 4, 6, 8, 10, 12, 14, 16, 20].map((num) => (
+                                                                                    <button
+                                                                                        key={num}
+                                                                                        type="button"
+                                                                                        onClick={(e) => {
+                                                                                            e.stopPropagation()
+                                                                                            setPerPlayerCount(num)
+                                                                                        }}
+                                                                                        className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer border ${
+                                                                                            perPlayerCount === num
+                                                                                                ? 'bg-[#111827] text-[#C8FF2E] border-[#111827] shadow-sm scale-105'
+                                                                                                : 'bg-slate-100 text-slate-700 border-slate-200 hover:bg-slate-200'
+                                                                                        }`}
+                                                                                    >
+                                                                                        {num} Players
+                                                                                    </button>
+                                                                                ))}
+
+                                                                                <div className="flex items-center gap-1.5 bg-slate-100 border border-slate-200 rounded-xl px-2 py-1">
+                                                                                    <span className="text-[10px] font-bold text-slate-500 uppercase">Custom:</span>
+                                                                                    <input
+                                                                                        type="number"
+                                                                                        min="1"
+                                                                                        max="50"
+                                                                                        value={perPlayerCount}
+                                                                                        onChange={(e) => {
+                                                                                            const val = parseInt(e.target.value, 10)
+                                                                                            if (val > 0) setPerPlayerCount(val)
+                                                                                        }}
+                                                                                        onClick={(e) => e.stopPropagation()}
+                                                                                        className="w-12 text-center text-xs font-black bg-white border border-slate-300 rounded-lg py-0.5 outline-none focus:border-emerald-500"
+                                                                                    />
+                                                                                </div>
+                                                                            </div>
+                                                                        </div>
+                                                                    )}
                                                                 </div>
                                                             </div>
 
@@ -1132,7 +1209,7 @@ export default function TurfDetailPage() {
                                                 )}
                                                 {paymentMode === 'dare' && (
                                                     <p className="text-[#4B5563] text-[11px] font-medium leading-relaxed">
-                                                        🔥 <strong>Dare to Play:</strong> Both teams deposit ₹100 now. Winner gets deposit refunded; losing team pays full ₹{totalRent.toLocaleString('en-IN')} after match score confirmation.
+                                                        🔥 <strong>Dare to Play:</strong> Both teams deposit 30% (₹{Math.round(totalRent * 0.3).toLocaleString('en-IN')}) now. Winner gets deposit refunded; losing team pays full ₹{totalRent.toLocaleString('en-IN')} after match score confirmation.
                                                     </p>
                                                 )}
                                                 {paymentMode === 'per-player' && (
@@ -1191,7 +1268,7 @@ export default function TurfDetailPage() {
 
                                             <button
                                                 disabled={isDeploying}
-                                                onClick={handleConfirmAndDeploy}
+                                                onClick={() => setShowPaymentModal(true)}
                                                 className="px-7 py-3 bg-[#C8FF2E] hover:bg-[#B5F000] text-[#111827] font-black text-xs uppercase tracking-widest rounded-full transition-all cursor-pointer shadow-sm border border-[#B5F000] flex items-center gap-2"
                                             >
                                                 {isDeploying ? (
@@ -1463,6 +1540,28 @@ export default function TurfDetailPage() {
                 bookingId={deploymentDetails?.deploymentId || bookingId}
                 navigate={navigate}
                 setSelectedSlot={setSelectedSlot}
+            />
+            <PaymentModal
+                isOpen={showPaymentModal}
+                onClose={() => setShowPaymentModal(false)}
+                paymentMode={paymentMode}
+                totalRent={totalRent}
+                myPaymentAmount={myShare}
+                opponentShareAmount={opponentShare}
+                handleConfirmBooking={() => {
+                    setShowPaymentModal(false);
+                    handleConfirmAndDeploy();
+                }}
+            />
+            <VenueSwitchModal
+                isOpen={isVenueModalOpen}
+                onClose={() => setIsVenueModalOpen(false)}
+                allTurfs={allTurfsList}
+                selectedVenue={activeTurf}
+                onSelectVenue={(venue) => {
+                    setIsVenueModalOpen(false);
+                    navigate(`/turf/${venue.id}`);
+                }}
             />
         </div>
     )

@@ -1,4 +1,5 @@
 import React from 'react'
+import { createPortal } from 'react-dom'
 
 /**
  * VenueSwitchModal — Quick venue selection modal
@@ -12,8 +13,11 @@ export default function VenueSwitchModal({
 }) {
     if (!isOpen) return null
 
-    return (
-        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200">
+    return createPortal(
+        <div
+            className="fixed inset-0 z-[999999] bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200"
+            style={{ zIndex: 999999 }}
+        >
             <div className="bg-white rounded-3xl max-w-xl w-full p-6 shadow-2xl space-y-5 border border-slate-100 max-h-[85vh] flex flex-col">
                 <div className="flex items-center justify-between border-b border-slate-100 pb-3">
                     <div>
@@ -68,6 +72,7 @@ export default function VenueSwitchModal({
                     })}
                 </div>
             </div>
-        </div>
+        </div>,
+        document.body
     )
 }

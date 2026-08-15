@@ -213,30 +213,7 @@ export default function AllTurfsPage() {
                             </div>
                         </div>
 
-                        {/* Amenities */}
-                        <div className="bg-[#F7F9FC]/70 p-4 rounded-2xl border border-[#E5E7EB] flex flex-col gap-3">
-                            <div className="flex items-center justify-between">
-                                <div className="flex items-center gap-2 text-xs font-bold text-[#111827]">
-                                    <HiSparkles className="w-4 h-4 text-[#9CA3AF]" />
-                                    <span>Amenities</span>
-                                </div>
-                                <HiPlus className="w-4 h-4 text-[#6B7280]" />
-                            </div>
-                            <div className="flex flex-wrap gap-2 pt-1">
-                                {allAmenities.map(a => (
-                                    <button
-                                        key={a}
-                                        onClick={() => toggleAmenity(a)}
-                                        className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all border cursor-pointer active:scale-95 ${selectedAmenities.includes(a)
-                                            ? 'bg-[#009846] border-[#009846] text-white shadow-xs'
-                                            : 'bg-white border-[#E5E7EB] text-[#111827] hover:border-[#009846]'
-                                            }`}
-                                    >
-                                        {a}
-                                    </button>
-                                ))}
-                            </div>
-                        </div>
+
 
                         {/* More Filters / Availability & Sort */}
                         <div className="bg-[#F7F9FC]/70 p-4 rounded-2xl border border-[#E5E7EB] flex flex-col gap-3">
