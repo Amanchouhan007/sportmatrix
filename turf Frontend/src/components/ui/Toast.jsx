@@ -83,4 +83,12 @@ export function ToastProvider({ children }) {
     )
 }
 
+const Toast = {
+    success: (msg) => console.log('[Toast Success]:', msg),
+    error: (msg) => console.log('[Toast Error]:', msg),
+    info: (msg) => console.log('[Toast Info]:', msg),
+}
+
+export default Toast
+
 

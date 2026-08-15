@@ -1,3 +1,5 @@
+import { useAuth } from '../../context/AuthContext'
+
 export default function TurfBookingSuccessModal({
     isOpen,
     onClose,
@@ -10,7 +12,17 @@ export default function TurfBookingSuccessModal({
     navigate,
     setSelectedSlot
 }) {
+    const { user } = useAuth() || {}
     if (!isOpen) return null
+
+    const handleViewAction = () => {
+        onClose()
+        if (user) {
+            navigate('/customer/bookings')
+        } else {
+            navigate('/turfs')
+        }
+    }
 
     return (
         <div className="fixed inset-0 z-[9999] bg-slate-950/70 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in">
@@ -50,13 +62,10 @@ export default function TurfBookingSuccessModal({
 
                 <div className="mt-6 flex gap-3">
                     <button
-                        onClick={() => {
-                            onClose()
-                            navigate('/customer/bookings')
-                        }}
+                        onClick={handleViewAction}
                         className="flex-1 py-3 px-4 bg-[#16A34A] hover:bg-[#15803D] text-white font-black tracking-wider text-xs uppercase rounded-full transition-colors cursor-pointer text-center"
                     >
-                        View My Bookings
+                        {user ? 'View My Bookings' : 'Explore More Turfs'}
                     </button>
                     <button
                         onClick={() => {

@@ -65,6 +65,9 @@ export default function CustomerBookings() {
             const cleanCurrentPhone = currentPhone.replace(/\D/g, '').slice(-10)
 
             const matched = parsed.filter(b => {
+                // Strictly exclude unauthenticated guest bookings from logged-in customer account
+                if (b.isGuest || b.userEmail === 'guest@sportmatrix.com') return false;
+
                 const bEmail = (b.userEmail || '').toLowerCase()
                 const bUserId = b.userId || ''
                 const bPhone = b.customerPhone || b.phone || ''
@@ -78,8 +81,6 @@ export default function CustomerBookings() {
                 if (cleanCurrentPhone && cleanBPhone && cleanBPhone === cleanCurrentPhone) return true
                 // Check guest email match derived from phone (e.g. "9876543210@guest.com")
                 if (cleanCurrentPhone && bEmail && bEmail.includes(cleanCurrentPhone)) return true
-                // Fallback for demo customer profile or unassigned guest booking
-                if (!bEmail && !bUserId && currentEmail === 'customer@gmail.com') return true
 
                 return false
             })

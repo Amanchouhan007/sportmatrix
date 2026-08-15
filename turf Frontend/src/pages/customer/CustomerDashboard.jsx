@@ -53,6 +53,7 @@ export default function CustomerDashboard() {
                     const currentPhone = user?.phone || user?.mobile || ''
 
                     const filtered = parsed.filter(b => {
+                        if (b.isGuest || b.userEmail === 'guest@sportmatrix.com') return false
                         const bEmail = (b.userEmail || '').toLowerCase()
                         const bUserId = b.userId || ''
                         const bPhone = b.customerPhone || b.phone || ''
@@ -60,22 +61,11 @@ export default function CustomerDashboard() {
                         if (currentEmail && bEmail && bEmail === currentEmail) return true
                         if (currentUserId && bUserId && bUserId === currentUserId) return true
                         if (currentPhone && bPhone && bPhone === currentPhone) return true
-                        if (!bEmail && !bUserId && currentEmail === 'customer@gmail.com') return true
                         return false
                     })
                     if (filtered.length > 0) {
                         setMyBookings(filtered)
                     }
-                }
-            }
-        } catch (e) { }
-        // Load guest bookings (no auth)
-        try {
-            const rawGuest = localStorage.getItem('guest_bookings')
-            if (rawGuest) {
-                const guestBookings = JSON.parse(rawGuest)
-                if (Array.isArray(guestBookings) && guestBookings.length > 0) {
-                    setMyBookings(prev => [...prev, ...guestBookings])
                 }
             }
         } catch (e) { }

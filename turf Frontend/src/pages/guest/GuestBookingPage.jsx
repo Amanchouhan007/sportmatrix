@@ -3,11 +3,12 @@ import { useNavigate } from 'react-router-dom';
 import Input from '../../components/ui/Input';
 import Button from '../../components/ui/Button';
 import Card from '../../components/ui/Card';
-import Toast from '../../components/ui/Toast';
+import { useToast } from '../../components/ui/Toast';
 import { saveGuestBooking } from '../../services/guestBookingService';
 
 export default function GuestBookingPage() {
   const navigate = useNavigate();
+  const { addToast } = useToast();
   const [form, setForm] = useState({
     sport: '',
     venue: '',
@@ -36,11 +37,11 @@ export default function GuestBookingPage() {
         status: 'Confirmed'
       };
       await saveGuestBooking(booking);
-      Toast.success('Booking saved! You can view it in your dashboard.');
-      navigate('/customer/dashboard');
+      if (addToast) addToast({ message: 'Guest Booking saved successfully!', type: 'success' });
+      navigate('/');
     } catch (err) {
       console.error(err);
-      Toast.error('Failed to save booking');
+      if (addToast) addToast({ message: 'Failed to save booking', type: 'error' });
     } finally {
       setLoading(false);
     }

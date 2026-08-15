@@ -1,4 +1,5 @@
 import React from 'react'
+import { useAuth } from '../../context/AuthContext'
 
 /**
  * BookingStep4Receipt — Step 4 Booking Success Receipt & WhatsApp Share Component
@@ -17,7 +18,16 @@ export default function BookingStep4Receipt({
     handleShareWhatsApp,
     navigate
 }) {
+    const { user } = useAuth() || {}
     const slotTimeLabel = allTimeSlots.find(s => s.id === selectedSlotTime)?.time || selectedSlotTime
+
+    const handleViewAction = () => {
+        if (user) {
+            navigate('/customer/bookings')
+        } else {
+            navigate('/turfs')
+        }
+    }
 
     return (
         <div className="bg-white border border-[#E5E7EB] rounded-3xl p-6 sm:p-8 shadow-sm space-y-7 text-center animate-in zoom-in-95 duration-200">
@@ -147,10 +157,10 @@ export default function BookingStep4Receipt({
 
                 <button
                     type="button"
-                    onClick={() => navigate('/customer/bookings')}
+                    onClick={handleViewAction}
                     className="bg-[#111827] hover:bg-slate-800 text-white font-black text-xs uppercase tracking-wider px-6 py-3 rounded-xl shadow-md transition-all cursor-pointer"
                 >
-                    View My Bookings →
+                    {user ? 'View My Bookings →' : 'Explore More Turfs →'}
                 </button>
             </div>
         </div>

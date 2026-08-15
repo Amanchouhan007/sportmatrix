@@ -9,6 +9,7 @@ import { HiTrophy } from 'react-icons/hi2'
 import Badge from '../../components/ui/Badge'
 import CustomSelect from '../../components/ui/CustomSelect'
 import { useToast } from '../../components/ui/Toast'
+import { useAuth } from '../../context/AuthContext'
 import MatchScoreVerificationModal from '../../components/booking/MatchScoreVerificationModal'
 import { getLeaderboardPlayers, calculatePPS } from '../../services/leaderboardService'
 

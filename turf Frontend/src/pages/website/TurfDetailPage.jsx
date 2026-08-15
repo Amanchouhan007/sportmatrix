@@ -401,29 +401,54 @@ export default function TurfDetailPage() {
                 }
             }
 
-            const existing = JSON.parse(localStorage.getItem('customer_bookings') || '[]');
-            const currentUserId = user?.id || (user?.email ? `usr_${user.email}` : `usr_cust_${Date.now()}`);
-            const currentUserEmail = user?.email || 'customer@gmail.com';
-            const currentCustomerName = user?.name || 'Customer';
-            const currentCustomerPhone = user?.phone || user?.mobile || '+91 98765 43210';
+            if (user) {
+                // Logged-in Customer Booking -> Save in customer_bookings for this specific logged-in user
+                const existing = JSON.parse(localStorage.getItem('customer_bookings') || '[]');
+                const currentUserId = user.id || (user.email ? `usr_${user.email}` : `usr_cust_${Date.now()}`);
+                const currentUserEmail = user.email;
+                const currentCustomerName = user.name || captainName || 'Customer';
+                const currentCustomerPhone = user.phone || user.mobile || captainPhone || '';
 
-            const newEntry = {
-                id: generatedBookingId,
-                userId: currentUserId,
-                userEmail: currentUserEmail,
-                customerName: currentCustomerName,
-                customerPhone: currentCustomerPhone,
-                turfId: `turf_${turfData.id}`,
-                venueId: turfData.id,
-                venue: `${turfData.name}, ${turfData.location}`,
-                sport: selectedSport || 'Turf Match',
-                date: selectedDateObj.fullDateString,
-                time: currentSlot?.time || '6:00 PM',
-                amount: `₹${myShare.toLocaleString('en-IN')}`,
-                status: 'Confirmed',
-                createdAt: new Date().toISOString()
-            };
-            localStorage.setItem('customer_bookings', JSON.stringify([newEntry, ...existing]));
+                const newEntry = {
+                    id: generatedBookingId,
+                    userId: currentUserId,
+                    userEmail: currentUserEmail,
+                    customerName: currentCustomerName,
+                    customerPhone: currentCustomerPhone,
+                    turfId: `turf_${turfData.id}`,
+                    venueId: turfData.id,
+                    venue: `${turfData.name}, ${turfData.location}`,
+                    sport: selectedSport || 'Turf Match',
+                    date: selectedDateObj.fullDateString,
+                    time: currentSlot?.time || '6:00 PM',
+                    amount: `₹${myShare.toLocaleString('en-IN')}`,
+                    status: 'Confirmed',
+                    isGuest: false,
+                    createdAt: new Date().toISOString()
+                };
+                localStorage.setItem('customer_bookings', JSON.stringify([newEntry, ...existing]));
+            } else {
+                // Unauthenticated Guest Booking -> Save in guest_bookings ONLY (Never attach to customer_bookings or customer@gmail.com)
+                const existingGuest = JSON.parse(localStorage.getItem('guest_bookings') || '[]');
+                const guestEntry = {
+                    id: generatedBookingId,
+                    guestId: `guest_${Date.now()}`,
+                    customerName: captainName || 'Guest User',
+                    customerPhone: captainPhone || '',
+                    userEmail: 'guest@sportmatrix.com',
+                    turfId: `turf_${turfData.id}`,
+                    venueId: turfData.id,
+                    venue: `${turfData.name}, ${turfData.location}`,
+                    sport: selectedSport || 'Turf Match',
+                    date: selectedDateObj.fullDateString,
+                    time: currentSlot?.time || '6:00 PM',
+                    amount: `₹${myShare.toLocaleString('en-IN')}`,
+                    status: 'Confirmed',
+                    isGuest: true,
+                    createdAt: new Date().toISOString()
+                };
+                localStorage.setItem('guest_bookings', JSON.stringify([guestEntry, ...existingGuest]));
+            }
         } catch (e) {
             console.error('Match payment engine API error:', e);
         }
@@ -1416,10 +1441,16 @@ export default function TurfDetailPage() {
                                                 Share match
                                             </button>
                                             <button
-                                                onClick={() => navigate('/customer/bookings')}
+                                                onClick={() => {
+                                                    if (user) {
+                                                        navigate('/customer/bookings')
+                                                    } else {
+                                                        navigate('/turfs')
+                                                    }
+                                                }}
                                                 className="flex-1 py-3 bg-[#C8FF2E] hover:bg-[#B5F000] text-[#111827] font-black text-xs uppercase tracking-widest rounded-full transition-colors text-center cursor-pointer shadow-sm border border-[#B5F000]"
                                             >
-                                                View my matches
+                                                {user ? 'View my matches' : 'Explore More Turfs'}
                                             </button>
                                         </div>
                                     </div>

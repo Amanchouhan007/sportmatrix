@@ -80,7 +80,7 @@ let localPlans = [...defaultFallbackPlans];
  */
 export const getAllPlans = async () => {
     try {
-        const response = await api.get('/subscriptions', { timeout: 400 });
+        const response = await api.get('/subscriptions', { timeout: 250 });
         if (response.data && response.data.success) {
             localPlans = response.data.data;
             return {
