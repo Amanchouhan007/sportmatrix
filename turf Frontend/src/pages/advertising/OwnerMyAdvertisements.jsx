@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useLocation } from 'react-router-dom'
 import Card from '../../components/ui/Card'
 import Badge from '../../components/ui/Badge'
 import Button from '../../components/ui/Button'
@@ -95,6 +95,9 @@ const INITIAL_OWNER_ADS = [
 
 export default function OwnerMyAdvertisements() {
     const navigate = useNavigate()
+    const location = useLocation()
+    // Derive base path dynamically so Staff (/staff/ads) & Owner (/admin/ads) both work correctly
+    const basePath = location.pathname.startsWith('/staff') ? '/staff' : '/admin'
     const { addToast } = useToast()
     const [ads, setAds] = useState(INITIAL_OWNER_ADS)
     const [viewMode, setViewMode] = useState('card') // 'card' | 'table'
@@ -294,7 +297,7 @@ export default function OwnerMyAdvertisements() {
 
                         <Button
                             variant="primary"
-                            onClick={() => navigate('/admin/ads/create')}
+                            onClick={() => navigate(`${basePath}/ads/create`)}
                             className="shadow-sm shadow-emerald-500/20 flex items-center gap-1 text-[11px] font-extrabold px-3 py-1.5 rounded-xl shrink-0"
                         >
                             <FiPlus className="w-3.5 h-3.5" /> Campaign
@@ -415,14 +418,14 @@ export default function OwnerMyAdvertisements() {
                                     {/* 9. 40x40 Action Buttons */}
                                     <div className="flex items-center gap-2">
                                         <button
-                                            onClick={() => navigate('/admin/ads/analytics')}
+                                            onClick={() => navigate(`${basePath}/ads/analytics`)}
                                             className="w-10 h-10 rounded-xl bg-slate-100/90 hover:bg-cyan-500 text-surface-600 hover:text-white border border-surface-200/60 hover:border-cyan-500 transition-all duration-200 shadow-soft flex items-center justify-center cursor-pointer"
                                             title="View Analytics"
                                         >
                                             <FiBarChart2 className="w-4 h-4" />
                                         </button>
                                         <button
-                                            onClick={() => navigate('/admin/ads/create')}
+                                            onClick={() => navigate(`${basePath}/ads/create`)}
                                             className="w-10 h-10 rounded-xl bg-slate-100/90 hover:bg-indigo-500 text-surface-600 hover:text-white border border-surface-200/60 hover:border-indigo-500 transition-all duration-200 shadow-soft flex items-center justify-center cursor-pointer"
                                             title="Edit Campaign"
                                         >
@@ -512,7 +515,7 @@ export default function OwnerMyAdvertisements() {
                                         <td className="px-5 py-4 text-right whitespace-nowrap pr-6">
                                             <div className="flex items-center justify-end gap-2">
                                                 <button
-                                                    onClick={() => navigate('/admin/ads/analytics')}
+                                                    onClick={() => navigate(`${basePath}/ads/analytics`)}
                                                     className="w-9 h-9 rounded-xl bg-slate-100 hover:bg-cyan-500 hover:text-white text-surface-600 transition-colors flex items-center justify-center cursor-pointer shadow-soft"
                                                     title="Analytics"
                                                 >
