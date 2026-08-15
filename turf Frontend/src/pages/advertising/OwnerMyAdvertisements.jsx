@@ -140,10 +140,9 @@ export default function OwnerMyAdvertisements() {
         setConfirmModal({ open: false, type: '', ad: null })
     }
 
-    const handleMarkPaid = (bookingId) => {
-        // Placeholder logic for marking a booking as paid.
-        // In a real implementation this would call an API endpoint.
-        addToast({ message: `Booking ${bookingId} marked as paid!`, type: 'success' });
+    const handleMarkPaid = (campaignId) => {
+        // Placeholder logic for marking a campaign fee as paid.
+        addToast({ message: `Campaign ${campaignId} commission marked as paid!`, type: 'success' });
     };
 
     const handleDelete = (id) => {
