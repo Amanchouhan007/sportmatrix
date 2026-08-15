@@ -132,6 +132,12 @@ export default function OwnerMyAdvertisements() {
         setConfirmModal({ open: false, type: '', ad: null })
     }
 
+    const handleMarkPaid = (bookingId) => {
+        // Placeholder logic for marking a booking as paid.
+        // In a real implementation this would call an API endpoint.
+        addToast({ message: `Booking ${bookingId} marked as paid!`, type: 'success' });
+    };
+
     const handleDelete = (id) => {
         setAds(prev => prev.filter(item => item.id !== id))
         addToast({ message: `Campaign deleted successfully!`, type: 'success' })
@@ -439,11 +445,19 @@ export default function OwnerMyAdvertisements() {
                                         )}
                                         <button
                                             onClick={() => setConfirmModal({ open: true, type: 'delete', ad })}
-                                            className="w-10 h-10 rounded-xl bg-slate-100/90 hover:bg-rose-500 text-surface-600 hover:text-white border border-surface-200/60 hover:border-rose-500 transition-all duration-200 shadow-soft flex items-center justify-center cursor-pointer"
+                                            className="w-10 h-10 rounded-xl bg-slate-100/90 hover:bg-rose-500 text-surface-600 hover:text-white border border-surface-200/60 hover:border-rose-500 transition-all shadow-soft flex items-center justify-center cursor-pointer"
                                             title="Delete Campaign"
                                         >
                                             <FiTrash2 className="w-4 h-4" />
                                         </button>
+                                        <Button
+                                            size="xs"
+                                            variant="primary"
+                                            className="px-4 py-1.5 text-xs font-bold shadow-xs"
+                                            onClick={() => handleMarkPaid(ad.id)}
+                                        >
+                                            Mark Paid
+                                        </Button>
                                     </div>
                                 </div>
                             </div>
