@@ -162,8 +162,8 @@ export default function SlotBookingPage() {
     const [paymentMode, setPaymentMode] = useState(() => {
         const modeParam = searchParams.get('mode')
         if (modeParam === 'dare') return 'DARE_TO_PLAY'
-        if (modeParam === 'split50') return 'SPLIT_50_50'
-        if (modeParam === 'per_player') return 'PER_PLAYER'
+        if (modeParam === 'split50' || modeParam === 'split-50') return 'SPLIT_50_50'
+        if (modeParam === 'per_player' || modeParam === 'per-player') return 'PER_PLAYER'
         return 'FULL_PAY'
     })
 
