@@ -70,9 +70,13 @@ export default function GuestBookingLookupModal({ isOpen, onClose }) {
                             onChange={(e) => setQuery(e.target.value)}
                         />
                     </div>
-                    <Button type="submit" disabled={searching} className="bg-[#10B981] hover:bg-[#0D9668] text-white shrink-0">
+                    <button
+                        type="submit"
+                        disabled={searching}
+                        className="bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-700 hover:from-emerald-500 hover:to-teal-500 text-white font-black text-xs px-5 py-2.5 rounded-xl shadow-[0_4px_16px_rgba(16,185,129,0.4)] hover:shadow-[0_6px_22px_rgba(16,185,129,0.5)] transition-all cursor-pointer shrink-0 active:scale-95"
+                    >
                         {searching ? 'Searching...' : 'Find Booking'}
-                    </Button>
+                    </button>
                 </form>
 
                 {results && (

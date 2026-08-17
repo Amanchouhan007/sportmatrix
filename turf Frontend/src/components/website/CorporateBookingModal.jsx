@@ -15,11 +15,13 @@ export default function CorporateBookingModal({ isOpen, onClose }) {
         email: '',
         eventType: 'Corporate Tournament',
         city: 'Indore',
-        estimatedPlayers: '30-50 Players',
+        estimatedPlayers: 'Number of Players',
         budget: '₹25,000 - ₹50,000',
         eventDate: ''
     })
     const [submitted, setSubmitted] = useState(false)
+    const [isCustomPlayerCount, setIsCustomPlayerCount] = useState(false)
+    const [customPlayerCount, setCustomPlayerCount] = useState('')
 
     const handleSubmit = (e) => {
         e.preventDefault()
@@ -28,10 +30,13 @@ export default function CorporateBookingModal({ isOpen, onClose }) {
             return
         }
 
+        const finalPlayerCount = isCustomPlayerCount ? (customPlayerCount || 'Custom Count') : form.estimatedPlayers
+        const finalPayload = { ...form, estimatedPlayers: finalPlayerCount }
+
         // Save lead in localStorage for demo
         try {
             const existing = JSON.parse(localStorage.getItem('corporate_leads') || '[]')
-            existing.push({ ...form, id: `CORP-${Date.now()}`, createdAt: new Date().toISOString() })
+            existing.push({ ...finalPayload, id: `CORP-${Date.now()}`, createdAt: new Date().toISOString() })
             localStorage.setItem('corporate_leads', JSON.stringify(existing))
         } catch (err) {
             console.error(err)
@@ -43,6 +48,8 @@ export default function CorporateBookingModal({ isOpen, onClose }) {
 
     const resetAndClose = () => {
         setSubmitted(false)
+        setIsCustomPlayerCount(false)
+        setCustomPlayerCount('')
         onClose()
     }
 
@@ -150,14 +157,37 @@ export default function CorporateBookingModal({ isOpen, onClose }) {
                         <div>
                             <label className="font-bold text-slate-700 block mb-1">Estimated Players</label>
                             <Select
-                                value={form.estimatedPlayers}
-                                onChange={(e) => setForm({ ...form, estimatedPlayers: e.target.value })}
+                                value={isCustomPlayerCount ? 'CUSTOM' : form.estimatedPlayers}
+                                onChange={(e) => {
+                                    if (e.target.value === 'CUSTOM') {
+                                        setIsCustomPlayerCount(true)
+                                    } else {
+                                        setIsCustomPlayerCount(false)
+                                        setForm({ ...form, estimatedPlayers: e.target.value })
+                                    }
+                                }}
                             >
-                                <option value="15-30 Players">15-30 Players</option>
-                                <option value="30-50 Players">30-50 Players</option>
-                                <option value="50-100 Players">50-100 Players</option>
-                                <option value="100+ Players (Full Arena)">100+ Players (Full Arena)</option>
+                                <option value="Number of Players">Number of Players</option>
+                                <option value="10-20 Players">10-20 Players</option>
+                                <option value="20-30 Players">20-30 Players</option>
+                                <option value="30-40 Players">30-40 Players</option>
+                                <option value="40-50 Players">40-50 Players</option>
+                                <option value="100+ Players (Full Arena Hire)">100+ Players (Full Arena Hire)</option>
+                                <option value="CUSTOM">✏️ Custom / Type Manually...</option>
                             </Select>
+
+                            {/* Manual Custom Input Field */}
+                            {isCustomPlayerCount && (
+                                <div className="mt-2 animate-in fade-in slide-in-from-top-1 duration-200">
+                                    <Input
+                                        placeholder="Enter exact count (e.g. 35 Players, 150 Guests)"
+                                        value={customPlayerCount}
+                                        onChange={(e) => setCustomPlayerCount(e.target.value)}
+                                        autoFocus
+                                        required
+                                    />
+                                </div>
+                            )}
                         </div>
                     </div>
 
@@ -169,9 +199,12 @@ export default function CorporateBookingModal({ isOpen, onClose }) {
                         >
                             Cancel
                         </button>
-                        <Button type="submit" className="bg-[#10B981] hover:bg-[#0D9668] text-white font-extrabold px-6 py-2">
+                        <button
+                            type="submit"
+                            className="bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-700 hover:from-emerald-500 hover:to-teal-500 text-white font-black text-xs px-6 py-2.5 rounded-xl shadow-[0_4px_16px_rgba(16,185,129,0.4)] hover:shadow-[0_6px_22px_rgba(16,185,129,0.5)] transition-all cursor-pointer transform hover:scale-[1.02] active:scale-95"
+                        >
                             Request Custom Proposal →
-                        </Button>
+                        </button>
                     </div>
                 </form>
             )}

@@ -67,9 +67,9 @@ export default function MembershipPage() {
 
     const formatPlanForUI = (p, index) => {
         const isYearly = billingCycle === 'yearly'
-        const priceVal = isYearly
-            ? (p.yearlyPricing?.price ?? 0)
-            : (p.monthlyPricing?.price ?? 0)
+        const monthlyPrice = p.monthlyPricing?.price ?? (index === 0 ? 999 : index === 1 ? 2499 : 4999)
+        const annualPriceWithDiscount = Math.round(monthlyPrice * 12 * 0.8)
+        const priceVal = isYearly ? annualPriceWithDiscount : monthlyPrice
 
         const branchLim = isYearly ? p.yearlyPricing?.branchLimit : p.monthlyPricing?.branchLimit
         const sportsLim = isYearly ? p.yearlyPricing?.sportsLimit : p.monthlyPricing?.sportsLimit
@@ -77,31 +77,87 @@ export default function MembershipPage() {
         const usersLim = isYearly ? p.yearlyPricing?.activeUsersLimit : p.monthlyPricing?.activeUsersLimit
 
         const priceStr = priceVal.toLocaleString('en-IN')
-        const periodStr = priceVal === 0 ? '/TRIAL' : (isYearly ? '/YR' : '/MO')
-        const descStr = p.description || (priceVal === 0 ? 'NO CREDIT CARD REQUIRED' : (p.isPopular ? 'RECOMMENDED FOR PROS' : 'STANDARD OPERATIONAL ACCESS'))
+        const periodStr = monthlyPrice === 0 ? '/TRIAL' : (isYearly ? '/YEAR' : '/MO')
+        const perMonthNote = isYearly && monthlyPrice > 0 
+            ? `₹${Math.round(monthlyPrice * 0.8).toLocaleString('en-IN')}/mo · Save ₹${Math.round(monthlyPrice * 12 * 0.2).toLocaleString('en-IN')}/yr (20% OFF)` 
+            : null
 
-        let color = 'from-blue-500 to-indigo-600'
-        let accent = 'blue'
+        const descStr = p.description || (monthlyPrice === 0 ? 'NO CREDIT CARD REQUIRED' : (p.isPopular ? 'RECOMMENDED FOR PROS' : 'STANDARD OPERATIONAL ACCESS'))
+
+        let color = 'from-emerald-500 to-teal-600'
+        let accent = 'emerald'
         const pNameLower = (p.planName || '').toLowerCase()
 
         if (p.isPopular || pNameLower.includes('enterprise') || pNameLower.includes('premium')) {
             color = 'from-[#16a34a] to-emerald-600'
             accent = 'emerald'
-        } else if (priceVal === 0 || pNameLower.includes('starter') || pNameLower.includes('free')) {
-            color = 'from-slate-500 to-slate-700'
+        } else if (monthlyPrice === 0 || pNameLower.includes('starter') || pNameLower.includes('free')) {
+            color = 'from-slate-700 to-slate-900'
             accent = 'slate'
-        } else if (index % 3 === 0) {
-            color = 'from-slate-500 to-slate-700'
-            accent = 'slate'
+        } else {
+            color = 'from-blue-600 to-indigo-700'
+            accent = 'blue'
         }
 
-        let features = p.features && p.features.length > 0 ? p.features : [
-            `${branchLim === -1 ? 'Unlimited' : branchLim} Branch(es) Allowed`,
-            `${sportsLim === -1 ? 'Unlimited' : sportsLim} Sports Types`,
-            `${bookingLim === -1 ? 'Unlimited' : bookingLim} Field Bookings`,
-            `${usersLim === -1 ? 'Unlimited' : usersLim} Active User Accounts`,
-            'Standard Platform Support'
+        let baseFeatures = [
+            '1 Venue / Turf Location Allowed',
+            'Online Slot Booking & WhatsApp Confirmations',
+            'Basic Revenue & Occupancy Analytics',
+            'Standard Email & Chat Support'
         ]
+        let monthlyPerks = [
+            '7-Day Free Trial (Cancel Anytime)',
+            'Instant WhatsApp Slot Alerts',
+            'Zero Setup / Onboarding Fee'
+        ]
+        let yearlyPerks = [
+            'FREE Custom Turf Webpage (Val. ₹1,500)',
+            '₹500 Featured Turf Ad Credits',
+            '1 Month Extra Free Validity (13 Mo)'
+        ]
+
+        if (index === 1 || pNameLower.includes('professional') || p.isPopular) {
+            baseFeatures = [
+                'Up to 3 Venue Branches / Turfs Allowed',
+                'Multi-Staff Roles & Cashier POS System',
+                '🔥 Dare Match™ & 50:50 Fee Splitting',
+                'Advanced Analytics & PDF/CSV Exports',
+                'Priority 24/7 WhatsApp Support'
+            ]
+            monthlyPerks = [
+                '14-Day Free Trial (Zero Risk)',
+                'Free Staff Training & Role Setup',
+                '₹300 Monthly Ad Booster Credit',
+                'Unlimited Player Split-Payment Invites'
+            ]
+            yearlyPerks = [
+                'FREE Thermal Receipt Printer Sync',
+                '₹2,000 Top-Banner Ad Credits',
+                '2 Months Extra Free Validity (14 Mo)',
+                'Complimentary Live Scorer Console'
+            ]
+        } else if (index === 2 || pNameLower.includes('enterprise')) {
+            baseFeatures = [
+                'Unlimited Branches & Multi-City Networks',
+                'Dedicated Account Manager & 99.9% SLA',
+                'White-Label Custom Branding & Domain',
+                'Corporate GST Invoice & Tournament Suite'
+            ]
+            monthlyPerks = [
+                '30-Day Money-Back Guarantee',
+                'Free Custom Subdomain Setup',
+                '₹1,000 Monthly Regional Banner Credits',
+                'Dedicated WhatsApp Account Manager'
+            ]
+            yearlyPerks = [
+                '0% Platform Corporate Event Commission',
+                '₹5,000 Region-Wide Ad Credits',
+                'Free Hardware & QR Scanner Bundle',
+                'Dedicated 1-on-1 Onboarding & Custom APIs'
+            ]
+        }
+
+        let features = p.features && p.features.length > 0 ? p.features : baseFeatures
 
         return {
             rawId: p._id || p.id,
@@ -109,11 +165,14 @@ export default function MembershipPage() {
             price: priceStr,
             numericPrice: priceVal,
             period: periodStr,
+            perMonthNote,
             desc: descStr.toUpperCase(),
             color,
             accent,
             popular: Boolean(p.isPopular),
             features,
+            activePerks: isYearly ? yearlyPerks : monthlyPerks,
+            isYearly,
             branchLimit: branchLim === -1 ? 'Unlimited' : branchLim,
             bookingLimit: bookingLim === -1 ? 'Unlimited' : bookingLim,
             sportsLimit: sportsLim === -1 ? 'Unlimited' : sportsLim,
@@ -240,18 +299,41 @@ export default function MembershipPage() {
                     <h1 className="text-3xl lg:text-4xl font-black text-[#111827] tracking-tight uppercase">MEMBERSHIP ACCESS PLANS</h1>
                     <p className="text-xs text-[#6B7280] max-w-lg mx-auto font-bold mt-2">Choose the perfect tier for your venue. Manage bookings, multi-branch courts, and analytics.</p>
 
-                    {/* Monthly vs Yearly Billing Toggle */}
-                    <div className="flex items-center justify-center gap-3 mt-6">
-                        <span className={`text-xs font-black uppercase tracking-wider transition-colors ${billingCycle === 'monthly' ? 'text-[#111827]' : 'text-[#6B7280]'}`}>Monthly</span>
+                    {/* Monthly vs Yearly Billing Toggle with Light UI Theme, Boundaries & Hover Highlights */}
+                    <div className="inline-flex items-center gap-1.5 bg-white border-2 border-slate-200 hover:border-emerald-400 p-1.5 rounded-full shadow-sm transition-all duration-300 mt-6">
                         <button
-                            onClick={() => setBillingCycle(prev => prev === 'monthly' ? 'yearly' : 'monthly')}
-                            className="w-12 h-6 rounded-full bg-[#F7F9FC] border border-[#E5E7EB] p-1 relative cursor-pointer transition-colors shadow-xs"
+                            type="button"
+                            onClick={() => setBillingCycle('monthly')}
+                            className={`px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-wider transition-all duration-300 cursor-pointer ${
+                                billingCycle === 'monthly'
+                                    ? 'bg-[#111827] text-white shadow-sm border border-slate-900'
+                                    : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100'
+                            }`}
                         >
-                            <div className={`w-4 h-4 rounded-full bg-[#16A34A] transition-transform duration-200 ${billingCycle === 'yearly' ? 'translate-x-6' : 'translate-x-0'}`} />
+                            Monthly
                         </button>
-                        <span className={`text-xs font-black uppercase tracking-wider flex items-center gap-1.5 transition-colors ${billingCycle === 'yearly' ? 'text-[#111827]' : 'text-[#6B7280]'}`}>
-                            Yearly <span className="bg-[#C8FF2E] text-[#111827] text-[10px] font-black px-2.5 py-0.5 rounded-full border border-[#B5F000] shadow-xs">Save 20%</span>
-                        </span>
+
+                        <div 
+                            onClick={() => setBillingCycle(prev => prev === 'monthly' ? 'yearly' : 'monthly')}
+                            className="w-12 h-6 rounded-full bg-slate-100 border-2 border-slate-300 hover:border-emerald-500 p-0.5 cursor-pointer relative transition-colors shrink-0"
+                        >
+                            <div className={`w-4.5 h-4.5 rounded-full bg-[#10B981] shadow-md transform transition-transform duration-300 ${billingCycle === 'yearly' ? 'translate-x-6 bg-[#16A34A]' : 'translate-x-0 bg-slate-600'}`} />
+                        </div>
+
+                        <button
+                            type="button"
+                            onClick={() => setBillingCycle('yearly')}
+                            className={`px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-wider transition-all duration-300 cursor-pointer flex items-center gap-1.5 ${
+                                billingCycle === 'yearly'
+                                    ? 'bg-[#16A34A] text-white shadow-sm border border-emerald-600'
+                                    : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100'
+                            }`}
+                        >
+                            <span>Yearly</span>
+                            <span className="bg-[#C8FF2E] text-[#111827] text-[9.5px] font-black px-2 py-0.5 rounded-full border border-[#aee810] shadow-2xs animate-pulse">
+                                SAVE 20%
+                            </span>
+                        </button>
                     </div>
                 </div>
 
@@ -290,15 +372,22 @@ export default function MembershipPage() {
                                     </div>
                                     <h3 className="text-xl font-black text-[#111827] tracking-tight uppercase mb-0.5">{p.name}</h3>
                                     <p className="text-[10px] font-bold text-[#6B7280] tracking-wider mb-4">{p.desc}</p>
-                                    <div className="flex items-baseline gap-1.5 mb-4 pb-4 border-b border-[#E5E7EB]">
-                                        <span className="text-[10px] font-black text-[#6B7280] uppercase tracking-wider">INR</span>
-                                        <span className="text-4xl font-black text-[#111827] tabular-nums tracking-tight">{p.price}</span>
-                                        <span className="text-[10px] font-black text-[#6B7280] uppercase tracking-wider">{p.period}</span>
+                                    <div className="flex flex-col mb-4 pb-4 border-b border-[#E5E7EB]">
+                                        <div className="flex items-baseline gap-1.5">
+                                            <span className="text-[10px] font-black text-[#6B7280] uppercase tracking-wider">INR</span>
+                                            <span className="text-4xl font-black text-[#111827] tabular-nums tracking-tight">₹{p.price}</span>
+                                            <span className="text-[10px] font-black text-[#6B7280] uppercase tracking-wider">{p.period}</span>
+                                        </div>
+                                        {p.perMonthNote && (
+                                            <span className="text-[9.5px] font-black text-[#16A34A] bg-emerald-50 border border-emerald-200 px-2.5 py-1 rounded-lg mt-2 inline-block self-start shadow-2xs">
+                                                ⚡ {p.perMonthNote}
+                                            </span>
+                                        )}
                                     </div>
                                 </div>
 
                                 <div className="px-5 pb-5 flex-1">
-                                    <ul className="space-y-2.5 mb-6">
+                                    <ul className="space-y-2.5 mb-4">
                                         {p.features.map((f, fidx) => (
                                             <li key={fidx} className="flex items-start gap-2.5 group/item">
                                                 <HiCheck className="w-4 h-4 mt-0.5 shrink-0 text-[#16A34A]" />
@@ -306,6 +395,29 @@ export default function MembershipPage() {
                                             </li>
                                         ))}
                                     </ul>
+
+                                    {/* MONTHLY & YEARLY EXCLUSIVE BONUS PERKS */}
+                                    {p.activePerks && p.activePerks.length > 0 && (
+                                        <div className={`mt-4 p-3.5 border rounded-xl shadow-2xs ${
+                                            p.isYearly 
+                                                ? 'bg-gradient-to-br from-emerald-50 to-teal-50 border-emerald-200' 
+                                                : 'bg-gradient-to-br from-blue-50 to-slate-50 border-blue-200'
+                                        }`}>
+                                            <span className={`text-[9.5px] font-black uppercase tracking-wider block mb-1.5 ${
+                                                p.isYearly ? 'text-[#065F46]' : 'text-blue-900'
+                                            }`}>
+                                                {p.isYearly ? '🎁 YEARLY EXCLUSIVE BONUS PERKS' : '⚡ MONTHLY INCLUDED BONUS PERKS'}
+                                            </span>
+                                            <ul className="space-y-1.5">
+                                                {p.activePerks.map((perk, perkIdx) => (
+                                                    <li key={perkIdx} className="text-[9.5px] font-extrabold text-[#111827] flex items-center gap-1.5">
+                                                        <span className={p.isYearly ? 'text-emerald-600 font-black' : 'text-blue-600 font-black'}>✓</span>
+                                                        <span>{perk}</span>
+                                                    </li>
+                                                ))}
+                                            </ul>
+                                        </div>
+                                    )}
                                 </div>
 
                                 <div className="p-5 pt-0">

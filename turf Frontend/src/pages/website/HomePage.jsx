@@ -84,6 +84,7 @@ export default function HomePage() {
     const [upcomingTournaments, setUpcomingTournaments] = useState([])
     const [homePlans, setHomePlans] = useState([])
     const [isChallengeVisible, setIsChallengeVisible] = useState(true)
+    const [billingCycle, setBillingCycle] = useState('monthly')
 
     /* ── Fetch Upcoming Tournaments & Subscription Plans ── */
     useEffect(() => {
@@ -521,12 +522,49 @@ const resolveOriginCoordinates = (locString, userGPS, explicitCoords) => {
                 <div className="absolute top-[25%] left-[15%] w-[45vw] h-[45vw] bg-[#C8FF2E]/15 blur-[150px] rounded-full pointer-events-none" />
 
                 <div className="max-w-[1400px] mx-auto px-6 relative z-10">
-                    <div className="text-center mb-16">
+                    <div className="text-center mb-10">
                         <span className="text-[#16A34A] text-[10px] font-black uppercase tracking-[0.25em] bg-green-50 border border-green-200 px-4 py-1.5 rounded-full shadow-sm">Membership Access</span>
                         <h2 className="text-2xl md:text-4xl font-black italic uppercase tracking-tight text-[#111827] mt-3 mb-1.5">
                             Subscription <span className="text-[#16A34A] underline decoration-[#C8FF2E] decoration-4 underline-offset-4">Plans</span>
                         </h2>
-                        <p className="text-xs text-[#6B7280] max-w-lg mx-auto font-semibold leading-relaxed">Elevate your game. Unlock unlimited field bookings, priority access, and tactical squad advantages.</p>
+                        <p className="text-xs text-[#6B7280] max-w-lg mx-auto font-semibold leading-relaxed mb-6">Elevate your game. Unlock unlimited field bookings, priority access, and tactical squad advantages.</p>
+
+                        {/* Billing Cycle Toggle Switch with Light UI Theme, Boundaries & Hover Highlights */}
+                        <div className="inline-flex items-center gap-1.5 bg-white border-2 border-slate-200 hover:border-emerald-400 p-1.5 rounded-full shadow-sm transition-all duration-300">
+                            <button
+                                type="button"
+                                onClick={() => setBillingCycle('monthly')}
+                                className={`px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-wider transition-all duration-300 cursor-pointer ${
+                                    billingCycle === 'monthly'
+                                        ? 'bg-[#111827] text-white shadow-sm border border-slate-900'
+                                        : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100'
+                                }`}
+                            >
+                                Monthly
+                            </button>
+
+                            <div 
+                                onClick={() => setBillingCycle(prev => prev === 'monthly' ? 'yearly' : 'monthly')}
+                                className="w-12 h-6 rounded-full bg-slate-100 border-2 border-slate-300 hover:border-emerald-500 p-0.5 cursor-pointer relative transition-colors shrink-0"
+                            >
+                                <div className={`w-4.5 h-4.5 rounded-full bg-[#10B981] shadow-md transform transition-transform duration-300 ${billingCycle === 'yearly' ? 'translate-x-6 bg-[#16A34A]' : 'translate-x-0 bg-slate-600'}`} />
+                            </div>
+
+                            <button
+                                type="button"
+                                onClick={() => setBillingCycle('yearly')}
+                                className={`px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-wider transition-all duration-300 cursor-pointer flex items-center gap-1.5 ${
+                                    billingCycle === 'yearly'
+                                        ? 'bg-[#16A34A] text-white shadow-sm border border-emerald-600'
+                                        : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100'
+                                }`}
+                            >
+                                <span>Yearly</span>
+                                <span className="bg-[#C8FF2E] text-[#111827] text-[9.5px] font-black px-2 py-0.5 rounded-full border border-[#aee810] shadow-2xs animate-pulse">
+                                    SAVE 20%
+                                </span>
+                            </button>
+                        </div>
                     </div>
 
                     <div
@@ -535,46 +573,166 @@ const resolveOriginCoordinates = (locString, userGPS, explicitCoords) => {
                             }`}
                     >
                         {(homePlans.length > 0 ? homePlans.map((p, idx) => {
-                            const priceVal = p.monthlyPricing?.price ?? 0;
+                            const monthlyPrice = p.monthlyPricing?.price ?? (idx === 0 ? 999 : idx === 1 ? 2499 : 4999);
+                            const isYearly = billingCycle === 'yearly';
+                            const annualPriceWithDiscount = Math.round(monthlyPrice * 12 * 0.8);
+                            const displayPrice = isYearly ? annualPriceWithDiscount.toLocaleString('en-IN') : monthlyPrice.toLocaleString('en-IN');
+                            const perMonthEquivalent = Math.round(monthlyPrice * 0.8).toLocaleString('en-IN');
+                            const yearlySavings = Math.round(monthlyPrice * 12 * 0.2).toLocaleString('en-IN');
+
                             const pNameLower = (p.planName || '').toLowerCase();
                             let accent = 'blue';
                             if (p.isPopular || pNameLower.includes('enterprise') || pNameLower.includes('premium')) accent = 'emerald';
-                            else if (priceVal === 0 || pNameLower.includes('starter') || pNameLower.includes('free')) accent = 'slate';
+                            else if (monthlyPrice === 0 || pNameLower.includes('starter') || pNameLower.includes('free')) accent = 'slate';
+
+                            let baseFeatures = [
+                                '1 Venue / Turf Location',
+                                'Online Slot Booking & WhatsApp Confirmations',
+                                'Basic Revenue & Occupancy Analytics',
+                                'Standard Email & Chat Support'
+                            ]
+                            let monthlyPerks = [
+                                '7-Day Free Trial (Cancel Anytime)',
+                                'Instant WhatsApp Slot Alerts',
+                                'Zero Setup / Onboarding Fee'
+                            ]
+                            let yearlyPerks = [
+                                'FREE Custom Turf Webpage (Val. ₹1,500)',
+                                '₹500 Featured Turf Ad Credits',
+                                '1 Month Extra Free Validity (13 Mo)'
+                            ]
+
+                            if (idx === 1 || pNameLower.includes('professional') || p.isPopular) {
+                                baseFeatures = [
+                                    'Up to 3 Venue Branches / Turfs',
+                                    'Multi-Staff Roles & Cashier POS System',
+                                    '🔥 Dare Match™ & 50:50 Fee Splitting',
+                                    'Advanced Analytics & PDF/CSV Exports',
+                                    'Priority 24/7 WhatsApp Support'
+                                ]
+                                monthlyPerks = [
+                                    '14-Day Free Trial (Zero Risk)',
+                                    'Free Staff Training & Role Setup',
+                                    '₹300 Monthly Ad Booster Credit',
+                                    'Unlimited Player Split-Payment Invites'
+                                ]
+                                yearlyPerks = [
+                                    'FREE Thermal Receipt Printer Sync',
+                                    '₹2,000 Top-Banner Ad Credits',
+                                    '2 Months Extra Free Validity (14 Mo)',
+                                    'Complimentary Live Scorer Console'
+                                ]
+                            } else if (idx === 2 || pNameLower.includes('enterprise')) {
+                                baseFeatures = [
+                                    'Unlimited Branches & Multi-City Networks',
+                                    'Dedicated Account Manager & 99.9% SLA',
+                                    'White-Label Custom Branding & Domain',
+                                    'Corporate GST Invoice & Tournament Suite'
+                                ]
+                                monthlyPerks = [
+                                    '30-Day Money-Back Guarantee',
+                                    'Free Custom Subdomain Setup',
+                                    '₹1,000 Monthly Regional Banner Credits',
+                                    'Dedicated WhatsApp Account Manager'
+                                ]
+                                yearlyPerks = [
+                                    '0% Platform Corporate Event Commission',
+                                    '₹5,000 Region-Wide Ad Credits',
+                                    'Free Hardware & QR Scanner Bundle',
+                                    'Dedicated 1-on-1 Onboarding & Custom APIs'
+                                ]
+                            }
 
                             return {
                                 name: p.planName,
-                                price: priceVal.toLocaleString('en-IN'),
-                                period: priceVal === 0 ? '/TRIAL' : '/MO',
+                                price: displayPrice,
+                                period: isYearly ? '/YEAR' : '/MO',
+                                perMonthNote: isYearly ? `₹${perMonthEquivalent}/mo · Save ₹${yearlySavings} (20% OFF)` : null,
                                 desc: p.description ? p.description.toUpperCase() : 'STANDARD OPERATIONAL ACCESS',
                                 accent,
                                 popular: Boolean(p.isPopular),
-                                features: p.features && p.features.length > 0 ? p.features : ['Standard Platform Support']
+                                features: p.features && p.features.length > 0 ? p.features : baseFeatures,
+                                activePerks: isYearly ? yearlyPerks : monthlyPerks,
+                                isYearly
                             };
                         }) : [
                             {
                                 name: 'Starter Plan',
-                                price: '999',
-                                period: '/MO',
+                                price: billingCycle === 'yearly' ? (999 * 12 * 0.8).toLocaleString('en-IN') : '999',
+                                period: billingCycle === 'yearly' ? '/YEAR' : '/MO',
+                                perMonthNote: billingCycle === 'yearly' ? '₹799/mo · Save ₹2,398/yr (20% OFF)' : null,
                                 desc: 'IDEAL FOR SINGLE TURF OWNERS GETTING STARTED.',
                                 accent: 'slate',
-                                features: ['Online Slot Booking', 'Basic Analytics', 'Email Notifications', 'Standard Support']
+                                features: [
+                                    '1 Venue / Turf Location',
+                                    'Online Slot Booking & WhatsApp Confirmations',
+                                    'Basic Revenue & Occupancy Analytics',
+                                    'Standard Email & Chat Support'
+                                ],
+                                activePerks: billingCycle === 'yearly' ? [
+                                    'FREE Custom Turf Webpage (Val. ₹1,500)',
+                                    '₹500 Featured Turf Ad Credits',
+                                    '1 Month Extra Free Validity (13 Mo)'
+                                ] : [
+                                    '7-Day Free Trial (Cancel Anytime)',
+                                    'Instant WhatsApp Slot Alerts',
+                                    'Zero Setup / Onboarding Fee'
+                                ],
+                                isYearly: billingCycle === 'yearly'
                             },
                             {
                                 name: 'Professional Plan',
-                                price: '2,499',
-                                period: '/MO',
+                                price: billingCycle === 'yearly' ? (2499 * 12 * 0.8).toLocaleString('en-IN') : '2,499',
+                                period: billingCycle === 'yearly' ? '/YEAR' : '/MO',
+                                perMonthNote: billingCycle === 'yearly' ? '₹1,999/mo · Save ₹5,998/yr (20% OFF)' : null,
                                 desc: 'PERFECT FOR GROWING MULTI-TURF SPORTS COMPLEXES.',
                                 accent: 'emerald',
                                 popular: true,
-                                features: ['All Starter Features', 'Multi-Branch Management', 'Advanced Analytics & Exports', 'POS Integration']
+                                features: [
+                                    'Up to 3 Venue Branches / Turfs',
+                                    'Multi-Staff Roles & Cashier POS System',
+                                    '🔥 Dare Match™ & 50:50 Fee Splitting',
+                                    'Advanced Analytics & PDF/CSV Exports',
+                                    'Priority 24/7 WhatsApp Support'
+                                ],
+                                activePerks: billingCycle === 'yearly' ? [
+                                    'FREE Thermal Receipt Printer Sync',
+                                    '₹2,000 Top-Banner Ad Credits',
+                                    '2 Months Extra Free Validity (14 Mo)',
+                                    'Complimentary Live Scorer Console'
+                                ] : [
+                                    '14-Day Free Trial (Zero Risk)',
+                                    'Free Staff Training & Role Setup',
+                                    '₹300 Monthly Ad Booster Credit',
+                                    'Unlimited Player Split-Payment Invites'
+                                ],
+                                isYearly: billingCycle === 'yearly'
                             },
                             {
                                 name: 'Enterprise Arena',
-                                price: '4,999',
-                                period: '/MO',
+                                price: billingCycle === 'yearly' ? (4999 * 12 * 0.8).toLocaleString('en-IN') : '4,999',
+                                period: billingCycle === 'yearly' ? '/YEAR' : '/MO',
+                                perMonthNote: billingCycle === 'yearly' ? '₹3,999/mo · Save ₹11,998/yr (20% OFF)' : null,
                                 desc: 'CUSTOM TAILORED PLAN FOR LARGE STADIUM & TURF NETWORKS.',
                                 accent: 'blue',
-                                features: ['Unlimited Branches', 'Dedicated Account Manager', 'Custom Billing Integrations', 'White Label Branding']
+                                features: [
+                                    'Unlimited Branches & Multi-City Networks',
+                                    'Dedicated Account Manager & 99.9% SLA',
+                                    'White-Label Custom Branding & Domain',
+                                    'Corporate GST Invoice & Tournament Suite'
+                                ],
+                                activePerks: billingCycle === 'yearly' ? [
+                                    '0% Platform Corporate Event Commission',
+                                    '₹5,000 Region-Wide Ad Credits',
+                                    'Free Hardware & QR Scanner Bundle',
+                                    'Dedicated 1-on-1 Onboarding & Custom APIs'
+                                ] : [
+                                    '30-Day Money-Back Guarantee',
+                                    'Free Custom Subdomain Setup',
+                                    '₹1,000 Monthly Regional Banner Credits',
+                                    'Dedicated WhatsApp Account Manager'
+                                ],
+                                isYearly: billingCycle === 'yearly'
                             }
                         ]).map((p, idx) => (
                             <div
@@ -594,20 +752,50 @@ const resolveOriginCoordinates = (locString, userGPS, explicitCoords) => {
                                 <h3 className="text-lg font-black text-[#111827] italic tracking-tighter uppercase mb-1">{p.name}</h3>
                                 <p className="text-[9px] font-bold text-[#6B7280] tracking-wider mb-4 uppercase">{p.desc}</p>
 
-                                <div className="flex items-baseline gap-1 mb-6 pb-6 border-b border-[#E5E7EB]">
-                                    <span className="text-[9px] font-black text-[#6B7280] uppercase tracking-widest">INR</span>
-                                    <span className="text-3xl font-black text-[#111827]">{p.price}</span>
-                                    <span className="text-[9px] font-black text-[#6B7280] uppercase tracking-widest">{p.period}</span>
+                                <div className="flex flex-col mb-6 pb-5 border-b border-[#E5E7EB]">
+                                    <div className="flex items-baseline gap-1">
+                                        <span className="text-[9px] font-black text-[#6B7280] uppercase tracking-widest">INR</span>
+                                        <span className="text-3xl font-black text-[#111827]">₹{p.price}</span>
+                                        <span className="text-[9px] font-black text-[#6B7280] uppercase tracking-widest">{p.period}</span>
+                                    </div>
+                                    {p.perMonthNote && (
+                                        <span className="text-[9.5px] font-black text-[#16A34A] bg-emerald-50 border border-emerald-200 px-2.5 py-1 rounded-lg mt-2 inline-block self-start shadow-2xs">
+                                            ⚡ {p.perMonthNote}
+                                        </span>
+                                    )}
                                 </div>
 
-                                <ul className="space-y-3 mb-8 flex-1">
+                                <ul className="space-y-3 mb-4 flex-1">
                                     {p.features.map((f, fidx) => (
                                         <li key={fidx} className="flex items-start gap-2.5">
                                             <span className="w-2 h-2 rounded-full bg-[#16A34A] mt-1 shrink-0" />
-                                            <span className="text-[10px] font-semibold text-[#111827] uppercase tracking-wide">{f}</span>
+                                            <span className="text-[10px] font-bold text-[#111827] uppercase tracking-wide">{f}</span>
                                         </li>
                                     ))}
                                 </ul>
+
+                                {/* MONTHLY & YEARLY EXCLUSIVE BONUS PERKS HIGHLIGHT BOX */}
+                                {p.activePerks && p.activePerks.length > 0 && (
+                                    <div className={`mb-6 pt-3 pb-3 px-3 border rounded-xl shadow-2xs ${
+                                        p.isYearly 
+                                            ? 'bg-gradient-to-br from-emerald-50/90 to-teal-50 border-emerald-200' 
+                                            : 'bg-gradient-to-br from-blue-50/90 to-slate-50 border-blue-200'
+                                    }`}>
+                                        <span className={`text-[9.5px] font-black uppercase tracking-wider block mb-1.5 ${
+                                            p.isYearly ? 'text-[#065F46]' : 'text-blue-900'
+                                        }`}>
+                                            {p.isYearly ? '🎁 YEARLY EXCLUSIVE BONUS PERKS' : '⚡ MONTHLY INCLUDED BONUS PERKS'}
+                                        </span>
+                                        <ul className="space-y-1.5">
+                                            {p.activePerks.map((perk, perkIdx) => (
+                                                <li key={perkIdx} className="text-[9.5px] font-extrabold text-[#111827] flex items-center gap-1.5">
+                                                    <span className={p.isYearly ? 'text-emerald-600 font-black' : 'text-blue-600 font-black'}>✓</span>
+                                                    <span>{perk}</span>
+                                                </li>
+                                            ))}
+                                        </ul>
+                                    </div>
+                                )}
 
                                 <button
                                     onClick={() => navigate('/membership')}

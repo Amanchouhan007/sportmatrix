@@ -84,48 +84,46 @@ export default function WebsiteLayout({ children }) {
                                 )}
                             </NavLink>
                         ))}
-                    </nav>
-
-                    {/* Auth & Guest Lookup Buttons (Desktop Action Group) */}
-                    <div className="hidden sm:flex items-center gap-2.5 shrink-0">
-                        {/* 🏢 Corporate Hire Button with Hover Icon Animation & Glow */}
+                    </nav>                    {/* Auth & Guest Lookup Buttons (Desktop & Tablet Action Group) */}
+                    <div className="flex items-center gap-2 sm:gap-2.5 shrink-0">
+                        {/* 🏢 Corporate Hire Button with Neon Lime Theme Glow */}
                         <button 
                             type="button"
                             onClick={() => setIsCorpOpen(true)} 
-                            className="group relative overflow-hidden font-black text-xs tracking-wider uppercase px-3.5 py-2 text-slate-100 bg-gradient-to-r from-slate-900 via-slate-850 to-emerald-950 border-2 border-slate-700/80 hover:border-emerald-400 shadow-md hover:shadow-[0_8px_25px_rgba(16,185,129,0.4)] transition-all duration-300 rounded-xl cursor-pointer flex items-center gap-2 shrink-0 transform hover:scale-105"
+                            className="group relative overflow-hidden font-black text-[11px] xl:text-xs tracking-wider uppercase px-2.5 sm:px-3.5 py-1.5 sm:py-2 text-slate-100 bg-gradient-to-r from-slate-950 via-slate-900 to-emerald-950 hover:from-emerald-950 hover:via-slate-900 hover:to-slate-950 border-2 border-emerald-500/50 hover:border-[#C8FF2E] shadow-md hover:shadow-[0_0_22px_rgba(200,255,46,0.45)] transition-all duration-300 rounded-xl cursor-pointer flex items-center gap-1.5 shrink-0 transform hover:scale-105"
                             title="Corporate & Bulk Event Booking"
                         >
-                            <span className="w-6 h-6 rounded-lg bg-emerald-500/20 text-emerald-300 flex items-center justify-center text-sm shadow-inner group-hover:scale-125 group-hover:rotate-12 group-hover:bg-emerald-500 group-hover:text-slate-950 transition-all duration-300 shrink-0">
+                            <span className="w-5 h-5 sm:w-6 sm:h-6 rounded-lg bg-emerald-500/20 text-[#C8FF2E] flex items-center justify-center text-xs sm:text-sm shadow-inner group-hover:scale-125 group-hover:rotate-12 group-hover:bg-[#C8FF2E] group-hover:text-slate-950 group-hover:shadow-[0_0_12px_rgba(200,255,46,0.7)] transition-all duration-300 shrink-0">
                                 🏢
                             </span>
-                            <span className="hidden md:inline group-hover:text-emerald-300 transition-colors">Corporate Hire</span>
-                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping hidden md:inline-block" />
+                            <span className="hidden xs:inline md:inline text-slate-100 group-hover:text-[#C8FF2E] transition-colors drop-shadow-sm font-black">Corporate Hire</span>
+                            <span className="w-1.5 h-1.5 rounded-full bg-[#C8FF2E] animate-ping hidden md:inline-block shadow-[0_0_6px_#C8FF2E]" />
                         </button>
 
-                        {/* 🔍 Find Booking Button with Hover Icon Animation & Glow */}
+                        {/* 🔍 Find Booking Button with Emerald Glass Glow */}
                         <button 
                             type="button"
                             onClick={() => setIsLookupOpen(true)} 
-                            className="group relative overflow-hidden font-black text-xs tracking-wider uppercase px-3.5 py-2 text-emerald-950 bg-gradient-to-r from-emerald-500/15 via-teal-500/10 to-emerald-500/20 hover:bg-emerald-100 border-2 border-emerald-400/90 hover:border-emerald-500 shadow-md hover:shadow-[0_8px_25px_rgba(16,185,129,0.45)] transition-all duration-300 rounded-xl cursor-pointer flex items-center gap-2 shrink-0 transform hover:scale-105"
+                            className="group relative overflow-hidden font-black text-[11px] xl:text-xs tracking-wider uppercase px-2.5 sm:px-3.5 py-1.5 sm:py-2 text-emerald-950 bg-gradient-to-r from-emerald-500/15 via-teal-500/10 to-emerald-500/20 hover:from-emerald-500/30 hover:to-teal-500/35 hover:bg-emerald-100 border-2 border-emerald-400/90 hover:border-[#16A34A] shadow-md hover:shadow-[0_0_20px_rgba(22,163,74,0.4)] transition-all duration-300 rounded-xl cursor-pointer flex items-center gap-1.5 shrink-0 transform hover:scale-105"
                             title="Find My Booking"
                         >
-                            <span className="w-6 h-6 rounded-lg bg-emerald-500/25 text-emerald-700 flex items-center justify-center text-sm shadow-inner group-hover:scale-125 group-hover:-rotate-12 group-hover:bg-emerald-600 group-hover:text-white transition-all duration-300 shrink-0">
+                            <span className="w-5 h-5 sm:w-6 sm:h-6 rounded-lg bg-emerald-500/25 text-emerald-800 flex items-center justify-center text-xs sm:text-sm shadow-inner group-hover:scale-125 group-hover:-rotate-12 group-hover:bg-[#16A34A] group-hover:text-white group-hover:shadow-[0_0_12px_rgba(22,163,74,0.6)] transition-all duration-300 shrink-0">
                                 🔍
                             </span>
-                            <span className="hidden md:inline group-hover:text-emerald-800 transition-colors">Find Booking</span>
+                            <span className="hidden xs:inline md:inline text-emerald-950 group-hover:text-[#065F46] transition-colors font-black">Find Booking</span>
                         </button>
 
                         <button 
                             type="button"
                             onClick={() => navigate('/login')} 
-                            className="font-black text-[10.5px] xl:text-[11px] tracking-widest uppercase px-3.5 py-1.5 border border-slate-200 text-[#111827] hover:border-[#16A34A] hover:text-[#16A34A] hover:bg-slate-50 transition-all rounded-xl cursor-pointer shrink-0"
+                            className="hidden md:block font-black text-[10.5px] xl:text-[11px] tracking-widest uppercase px-3.5 py-2 border border-slate-200 text-[#111827] hover:border-[#16A34A] hover:text-[#16A34A] hover:bg-slate-50 transition-all rounded-xl cursor-pointer shrink-0"
                         >
                             Log In
                         </button>
                         <button 
                             type="button"
                             onClick={() => navigate('/register')} 
-                            className="bg-[#C8FF2E] hover:bg-[#b8f51a] text-[#111827] font-black text-[10.5px] xl:text-[11px] tracking-widest uppercase px-4 py-1.5 border border-[#aee810] rounded-full shadow-[0_4px_14px_rgba(184,255,44,0.35)] hover:shadow-[0_6px_20px_rgba(184,255,44,0.45)] transition-all transform hover:scale-[1.03] cursor-pointer shrink-0"
+                            className="hidden md:block bg-[#C8FF2E] hover:bg-[#b8f51a] text-[#111827] font-black text-[10.5px] xl:text-[11px] tracking-widest uppercase px-4 py-2 border border-[#aee810] rounded-full shadow-[0_4px_14px_rgba(184,255,44,0.35)] hover:shadow-[0_6px_20px_rgba(184,255,44,0.45)] transition-all transform hover:scale-[1.03] cursor-pointer shrink-0"
                         >
                             Get Started
                         </button>
@@ -138,43 +136,76 @@ export default function WebsiteLayout({ children }) {
                     <button 
                         type="button"
                         onClick={() => setMobileOpen(!mobileOpen)} 
-                        className="lg:hidden p-2 rounded-xl hover:bg-slate-100 text-[#111827] cursor-pointer shrink-0 transition-colors" 
+                        className="lg:hidden p-2 rounded-xl hover:bg-slate-100 text-[#111827] cursor-pointer shrink-0 transition-colors ml-1" 
                         aria-label="Toggle navigation menu"
                     >
                         {mobileOpen ? <HiX className="w-6 h-6" /> : <HiMenu className="w-6 h-6" />}
                     </button>
                 </div>
 
-                {/* Mobile Dropdown Menu */}
+                {/* Mobile Dropdown Menu with High-Impact Mobile Action Cards */}
                 {mobileOpen && (
-                    <div className="lg:hidden bg-white/98 backdrop-blur-xl border-t border-slate-200 px-6 pb-6 pt-4 space-y-1 shadow-2xl animate-in fade-in slide-in-from-top-2 duration-200">
-                        {navLinks.map((link) => (
-                            <NavLink 
-                                key={link.to} 
-                                to={link.to} 
-                                onClick={() => setMobileOpen(false)} 
-                                className={({ isActive }) => 
-                                    `block px-4 py-3 rounded-xl text-[12px] font-black uppercase tracking-widest transition-colors ${
-                                        isActive 
-                                            ? 'bg-[#C8FF2E]/30 text-[#16A34A] font-black border-l-4 border-[#16A34A]' 
-                                            : 'text-[#111827] hover:bg-slate-50 hover:text-[#16A34A]'
-                                    }`
-                                }
+                    <div className="lg:hidden bg-white/98 backdrop-blur-xl border-t border-slate-200 px-5 pb-6 pt-4 space-y-3 shadow-2xl animate-in fade-in slide-in-from-top-2 duration-200">
+                        {/* Mobile Action Cards Grid for Corporate & Find Booking */}
+                        <div className="grid grid-cols-2 gap-2.5 pb-2">
+                            <button
+                                type="button"
+                                onClick={() => { setIsCorpOpen(true); setMobileOpen(false); }}
+                                className="group flex flex-col items-start p-3.5 rounded-2xl bg-gradient-to-br from-slate-950 via-slate-900 to-emerald-950 text-white border-2 border-emerald-500/40 active:border-[#C8FF2E] shadow-lg text-left active:scale-95 transition-all"
                             >
-                                {link.label}
-                            </NavLink>
-                        ))}
-                        <div className="pt-4 space-y-2.5 border-t border-slate-200 mt-3">
+                                <div className="flex items-center gap-2 mb-1">
+                                    <span className="text-lg group-hover:scale-110 transition-transform">🏢</span>
+                                    <span className="text-[10px] font-black uppercase tracking-wider text-[#C8FF2E]">Corporate</span>
+                                </div>
+                                <span className="text-xs font-black text-white group-hover:text-[#C8FF2E] transition-colors">Corporate Hire</span>
+                                <span className="text-[9.5px] text-emerald-300 font-bold mt-0.5">GST Invoices & Events →</span>
+                            </button>
+
+                            <button
+                                type="button"
+                                onClick={() => { setIsLookupOpen(true); setMobileOpen(false); }}
+                                className="group flex flex-col items-start p-3.5 rounded-2xl bg-gradient-to-br from-emerald-50 via-teal-50/90 to-emerald-100 text-slate-900 border-2 border-emerald-300/90 active:border-emerald-500 shadow-lg text-left active:scale-95 transition-all"
+                            >
+                                <div className="flex items-center gap-2 mb-1">
+                                    <span className="text-lg group-hover:scale-110 transition-transform">🔍</span>
+                                    <span className="text-[10px] font-black uppercase tracking-wider text-[#065F46]">Lookup</span>
+                                </div>
+                                <span className="text-xs font-black text-emerald-950 group-hover:text-[#16A34A] transition-colors">Find Booking</span>
+                                <span className="text-[9.5px] text-emerald-800 font-bold mt-0.5">Track Mobile / OTP →</span>
+                            </button>
+                        </div>
+
+                        {/* Navigation Links */}
+                        <div className="space-y-1 pt-1 border-t border-slate-100">
+                            {navLinks.map((link) => (
+                                <NavLink 
+                                    key={link.to} 
+                                    to={link.to} 
+                                    onClick={() => setMobileOpen(false)} 
+                                    className={({ isActive }) => 
+                                        `block px-4 py-2.5 rounded-xl text-[12px] font-black uppercase tracking-widest transition-colors ${
+                                            isActive 
+                                                ? 'bg-[#C8FF2E]/30 text-[#16A34A] font-black border-l-4 border-[#16A34A]' 
+                                                : 'text-[#111827] hover:bg-slate-50 hover:text-[#16A34A]'
+                                        }`
+                                    }
+                                >
+                                    {link.label}
+                                </NavLink>
+                            ))}
+                        </div>
+
+                        <div className="pt-3 space-y-2 border-t border-slate-200">
                             <button 
                                 type="button"
-                                className="w-full py-3 border border-slate-200 text-[#111827] font-black text-[11px] tracking-widest uppercase rounded-xl hover:border-[#16A34A] hover:text-[#16A34A] transition-all cursor-pointer" 
+                                className="w-full py-2.5 border border-slate-200 text-[#111827] font-black text-[11px] tracking-widest uppercase rounded-xl hover:border-[#16A34A] hover:text-[#16A34A] transition-all cursor-pointer" 
                                 onClick={() => { navigate('/login'); setMobileOpen(false) }}
                             >
                                 Log In
                             </button>
                             <button 
                                 type="button"
-                                className="w-full py-3 bg-[#C8FF2E] hover:bg-[#b8f51a] text-[#111827] font-black text-[11px] tracking-widest uppercase rounded-full shadow-[0_6px_20px_rgba(184,255,44,0.35)] transition-all cursor-pointer" 
+                                className="w-full py-2.5 bg-[#C8FF2E] hover:bg-[#b8f51a] text-[#111827] font-black text-[11px] tracking-widest uppercase rounded-full shadow-[0_6px_20px_rgba(184,255,44,0.35)] transition-all cursor-pointer" 
                                 onClick={() => { navigate('/register'); setMobileOpen(false) }}
                             >
                                 Get Started
