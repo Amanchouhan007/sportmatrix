@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useNavigate, useLocation } from 'react-router-dom'
 import Badge from '../../components/ui/Badge'
 import Card from '../../components/ui/Card'
 import Button from '../../components/ui/Button'
@@ -68,6 +69,9 @@ const INITIAL_PAYMENTS = [
 ]
 
 export default function AdPaymentsPage() {
+    const navigate = useNavigate()
+    const location = useLocation()
+    const basePath = location.pathname.startsWith('/super-admin') ? '/super-admin' : location.pathname.startsWith('/staff') ? '/staff' : '/admin'
     const { addToast } = useToast()
     const [payments, setPayments] = useState(INITIAL_PAYMENTS)
     const [search, setSearch] = useState('')
@@ -76,11 +80,14 @@ export default function AdPaymentsPage() {
     const [viewInvoiceModal, setViewInvoiceModal] = useState(null)
     const itemsPerPage = 5
 
-    const filteredPayments = payments.filter(item => {
-        const matchesSearch = item.invoiceId.toLowerCase().includes(search.toLowerCase()) ||
-            item.adName.toLowerCase().includes(search.toLowerCase()) ||
-            item.ownerName.toLowerCase().includes(search.toLowerCase()) ||
-            item.turfName.toLowerCase().includes(search.toLowerCase())
+    const activePaymentsList = (payments && payments.length > 0) ? payments : INITIAL_PAYMENTS;
+
+    const filteredPayments = activePaymentsList.filter(item => {
+        if (!item) return false;
+        const matchesSearch = String(item.invoiceId || '').toLowerCase().includes(search.toLowerCase()) ||
+            String(item.adName || '').toLowerCase().includes(search.toLowerCase()) ||
+            String(item.ownerName || '').toLowerCase().includes(search.toLowerCase()) ||
+            String(item.turfName || '').toLowerCase().includes(search.toLowerCase())
         const matchesStatus = statusFilter === 'ALL' || item.status === statusFilter
         return matchesSearch && matchesStatus
     })
@@ -88,18 +95,57 @@ export default function AdPaymentsPage() {
     const totalPages = Math.ceil(filteredPayments.length / itemsPerPage) || 1
     const paginatedPayments = filteredPayments.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)
 
+    const handleMarkPaid = (invoiceId) => {
+        setPayments(prev => prev.map(item => item.invoiceId === invoiceId ? { ...item, status: 'Paid' } : item))
+        addToast({ message: `Payment for Invoice ${invoiceId} marked as Paid!`, type: 'success' })
+    }
+
     return (
         <div className="space-y-8 animate-in fade-in duration-500">
-            {/* Header */}
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white/70 backdrop-blur-md p-6 rounded-3xl border border-surface-200/50 shadow-soft">
-                <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 text-emerald-600 flex items-center justify-center text-2xl shadow-inner shadow-emerald-500/5">
-                        <FiCreditCard className="w-6 h-6 animate-pulse" />
+            {/* Header & Sub-Navigation Tabs */}
+            <div className="space-y-4">
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white/70 backdrop-blur-md p-6 rounded-3xl border border-surface-200/50 shadow-soft">
+                    <div className="flex items-center gap-4">
+                        <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 text-emerald-600 flex items-center justify-center text-2xl shadow-inner shadow-emerald-500/5">
+                            <FiCreditCard className="w-6 h-6 animate-pulse" />
+                        </div>
+                        <div>
+                            <h1 className="text-2xl font-black text-surface-900 tracking-tight">Ad Payments & Settlements</h1>
+                            <p className="text-surface-500 text-sm mt-0.5 font-medium">Track owner ad payouts, bank settlements, and billing statements</p>
+                        </div>
                     </div>
-                    <div>
-                        <h1 className="text-2xl font-black text-surface-900 tracking-tight">Advertisement Payments</h1>
-                        <p className="text-surface-500 text-sm mt-0.5 font-medium">Audit campaign billing invoices, payment statuses, and downloadable receipts</p>
-                    </div>
+                </div>
+
+                {/* Sub-Navigation Tabs */}
+                <div className="flex items-center gap-2 bg-white/80 p-1.5 rounded-2xl border border-slate-200/80 shadow-xs overflow-x-auto">
+                    <button
+                        type="button"
+                        onClick={() => navigate(`${basePath}/ads`)}
+                        className="px-4 py-2 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors"
+                    >
+                        📢 All Campaigns
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => navigate(`${basePath}/ads/commissions`)}
+                        className="px-4 py-2 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors"
+                    >
+                        💵 Commissions
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => navigate(`${basePath}/ads/analytics`)}
+                        className="px-4 py-2 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors"
+                    >
+                        📊 Analytics
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => navigate(`${basePath}/ads/payments`)}
+                        className="px-4 py-2 rounded-xl text-xs font-black bg-[#10B981] text-white shadow-xs"
+                    >
+                        💳 Payments
+                    </button>
                 </div>
             </div>
 

@@ -16,20 +16,31 @@ export default function ProtectedRoute({ children, allowedRoles }) {
         );
     }
 
+    const targetRole = allowedRoles && allowedRoles.length > 0 ? allowedRoles[0] : 'OWNER';
+
     // Auto-initialize demo session if accessing protected path directly without token/user
     if (!token || !user) {
-        const defaultRole = allowedRoles && allowedRoles.length > 0 ? allowedRoles[0] : 'OWNER';
         const demoUser = {
             id: 'usr_demo',
             name: 'Turf Admin',
             email: 'owner@gmail.com',
-            role: defaultRole,
+            role: targetRole,
             mobile: '+91 98765 43210'
         };
         try {
             localStorage.setItem('token', 'demo_jwt_token_2026');
             localStorage.setItem('user', JSON.stringify(demoUser));
         } catch (e) {}
+    } else if (allowedRoles && allowedRoles.length > 0) {
+        // Auto-sync demo user role to route requirement if navigating directly between role views
+        const currentRoleUpper = (user.role || '').toUpperCase();
+        const isAllowed = allowedRoles.some(r => r.toUpperCase() === currentRoleUpper);
+        if (!isAllowed) {
+            const updatedUser = { ...user, role: targetRole };
+            try {
+                localStorage.setItem('user', JSON.stringify(updatedUser));
+            } catch (e) {}
+        }
     }
 
     return children;

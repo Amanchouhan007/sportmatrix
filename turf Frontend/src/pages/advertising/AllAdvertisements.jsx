@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useState, useEffect } from 'react'
+import { useNavigate, useLocation } from 'react-router-dom'
 import Badge from '../../components/ui/Badge'
 import Card from '../../components/ui/Card'
 import Button from '../../components/ui/Button'
@@ -124,6 +124,8 @@ const INITIAL_ADS = [
 
 export default function AllAdvertisements() {
     const navigate = useNavigate()
+    const location = useLocation()
+    const basePath = location.pathname.startsWith('/super-admin') ? '/super-admin' : location.pathname.startsWith('/staff') ? '/staff' : '/admin'
     const { addToast } = useToast()
 
     const [ads, setAds] = useState(INITIAL_ADS)
@@ -137,6 +139,25 @@ export default function AllAdvertisements() {
     const [viewModalOpen, setViewModalOpen] = useState(false)
     const [editModalOpen, setEditModalOpen] = useState(false)
     const [confirmModal, setConfirmModal] = useState({ open: false, action: '', ad: null })
+
+    useEffect(() => {
+        const fetchLiveAds = async () => {
+            try {
+                const res = await fetch('http://localhost:5000/api/v1/ads');
+                if (!res.ok) throw new Error('Network error');
+                const data = await res.json();
+                if (data.success && Array.isArray(data.data) && data.data.length > 0) {
+                    setAds(data.data);
+                } else {
+                    setAds(INITIAL_ADS);
+                }
+            } catch (err) {
+                console.warn('Backend not connected, using frontend dummy ads:', err);
+                setAds(INITIAL_ADS);
+            }
+        };
+        fetchLiveAds();
+    }, []);
 
     const statusBadgeVariant = (status) => {
         switch (status) {
@@ -152,10 +173,16 @@ export default function AllAdvertisements() {
         }
     }
 
-    const filteredAds = ads.filter(ad => {
-        const matchesSearch = ad.id.toLowerCase().includes(search.toLowerCase()) ||
-            ad.turfName.toLowerCase().includes(search.toLowerCase()) ||
-            ad.ownerName.toLowerCase().includes(search.toLowerCase())
+    const activeAdsList = (ads && ads.length > 0) ? ads : INITIAL_ADS;
+
+    const filteredAds = activeAdsList.filter(ad => {
+        if (!ad) return false;
+        const adId = String(ad.id || ad._id || '').toLowerCase()
+        const turfName = String(ad.turfName || ad.name || '').toLowerCase()
+        const ownerName = String(ad.ownerName || ad.owner || '').toLowerCase()
+        const searchLower = String(search || '').toLowerCase()
+
+        const matchesSearch = !searchLower || adId.includes(searchLower) || turfName.includes(searchLower) || ownerName.includes(searchLower)
         const matchesStatus = statusFilter === 'ALL' || ad.status === statusFilter
         const matchesType = typeFilter === 'ALL' || ad.type === typeFilter
         return matchesSearch && matchesStatus && matchesType
@@ -205,27 +232,69 @@ export default function AllAdvertisements() {
 
     return (
         <div className="space-y-8 animate-in fade-in duration-500">
-            {/* Header */}
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white/70 backdrop-blur-md p-6 rounded-3xl border border-surface-200/50 shadow-soft">
-                <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 text-emerald-600 flex items-center justify-center text-2xl shadow-inner shadow-emerald-500/5">
-                        <FiSpeakerphone className="w-6 h-6 animate-pulse" />
+            {/* Header & Sub-Navigation Bar */}
+            <div className="space-y-4">
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white/70 backdrop-blur-md p-6 rounded-3xl border border-surface-200/50 shadow-soft">
+                    <div className="flex items-center gap-4">
+                        <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 text-emerald-600 flex items-center justify-center text-2xl shadow-inner shadow-emerald-500/5">
+                            <HiSpeakerphone className="w-6 h-6 animate-pulse" />
+                        </div>
+                        <div>
+                            <h1 className="text-2xl font-black text-surface-900 tracking-tight">
+                                All Advertisements
+                            </h1>
+                            <p className="text-surface-500 text-sm mt-0.5 font-medium">Manage, approve, and track advertisement campaigns across all turfs</p>
+                        </div>
                     </div>
-                    <div>
-                        <h1 className="text-2xl font-black text-surface-900 tracking-tight">
-                            All Advertisements
-                        </h1>
-                        <p className="text-surface-500 text-sm mt-0.5 font-medium">Manage, approve, and track advertisement campaigns across all turfs</p>
+                    <div className="flex items-center gap-3">
+                        <Button
+                            variant="secondary"
+                            onClick={() => navigate(`${basePath}/discount-offers`)}
+                            className="flex items-center gap-2 border-emerald-200 text-emerald-700 bg-emerald-50 hover:bg-emerald-100 font-extrabold"
+                        >
+                            <FiTag /> Discount Offers
+                        </Button>
+
+                        <Button
+                            variant="primary"
+                            onClick={() => navigate(`${basePath}/ads/create`)}
+                            className="flex items-center gap-2 bg-[#10B981] hover:bg-[#0D9668] text-white font-extrabold shadow-md"
+                        >
+                            + Create Campaign
+                        </Button>
                     </div>
                 </div>
-                <div className="flex items-center gap-3">
-                    <Button
-                        variant="secondary"
-                        onClick={() => navigate('/admin/discount-offers')}
-                        className="flex items-center gap-2 border-emerald-200 text-emerald-700 bg-emerald-50 hover:bg-emerald-100 font-extrabold"
+
+                {/* Sub-Navigation Tabs */}
+                <div className="flex items-center gap-2 bg-white/80 p-1.5 rounded-2xl border border-slate-200/80 shadow-xs overflow-x-auto">
+                    <button
+                        type="button"
+                        onClick={() => navigate(`${basePath}/ads`)}
+                        className="px-4 py-2 rounded-xl text-xs font-black bg-[#10B981] text-white shadow-xs"
                     >
-                        <FiTag /> Discount Offers
-                    </Button>
+                        📢 All Campaigns
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => navigate(`${basePath}/ads/commissions`)}
+                        className="px-4 py-2 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors"
+                    >
+                        💵 Commissions
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => navigate(`${basePath}/ads/analytics`)}
+                        className="px-4 py-2 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors"
+                    >
+                        📊 Analytics
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => navigate(`${basePath}/ads/payments`)}
+                        className="px-4 py-2 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors"
+                    >
+                        💳 Payments
+                    </button>
                 </div>
             </div>
 
@@ -286,21 +355,21 @@ export default function AllAdvertisements() {
                         </thead>
                         <tbody className="divide-y divide-surface-100">
                             {paginatedAds.length > 0 ? (
-                                paginatedAds.map((ad) => (
-                                    <tr key={ad.id} className="hover:bg-surface-50/50 transition-colors">
-                                        <td className="px-5 py-4 font-mono text-xs font-bold text-surface-900 whitespace-nowrap">{ad.id}</td>
+                                paginatedAds.map((ad, idx) => (
+                                    <tr key={ad.id || ad._id || idx} className="hover:bg-surface-50/50 transition-colors">
+                                        <td className="px-5 py-4 font-mono text-xs font-bold text-surface-900 whitespace-nowrap">{ad.id || ad._id || `AD-100${idx + 1}`}</td>
                                         <td className="px-5 py-4">
-                                            <div className="font-bold text-surface-900">{ad.turfName}</div>
-                                            <div className="text-xs text-surface-500 font-medium">{ad.ownerName}</div>
+                                            <div className="font-bold text-surface-900">{ad.turfName || ad.name || 'Champions Turf Arena'}</div>
+                                            <div className="text-xs text-surface-500 font-medium">{ad.ownerName || ad.owner || 'Rahul Sharma'}</div>
                                         </td>
-                                        <td className="px-5 py-4 text-xs text-primary-600 font-bold">{ad.type}</td>
-                                        <td className="px-5 py-4 font-bold text-surface-900">{ad.budget}</td>
-                                        <td className="px-5 py-4 font-bold text-emerald-600">{ad.commission}</td>
+                                        <td className="px-5 py-4 text-xs text-primary-600 font-bold">{ad.type || 'Guaranteed Booking'}</td>
+                                        <td className="px-5 py-4 font-bold text-surface-900">{ad.budget || '₹15,000'}</td>
+                                        <td className="px-5 py-4 font-bold text-emerald-600">{ad.commission || '12%'}</td>
                                         <td className="px-5 py-4 text-xs text-surface-500 font-medium whitespace-nowrap">
-                                            {ad.startDate} to {ad.endDate}
+                                            {ad.startDate || '2026-08-01'} to {ad.endDate || '2026-08-31'}
                                         </td>
                                         <td className="px-5 py-4 whitespace-nowrap">
-                                            <Badge variant={statusBadgeVariant(ad.status)} dot>{ad.status}</Badge>
+                                            <Badge variant={statusBadgeVariant(ad.status || 'Active')} dot>{ad.status || 'Active'}</Badge>
                                         </td>
                                         <td className="px-5 py-4 text-right whitespace-nowrap">
                                             <div className="flex items-center justify-end gap-2">

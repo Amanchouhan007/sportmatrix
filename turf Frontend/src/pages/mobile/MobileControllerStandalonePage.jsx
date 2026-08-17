@@ -468,7 +468,7 @@ export default function MobileControllerStandalonePage() {
                         <button onClick={() => setActiveModal('batsman')} className="py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-200 font-bold text-[10px] border border-slate-800 cursor-pointer">
                             Batsman
                         </button>
-                        <button onClick={() => alert('Retire hurt logged')} className="py-2 rounded-xl bg-rose-950/40 hover:bg-rose-900 text-rose-300 font-bold text-[9px] border border-rose-800/40 cursor-pointer">
+                        <button onClick={() => sendScoreAction('RETIRE_HURT')} className="py-2 rounded-xl bg-rose-950/40 hover:bg-rose-900 text-rose-300 font-bold text-[9px] border border-rose-800/40 cursor-pointer">
                             Retire
                         </button>
                     </div>
@@ -619,7 +619,7 @@ export default function MobileControllerStandalonePage() {
                             <button onClick={() => setActiveModal('batsman')} className="py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-200 font-bold text-[10px] border border-slate-800 cursor-pointer">
                                 Batsman
                             </button>
-                            <button onClick={() => alert('Retire hurt logged')} className="py-1.5 rounded-xl bg-rose-950/40 hover:bg-rose-900 text-rose-300 font-bold text-[9px] border border-rose-800/40 cursor-pointer">
+                            <button onClick={() => sendScoreAction('RETIRE_HURT')} className="py-1.5 rounded-xl bg-rose-950/40 hover:bg-rose-900 text-rose-300 font-bold text-[9px] border border-rose-800/40 cursor-pointer">
                                 Retire
                             </button>
                         </div>

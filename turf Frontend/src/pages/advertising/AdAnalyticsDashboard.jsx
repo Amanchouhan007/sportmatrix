@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useNavigate, useLocation } from 'react-router-dom'
 import {
     ResponsiveContainer, AreaChart, Area, BarChart, Bar, LineChart, Line, XAxis, YAxis, Tooltip, CartesianGrid, Legend
 } from 'recharts'
@@ -59,67 +60,104 @@ const TIMEFRAME_OPTIONS = [
 ]
 
 export default function AdAnalyticsDashboard() {
+    const navigate = useNavigate()
+    const location = useLocation()
+    const basePath = location.pathname.startsWith('/super-admin') ? '/super-admin' : location.pathname.startsWith('/staff') ? '/staff' : '/admin'
     const [timeframe, setTimeframe] = useState('30d')
     const [isTimeframeOpen, setIsTimeframeOpen] = useState(false)
 
     return (
         <div className="space-y-6 animate-in fade-in duration-300">
-            {/* Page Hero Header */}
-            <div className="bg-white rounded-[24px] border border-slate-200/80 p-5 sm:p-6 shadow-[0_4px_20px_rgba(0,0,0,0.03)] flex flex-col md:flex-row md:items-center justify-between gap-4">
-                <div className="flex items-center gap-3.5">
-                    <div className="w-11 h-11 rounded-2xl bg-emerald-50 border border-emerald-200/60 text-[#10B981] flex items-center justify-center text-xl shadow-2xs">
-                        <FiBarChart2 className="w-5 h-5 animate-pulse" />
+            {/* Header & Sub-Navigation Tabs */}
+            <div className="space-y-4">
+                <div className="bg-white rounded-[24px] border border-slate-200/80 p-5 sm:p-6 shadow-[0_4px_20px_rgba(0,0,0,0.03)] flex flex-col md:flex-row md:items-center justify-between gap-4">
+                    <div className="flex items-center gap-3.5">
+                        <div className="w-11 h-11 rounded-2xl bg-emerald-50 border border-emerald-200/60 text-[#10B981] flex items-center justify-center text-xl shadow-2xs">
+                            <FiBarChart2 className="w-5 h-5 animate-pulse" />
+                        </div>
+                        <div>
+                            <h1 className="text-2xl font-black text-slate-900 tracking-tight leading-none">
+                                Advertising Analytics
+                            </h1>
+                            <p className="text-xs sm:text-sm text-slate-500 font-medium mt-1">
+                                Deep-dive metrics into ad campaigns, conversion rates, and revenue performance
+                            </p>
+                        </div>
                     </div>
-                    <div>
-                        <h1 className="text-2xl font-black text-slate-900 tracking-tight leading-none">
-                            Advertising Analytics
-                        </h1>
-                        <p className="text-xs sm:text-sm text-slate-500 font-medium mt-1">
-                            Deep-dive metrics into ad campaigns, conversion rates, and revenue performance
-                        </p>
+
+                    {/* Date Filter Controls Popover */}
+                    <div className="relative inline-block">
+                        <button
+                            type="button"
+                            onClick={() => setIsTimeframeOpen(!isTimeframeOpen)}
+                            className="h-11 px-4 bg-white hover:bg-slate-50 rounded-xl border border-slate-200/90 shadow-2xs hover:border-slate-300 transition-all cursor-pointer flex items-center gap-2 font-extrabold text-xs text-slate-800 outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
+                        >
+                            <FiCalendar className="w-4 h-4 text-emerald-600" />
+                            <span>{TIMEFRAME_OPTIONS.find(o => o.value === timeframe)?.label || 'Last 30 Days'}</span>
+                            <FiChevronDown className={`w-4 h-4 text-slate-400 transition-transform duration-200 ${isTimeframeOpen ? 'rotate-180 text-emerald-600' : ''}`} />
+                        </button>
+
+                        {isTimeframeOpen && (
+                            <>
+                                <div className="fixed inset-0 z-40" onClick={() => setIsTimeframeOpen(false)} />
+                                <div className="absolute top-full right-0 mt-2 z-50 w-44 bg-white/95 backdrop-blur-md rounded-2xl border border-slate-200/90 shadow-[0_15px_35px_rgba(0,0,0,0.1)] p-1.5 space-y-0.5 animate-in fade-in slide-in-from-top-2 duration-150">
+                                    {TIMEFRAME_OPTIONS.map(opt => {
+                                        const isSelected = timeframe === opt.value
+                                        return (
+                                            <button
+                                                key={opt.value}
+                                                type="button"
+                                                onClick={() => {
+                                                    setTimeframe(opt.value)
+                                                    setIsTimeframeOpen(false)
+                                                }}
+                                                className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-extrabold transition-colors ${
+                                                    isSelected 
+                                                        ? 'bg-emerald-50 text-emerald-700 font-black' 
+                                                        : 'text-slate-700 hover:bg-slate-100 hover:text-slate-900'
+                                                }`}
+                                            >
+                                                <span>{opt.label}</span>
+                                                {isSelected && <FiCheck className="w-3.5 h-3.5 text-emerald-600 shrink-0" />}
+                                            </button>
+                                        )
+                                    })}
+                                </div>
+                            </>
+                        )}
                     </div>
                 </div>
 
-                {/* Date Filter Controls Popover */}
-                <div className="relative inline-block">
+                {/* Sub-Navigation Tabs */}
+                <div className="flex items-center gap-2 bg-white/80 p-1.5 rounded-2xl border border-slate-200/80 shadow-xs overflow-x-auto">
                     <button
                         type="button"
-                        onClick={() => setIsTimeframeOpen(!isTimeframeOpen)}
-                        className="h-11 px-4 bg-white hover:bg-slate-50 rounded-xl border border-slate-200/90 shadow-2xs hover:border-slate-300 transition-all cursor-pointer flex items-center gap-2 font-extrabold text-xs text-slate-800 outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
+                        onClick={() => navigate(`${basePath}/ads`)}
+                        className="px-4 py-2 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors"
                     >
-                        <FiCalendar className="w-4 h-4 text-emerald-600" />
-                        <span>{TIMEFRAME_OPTIONS.find(o => o.value === timeframe)?.label || 'Last 30 Days'}</span>
-                        <FiChevronDown className={`w-4 h-4 text-slate-400 transition-transform duration-200 ${isTimeframeOpen ? 'rotate-180 text-emerald-600' : ''}`} />
+                        📢 All Campaigns
                     </button>
-
-                    {isTimeframeOpen && (
-                        <>
-                            <div className="fixed inset-0 z-40" onClick={() => setIsTimeframeOpen(false)} />
-                            <div className="absolute top-full right-0 mt-2 z-50 w-44 bg-white/95 backdrop-blur-md rounded-2xl border border-slate-200/90 shadow-[0_15px_35px_rgba(0,0,0,0.1)] p-1.5 space-y-0.5 animate-in fade-in slide-in-from-top-2 duration-150">
-                                {TIMEFRAME_OPTIONS.map(opt => {
-                                    const isSelected = timeframe === opt.value
-                                    return (
-                                        <button
-                                            key={opt.value}
-                                            type="button"
-                                            onClick={() => {
-                                                setTimeframe(opt.value)
-                                                setIsTimeframeOpen(false)
-                                            }}
-                                            className={`w-full text-left px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center justify-between cursor-pointer ${
-                                                isSelected
-                                                    ? 'bg-emerald-50 text-[#10B981] border border-emerald-200/60 shadow-2xs'
-                                                    : 'text-slate-700 hover:bg-emerald-50/60 hover:text-emerald-700'
-                                            }`}
-                                        >
-                                            <span>{opt.label}</span>
-                                            {isSelected && <FiCheck className="w-3.5 h-3.5 text-[#10B981]" />}
-                                        </button>
-                                    )
-                                })}
-                            </div>
-                        </>
-                    )}
+                    <button
+                        type="button"
+                        onClick={() => navigate(`${basePath}/ads/commissions`)}
+                        className="px-4 py-2 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors"
+                    >
+                        💵 Commissions
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => navigate(`${basePath}/ads/analytics`)}
+                        className="px-4 py-2 rounded-xl text-xs font-black bg-[#10B981] text-white shadow-xs"
+                    >
+                        📊 Analytics
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => navigate(`${basePath}/ads/payments`)}
+                        className="px-4 py-2 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors"
+                    >
+                        💳 Payments
+                    </button>
                 </div>
             </div>
 

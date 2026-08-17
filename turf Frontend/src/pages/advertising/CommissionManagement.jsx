@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { useNavigate, useLocation } from 'react-router-dom'
 import Badge from '../../components/ui/Badge'
 import Card from '../../components/ui/Card'
 import Button from '../../components/ui/Button'
@@ -73,6 +74,9 @@ const INITIAL_COMMISSIONS = [
 ]
 
 export default function CommissionManagement() {
+    const navigate = useNavigate()
+    const location = useLocation()
+    const basePath = location.pathname.startsWith('/super-admin') ? '/super-admin' : location.pathname.startsWith('/staff') ? '/staff' : '/admin'
     const { addToast } = useToast()
     const [commissions, setCommissions] = useState(INITIAL_COMMISSIONS)
     const [summary, setSummary] = useState({ totalPool: 2422, pendingPayouts: 2038, settledCommissions: 384 })
@@ -103,11 +107,14 @@ export default function CommissionManagement() {
         fetchLiveCommissions();
     }, []);
 
-    const filteredData = commissions.filter(item => {
-        const matchesSearch = item.bookingId.toLowerCase().includes(search.toLowerCase()) ||
-            item.adId.toLowerCase().includes(search.toLowerCase()) ||
-            item.turfName.toLowerCase().includes(search.toLowerCase()) ||
-            item.invoiceNo.toLowerCase().includes(search.toLowerCase())
+    const activeCommissionsList = (commissions && commissions.length > 0) ? commissions : INITIAL_COMMISSIONS;
+
+    const filteredData = activeCommissionsList.filter(item => {
+        if (!item) return false;
+        const matchesSearch = String(item.bookingId || '').toLowerCase().includes(search.toLowerCase()) ||
+            String(item.adId || '').toLowerCase().includes(search.toLowerCase()) ||
+            String(item.turfName || '').toLowerCase().includes(search.toLowerCase()) ||
+            String(item.invoiceNo || '').toLowerCase().includes(search.toLowerCase())
         const matchesStatus = statusFilter === 'ALL' || item.paymentStatus === statusFilter
         return matchesSearch && matchesStatus
     })
@@ -128,16 +135,50 @@ export default function CommissionManagement() {
 
     return (
         <div className="space-y-8 animate-in fade-in duration-500">
-            {/* Header */}
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white/70 backdrop-blur-md p-6 rounded-3xl border border-surface-200/50 shadow-soft">
-                <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 text-emerald-600 flex items-center justify-center text-2xl shadow-inner shadow-emerald-500/5">
-                        <FiCreditCard className="w-6 h-6 animate-pulse" />
+            {/* Header & Sub-Navigation Tabs */}
+            <div className="space-y-4">
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white/70 backdrop-blur-md p-6 rounded-3xl border border-surface-200/50 shadow-soft">
+                    <div className="flex items-center gap-4">
+                        <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 text-emerald-600 flex items-center justify-center text-2xl shadow-inner shadow-emerald-500/5">
+                            <FiCreditCard className="w-6 h-6 animate-pulse" />
+                        </div>
+                        <div>
+                            <h1 className="text-2xl font-black text-surface-900 tracking-tight">Commission Management</h1>
+                            <p className="text-surface-500 text-sm mt-0.5 font-medium">Audit advertisement commission payouts, invoices, and settlements</p>
+                        </div>
                     </div>
-                    <div>
-                        <h1 className="text-2xl font-black text-surface-900 tracking-tight">Commission Management</h1>
-                        <p className="text-surface-500 text-sm mt-0.5 font-medium">Audit advertisement commission payouts, invoices, and settlements</p>
-                    </div>
+                </div>
+
+                {/* Sub-Navigation Tabs */}
+                <div className="flex items-center gap-2 bg-white/80 p-1.5 rounded-2xl border border-slate-200/80 shadow-xs overflow-x-auto">
+                    <button
+                        type="button"
+                        onClick={() => navigate(`${basePath}/ads`)}
+                        className="px-4 py-2 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors"
+                    >
+                        📢 All Campaigns
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => navigate(`${basePath}/ads/commissions`)}
+                        className="px-4 py-2 rounded-xl text-xs font-black bg-[#10B981] text-white shadow-xs"
+                    >
+                        💵 Commissions
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => navigate(`${basePath}/ads/analytics`)}
+                        className="px-4 py-2 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors"
+                    >
+                        📊 Analytics
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => navigate(`${basePath}/ads/payments`)}
+                        className="px-4 py-2 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors"
+                    >
+                        💳 Payments
+                    </button>
                 </div>
             </div>
 

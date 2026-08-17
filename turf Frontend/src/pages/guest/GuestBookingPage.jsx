@@ -48,9 +48,10 @@ export default function GuestBookingPage() {
   };
 
   return (
-    <div className="flex justify-center items-center min-h-screen bg-gradient-to-r from-purple-500 via-indigo-600 to-pink-500 p-4">
-      <Card className="w-full max-w-md glassmorphism p-6 space-y-4">
-        <h2 className="text-2xl font-bold text-center text-white">Guest Booking</h2>
+    <div className="flex justify-center items-center py-12 px-4 bg-[#F8FAFC] min-h-[calc(100vh-64px)] relative">
+      <div className="fixed top-0 left-0 w-[400px] h-[400px] bg-emerald-500/5 rounded-full blur-3xl pointer-events-none -z-10" />
+      <Card className="w-full max-w-md bg-white border border-slate-200/80 shadow-xl rounded-2xl p-6 space-y-4">
+        <h2 className="text-2xl font-black text-center text-slate-900 tracking-tight">Guest Booking</h2>
         <form onSubmit={handleSubmit} className="space-y-3">
           <Input label="Sport" id="sport" name="sport" placeholder="e.g., Cricket" value={form.sport} onChange={handleChange} />
           <Input label="Venue" id="venue" name="venue" placeholder="Venue name" value={form.venue} onChange={handleChange} />

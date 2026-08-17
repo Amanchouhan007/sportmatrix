@@ -2,6 +2,7 @@ import { NavLink, useNavigate, useLocation } from 'react-router-dom'
 import { useState, useEffect } from 'react'
 import { HiMenu, HiX } from 'react-icons/hi'
 import Button from '../components/ui/Button'
+import GuestBookingLookupModal from '../components/booking/GuestBookingLookupModal'
 
 const navLinks = [
     { label: 'Home', to: '/' },
@@ -15,6 +16,7 @@ const navLinks = [
 export default function WebsiteLayout({ children }) {
     const [mobileOpen, setMobileOpen] = useState(false)
     const [isScrolled, setIsScrolled] = useState(false)
+    const [isLookupOpen, setIsLookupOpen] = useState(false)
     const navigate = useNavigate()
     const location = useLocation()
 
@@ -37,7 +39,7 @@ export default function WebsiteLayout({ children }) {
             <div className="fixed top-0 left-0 w-[500px] h-[500px] bg-[#16A34A]/5 rounded-full blur-3xl pointer-events-none -z-10" />
             <div className="fixed bottom-0 right-0 w-[600px] h-[600px] bg-[#C8FF2E]/10 rounded-full blur-3xl pointer-events-none -z-10" />
 
-            {/* 🌟 Top Navigation Bar (Highest z-index so it is always visible on scroll) */}
+            {/* 🌟 Top Navigation Bar */}
             <header 
                 className={`fixed top-0 inset-x-0 z-[1000] transition-all duration-200 bg-white/95 backdrop-blur-md border-b ${
                     isScrolled 
@@ -82,23 +84,33 @@ export default function WebsiteLayout({ children }) {
                         ))}
                     </nav>
 
-                    {/* Auth Buttons (Desktop) */}
-                    <div className="hidden lg:flex items-center gap-3 shrink-0">
+                    {/* Auth & Guest Lookup Buttons (Desktop) */}
+                    <div className="hidden lg:flex items-center gap-2.5 shrink-0">
+                        <button 
+                            type="button"
+                            onClick={() => setIsLookupOpen(true)} 
+                            className="font-extrabold text-[11px] tracking-wider uppercase px-3 py-2 text-emerald-700 bg-emerald-50 border border-emerald-200 hover:bg-emerald-100 transition-all rounded-xl cursor-pointer flex items-center gap-1.5"
+                        >
+                            <span>🔍</span> Find Booking
+                        </button>
+
                         <button 
                             type="button"
                             onClick={() => navigate('/login')} 
-                            className="font-black text-[11px] tracking-widest uppercase px-5 py-2 border border-slate-200 text-[#111827] hover:border-[#16A34A] hover:text-[#16A34A] hover:bg-slate-50 transition-all rounded-xl cursor-pointer"
+                            className="font-black text-[11px] tracking-widest uppercase px-4 py-2 border border-slate-200 text-[#111827] hover:border-[#16A34A] hover:text-[#16A34A] hover:bg-slate-50 transition-all rounded-xl cursor-pointer"
                         >
                             Log In
                         </button>
                         <button 
                             type="button"
                             onClick={() => navigate('/register')} 
-                            className="bg-[#C8FF2E] hover:bg-[#b8f51a] text-[#111827] font-black text-[11px] tracking-widest uppercase px-6 py-2 border border-[#aee810] rounded-full shadow-[0_4px_14px_rgba(184,255,44,0.35)] hover:shadow-[0_6px_20px_rgba(184,255,44,0.45)] transition-all transform hover:scale-[1.03] cursor-pointer"
+                            className="bg-[#C8FF2E] hover:bg-[#b8f51a] text-[#111827] font-black text-[11px] tracking-widest uppercase px-5 py-2 border border-[#aee810] rounded-full shadow-[0_4px_14px_rgba(184,255,44,0.35)] hover:shadow-[0_6px_20px_rgba(184,255,44,0.45)] transition-all transform hover:scale-[1.03] cursor-pointer"
                         >
                             Get Started
                         </button>
                     </div>
+
+                    <GuestBookingLookupModal isOpen={isLookupOpen} onClose={() => setIsLookupOpen(false)} />
 
                     {/* Mobile Toggle Button */}
                     <button 

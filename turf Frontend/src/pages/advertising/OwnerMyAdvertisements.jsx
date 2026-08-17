@@ -96,8 +96,8 @@ const INITIAL_OWNER_ADS = [
 export default function OwnerMyAdvertisements() {
     const navigate = useNavigate()
     const location = useLocation()
-    // Derive base path dynamically so Staff (/staff/ads) & Owner (/admin/ads) both work correctly
-    const basePath = location.pathname.startsWith('/staff') ? '/staff' : '/admin'
+    // Derive base path dynamically so SuperAdmin (/super-admin/ads), Staff (/staff/ads) & Owner (/admin/ads) work correctly
+    const basePath = location.pathname.startsWith('/super-admin') ? '/super-admin' : location.pathname.startsWith('/staff') ? '/staff' : '/admin'
     const { addToast } = useToast()
     const [ads, setAds] = useState(INITIAL_OWNER_ADS)
     const [viewMode, setViewMode] = useState('card') // 'card' | 'table'

@@ -117,12 +117,22 @@ export default function DashboardLayout({ role = 'owner' }) {
         setNotifications(prev => prev.map(n => ({ ...n, unread: false })))
     }
 
-    const quickActionItems = [
-        { label: 'Add Booking', icon: <HiTicket className="w-4 h-4 text-emerald-600" />, path: '/admin/pos' },
-        { label: 'Add Turf', icon: <HiLightningBolt className="w-4 h-4 text-[#10B981]" />, path: '/admin/sports' },
-        { label: 'Add Tournament', icon: <HiTrophy className="w-4 h-4 text-amber-500" />, path: '/admin/tournaments/all' },
-        { label: 'Add Team', icon: <HiUserGroup className="w-4 h-4 text-blue-500" />, path: '/admin/teams' },
-        { label: 'Create Invoice', icon: <HiDocumentText className="w-4 h-4 text-indigo-500" />, path: '/admin/pos' },
+    const basePath = role === 'staff' ? '/staff' : role === 'superadmin' ? '/super-admin' : role === 'customer' ? '/customer' : '/admin'
+
+    const quickActionItems = role === 'customer' ? [
+        { label: 'Book Turf', icon: <HiTicket className="w-4 h-4 text-emerald-600" />, path: '/turfs' },
+        { label: 'Browse Tournaments', icon: <HiTrophy className="w-4 h-4 text-amber-500" />, path: '/tournaments' },
+        { label: 'My Bookings', icon: <HiDocumentText className="w-4 h-4 text-indigo-500" />, path: '/customer/bookings' },
+    ] : role === 'superadmin' ? [
+        { label: 'Add Owner', icon: <HiUser className="w-4 h-4 text-emerald-600" />, path: '/super-admin/owners' },
+        { label: 'View Subscriptions', icon: <HiLightningBolt className="w-4 h-4 text-[#10B981]" />, path: '/super-admin/subscriptions' },
+        { label: 'Ad Campaigns', icon: <HiTrophy className="w-4 h-4 text-amber-500" />, path: '/super-admin/ads' },
+    ] : [
+        { label: 'Add Booking', icon: <HiTicket className="w-4 h-4 text-emerald-600" />, path: role === 'staff' ? '/staff/bookings' : '/admin/pos' },
+        { label: 'Add Turf', icon: <HiLightningBolt className="w-4 h-4 text-[#10B981]" />, path: role === 'staff' ? '/staff' : '/admin/sports' },
+        { label: 'Add Tournament', icon: <HiTrophy className="w-4 h-4 text-amber-500" />, path: `${basePath}/tournaments/all` },
+        { label: 'Add Team', icon: <HiUserGroup className="w-4 h-4 text-blue-500" />, path: role === 'staff' ? '/staff/tournaments/registrations' : '/admin/teams' },
+        { label: 'Create Invoice', icon: <HiDocumentText className="w-4 h-4 text-indigo-500" />, path: role === 'staff' ? '/staff/bookings' : '/admin/pos' },
     ]
 
     return (

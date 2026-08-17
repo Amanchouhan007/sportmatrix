@@ -33,7 +33,7 @@ const fallbackLogsList = [
  */
 export const getPaymentStats = async (params = {}) => {
     try {
-        const response = await api.get('/billing/stats', { params, timeout: 600 });
+        const response = await api.get('/billing/stats', { params });
         if (response.data && response.data.success && response.data.data) {
             return response.data;
         }
@@ -51,7 +51,7 @@ export const getPaymentStats = async (params = {}) => {
  */
 export const getPaymentLogs = async (params = {}) => {
     try {
-        const response = await api.get('/billing/history', { params, timeout: 600 });
+        const response = await api.get('/billing/history', { params });
         if (response.data && response.data.success && Array.isArray(response.data.data) && response.data.data.length > 0) {
             return response.data;
         }
@@ -74,7 +74,7 @@ export const getPaymentLogs = async (params = {}) => {
  */
 export const getPaymentLogById = async (id) => {
     try {
-        const response = await api.get(`/billing/history/${id}`, { timeout: 600 });
+        const response = await api.get(`/billing/history/${id}`);
         if (response.data && response.data.success) {
             return response.data;
         }

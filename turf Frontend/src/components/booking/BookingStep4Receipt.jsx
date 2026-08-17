@@ -129,13 +129,23 @@ export default function BookingStep4Receipt({
                     </button>
                 </div>
 
-                <button
-                    type="button"
-                    onClick={handleShareWhatsApp}
-                    className="w-full py-3 bg-[#25D366] hover:bg-[#20bd5a] text-white font-black text-xs uppercase tracking-wider rounded-xl transition-all cursor-pointer shadow-md flex items-center justify-center gap-2"
-                >
-                    <span>💬 Share directly on WhatsApp</span>
-                </button>
+                <div className="grid grid-cols-2 gap-2 pt-1">
+                    <button
+                        type="button"
+                        onClick={handleShareWhatsApp}
+                        className="py-3 bg-[#25D366] hover:bg-[#20bd5a] text-white font-black text-xs uppercase tracking-wider rounded-xl transition-all cursor-pointer shadow-md flex items-center justify-center gap-2"
+                    >
+                        <span>💬 WhatsApp Receipt</span>
+                    </button>
+
+                    <button
+                        type="button"
+                        onClick={() => window.print()}
+                        className="py-3 bg-slate-900 hover:bg-slate-800 text-white font-black text-xs uppercase tracking-wider rounded-xl transition-all cursor-pointer shadow-md flex items-center justify-center gap-2"
+                    >
+                        <span>📄 Download PDF / Print</span>
+                    </button>
+                </div>
 
                 {/* 3-HOUR CANCELLATION POLICY NOTE */}
                 {paymentMode === 'DARE_TO_PLAY' && (
@@ -144,6 +154,45 @@ export default function BookingStep4Receipt({
                     </div>
                 )}
             </div>
+
+            {/* GUEST AUTO-ACCOUNT CREATION OFFER CARD (Visible when guest completes booking) */}
+            {!user && (
+                <div className="bg-gradient-to-r from-emerald-500 to-green-600 rounded-2xl p-5 text-white text-left max-w-lg mx-auto shadow-lg space-y-3">
+                    <div className="flex items-center gap-2">
+                        <span className="text-2xl">🎁</span>
+                        <div>
+                            <h4 className="font-black text-sm uppercase tracking-tight">Claim ₹100 Cashback Credits!</h4>
+                            <p className="text-[11px] text-emerald-100">Set a password to create your account & track bookings automatically.</p>
+                        </div>
+                    </div>
+                    <div className="flex gap-2">
+                        <input
+                            type="password"
+                            placeholder="Create account password"
+                            className="bg-white text-slate-900 px-3 py-2 rounded-xl text-xs flex-1 border-0 outline-none font-bold"
+                            defaultValue="123456"
+                        />
+                        <button
+                            type="button"
+                            onClick={() => {
+                                const guestUser = {
+                                    id: `usr_guest_${Date.now()}`,
+                                    name: 'Guest Player',
+                                    email: 'guest@sportmatrix.com',
+                                    role: 'CUSTOMER',
+                                    walletBalance: 100
+                                }
+                                localStorage.setItem('token', 'guest_demo_token')
+                                localStorage.setItem('user', JSON.stringify(guestUser))
+                                window.location.href = '/customer'
+                            }}
+                            className="bg-[#C8FF2E] hover:bg-[#b8f51a] text-[#111827] font-black text-xs uppercase px-4 py-2 rounded-xl shrink-0 transition-transform hover:scale-105 cursor-pointer shadow-md"
+                        >
+                            Claim ₹100 & Save
+                        </button>
+                    </div>
+                </div>
+            )}
 
             {/* Bottom Actions */}
             <div className="flex items-center justify-center gap-4 pt-3">

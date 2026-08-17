@@ -109,15 +109,15 @@ export default function CustomerTeams() {
                             </div>
                             <div className="grid grid-cols-3 gap-3 text-center">
                                 <div className="bg-surface-50 rounded-lg py-2">
-                                    <p className="text-lg font-bold text-accent-600">0</p>
+                                    <p className="text-lg font-bold text-accent-600">{t.wins ?? 0}</p>
                                     <p className="text-xs text-surface-400">Wins</p>
                                 </div>
                                 <div className="bg-surface-50 rounded-lg py-2">
-                                    <p className="text-lg font-bold text-danger-500">0</p>
+                                    <p className="text-lg font-bold text-danger-500">{t.losses ?? 0}</p>
                                     <p className="text-xs text-surface-400">Losses</p>
                                 </div>
                                 <div className="bg-surface-50 rounded-lg py-2">
-                                    <p className="text-lg font-bold text-primary-600">-</p>
+                                    <p className="text-lg font-bold text-primary-600">{t.rank || '-'}</p>
                                     <p className="text-xs text-surface-400">Rank</p>
                                 </div>
                             </div>

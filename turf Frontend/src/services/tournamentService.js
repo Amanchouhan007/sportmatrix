@@ -94,7 +94,7 @@ export const fallbackPublicTournaments = [
 export const getPublicTournaments = async (filters = {}, config = {}) => {
     try {
         const params = { role: 'CUSTOMER', ...filters };
-        const response = await api.get('/tournaments', { params, timeout: 300, ...config });
+        const response = await api.get('/tournaments', { params, ...config });
         if (response.data && response.data.success && Array.isArray(response.data.data) && response.data.data.length > 0) {
             return response.data;
         }
@@ -113,7 +113,7 @@ export const getPublicTournaments = async (filters = {}, config = {}) => {
  */
 export const getTournamentById = async (id) => {
     try {
-        const response = await api.get(`/tournaments/${id}`, { timeout: 300 });
+        const response = await api.get(`/tournaments/${id}`);
         if (response.data && response.data.success) {
             return response.data;
         }
@@ -133,7 +133,7 @@ export const getTournamentById = async (id) => {
  */
 export const getFixtures = async (tournamentId) => {
     try {
-        const response = await api.get(`/tournaments/${tournamentId}/fixtures`, { timeout: 300 });
+        const response = await api.get(`/tournaments/${tournamentId}/fixtures`);
         return response.data;
     } catch (error) {
         return { success: true, data: [] };
@@ -145,7 +145,7 @@ export const getFixtures = async (tournamentId) => {
  */
 export const getLeaderboard = async (tournamentId) => {
     try {
-        const response = await api.get(`/tournaments/${tournamentId}/leaderboard`, { timeout: 300 });
+        const response = await api.get(`/tournaments/${tournamentId}/leaderboard`);
         return response.data;
     } catch (error) {
         return { success: true, data: [] };
