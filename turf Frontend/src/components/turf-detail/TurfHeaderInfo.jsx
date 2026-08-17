@@ -10,9 +10,12 @@ export default function TurfHeaderInfo({
         <div className="mb-6">
             <div className="flex items-start justify-between mb-4">
                 <div>
-                    <div className="flex items-center gap-2 mb-2">
+                    <div className="flex flex-wrap items-center gap-2 mb-2">
                         <span className="text-[10px] font-black uppercase tracking-wider px-3 py-1 bg-emerald-50 text-[#16A34A] border border-emerald-200/60 rounded-full">
                             Official Verified Partner Turf
+                        </span>
+                        <span className="text-[10px] font-black uppercase tracking-wider px-3 py-1 bg-slate-900 text-white rounded-full flex items-center gap-1 cursor-pointer">
+                            🏢 GST Corporate Invoicing Available
                         </span>
                         {turfData.badge && (
                             <span className="text-[10px] font-black uppercase tracking-wider px-3 py-1 bg-amber-50 text-amber-700 border border-amber-200/60 rounded-full">

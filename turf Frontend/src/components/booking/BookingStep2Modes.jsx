@@ -15,18 +15,6 @@ export default function BookingStep2Modes({
 }) {
     const modes = [
         {
-            id: 'FULL_PAY',
-            title: 'FULL PAY™',
-            subtitle: '"Tera Bhai Dega Pura Bill!"',
-            desc: 'Pay complete turf rent upfront & collect from team offline.',
-            badge: 'FASTEST',
-            badgeBg: 'bg-[#16A34A] text-white',
-            borderColor: 'border-emerald-400',
-            bgGradient: 'from-emerald-50 to-teal-50/30',
-            calcText: `Total: ₹${totalRent.toLocaleString('en-IN')} · You Pay: ₹${totalRent.toLocaleString('en-IN')} · Opponent: ₹0`,
-            icon: '💳'
-        },
-        {
             id: 'DARE_TO_PLAY',
             title: 'DARE MATCH™',
             subtitle: '"Dum Hai Toh Harake Dikha!"',
@@ -59,8 +47,20 @@ export default function BookingStep2Modes({
             badgeBg: 'bg-blue-600 text-white',
             borderColor: 'border-blue-400',
             bgGradient: 'from-blue-50 to-indigo-50/30',
-            calcText: `Total: ₹${totalRent.toLocaleString('en-IN')} · ${perPlayerCount} Players: ₹${perPlayerShareAmount.toLocaleString('en-IN')} each`,
+            calcText: `Total: ₹${totalRent.toLocaleString('en-IN')} · ${perPlayerCount} Players: ₹${perPlayerShareAmount.toLocaleString('en-IN')}/player`,
             icon: '👥'
+        },
+        {
+            id: 'FULL_PAY',
+            title: 'FULL PAY™',
+            subtitle: '"Tera Bhai Dega Pura Bill!"',
+            desc: 'Pay complete turf rent upfront & collect from team offline.',
+            badge: 'FASTEST',
+            badgeBg: 'bg-[#16A34A] text-white',
+            borderColor: 'border-emerald-400',
+            bgGradient: 'from-emerald-50 to-teal-50/30',
+            calcText: `Total: ₹${totalRent.toLocaleString('en-IN')} · You Pay: ₹${totalRent.toLocaleString('en-IN')} · Opponent: ₹0`,
+            icon: '💳'
         }
     ]
 

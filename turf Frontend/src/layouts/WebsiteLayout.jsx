@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react'
 import { HiMenu, HiX } from 'react-icons/hi'
 import Button from '../components/ui/Button'
 import GuestBookingLookupModal from '../components/booking/GuestBookingLookupModal'
+import CorporateBookingModal from '../components/website/CorporateBookingModal'
 
 const navLinks = [
     { label: 'Home', to: '/' },
@@ -17,6 +18,7 @@ export default function WebsiteLayout({ children }) {
     const [mobileOpen, setMobileOpen] = useState(false)
     const [isScrolled, setIsScrolled] = useState(false)
     const [isLookupOpen, setIsLookupOpen] = useState(false)
+    const [isCorpOpen, setIsCorpOpen] = useState(false)
     const navigate = useNavigate()
     const location = useLocation()
 
@@ -47,7 +49,7 @@ export default function WebsiteLayout({ children }) {
                         : 'border-slate-200/60 shadow-xs'
                 }`}
             >
-                <div className="w-full px-5 md:px-10 lg:px-16 h-[64px] flex items-center justify-between relative">
+                <div className="w-full px-4 sm:px-6 md:px-8 lg:px-12 h-[64px] flex items-center justify-between gap-4 relative">
                     {/* Brand Logo */}
                     <NavLink to="/" className="flex items-center gap-2.5 group shrink-0">
                         <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#16A34A] to-emerald-600 flex items-center justify-center font-black text-white text-sm shadow-md group-hover:scale-105 transition-transform">
@@ -58,14 +60,14 @@ export default function WebsiteLayout({ children }) {
                         </span>
                     </NavLink>
 
-                    {/* Nav Links (Centered on Desktop) */}
-                    <nav className="hidden lg:flex items-center gap-8 absolute left-1/2 -translate-x-1/2">
+                    {/* Nav Links (Flexible Centered Grid) */}
+                    <nav className="hidden lg:flex items-center gap-4 xl:gap-6 2xl:gap-8 shrink">
                         {navLinks.map((link) => (
                             <NavLink 
                                 key={link.to} 
                                 to={link.to} 
                                 className={({ isActive }) => 
-                                    `relative text-[12px] font-black tracking-widest uppercase transition-all duration-200 py-2 ${
+                                    `relative text-[11px] xl:text-[12px] font-black tracking-wider uppercase transition-all duration-200 py-1.5 whitespace-nowrap ${
                                         isActive 
                                             ? 'text-[#16A34A]' 
                                             : 'text-[#111827] hover:text-[#16A34A]'
@@ -75,7 +77,7 @@ export default function WebsiteLayout({ children }) {
                                 {({ isActive }) => (
                                     <>
                                         {link.label}
-                                        <span className={`absolute -bottom-1 left-0 w-full h-[3px] bg-[#16A34A] rounded-full transform origin-left transition-transform duration-200 ${
+                                        <span className={`absolute -bottom-1 left-0 w-full h-[2.5px] bg-[#16A34A] rounded-full transform origin-left transition-transform duration-200 ${
                                             isActive ? 'scale-x-100' : 'scale-x-0 hover:scale-x-100'
                                         }`} />
                                     </>
@@ -84,33 +86,53 @@ export default function WebsiteLayout({ children }) {
                         ))}
                     </nav>
 
-                    {/* Auth & Guest Lookup Buttons (Desktop) */}
-                    <div className="hidden lg:flex items-center gap-2.5 shrink-0">
+                    {/* Auth & Guest Lookup Buttons (Desktop Action Group) */}
+                    <div className="hidden sm:flex items-center gap-2.5 shrink-0">
+                        {/* 🏢 Corporate Hire Button with Hover Icon Animation & Glow */}
+                        <button 
+                            type="button"
+                            onClick={() => setIsCorpOpen(true)} 
+                            className="group relative overflow-hidden font-black text-xs tracking-wider uppercase px-3.5 py-2 text-slate-100 bg-gradient-to-r from-slate-900 via-slate-850 to-emerald-950 border-2 border-slate-700/80 hover:border-emerald-400 shadow-md hover:shadow-[0_8px_25px_rgba(16,185,129,0.4)] transition-all duration-300 rounded-xl cursor-pointer flex items-center gap-2 shrink-0 transform hover:scale-105"
+                            title="Corporate & Bulk Event Booking"
+                        >
+                            <span className="w-6 h-6 rounded-lg bg-emerald-500/20 text-emerald-300 flex items-center justify-center text-sm shadow-inner group-hover:scale-125 group-hover:rotate-12 group-hover:bg-emerald-500 group-hover:text-slate-950 transition-all duration-300 shrink-0">
+                                🏢
+                            </span>
+                            <span className="hidden md:inline group-hover:text-emerald-300 transition-colors">Corporate Hire</span>
+                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping hidden md:inline-block" />
+                        </button>
+
+                        {/* 🔍 Find Booking Button with Hover Icon Animation & Glow */}
                         <button 
                             type="button"
                             onClick={() => setIsLookupOpen(true)} 
-                            className="font-extrabold text-[11px] tracking-wider uppercase px-3 py-2 text-emerald-700 bg-emerald-50 border border-emerald-200 hover:bg-emerald-100 transition-all rounded-xl cursor-pointer flex items-center gap-1.5"
+                            className="group relative overflow-hidden font-black text-xs tracking-wider uppercase px-3.5 py-2 text-emerald-950 bg-gradient-to-r from-emerald-500/15 via-teal-500/10 to-emerald-500/20 hover:bg-emerald-100 border-2 border-emerald-400/90 hover:border-emerald-500 shadow-md hover:shadow-[0_8px_25px_rgba(16,185,129,0.45)] transition-all duration-300 rounded-xl cursor-pointer flex items-center gap-2 shrink-0 transform hover:scale-105"
+                            title="Find My Booking"
                         >
-                            <span>🔍</span> Find Booking
+                            <span className="w-6 h-6 rounded-lg bg-emerald-500/25 text-emerald-700 flex items-center justify-center text-sm shadow-inner group-hover:scale-125 group-hover:-rotate-12 group-hover:bg-emerald-600 group-hover:text-white transition-all duration-300 shrink-0">
+                                🔍
+                            </span>
+                            <span className="hidden md:inline group-hover:text-emerald-800 transition-colors">Find Booking</span>
                         </button>
 
                         <button 
                             type="button"
                             onClick={() => navigate('/login')} 
-                            className="font-black text-[11px] tracking-widest uppercase px-4 py-2 border border-slate-200 text-[#111827] hover:border-[#16A34A] hover:text-[#16A34A] hover:bg-slate-50 transition-all rounded-xl cursor-pointer"
+                            className="font-black text-[10.5px] xl:text-[11px] tracking-widest uppercase px-3.5 py-1.5 border border-slate-200 text-[#111827] hover:border-[#16A34A] hover:text-[#16A34A] hover:bg-slate-50 transition-all rounded-xl cursor-pointer shrink-0"
                         >
                             Log In
                         </button>
                         <button 
                             type="button"
                             onClick={() => navigate('/register')} 
-                            className="bg-[#C8FF2E] hover:bg-[#b8f51a] text-[#111827] font-black text-[11px] tracking-widest uppercase px-5 py-2 border border-[#aee810] rounded-full shadow-[0_4px_14px_rgba(184,255,44,0.35)] hover:shadow-[0_6px_20px_rgba(184,255,44,0.45)] transition-all transform hover:scale-[1.03] cursor-pointer"
+                            className="bg-[#C8FF2E] hover:bg-[#b8f51a] text-[#111827] font-black text-[10.5px] xl:text-[11px] tracking-widest uppercase px-4 py-1.5 border border-[#aee810] rounded-full shadow-[0_4px_14px_rgba(184,255,44,0.35)] hover:shadow-[0_6px_20px_rgba(184,255,44,0.45)] transition-all transform hover:scale-[1.03] cursor-pointer shrink-0"
                         >
                             Get Started
                         </button>
                     </div>
 
                     <GuestBookingLookupModal isOpen={isLookupOpen} onClose={() => setIsLookupOpen(false)} />
+                    <CorporateBookingModal isOpen={isCorpOpen} onClose={() => setIsCorpOpen(false)} />
 
                     {/* Mobile Toggle Button */}
                     <button 

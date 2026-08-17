@@ -97,16 +97,28 @@ function SectionLabel({ children, accent = 'emerald' }) {
     )
 }
 
-const generateSlots = (hourlyPrice = 1200) => {
+const generateSlots = (hourlyPrice = 1200, selectedDate = null) => {
     const times = ['06:00', '07:00', '08:00', '09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00', '18:00', '19:00', '20:00', '21:00', '22:00']
+    const now = new Date()
+    const currentHour = now.getHours()
+    const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
+    const isToday = !selectedDate || selectedDate === todayStr
+
     return times.map((t, i) => {
+        const slotHour = parseInt(t.split(':')[0], 10)
         const factor = i < 5 ? 0.8 : (i >= 11 && i <= 16 ? 1.25 : 1.0)
         const slotPrice = Math.round((hourlyPrice * factor) / 50) * 50
+        let status = [3, 7, 11, 15].includes(i) ? 'booked' : i === 5 ? 'blocked' : 'available'
+
+        if (isToday && slotHour <= currentHour) {
+            status = 'booked'
+        }
+
         return {
             id: i,
             time: t,
             price: slotPrice,
-            status: [3, 7, 11, 15].includes(i) ? 'booked' : i === 5 ? 'blocked' : 'available',
+            status,
         }
     })
 }

@@ -64,8 +64,8 @@ const generateUpcomingDays = () => {
     return list
 }
 
-// Generate dynamic time slots based on selected venue price
-const generateDynamicSlots = (basePrice = 1200) => {
+// Generate dynamic time slots based on selected venue price and actual current time
+const generateDynamicSlots = (basePrice = 1200, selectedDateObj = null) => {
     const rawSlots = [
         { id: '06:00', time: '6:00 AM', factor: 0.8, status: 'available' },
         { id: '07:00', time: '7:00 AM', factor: 0.8, status: 'available' },
@@ -85,10 +85,27 @@ const generateDynamicSlots = (basePrice = 1200) => {
         { id: '21:00', time: '9:00 PM', factor: 1.25, status: 'available' },
     ]
 
-    return rawSlots.map(s => ({
-        ...s,
-        price: Math.round((basePrice * s.factor) / 50) * 50
-    }))
+    const now = new Date()
+    const currentHour = now.getHours()
+    const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
+
+    const isToday = !selectedDateObj || selectedDateObj.dayShort === 'TODAY' || selectedDateObj.fullDateString === todayStr
+
+    return rawSlots.map(s => {
+        const slotHour = parseInt(s.id.split(':')[0], 10)
+        let effectiveStatus = s.status
+
+        // Real-time time management: if the date is TODAY and slot hour <= currentHour, slot has passed!
+        if (isToday && slotHour <= currentHour) {
+            effectiveStatus = 'booked'
+        }
+
+        return {
+            ...s,
+            status: effectiveStatus,
+            price: Math.round((basePrice * s.factor) / 50) * 50
+        }
+    })
 }
 
 export default function SlotBookingPage() {
@@ -104,11 +121,6 @@ export default function SlotBookingPage() {
         const found = allAvailableTurfs.find(t => t.id === Number(id))
         return found || allAvailableTurfs[0]
     })
-
-    // Dynamic slot generation based on selectedVenue price
-    const allTimeSlots = useMemo(() => {
-        return generateDynamicSlots(selectedVenue?.price || 1200)
-    }, [selectedVenue?.price])
 
     // Active venue photo preview state & Lightbox Modal
     const [activePhotoUrl, setActivePhotoUrl] = useState(() => selectedVenue.image || '/images/turf1.png')
@@ -141,12 +153,16 @@ export default function SlotBookingPage() {
     // Booking Steps (1 to 4)
     const [activeStep, setActiveStep] = useState(1)
 
-    // Step 1 Selections
     const [durationHours, setDurationHours] = useState(1)
     const [dateList] = useState(generateUpcomingDays())
     const [selectedDateObj, setSelectedDateObj] = useState(dateList[0])
     const [selectedSlotTime, setSelectedSlotTime] = useState('18:00')
     const [hasVerifiedUmpire, setHasVerifiedUmpire] = useState(false)
+
+    // Dynamic slot generation based on selectedVenue price and selectedDateObj
+    const allTimeSlots = useMemo(() => {
+        return generateDynamicSlots(selectedVenue?.price || 1200, selectedDateObj)
+    }, [selectedVenue?.price, selectedDateObj])
 
     // Coupons
     const [couponInput, setCouponInput] = useState('')

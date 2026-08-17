@@ -7,21 +7,6 @@ export default function TeamPaymentModesSection({ onSelectMode, selectedMode = '
 
     const paymentModes = [
         {
-            id: 'full',
-            icon: '💳',
-            badge: 'FASTEST BOOKING',
-            badgeBg: 'bg-emerald-100 text-emerald-800 border-emerald-300',
-            title: 'I Pay Full Amount — "Tera Bhai Dega!"',
-            desc: '"Tera Bhai Dega Pura Bill!" Pay the complete turf amount upfront now and collect from your team later offline.',
-            example: 'Total: ₹1,200 · You Pay: ₹1,200 · Opponent: ₹0',
-            cta: 'Choose Full Pay',
-            steps: [
-                '1. Pay the total match fee (₹1,200) upfront.',
-                '2. Turf slot is locked and confirmed instantly.',
-                '3. Collect cash/UPI from your teammates at your convenience.'
-            ]
-        },
-        {
             id: 'dare',
             icon: '🔥',
             badge: '🔥 CHALLENGE MODE',
@@ -66,6 +51,21 @@ export default function TeamPaymentModesSection({ onSelectMode, selectedMode = '
                 '1. Add player count (e.g. 6 players = ₹200/player).',
                 '2. Send personal WhatsApp payment links to teammates.',
                 '3. Booking completes as required individual payments are collected.'
+            ]
+        },
+        {
+            id: 'full',
+            icon: '💳',
+            badge: 'FASTEST BOOKING',
+            badgeBg: 'bg-emerald-100 text-emerald-800 border-emerald-300',
+            title: 'I Pay Full Amount — "Tera Bhai Dega!"',
+            desc: '"Tera Bhai Dega Pura Bill!" Pay the complete turf amount upfront now and collect from your team later offline.',
+            example: 'Total: ₹1,200 · You Pay: ₹1,200 · Opponent: ₹0',
+            cta: 'Choose Full Pay',
+            steps: [
+                '1. Pay the total match fee (₹1,200) upfront.',
+                '2. Turf slot is locked and confirmed instantly.',
+                '3. Collect cash/UPI from your teammates at your convenience.'
             ]
         }
     ]
