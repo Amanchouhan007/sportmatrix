@@ -255,160 +255,286 @@ const resolveOriginCoordinates = (locString, userGPS, explicitCoords) => {
                         />
                     </div>
 
-                    {/* ── SPECIAL CRICKET MODES & USP ATTRACTION BAR (Prominent, High-Impact 5-Card Layout with Micro-Animations) ── */}
-                    <div className="mt-7 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 sm:gap-5 w-full select-none">
-                        {/* 1. 🔥 DARE MATCH™ */}
-                        <button
-                            type="button"
+                    {/* ── SPECIAL CRICKET MODES & USP ATTRACTION TEMPLATES (Immersive Templates with Background Photos, Spec Tables & No Redundant Tags) ── */}
+                    <div className="mt-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 sm:gap-5 w-full select-none">
+                        
+                        {/* 1. 🔥 DARE MATCH™ TEMPLATE */}
+                        <div
                             onClick={() => {
                                 const nearbyId = filteredTurfs[0]?.id || 6
                                 setIsChallengeVisible(true)
                                 navigate(`/booking/${nearbyId}?mode=dare&pay=opponent`)
                             }}
-                            className="group relative overflow-hidden w-full flex flex-col justify-between p-4.5 sm:p-5 rounded-3xl bg-gradient-to-br from-orange-500/20 via-amber-500/10 to-red-500/15 border-2 border-orange-400/90 hover:border-orange-500 shadow-lg hover:shadow-[0_15px_35px_rgba(249,115,22,0.4)] transition-all duration-300 cursor-pointer hover:scale-[1.03] hover:-translate-y-1.5 active:scale-95 text-left shimmer-sweep min-h-[125px] sm:min-h-[135px]"
+                            className="group relative overflow-hidden w-full flex flex-col justify-between p-5 rounded-3xl border-2 border-orange-500/60 hover:border-orange-400 shadow-xl hover:shadow-[0_20px_45px_rgba(249,115,22,0.45)] transition-all duration-500 cursor-pointer hover:-translate-y-2 text-left min-h-[340px]"
                         >
-                            <div className="flex items-center gap-3">
-                                <div className="w-12 h-12 sm:w-13 sm:h-13 rounded-2xl bg-gradient-to-br from-orange-500 to-red-600 text-white shadow-[0_0_20px_rgba(249,115,22,0.7)] flex items-center justify-center text-2xl sm:text-3xl shrink-0 group-hover:scale-115 group-hover:rotate-12 transition-transform animate-fire-float">
-                                    🔥
-                                </div>
-                                <div className="flex flex-col min-w-0 flex-1 leading-tight">
-                                    <div className="flex items-center justify-between gap-1 mb-1">
-                                        <span className="text-xs sm:text-sm font-black text-orange-950 uppercase tracking-tight">Dare Match™</span>
-                                        <span className="bg-gradient-to-r from-red-600 to-orange-500 text-white font-black text-[8.5px] sm:text-[9px] px-2 py-0.5 rounded-full uppercase tracking-wider animate-bounce shrink-0 shadow-sm">
-                                            ₹0 FREE
-                                        </span>
-                                    </div>
-                                    <span className="text-sm sm:text-base font-black text-[#111827] leading-snug group-hover:text-orange-600 transition-colors">
-                                        "Dum Hai Toh Harake Dikha!"
-                                    </span>
-                                </div>
-                            </div>
-                            <div className="mt-3 pt-2.5 border-t border-orange-300/40 flex items-center justify-between text-[10px] sm:text-[11px] font-bold text-orange-900">
-                                <span>Winner FREE, Loser Pays ⚡</span>
-                                <span className="text-orange-600 font-extrabold group-hover:translate-x-1 transition-transform">Play →</span>
-                            </div>
-                        </button>
+                            {/* Background Photo */}
+                            <div 
+                                className="absolute inset-0 bg-cover bg-center transition-transform duration-700 ease-out group-hover:scale-110"
+                                style={{ backgroundImage: `url('/images/dare_match_template.jpg')` }}
+                            />
+                            {/* Dark Gradient Tint & Frosted Overlay */}
+                            <div className="absolute inset-0 bg-gradient-to-t from-[#0B0F0C] via-[#0B0F0C]/90 to-[#0B0F0C]/60 backdrop-blur-[1px]" />
+                            {/* Neon Fire Shimmer Line */}
+                            <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-transparent via-orange-500 to-transparent" />
 
-                        {/* 2. 🤝 50:50 MATCH SPLIT™ */}
-                        <button
-                            type="button"
+                            <div className="relative z-10 space-y-3">
+                                <div className="flex items-center gap-3">
+                                    <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-orange-500 to-red-600 text-white shadow-[0_0_25px_rgba(249,115,22,0.8)] flex items-center justify-center text-2xl shrink-0 group-hover:scale-110 group-hover:rotate-6 transition-transform animate-fire-float">
+                                        🔥
+                                    </div>
+                                    <div className="min-w-0 flex-1">
+                                        <h3 className="text-sm font-black text-orange-400 uppercase tracking-wider">Dare Match™</h3>
+                                        <p className="text-base font-black text-white leading-tight">"Dum Hai Toh Harake Dikha!"</p>
+                                    </div>
+                                </div>
+
+                                <p className="text-xs text-slate-300 font-medium leading-relaxed">
+                                    Winner plays 100% FREE! Losing team settles total match rent at match end.
+                                </p>
+
+                                {/* Proper Details Table */}
+                                <div className="p-3 rounded-2xl bg-black/60 border border-orange-500/30 backdrop-blur-md space-y-1.5 text-[11px]">
+                                    <div className="flex justify-between items-center text-slate-300 font-semibold border-b border-white/10 pb-1">
+                                        <span>Winner Rule</span>
+                                        <span className="text-emerald-400 font-black">100% Free (Refund)</span>
+                                    </div>
+                                    <div className="flex justify-between items-center text-slate-300 font-semibold border-b border-white/10 pb-1">
+                                        <span>Loser Rule</span>
+                                        <span className="text-red-400 font-black">Pays Total Fee</span>
+                                    </div>
+                                    <div className="flex justify-between items-center text-slate-300 font-semibold">
+                                        <span>Advance Entry</span>
+                                        <span className="text-amber-400 font-black">30% Deposit</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="relative z-10 mt-4 pt-3 border-t border-orange-500/30 flex items-center justify-between text-xs font-black text-orange-400 group-hover:text-white transition-colors">
+                                <span>Play Dare Match</span>
+                                <span className="text-orange-400 group-hover:text-white font-black group-hover:translate-x-1.5 transition-transform">Challenge →</span>
+                            </div>
+                        </div>
+
+                        {/* 2. 🤝 50:50 SPLIT™ TEMPLATE */}
+                        <div
                             onClick={() => {
                                 const nearbyId = filteredTurfs[0]?.id || 6
                                 navigate(`/booking/${nearbyId}?mode=split50`)
                             }}
-                            className="group relative overflow-hidden w-full flex flex-col justify-between p-4.5 sm:p-5 rounded-3xl bg-gradient-to-br from-emerald-500/20 via-teal-500/10 to-emerald-500/15 border-2 border-emerald-400/90 hover:border-emerald-500 shadow-lg hover:shadow-[0_15px_35px_rgba(16,185,129,0.4)] transition-all duration-300 cursor-pointer hover:scale-[1.03] hover:-translate-y-1.5 active:scale-95 text-left shimmer-sweep min-h-[125px] sm:min-h-[135px]"
+                            className="group relative overflow-hidden w-full flex flex-col justify-between p-5 rounded-3xl border-2 border-emerald-500/60 hover:border-emerald-400 shadow-xl hover:shadow-[0_20px_45px_rgba(16,185,129,0.45)] transition-all duration-500 cursor-pointer hover:-translate-y-2 text-left min-h-[340px]"
                         >
-                            <div className="flex items-center gap-3">
-                                <div className="w-12 h-12 sm:w-13 sm:h-13 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-700 text-white shadow-[0_0_20px_rgba(16,185,129,0.7)] flex items-center justify-center text-2xl sm:text-3xl shrink-0 group-hover:scale-115 group-hover:-rotate-12 transition-transform">
-                                    🤝
-                                </div>
-                                <div className="flex flex-col min-w-0 flex-1 leading-tight">
-                                    <div className="flex items-center justify-between gap-1 mb-1">
-                                        <span className="text-xs sm:text-sm font-black text-[#064E3B] uppercase tracking-tight">50:50 Split™</span>
-                                        <span className="bg-[#10B981] text-white font-black text-[8.5px] sm:text-[9px] px-2 py-0.5 rounded-full uppercase tracking-wider shrink-0 shadow-sm">
-                                            NO KHAT-PAT
-                                        </span>
-                                    </div>
-                                    <span className="text-sm sm:text-base font-black text-[#111827] leading-snug group-hover:text-[#10B981] transition-colors">
-                                        "Aadha Bill Tera, Aadha Mera!"
-                                    </span>
-                                </div>
-                            </div>
-                            <div className="mt-3 pt-2.5 border-t border-emerald-300/40 flex items-center justify-between text-[10px] sm:text-[11px] font-bold text-emerald-900">
-                                <span>Dono Captains Ka 50:50 Rent ⚡</span>
-                                <span className="text-emerald-700 font-extrabold group-hover:translate-x-1 transition-transform">Split →</span>
-                            </div>
-                        </button>
+                            {/* Background Photo */}
+                            <div 
+                                className="absolute inset-0 bg-cover bg-center transition-transform duration-700 ease-out group-hover:scale-110"
+                                style={{ backgroundImage: `url('/images/split_50_template.jpg')` }}
+                            />
+                            {/* Dark Gradient Tint & Frosted Overlay */}
+                            <div className="absolute inset-0 bg-gradient-to-t from-[#0B0F0C] via-[#0B0F0C]/90 to-[#0B0F0C]/60 backdrop-blur-[1px]" />
+                            {/* Neon Emerald Shimmer Line */}
+                            <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-transparent via-emerald-500 to-transparent" />
 
-                        {/* 3. 👥 SQUAD UPI SPLIT™ */}
-                        <button
-                            type="button"
+                            <div className="relative z-10 space-y-3">
+                                <div className="flex items-center gap-3">
+                                    <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-700 text-white shadow-[0_0_25px_rgba(16,185,129,0.8)] flex items-center justify-center text-2xl shrink-0 group-hover:scale-110 group-hover:-rotate-6 transition-transform">
+                                        🤝
+                                    </div>
+                                    <div className="min-w-0 flex-1">
+                                        <h3 className="text-sm font-black text-emerald-400 uppercase tracking-wider">50:50 Split™</h3>
+                                        <p className="text-base font-black text-white leading-tight">"Aadha Bill Tera, Aadha Mera!"</p>
+                                    </div>
+                                </div>
+
+                                <p className="text-xs text-slate-300 font-medium leading-relaxed">
+                                    Both captains pay half (50%) rent. Automated payment link sent to opponent captain.
+                                </p>
+
+                                {/* Proper Details Table */}
+                                <div className="p-3 rounded-2xl bg-black/60 border border-emerald-500/30 backdrop-blur-md space-y-1.5 text-[11px]">
+                                    <div className="flex justify-between items-center text-slate-300 font-semibold border-b border-white/10 pb-1">
+                                        <span>Your Share</span>
+                                        <span className="text-emerald-400 font-black">50% (₹600 of ₹1.2k)</span>
+                                    </div>
+                                    <div className="flex justify-between items-center text-slate-300 font-semibold border-b border-white/10 pb-1">
+                                        <span>Opponent Share</span>
+                                        <span className="text-teal-400 font-black">50% (₹600 of ₹1.2k)</span>
+                                    </div>
+                                    <div className="flex justify-between items-center text-slate-300 font-semibold">
+                                        <span>Confirmation</span>
+                                        <span className="text-amber-400 font-black">Auto WhatsApp Link</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="relative z-10 mt-4 pt-3 border-t border-emerald-500/30 flex items-center justify-between text-xs font-black text-emerald-400 group-hover:text-white transition-colors">
+                                <span>Split 50:50 Rent</span>
+                                <span className="text-emerald-400 group-hover:text-white font-black group-hover:translate-x-1.5 transition-transform">Split →</span>
+                            </div>
+                        </div>
+
+                        {/* 3. 👥 SQUAD SPLIT™ TEMPLATE */}
+                        <div
                             onClick={() => {
                                 const nearbyId = filteredTurfs[0]?.id || 6
                                 navigate(`/booking/${nearbyId}?mode=per_player`)
                             }}
-                            className="group relative overflow-hidden w-full flex flex-col justify-between p-4.5 sm:p-5 rounded-3xl bg-gradient-to-br from-blue-500/20 via-indigo-500/10 to-blue-500/15 border-2 border-blue-400/90 hover:border-blue-500 shadow-lg hover:shadow-[0_15px_35px_rgba(59,130,246,0.4)] transition-all duration-300 cursor-pointer hover:scale-[1.03] hover:-translate-y-1.5 active:scale-95 text-left shimmer-sweep min-h-[125px] sm:min-h-[135px]"
+                            className="group relative overflow-hidden w-full flex flex-col justify-between p-5 rounded-3xl border-2 border-blue-500/60 hover:border-blue-400 shadow-xl hover:shadow-[0_20px_45px_rgba(59,130,246,0.45)] transition-all duration-500 cursor-pointer hover:-translate-y-2 text-left min-h-[340px]"
                         >
-                            <div className="flex items-center gap-3">
-                                <div className="w-12 h-12 sm:w-13 sm:h-13 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-700 text-white shadow-[0_0_20px_rgba(59,130,246,0.7)] flex items-center justify-center text-2xl sm:text-3xl shrink-0 group-hover:scale-115 group-hover:rotate-12 transition-transform">
-                                    👥
-                                </div>
-                                <div className="flex flex-col min-w-0 flex-1 leading-tight">
-                                    <div className="flex items-center justify-between gap-1 mb-1">
-                                        <span className="text-xs sm:text-sm font-black text-blue-950 uppercase tracking-tight">Squad Split™</span>
-                                        <span className="bg-blue-600 text-white font-black text-[8.5px] sm:text-[9px] px-2 py-0.5 rounded-full uppercase tracking-wider shrink-0 shadow-sm">
-                                            EQUAL PAY
-                                        </span>
-                                    </div>
-                                    <span className="text-sm sm:text-base font-black text-[#111827] leading-snug group-hover:text-blue-600 transition-colors">
-                                        "Apna Hissa, Khud Bharo!"
-                                    </span>
-                                </div>
-                            </div>
-                            <div className="mt-3 pt-2.5 border-t border-blue-300/40 flex items-center justify-between text-[10px] sm:text-[11px] font-bold text-blue-900">
-                                <span>Sabhi Players Ka Equal Share ⚡</span>
-                                <span className="text-blue-700 font-extrabold group-hover:translate-x-1 transition-transform">Share →</span>
-                            </div>
-                        </button>
+                            {/* Background Photo */}
+                            <div 
+                                className="absolute inset-0 bg-cover bg-center transition-transform duration-700 ease-out group-hover:scale-110"
+                                style={{ backgroundImage: `url('/images/squad_split_template.jpg')` }}
+                            />
+                            {/* Dark Gradient Tint & Frosted Overlay */}
+                            <div className="absolute inset-0 bg-gradient-to-t from-[#0B0F0C] via-[#0B0F0C]/90 to-[#0B0F0C]/60 backdrop-blur-[1px]" />
+                            {/* Neon Blue Shimmer Line */}
+                            <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-transparent via-blue-500 to-transparent" />
 
-                        {/* 4. 💳 FULL PAY™ */}
-                        <button
-                            type="button"
+                            <div className="relative z-10 space-y-3">
+                                <div className="flex items-center gap-3">
+                                    <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-700 text-white shadow-[0_0_25px_rgba(59,130,246,0.8)] flex items-center justify-center text-2xl shrink-0 group-hover:scale-110 group-hover:rotate-6 transition-transform">
+                                        👥
+                                    </div>
+                                    <div className="min-w-0 flex-1">
+                                        <h3 className="text-sm font-black text-blue-400 uppercase tracking-wider">Squad Split™</h3>
+                                        <p className="text-base font-black text-white leading-tight">"Apna Hissa, Khud Bharo!"</p>
+                                    </div>
+                                </div>
+
+                                <p className="text-xs text-slate-300 font-medium leading-relaxed">
+                                    Individual UPI links sent to each teammate. Everyone pays their equal share directly.
+                                </p>
+
+                                {/* Proper Details Table */}
+                                <div className="p-3 rounded-2xl bg-black/60 border border-blue-500/30 backdrop-blur-md space-y-1.5 text-[11px]">
+                                    <div className="flex justify-between items-center text-slate-300 font-semibold border-b border-white/10 pb-1">
+                                        <span>Squad Size</span>
+                                        <span className="text-blue-400 font-black">2 to 14 Players</span>
+                                    </div>
+                                    <div className="flex justify-between items-center text-slate-300 font-semibold border-b border-white/10 pb-1">
+                                        <span>Per Player Share</span>
+                                        <span className="text-cyan-400 font-black">₹150 – ₹300 / Head</span>
+                                    </div>
+                                    <div className="flex justify-between items-center text-slate-300 font-semibold">
+                                        <span>UPI Link</span>
+                                        <span className="text-emerald-400 font-black">Live Player Status</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="relative z-10 mt-4 pt-3 border-t border-blue-500/30 flex items-center justify-between text-xs font-black text-blue-400 group-hover:text-white transition-colors">
+                                <span>Create Squad Split</span>
+                                <span className="text-blue-400 group-hover:text-white font-black group-hover:translate-x-1.5 transition-transform">Share →</span>
+                            </div>
+                        </div>
+
+                        {/* 4. 💳 FULL PAY™ TEMPLATE */}
+                        <div
                             onClick={() => {
                                 const nearbyId = filteredTurfs[0]?.id || 6
                                 navigate(`/booking/${nearbyId}?mode=full`)
                             }}
-                            className="group relative overflow-hidden w-full flex flex-col justify-between p-4.5 sm:p-5 rounded-3xl bg-gradient-to-br from-emerald-500/20 via-green-500/10 to-teal-500/15 border-2 border-emerald-400/90 hover:border-emerald-500 shadow-lg hover:shadow-[0_15px_35px_rgba(22,163,74,0.4)] transition-all duration-300 cursor-pointer hover:scale-[1.03] hover:-translate-y-1.5 active:scale-95 text-left shimmer-sweep min-h-[125px] sm:min-h-[135px]"
+                            className="group relative overflow-hidden w-full flex flex-col justify-between p-5 rounded-3xl border-2 border-lime-500/60 hover:border-lime-400 shadow-xl hover:shadow-[0_20px_45px_rgba(132,204,22,0.45)] transition-all duration-500 cursor-pointer hover:-translate-y-2 text-left min-h-[340px]"
                         >
-                            <div className="flex items-center gap-3">
-                                <div className="w-12 h-12 sm:w-13 sm:h-13 rounded-2xl bg-gradient-to-br from-[#16A34A] to-emerald-700 text-white shadow-[0_0_20px_rgba(22,163,74,0.7)] flex items-center justify-center text-2xl sm:text-3xl shrink-0 group-hover:scale-115 group-hover:-rotate-12 transition-transform">
-                                    💳
-                                </div>
-                                <div className="flex flex-col min-w-0 flex-1 leading-tight">
-                                    <div className="flex items-center justify-between gap-1 mb-1">
-                                        <span className="text-xs sm:text-sm font-black text-emerald-950 uppercase tracking-tight">Full Pay™</span>
-                                        <span className="bg-[#16A34A] text-white font-black text-[8.5px] sm:text-[9px] px-2 py-0.5 rounded-full uppercase tracking-wider shrink-0 shadow-sm">
-                                            FASTEST
-                                        </span>
-                                    </div>
-                                    <span className="text-sm sm:text-base font-black text-[#111827] leading-snug group-hover:text-[#16A34A] transition-colors">
-                                        "Tera Bhai Dega Pura Bill!"
-                                    </span>
-                                </div>
-                            </div>
-                            <div className="mt-3 pt-2.5 border-t border-emerald-300/40 flex items-center justify-between text-[10px] sm:text-[11px] font-bold text-emerald-900">
-                                <span>Instant Slot Locking ⚡</span>
-                                <span className="text-emerald-700 font-extrabold group-hover:translate-x-1 transition-transform">Book →</span>
-                            </div>
-                        </button>
+                            {/* Background Photo */}
+                            <div 
+                                className="absolute inset-0 bg-cover bg-center transition-transform duration-700 ease-out group-hover:scale-110"
+                                style={{ backgroundImage: `url('/images/full_pay_template.jpg')` }}
+                            />
+                            {/* Dark Gradient Tint & Frosted Overlay */}
+                            <div className="absolute inset-0 bg-gradient-to-t from-[#0B0F0C] via-[#0B0F0C]/90 to-[#0B0F0C]/60 backdrop-blur-[1px]" />
+                            {/* Neon Lime Shimmer Line */}
+                            <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-transparent via-[#C8FF2E] to-transparent" />
 
-                        {/* 5. 👑 HALL OF FAME & PLAYER SQUAD CONNECT™ */}
-                        <button
-                            type="button"
-                            onClick={() => navigate('/leaderboard')}
-                            className="group relative overflow-hidden w-full flex flex-col justify-between p-4.5 sm:p-5 rounded-3xl bg-gradient-to-br from-amber-500/20 via-yellow-500/10 to-amber-500/15 border-2 border-amber-400/90 hover:border-amber-500 shadow-lg hover:shadow-[0_15px_35px_rgba(245,158,11,0.4)] transition-all duration-300 cursor-pointer hover:scale-[1.03] hover:-translate-y-1.5 active:scale-95 text-left shimmer-sweep min-h-[125px] sm:min-h-[135px]"
-                        >
-                            <div className="flex items-center gap-3">
-                                <div className="w-12 h-12 sm:w-13 sm:h-13 rounded-2xl bg-gradient-to-br from-amber-400 to-yellow-600 text-black shadow-[0_0_20px_rgba(245,158,11,0.7)] flex items-center justify-center text-2xl sm:text-3xl shrink-0 group-hover:scale-115 group-hover:-rotate-12 transition-transform">
-                                    👑
-                                </div>
-                                <div className="flex flex-col min-w-0 flex-1 leading-tight">
-                                    <div className="flex items-center justify-between gap-1 mb-1">
-                                        <span className="text-xs sm:text-sm font-black text-amber-950 uppercase tracking-tight">Hall of Fame™</span>
-                                        <span className="bg-amber-500 text-black font-black text-[8.5px] sm:text-[9px] px-2 py-0.5 rounded-full uppercase tracking-wider shrink-0 shadow-sm">
-                                            CONNECT
-                                        </span>
+                            <div className="relative z-10 space-y-3">
+                                <div className="flex items-center gap-3">
+                                    <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-[#16A34A] to-emerald-700 text-white shadow-[0_0_25px_rgba(22,163,74,0.8)] flex items-center justify-center text-2xl shrink-0 group-hover:scale-110 group-hover:-rotate-6 transition-transform">
+                                        💳
                                     </div>
-                                    <span className="text-sm sm:text-base font-black text-[#111827] leading-snug group-hover:text-amber-600 transition-colors">
-                                        "Khiladi Bulao, Match Khelao!"
-                                    </span>
+                                    <div className="min-w-0 flex-1">
+                                        <h3 className="text-sm font-black text-[#C8FF2E] uppercase tracking-wider">Full Pay™</h3>
+                                        <p className="text-base font-black text-white leading-tight">"Tera Bhai Dega Pura Bill!"</p>
+                                    </div>
+                                </div>
+
+                                <p className="text-xs text-slate-300 font-medium leading-relaxed">
+                                    Pay complete turf amount upfront for instant slot locking. Collect offline at your ease.
+                                </p>
+
+                                {/* Proper Details Table */}
+                                <div className="p-3 rounded-2xl bg-black/60 border border-lime-500/30 backdrop-blur-md space-y-1.5 text-[11px]">
+                                    <div className="flex justify-between items-center text-slate-300 font-semibold border-b border-white/10 pb-1">
+                                        <span>Booking Speed</span>
+                                        <span className="text-[#C8FF2E] font-black">Instant 10s Lock</span>
+                                    </div>
+                                    <div className="flex justify-between items-center text-slate-300 font-semibold border-b border-white/10 pb-1">
+                                        <span>Upfront Pay</span>
+                                        <span className="text-emerald-400 font-black">100% Single Captain</span>
+                                    </div>
+                                    <div className="flex justify-between items-center text-slate-300 font-semibold">
+                                        <span>Settlement</span>
+                                        <span className="text-cyan-400 font-black">Collect Offline Cash/UPI</span>
+                                    </div>
                                 </div>
                             </div>
-                            <div className="mt-3 pt-2.5 border-t border-amber-300/40 flex items-center justify-between text-[10px] sm:text-[11px] font-bold text-amber-900">
-                                <span>Direct WhatsApp Challenge 📲</span>
-                                <span className="text-amber-700 font-extrabold group-hover:translate-x-1 transition-transform">Rankings →</span>
+
+                            <div className="relative z-10 mt-4 pt-3 border-t border-lime-500/30 flex items-center justify-between text-xs font-black text-[#C8FF2E] group-hover:text-white transition-colors">
+                                <span>Instant Full Booking</span>
+                                <span className="text-[#C8FF2E] group-hover:text-white font-black group-hover:translate-x-1.5 transition-transform">Book →</span>
                             </div>
-                        </button>
+                        </div>
+
+                        {/* 5. 👑 HALL OF FAME™ TEMPLATE */}
+                        <div
+                            onClick={() => navigate('/leaderboard')}
+                            className="group relative overflow-hidden w-full flex flex-col justify-between p-5 rounded-3xl border-2 border-amber-500/60 hover:border-amber-400 shadow-xl hover:shadow-[0_20px_45px_rgba(245,158,11,0.45)] transition-all duration-500 cursor-pointer hover:-translate-y-2 text-left min-h-[340px]"
+                        >
+                            {/* Background Photo */}
+                            <div 
+                                className="absolute inset-0 bg-cover bg-center transition-transform duration-700 ease-out group-hover:scale-110"
+                                style={{ backgroundImage: `url('/images/hall_of_fame_template.jpg')` }}
+                            />
+                            {/* Dark Gradient Tint & Frosted Overlay */}
+                            <div className="absolute inset-0 bg-gradient-to-t from-[#0B0F0C] via-[#0B0F0C]/90 to-[#0B0F0C]/60 backdrop-blur-[1px]" />
+                            {/* Neon Amber Shimmer Line */}
+                            <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-transparent via-amber-500 to-transparent" />
+
+                            <div className="relative z-10 space-y-3">
+                                <div className="flex items-center gap-3">
+                                    <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-amber-400 to-yellow-600 text-black shadow-[0_0_25px_rgba(245,158,11,0.8)] flex items-center justify-center text-2xl shrink-0 group-hover:scale-110 group-hover:-rotate-6 transition-transform">
+                                        👑
+                                    </div>
+                                    <div className="min-w-0 flex-1">
+                                        <h3 className="text-sm font-black text-amber-400 uppercase tracking-wider">Hall of Fame™</h3>
+                                        <p className="text-base font-black text-white leading-tight">"Khiladi Bulao, Match Khelao!"</p>
+                                    </div>
+                                </div>
+
+                                <p className="text-xs text-slate-300 font-medium leading-relaxed">
+                                    Challenge top city teams, climb rankings, find player squads, and earn championship trophies.
+                                </p>
+
+                                {/* Proper Details Table */}
+                                <div className="p-3 rounded-2xl bg-black/60 border border-amber-500/30 backdrop-blur-md space-y-1.5 text-[11px]">
+                                    <div className="flex justify-between items-center text-slate-300 font-semibold border-b border-white/10 pb-1">
+                                        <span>Rankings</span>
+                                        <span className="text-amber-400 font-black">City & Turf Top XI</span>
+                                    </div>
+                                    <div className="flex justify-between items-center text-slate-300 font-semibold border-b border-white/10 pb-1">
+                                        <span>Matchmaker</span>
+                                        <span className="text-orange-400 font-black">Direct WhatsApp Duel</span>
+                                    </div>
+                                    <div className="flex justify-between items-center text-slate-300 font-semibold">
+                                        <span>Awards</span>
+                                        <span className="text-yellow-400 font-black">MVP Badges & Trophies</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="relative z-10 mt-4 pt-3 border-t border-amber-500/30 flex items-center justify-between text-xs font-black text-amber-400 group-hover:text-white transition-colors">
+                                <span>Leaderboard & Squads</span>
+                                <span className="text-amber-400 group-hover:text-white font-black group-hover:translate-x-1.5 transition-transform">Rankings →</span>
+                            </div>
+                        </div>
                     </div>
 
                     {/* FLOATING SIDE LIVE CRICKET CHALLENGE POPUP (Dynamic to Indore / Active City) */}

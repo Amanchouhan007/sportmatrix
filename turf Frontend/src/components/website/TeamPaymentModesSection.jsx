@@ -9,44 +9,60 @@ export default function TeamPaymentModesSection({ onSelectMode, selectedMode = '
         {
             id: 'dare',
             icon: '🔥',
-            badge: '🔥 CHALLENGE MODE',
-            badgeBg: 'bg-[#B8F52A] text-[#121614] font-black border-[#B8F52A]',
-            isDare: true,
+            bgImage: '/images/dare_match_template.jpg',
+            borderColor: 'border-orange-500/60 hover:border-orange-400',
+            glowShadow: 'hover:shadow-[0_20px_45px_rgba(249,115,22,0.45)]',
+            accentColor: 'text-orange-400',
             title: 'Dare Match — "Dum Hai Toh Harake Dikha!"',
-            desc: '"Winner Plays FREE, Loser Bharega Pura Bill!" Both teams enter with 30% deposit. Settle after match result.',
-            example: '30% Deposit each · Winner: Full refund · Loser: Pays total match fee · Draw: Split 50-50',
-            cta: '🔥 Accept the Dare',
-            subText: 'Play first. Settle after the result.',
+            desc: 'Winner plays 100% FREE! Both teams enter with 30% advance deposit and settle after match result.',
+            tableData: [
+                { label: 'Winner Rule', val: '100% Free (Refund)', valColor: 'text-emerald-400' },
+                { label: 'Loser Rule', val: 'Pays Total Match Fee', valColor: 'text-red-400' },
+                { label: 'Advance Entry', val: '30% Refundable Deposit', valColor: 'text-amber-400' },
+            ],
+            cta: 'Play Dare Match →',
             steps: [
                 '1. Both teams deposit 30% security amount to lock match.',
                 '2. Play the match at the turf venue.',
-                '3. Match winner gets full deposit refund; losing team settles the ₹1,200 match fee.'
+                '3. Match winner gets full deposit refund; losing team settles the match fee.'
             ]
         },
         {
             id: 'split-50',
-            icon: '⚖️',
-            badge: 'MOST POPULAR',
-            badgeBg: 'bg-sky-100 text-sky-800 border-sky-300',
+            icon: '🤝',
+            bgImage: '/images/split_50_template.jpg',
+            borderColor: 'border-emerald-500/60 hover:border-emerald-400',
+            glowShadow: 'hover:shadow-[0_20px_45px_rgba(16,185,129,0.45)]',
+            accentColor: 'text-emerald-400',
             title: '50:50 Split — "Aadha Bill Tera, Aadha Mera!"',
-            desc: '"No Khat-Pat!" Both teams pay half (50%) of the booking amount to confirm the slot.',
-            example: 'Total: ₹1,200 · You Pay: ₹600 · Opponent: ₹600',
-            cta: 'Choose 50-50',
+            desc: 'Both captains pay half (50%) of the booking amount to confirm the slot.',
+            tableData: [
+                { label: 'Your Share', val: '50% (₹600 of ₹1,200)', valColor: 'text-emerald-400' },
+                { label: 'Opponent Share', val: '50% (₹600 of ₹1,200)', valColor: 'text-teal-400' },
+                { label: 'Auto Confirm', val: 'Auto WhatsApp Link', valColor: 'text-amber-400' },
+            ],
+            cta: 'Choose 50-50 →',
             steps: [
                 '1. You pay your half share (₹600) to initiate booking.',
                 '2. System automatically generates and sends payment link to Opponent Captain.',
-                '3. Booking confirms automatically once Opponent completes their ₹600 share.'
+                '3. Booking confirms automatically once Opponent completes their share.'
             ]
         },
         {
             id: 'per-player',
             icon: '👥',
-            badge: 'SPLIT PER PLAYER',
-            badgeBg: 'bg-amber-100 text-amber-800 border-amber-300',
+            bgImage: '/images/squad_split_template.jpg',
+            borderColor: 'border-blue-500/60 hover:border-blue-400',
+            glowShadow: 'hover:shadow-[0_20px_45px_rgba(59,130,246,0.45)]',
+            accentColor: 'text-blue-400',
             title: 'Squad Split — "Apna Hissa, Khud Bharo!"',
-            desc: '"Equal Pay!" Every player pays their individual share directly using personal payment links.',
-            example: 'Total: ₹1,200 · 2 Players: ₹600 each · 4 Players: ₹300 each · 6 Players: ₹200 each',
-            cta: 'Split Between Players',
+            desc: 'Every player pays their individual share directly using personal UPI payment links.',
+            tableData: [
+                { label: 'Squad Range', val: '2 to 14 Players', valColor: 'text-blue-400' },
+                { label: 'Per Player Cost', val: '₹150 – ₹300 / Head', valColor: 'text-cyan-400' },
+                { label: 'UPI Status', val: 'Live Teammate Tracking', valColor: 'text-emerald-400' },
+            ],
+            cta: 'Split Between Players →',
             steps: [
                 '1. Add player count (e.g. 6 players = ₹200/player).',
                 '2. Send personal WhatsApp payment links to teammates.',
@@ -56,14 +72,20 @@ export default function TeamPaymentModesSection({ onSelectMode, selectedMode = '
         {
             id: 'full',
             icon: '💳',
-            badge: 'FASTEST BOOKING',
-            badgeBg: 'bg-emerald-100 text-emerald-800 border-emerald-300',
-            title: 'I Pay Full Amount — "Tera Bhai Dega!"',
-            desc: '"Tera Bhai Dega Pura Bill!" Pay the complete turf amount upfront now and collect from your team later offline.',
-            example: 'Total: ₹1,200 · You Pay: ₹1,200 · Opponent: ₹0',
-            cta: 'Choose Full Pay',
+            bgImage: '/images/full_pay_template.jpg',
+            borderColor: 'border-lime-500/60 hover:border-lime-400',
+            glowShadow: 'hover:shadow-[0_20px_45px_rgba(132,204,22,0.45)]',
+            accentColor: 'text-[#C8FF2E]',
+            title: 'Full Pay — "Tera Bhai Dega!"',
+            desc: 'Pay complete turf amount upfront now and collect from your team later offline.',
+            tableData: [
+                { label: 'Booking Speed', val: 'Instant (10s Slot Lock)', valColor: 'text-[#C8FF2E]' },
+                { label: 'Upfront Pay', val: '100% Single Captain', valColor: 'text-emerald-400' },
+                { label: 'Settlement', val: 'Collect Offline / Cash', valColor: 'text-cyan-400' },
+            ],
+            cta: 'Choose Full Pay →',
             steps: [
-                '1. Pay the total match fee (₹1,200) upfront.',
+                '1. Pay the total match fee upfront.',
                 '2. Turf slot is locked and confirmed instantly.',
                 '3. Collect cash/UPI from your teammates at your convenience.'
             ]
@@ -86,113 +108,54 @@ export default function TeamPaymentModesSection({ onSelectMode, selectedMode = '
                     </p>
                 </div>
 
-                {/* 5 Cards Grid */}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {/* 4 Cards Grid */}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                     {paymentModes.map((mode) => {
                         const isSelected = selectedMode === mode.id
-                        if (mode.isDare) {
-                            return (
-                                <div
-                                    key={mode.id}
-                                    onClick={() => onSelectMode && onSelectMode(mode.id)}
-                                    className={`col-span-1 md:col-span-2 lg:col-span-1 relative overflow-hidden group cursor-pointer rounded-3xl p-6 transition-all duration-500 transform hover:-translate-y-1.5 text-white border-2 ${
-                                        isSelected ? 'border-[#B8F52A] shadow-2xl ring-4 ring-[#B8F52A]/30' : 'border-[#B8F52A]/70 hover:border-[#B8F52A]'
-                                    }`}
-                                >
-                                    {/* Layer 1: Night Turf Stadium Photo (Ken Burns Pan/Zoom) */}
-                                    <div 
-                                        className="absolute inset-0 bg-cover bg-center animate-kenburns" 
-                                        style={{ backgroundImage: `url('/images/dare_challenge_turf.png')` }} 
-                                    />
-
-                                    {/* Layer 2: Dark Athletic Grass Tint Overlay */}
-                                    <div className="absolute inset-0 bg-gradient-to-t from-[#121614] via-[#121614]/88 to-[#121614]/75 backdrop-blur-[1.5px]" />
-
-                                    {/* Layer 3: Sweeping Arena Floodlight Beam */}
-                                    <div className="absolute top-0 bottom-0 left-0 w-36 bg-gradient-to-r from-transparent via-[#B8F52A]/30 to-transparent animate-stadium-sweep pointer-events-none" />
-
-                                    {/* Layer 4: Pitch Glow Aura */}
-                                    <div className="absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-[#79C943]/25 via-emerald-600/10 to-transparent animate-pitch-pulse pointer-events-none" />
-
-                                    <div className="relative z-10 space-y-4">
-                                        <div className="flex justify-between items-start">
-                                            {/* Spinning Cricket Leather Ball / Trophy Icon */}
-                                            <div className="w-12 h-12 rounded-2xl bg-[#172019] border-2 border-[#B8F52A] flex items-center justify-center text-2xl shadow-[0_0_20px_rgba(184,255,42,0.5)] animate-cricket-spin">
-                                                🏏
-                                            </div>
-                                            <span className="text-[10px] px-3 py-1 rounded-full font-black uppercase tracking-wider bg-[#B8F52A] text-[#121614] border border-[#B8F52A] shadow-md animate-wicket-flash">
-                                                🏏 CRICKET CHALLENGE
-                                            </span>
-                                        </div>
-
-                                        <div>
-                                            <h3 className="text-xl font-black text-white uppercase tracking-wide flex items-center gap-2">
-                                                {mode.title}
-                                            </h3>
-                                            <p className="text-xs text-slate-200 mt-1 line-clamp-2 font-medium">
-                                                {mode.desc}
-                                            </p>
-                                        </div>
-
-                                        {/* Visual Example Box */}
-                                        <div className="p-3.5 rounded-2xl bg-black/75 border border-[#B8F52A]/30 text-xs text-slate-200 font-semibold space-y-1 backdrop-blur-md shadow-inner">
-                                            <div className="text-[10px] text-[#B8F52A] uppercase font-black tracking-wider flex items-center justify-between">
-                                                <span>Match Challenge Terms</span>
-                                                <span className="text-amber-400 font-extrabold">₹100 Deposit Each</span>
-                                            </div>
-                                            <div className="text-white text-[11px] font-bold">{mode.example}</div>
-                                        </div>
-
-                                        <div className="pt-2 flex items-center justify-between text-xs font-black text-[#D4FF45] group-hover:text-white transition-colors">
-                                            <span>Accept & Challenge Opponent</span>
-                                            <HiArrowRight className="w-4 h-4 transform group-hover:translate-x-1.5 transition-transform" />
-                                        </div>
-                                    </div>
-                                </div>
-                            )
-                        }
-
                         return (
                             <div
                                 key={mode.id}
                                 onClick={() => onSelectMode && onSelectMode(mode.id)}
-                                className={`relative overflow-hidden group cursor-pointer rounded-3xl p-6 transition-all duration-300 transform hover:-translate-y-1 bg-white border-2 flex flex-col justify-between ${
-                                    isSelected 
-                                        ? 'border-[#79C943] shadow-xl ring-4 ring-[#79C943]/15' 
-                                        : 'border-[#E3E8E1] hover:border-[#79C943]/50 hover:shadow-md'
+                                className={`relative overflow-hidden group cursor-pointer rounded-3xl p-5.5 transition-all duration-500 transform hover:-translate-y-2 border-2 flex flex-col justify-between min-h-[350px] ${mode.borderColor} ${mode.glowShadow} ${
+                                    isSelected ? 'ring-4 ring-offset-2 ring-emerald-500 shadow-2xl scale-[1.02]' : 'shadow-lg'
                                 }`}
                             >
-                                {/* Subtle Moving Background Light Shimmer */}
-                                <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-[#F6F7F4]/80 to-transparent opacity-0 group-hover:opacity-100 transition-opacity animate-moving-gradient pointer-events-none" />
+                                {/* Background Image */}
+                                <div 
+                                    className="absolute inset-0 bg-cover bg-center transition-transform duration-700 ease-out group-hover:scale-110"
+                                    style={{ backgroundImage: `url('${mode.bgImage}')` }}
+                                />
+                                {/* Dark Gradient Overlay */}
+                                <div className="absolute inset-0 bg-gradient-to-t from-[#0B0F0C] via-[#0B0F0C]/90 to-[#0B0F0C]/65 backdrop-blur-[1px]" />
 
-                                <div className="relative z-10 space-y-4">
-                                    <div className="flex justify-between items-start">
-                                        <div className="w-12 h-12 rounded-2xl bg-[#F6F7F4] border border-[#E3E8E1] flex items-center justify-center text-2xl shadow-xs group-hover:scale-105 transition-transform">
+                                <div className="relative z-10 space-y-3.5">
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-12 h-12 rounded-2xl bg-black/60 border border-white/20 flex items-center justify-center text-2xl shadow-md group-hover:scale-110 transition-transform">
                                             {mode.icon}
                                         </div>
-                                        <span className={`text-[10px] px-3 py-1 rounded-full font-black uppercase tracking-wider border ${mode.badgeBg}`}>
-                                            {mode.badge}
-                                        </span>
-                                    </div>
-
-                                    <div>
-                                        <h3 className="text-lg font-black text-[#172019] uppercase tracking-wide">
+                                        <h3 className={`text-base font-black uppercase tracking-wide leading-tight ${mode.accentColor}`}>
                                             {mode.title}
                                         </h3>
-                                        <p className="text-xs text-[#6B746D] mt-1 line-clamp-2 font-medium">
-                                            {mode.desc}
-                                        </p>
                                     </div>
 
-                                    <div className="p-3.5 rounded-2xl bg-[#F6F7F4] border border-[#E3E8E1] text-xs text-[#172019] font-semibold space-y-1">
-                                        <div className="text-[10px] text-[#6B746D] uppercase font-bold">Example Calculation</div>
-                                        <div>{mode.example}</div>
+                                    <p className="text-xs text-slate-300 font-medium leading-relaxed">
+                                        {mode.desc}
+                                    </p>
+
+                                    {/* Table of Details */}
+                                    <div className="p-3 rounded-2xl bg-black/60 border border-white/10 backdrop-blur-md space-y-1.5 text-[11px]">
+                                        {mode.tableData.map((row, rIdx) => (
+                                            <div key={rIdx} className="flex justify-between items-center text-slate-300 font-semibold border-b border-white/10 last:border-0 pb-1 last:pb-0">
+                                                <span>{row.label}</span>
+                                                <span className={`font-black ${row.valColor}`}>{row.val}</span>
+                                            </div>
+                                        ))}
                                     </div>
                                 </div>
 
-                                <div className="relative z-10 pt-4 flex items-center justify-between text-xs font-bold text-[#172019] group-hover:text-[#79C943] transition-colors border-t border-[#E3E8E1] mt-4">
-                                    <span>Select Payment Mode</span>
-                                    <HiArrowRight className="w-4 h-4 transform group-hover:translate-x-1 transition-transform" />
+                                <div className="relative z-10 pt-4 flex items-center justify-between text-xs font-black text-white group-hover:text-amber-300 transition-colors border-t border-white/15 mt-4">
+                                    <span>{mode.cta}</span>
+                                    <HiArrowRight className="w-4 h-4 transform group-hover:translate-x-1.5 transition-transform" />
                                 </div>
                             </div>
                         )

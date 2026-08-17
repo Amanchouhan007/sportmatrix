@@ -19,8 +19,6 @@ export default function BookingStep2Modes({
             title: 'DARE MATCH™',
             subtitle: '"Dum Hai Toh Harake Dikha!"',
             desc: `Winner Plays FREE, Loser Pays Match Rent! Both teams enter with 30% deposit (₹${Math.round(totalRent * 0.3).toLocaleString('en-IN')}).`,
-            badge: '30% DEPOSIT',
-            badgeBg: 'bg-gradient-to-r from-red-600 to-orange-500 text-white',
             borderColor: 'border-orange-400',
             bgGradient: 'from-orange-50 to-amber-50/30',
             calcText: `Deposit: ₹${Math.round(totalRent * 0.3).toLocaleString('en-IN')} (30%) · Winner: Full Refund · Loser Pays ₹${totalRent.toLocaleString('en-IN')}`,
@@ -31,8 +29,6 @@ export default function BookingStep2Modes({
             title: '50:50 SPLIT™',
             subtitle: '"Aadha Bill Tera, Aadha Mera!"',
             desc: 'Both teams pay half (50%) of the booking amount to confirm slot.',
-            badge: 'NO KHAT-PAT',
-            badgeBg: 'bg-[#10B981] text-white',
             borderColor: 'border-teal-400',
             bgGradient: 'from-teal-50 to-emerald-50/30',
             calcText: `Total: ₹${totalRent.toLocaleString('en-IN')} · You Pay: ₹${split50Amount.toLocaleString('en-IN')} · Opponent: ₹${split50Amount.toLocaleString('en-IN')}`,
@@ -43,8 +39,6 @@ export default function BookingStep2Modes({
             title: 'SQUAD SPLIT™',
             subtitle: '"Apna Hissa, Khud Bharo!"',
             desc: 'Every player pays their individual share directly using personal UPI links.',
-            badge: 'EQUAL PAY',
-            badgeBg: 'bg-blue-600 text-white',
             borderColor: 'border-blue-400',
             bgGradient: 'from-blue-50 to-indigo-50/30',
             calcText: `Total: ₹${totalRent.toLocaleString('en-IN')} · ${perPlayerCount} Players: ₹${perPlayerShareAmount.toLocaleString('en-IN')}/player`,
@@ -55,8 +49,6 @@ export default function BookingStep2Modes({
             title: 'FULL PAY™',
             subtitle: '"Tera Bhai Dega Pura Bill!"',
             desc: 'Pay complete turf rent upfront & collect from team offline.',
-            badge: 'FASTEST',
-            badgeBg: 'bg-[#16A34A] text-white',
             borderColor: 'border-emerald-400',
             bgGradient: 'from-emerald-50 to-teal-50/30',
             calcText: `Total: ₹${totalRent.toLocaleString('en-IN')} · You Pay: ₹${totalRent.toLocaleString('en-IN')} · Opponent: ₹0`,
@@ -90,9 +82,6 @@ export default function BookingStep2Modes({
                                     <div>
                                         <div className="flex items-center gap-2">
                                             <h3 className="text-base font-black text-[#111827]">{m.title}</h3>
-                                            <span className={`text-[9px] font-black px-2 py-0.5 rounded-full uppercase tracking-wider ${m.badgeBg}`}>
-                                                {m.badge}
-                                            </span>
                                         </div>
                                         <p className="text-xs font-black text-slate-700 mt-0.5">{m.subtitle}</p>
                                     </div>
