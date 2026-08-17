@@ -505,35 +505,35 @@ const resolveOriginCoordinates = (locString, userGPS, explicitCoords) => {
                                         👑
                                     </div>
                                     <div className="min-w-0 flex-1">
-                                        <h3 className="text-sm font-black text-amber-400 uppercase tracking-wider">Hall of Fame™</h3>
-                                        <p className="text-base font-black text-white leading-tight">"Khiladi Bulao, Match Khelao!"</p>
+                                        <h3 className="text-sm font-black text-amber-400 uppercase tracking-wider">Player Matchmaking™</h3>
+                                        <p className="text-base font-black text-white leading-tight">"Best Players Ke Sath Khelo!"</p>
                                     </div>
                                 </div>
 
                                 <p className="text-xs text-slate-300 font-medium leading-relaxed">
-                                    Challenge top city teams, climb rankings, find player squads, and earn championship trophies.
+                                    City ke best players aur top cricket teams ko match khelne ke liye bulao aur challenge karo.
                                 </p>
 
                                 {/* Proper Details Table */}
                                 <div className="p-3 rounded-2xl bg-black/60 border border-amber-500/30 backdrop-blur-md space-y-1.5 text-[11px]">
                                     <div className="flex justify-between items-center text-slate-300 font-semibold border-b border-white/10 pb-1">
-                                        <span>Rankings</span>
-                                        <span className="text-amber-400 font-black">City & Turf Top XI</span>
+                                        <span>Khiladi Invite</span>
+                                        <span className="text-amber-400 font-black">Top City Players</span>
                                     </div>
                                     <div className="flex justify-between items-center text-slate-300 font-semibold border-b border-white/10 pb-1">
-                                        <span>Matchmaker</span>
-                                        <span className="text-orange-400 font-black">Direct WhatsApp Duel</span>
+                                        <span>Open Challenge</span>
+                                        <span className="text-orange-400 font-black">Direct WhatsApp Invite</span>
                                     </div>
                                     <div className="flex justify-between items-center text-slate-300 font-semibold">
-                                        <span>Awards</span>
-                                        <span className="text-yellow-400 font-black">MVP Badges & Trophies</span>
+                                        <span>Rankings</span>
+                                        <span className="text-yellow-400 font-black">Top XI Leaderboard</span>
                                     </div>
                                 </div>
                             </div>
 
                             <div className="relative z-10 mt-4 pt-3 border-t border-amber-500/30 flex items-center justify-between text-xs font-black text-amber-400 group-hover:text-white transition-colors">
-                                <span>Leaderboard & Squads</span>
-                                <span className="text-amber-400 group-hover:text-white font-black group-hover:translate-x-1.5 transition-transform">Rankings →</span>
+                                <span>Best Players Se Khelo</span>
+                                <span className="text-amber-400 group-hover:text-white font-black group-hover:translate-x-1.5 transition-transform">Invite →</span>
                             </div>
                         </div>
                     </div>
