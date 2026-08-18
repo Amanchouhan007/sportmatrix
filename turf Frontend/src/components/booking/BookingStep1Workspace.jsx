@@ -76,11 +76,10 @@ export default function BookingStep1Workspace({
                                     key={hr}
                                     type="button"
                                     onClick={() => setDurationHours(hr)}
-                                    className={`px-5 py-2 rounded-full text-xs font-black uppercase tracking-wider transition-all cursor-pointer ${
-                                        durationHours === hr
+                                    className={`px-5 py-2 rounded-full text-xs font-black uppercase tracking-wider transition-all cursor-pointer ${durationHours === hr
                                             ? 'bg-[#111827] text-white shadow-xs'
                                             : 'text-slate-500 hover:text-[#111827]'
-                                    }`}
+                                        }`}
                                 >
                                     {hr} {hr === 1 ? 'HOUR' : 'HOURS'}
                                 </button>
@@ -122,27 +121,23 @@ export default function BookingStep1Workspace({
                                         py-3 sm:py-3.5 md:py-4
                                         px-1 sm:px-2
                                         rounded-2xl sm:rounded-[20px]
-                                        ${
-                                            isSelected
-                                                ? 'bg-[#111827] text-white border-2 border-[#10B981] shadow-lg scale-105'
-                                                : isToday
-                                                    ? 'bg-emerald-50 border-2 border-emerald-300 text-emerald-700 hover:border-emerald-500'
-                                                    : 'bg-white border border-[#E2E8F0] text-slate-500 hover:border-slate-400 hover:shadow-sm'
+                                        ${isSelected
+                                            ? 'bg-[#111827] text-white border-2 border-[#10B981] shadow-lg scale-105'
+                                            : isToday
+                                                ? 'bg-emerald-50 border-2 border-emerald-300 text-emerald-700 hover:border-emerald-500'
+                                                : 'bg-white border border-[#E2E8F0] text-slate-500 hover:border-slate-400 hover:shadow-sm'
                                         }`}
                                 >
-                                    <span className={`text-[9px] sm:text-[10px] font-black mb-0.5 sm:mb-1 tracking-wide ${
-                                        isSelected ? 'text-emerald-400' : isToday ? 'text-emerald-600' : 'text-slate-400'
-                                    }`}>
+                                    <span className={`text-[9px] sm:text-[10px] font-black mb-0.5 sm:mb-1 tracking-wide ${isSelected ? 'text-emerald-400' : isToday ? 'text-emerald-600' : 'text-slate-400'
+                                        }`}>
                                         {d.dayShort}
                                     </span>
-                                    <span className={`text-xl sm:text-2xl md:text-3xl font-black leading-none my-0.5 ${
-                                        isSelected ? 'text-white' : isToday ? 'text-emerald-700' : 'text-[#111827]'
-                                    }`}>
+                                    <span className={`text-xl sm:text-2xl md:text-3xl font-black leading-none my-0.5 ${isSelected ? 'text-white' : isToday ? 'text-emerald-700' : 'text-[#111827]'
+                                        }`}>
                                         {d.dateNum}
                                     </span>
-                                    <span className={`text-[9px] sm:text-[10px] font-bold mt-0.5 sm:mt-1 ${
-                                        isSelected ? 'text-slate-300' : isToday ? 'text-emerald-500' : 'text-slate-400'
-                                    }`}>
+                                    <span className={`text-[9px] sm:text-[10px] font-bold mt-0.5 sm:mt-1 ${isSelected ? 'text-slate-300' : isToday ? 'text-emerald-500' : 'text-slate-400'
+                                        }`}>
                                         {d.monthShort}
                                     </span>
                                 </button>
@@ -200,19 +195,18 @@ export default function BookingStep1Workspace({
                                         }
                                         setSelectedSlotTime(slot.id)
                                     }}
-                                    className={`py-3.5 px-3 rounded-[22px] text-center flex flex-col items-center justify-center gap-1 min-h-[76px] transition-all duration-200 ${
-                                        isSlotInSelectedRange
+                                    className={`py-3.5 px-3 rounded-[22px] text-center flex flex-col items-center justify-center gap-1 min-h-[76px] transition-all duration-200 ${isSlotInSelectedRange
                                             ? 'bg-[#10B981] text-white border-2 border-[#059669] shadow-lg shadow-emerald-500/20 scale-[1.02] cursor-pointer'
                                             : isBooked
-                                            ? 'bg-[#F8FAFC] text-slate-300 border border-slate-100 opacity-75 cursor-not-allowed'
-                                            : isMaintenance
-                                            ? 'bg-[#FEFCE8] text-[#854D0E] border-2 border-[#FDE047] cursor-not-allowed'
-                                            : isStaffUnavail
-                                            ? 'bg-[#F1F5F9] text-slate-600 border-2 border-slate-200 cursor-not-allowed'
-                                            : !canFulfillConsecutive && durationHours > 1
-                                            ? 'bg-slate-50 border border-slate-200 text-slate-400 opacity-60 cursor-not-allowed'
-                                            : 'bg-[#ECFDF5] border-2 border-[#10B981] hover:bg-emerald-100/60 text-slate-900 cursor-pointer shadow-xs'
-                                    }`}
+                                                ? 'bg-[#F8FAFC] text-slate-300 border border-slate-100 opacity-75 cursor-not-allowed'
+                                                : isMaintenance
+                                                    ? 'bg-[#FEFCE8] text-[#854D0E] border-2 border-[#FDE047] cursor-not-allowed'
+                                                    : isStaffUnavail
+                                                        ? 'bg-[#F1F5F9] text-slate-600 border-2 border-slate-200 cursor-not-allowed'
+                                                        : !canFulfillConsecutive && durationHours > 1
+                                                            ? 'bg-slate-50 border border-slate-200 text-slate-400 opacity-60 cursor-not-allowed'
+                                                            : 'bg-[#ECFDF5] border-2 border-[#10B981] hover:bg-emerald-100/60 text-slate-900 cursor-pointer shadow-xs'
+                                        }`}
                                 >
                                     <span className={`text-sm sm:text-base font-black tracking-tight ${isSlotInSelectedRange ? 'text-white' : isBooked ? 'text-slate-300 line-through' : isMaintenance ? 'text-[#854D0E]' : isStaffUnavail ? 'text-slate-700' : 'text-[#111827]'}`}>
                                         {slot.time}
@@ -267,11 +261,10 @@ export default function BookingStep1Workspace({
                     <button
                         type="button"
                         onClick={() => setHasVerifiedUmpire(!hasVerifiedUmpire)}
-                        className={`px-4 py-2 rounded-xl text-xs font-black transition-all cursor-pointer shrink-0 border ${
-                            hasVerifiedUmpire
+                        className={`px-4 py-2 rounded-xl text-xs font-black transition-all cursor-pointer shrink-0 border ${hasVerifiedUmpire
                                 ? 'bg-[#10B981] text-white border-emerald-600 shadow-sm'
                                 : 'bg-white text-slate-700 border-slate-300 hover:border-emerald-400'
-                        }`}
+                            }`}
                     >
                         {hasVerifiedUmpire ? '✓ UMPIRE ADDED' : '+ ADD UMPIRE'}
                     </button>

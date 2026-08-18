@@ -140,7 +140,6 @@ export default function StaffTournaments() {
                     <h1 className="text-2xl font-bold text-surface-900">Tournaments</h1>
                     <p className="text-surface-500 text-sm mt-1">View tournaments and manage matches</p>
                 </div>
-                <Button onClick={() => setIsCreateModalOpen(true)}>+ Create Tournament</Button>
             </div>
             
             <div className="bg-white rounded-xl shadow-sm border border-surface-200 overflow-hidden pt-4">
