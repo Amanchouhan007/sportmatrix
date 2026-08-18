@@ -218,12 +218,14 @@ export default function TournamentDashboard({ role = 'owner' }) {
                                 <span>Export Report</span>
                             </button>
                         </Link>
-                        <Link to={`${basePath}/create`}>
-                            <button className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 font-black text-xs tracking-wide shadow-lg shadow-emerald-500/25 transition-all transform hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-2 cursor-pointer">
-                                <HiPlus className="w-4 h-4 stroke-[3]" />
-                                <span>CREATE TOURNAMENT</span>
-                            </button>
-                        </Link>
+                        {role !== 'staff' && (
+                            <Link to={`${basePath}/create`}>
+                                <button className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 font-black text-xs tracking-wide shadow-lg shadow-emerald-500/25 transition-all transform hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-2 cursor-pointer">
+                                    <HiPlus className="w-4 h-4 stroke-[3]" />
+                                    <span>CREATE TOURNAMENT</span>
+                                </button>
+                            </Link>
+                        )}
                     </div>
                 </div>
 
@@ -235,11 +237,13 @@ export default function TournamentDashboard({ role = 'owner' }) {
                     <span className="text-xs font-black uppercase text-slate-500 tracking-wider flex items-center gap-2">
                         <HiBolt className="w-4 h-4 text-amber-500" /> QUICK ACTION HUB
                     </span>
-                    <span className="text-[11px] font-semibold text-slate-400">7 Module Controls</span>
+                    <span className="text-[11px] font-semibold text-slate-400">
+                        {role !== 'staff' ? '7 Module Controls' : '6 Management Controls'}
+                    </span>
                 </div>
-                <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3">
+                <div className={`grid grid-cols-2 sm:grid-cols-3 ${role !== 'staff' ? 'lg:grid-cols-7' : 'lg:grid-cols-6'} gap-3`}>
                     {[
-                        { title: 'New Tournament', icon: <HiPlus />, path: '/create', color: 'bg-emerald-500/10 text-emerald-600 border-emerald-200/80' },
+                        ...(role !== 'staff' ? [{ title: 'New Tournament', icon: <HiPlus />, path: '/create', color: 'bg-emerald-500/10 text-emerald-600 border-emerald-200/80' }] : []),
                         { title: 'Team Roster', icon: <HiUserGroup />, path: '/registrations', color: 'bg-indigo-500/10 text-indigo-600 border-indigo-200/80' },
                         { title: 'Auto Fixtures', icon: <HiChartBar />, path: '/fixtures', color: 'bg-blue-500/10 text-blue-600 border-blue-200/80' },
                         { title: 'Live Matches', icon: <HiPlay />, path: '/matches', color: 'bg-purple-500/10 text-purple-600 border-purple-200/80' },

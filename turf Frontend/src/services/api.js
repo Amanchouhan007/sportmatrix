@@ -5,24 +5,54 @@ export const SERVER_URL = import.meta.env.VITE_SERVER_URL || 'http://localhost:5
 
 const api = axios.create({
     baseURL: API_BASE_URL,
-    timeout: 2500,
+    timeout: 5000,
     headers: {
         'Content-Type': 'application/json'
     }
 });
 
-// Request Interceptor to inject Authorization Bearer token
+// Request Interceptor: Inject JWT Auth Token
 api.interceptors.request.use(
     (config) => {
-        const token = localStorage.getItem('token');
+        const token = localStorage.getItem('token') || localStorage.getItem('sport_matrix_token');
         if (token) {
             config.headers['Authorization'] = `Bearer ${token}`;
         }
         return config;
     },
+    (error) => Promise.reject(error)
+);
+
+// Response Interceptor: Gracefully handle network disconnects or API errors without crashing UI
+api.interceptors.response.use(
+    (response) => response.data || response,
     (error) => {
-        return Promise.reject(error);
+        const customError = {
+            success: false,
+            message: error.response?.data?.message || error.message || 'Server unreachable. Using local fallback.',
+            status: error.response?.status || 500,
+            isNetworkError: !error.response
+        };
+        console.warn('[API Client Warning]:', customError.message);
+        return Promise.reject(customError);
     }
 );
+
+// Non-breaking Helper Wrappers for UI Components
+export const getApi = async (url, params = {}) => {
+    try {
+        return await api.get(url, { params });
+    } catch (err) {
+        return { success: false, error: err };
+    }
+};
+
+export const postApi = async (url, data = {}) => {
+    try {
+        return await api.post(url, data);
+    } catch (err) {
+        return { success: false, error: err };
+    }
+};
 
 export default api;

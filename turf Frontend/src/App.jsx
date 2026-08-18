@@ -2,6 +2,7 @@ import { lazy, Suspense } from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { ToastProvider } from './components/ui/Toast'
 import PageLoader from './components/ui/PageLoader'
+import ScrollToTop from './components/ui/ScrollToTop'
 import { AuthProvider } from './context/AuthContext'
 import ProtectedRoute from './routes/ProtectedRoute'
 
@@ -109,6 +110,7 @@ export default function App() {
   return (
     <AuthProvider>
       <BrowserRouter>
+        <ScrollToTop />
         <ToastProvider>
           <Suspense fallback={<PageLoader text="Loading SportMatrix..." />}>
             <Routes>
@@ -207,7 +209,7 @@ export default function App() {
                 <Route path="tournaments" element={<TournamentAllPage role="staff" />} />
                 <Route path="tournaments/dashboard" element={<TournamentDashboard role="staff" />} />
                 <Route path="tournaments/all" element={<TournamentAllPage role="staff" />} />
-                <Route path="tournaments/create" element={<TournamentCreatePage role="staff" />} />
+                <Route path="tournaments/create" element={<Navigate to="/staff/tournaments/dashboard" replace />} />
                 <Route path="tournaments/pending" element={<TournamentPendingPage role="staff" />} />
                 <Route path="tournaments/categories" element={<TournamentCategoriesPage />} />
                 <Route path="tournaments/registrations" element={<TournamentRegistrationsPage />} />

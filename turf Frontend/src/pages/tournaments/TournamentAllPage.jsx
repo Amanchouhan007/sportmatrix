@@ -159,11 +159,13 @@ export default function TournamentAllPage({ role = 'owner' }) {
                     </h1>
                     <p className="text-surface-500 text-sm mt-0.5 font-medium">Browse, review, and manage all scheduled and ongoing tournaments</p>
                 </div>
-                <Link to={`${basePath}/create`}>
-                    <Button className="shadow-lg shadow-primary-500/10 cursor-pointer">
-                        <HiPlus className="w-5 h-5 mr-1" /> Create Tournament
-                    </Button>
-                </Link>
+                {role !== 'staff' && (
+                    <Link to={`${basePath}/create`}>
+                        <Button className="shadow-lg shadow-primary-500/10 cursor-pointer">
+                            <HiPlus className="w-5 h-5 mr-1" /> Create Tournament
+                        </Button>
+                    </Link>
+                )}
             </div>
 
             {/* Filter Tabs & Search Bar */}

@@ -15,7 +15,7 @@ export default function CorporateBookingModal({ isOpen, onClose }) {
         email: '',
         eventType: 'Corporate Tournament',
         city: 'Indore',
-        estimatedPlayers: 'Number of Players',
+        estimatedPlayers: '10-20 Players',
         budget: '₹25,000 - ₹50,000',
         eventDate: ''
     })
@@ -167,12 +167,12 @@ export default function CorporateBookingModal({ isOpen, onClose }) {
                                     }
                                 }}
                             >
-                                <option value="Number of Players">Number of Players</option>
                                 <option value="10-20 Players">10-20 Players</option>
                                 <option value="20-30 Players">20-30 Players</option>
                                 <option value="30-40 Players">30-40 Players</option>
                                 <option value="40-50 Players">40-50 Players</option>
                                 <option value="100+ Players (Full Arena Hire)">100+ Players (Full Arena Hire)</option>
+                                <option value="Number of Players">Number of Players</option>
                                 <option value="CUSTOM">✏️ Custom / Type Manually...</option>
                             </Select>
 

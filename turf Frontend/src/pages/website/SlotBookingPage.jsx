@@ -153,6 +153,13 @@ export default function SlotBookingPage() {
     // Booking Steps (1 to 4)
     const [activeStep, setActiveStep] = useState(1)
 
+    // Scroll to top of page whenever booking step changes
+    useEffect(() => {
+        window.scrollTo({ top: 0, left: 0, behavior: 'instant' })
+        document.documentElement.scrollTop = 0
+        document.body.scrollTop = 0
+    }, [activeStep])
+
     const [durationHours, setDurationHours] = useState(1)
     const [dateList] = useState(generateUpcomingDays())
     const [selectedDateObj, setSelectedDateObj] = useState(dateList[0])
@@ -180,7 +187,7 @@ export default function SlotBookingPage() {
         if (modeParam === 'dare') return 'DARE_TO_PLAY'
         if (modeParam === 'split50' || modeParam === 'split-50') return 'SPLIT_50_50'
         if (modeParam === 'per_player' || modeParam === 'per-player') return 'PER_PLAYER'
-        return 'FULL_PAY'
+        return 'DARE_TO_PLAY'
     })
 
     const [perPlayerCount, setPerPlayerCount] = useState(6)
@@ -363,10 +370,10 @@ export default function SlotBookingPage() {
                                     onClick={() => isPast && setActiveStep(step.num)}
                                     disabled={isDisabled}
                                     className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center gap-1.5 whitespace-nowrap shrink-0 ${isActive
-                                            ? 'bg-[#111827] text-white shadow-xs'
-                                            : isPast
-                                                ? 'bg-white text-[#10B981] border border-emerald-300 hover:bg-emerald-50 cursor-pointer'
-                                                : 'bg-slate-100 text-slate-400 border border-slate-200 cursor-not-allowed opacity-60'
+                                        ? 'bg-[#111827] text-white shadow-xs'
+                                        : isPast
+                                            ? 'bg-white text-[#10B981] border border-emerald-300 hover:bg-emerald-50 cursor-pointer'
+                                            : 'bg-slate-100 text-slate-400 border border-slate-200 cursor-not-allowed opacity-60'
                                         }`}
                                 >
                                     {isPast && <HiCheck className="w-3.5 h-3.5 text-[#10B981]" />}
