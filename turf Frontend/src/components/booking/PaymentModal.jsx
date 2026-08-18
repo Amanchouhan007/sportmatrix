@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { 
   HiShieldCheck, 
@@ -35,9 +35,17 @@ export default function PaymentModal({
 }) {
   if (!isOpen) return null;
 
+  const modalBodyRef = useRef(null);
+
   // Step state: 1 = Select Method, 2 = Payment Form, 3 = Processing/OTP, 4 = Success Result
   const [step, setStep] = useState(1);
   const [selectedMethod, setSelectedMethod] = useState('upi');
+
+  useEffect(() => {
+    if (modalBodyRef.current) {
+      modalBodyRef.current.scrollTop = 0;
+    }
+  }, [step]);
 
   // Step 2 Form States
   // Card
@@ -370,7 +378,7 @@ export default function PaymentModal({
         )}
 
         {/* MODAL BODY */}
-        <div className="p-6 space-y-6 overflow-y-auto custom-scrollbar flex-1">
+        <div ref={modalBodyRef} className="p-6 space-y-6 overflow-y-auto custom-scrollbar flex-1">
 
           {/* STEP 1: PAYMENT METHOD SELECTION */}
           {step === 1 && (

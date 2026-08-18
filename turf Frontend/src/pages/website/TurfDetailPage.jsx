@@ -160,7 +160,7 @@ export default function TurfDetailPage() {
                 const parsed = JSON.parse(saved);
                 if (Array.isArray(parsed) && parsed.length > 0) return parsed;
             }
-        } catch (e) {}
+        } catch (e) { }
         return initialMedia;
     });
 
@@ -210,7 +210,7 @@ export default function TurfDetailPage() {
         setCustomMediaList(updatedMedia);
         try {
             localStorage.setItem(`turf_media_${activeTurf.id}`, JSON.stringify(updatedMedia));
-        } catch (e) {}
+        } catch (e) { }
         try {
             await fetch(`http://localhost:5000/api/v1/turfs/${activeTurf.id}/media`, {
                 method: 'PUT',
@@ -270,8 +270,8 @@ export default function TurfDetailPage() {
         { id: 'd-8', fullDateString: '2026-08-16', dayShort: 'Sun', dateNum: 16, monthShort: 'Aug', formattedLabel: 'SUNDAY, 16 AUG' },
     ];
     const [selectedDateObj, setSelectedDateObj] = useState(dateList[0]);
-    const [paymentMode, setPaymentMode] = useState('full');
-    const [expandedAccordionMode, setExpandedAccordionMode] = useState('full');
+    const [paymentMode, setPaymentMode] = useState('dare');
+    const [expandedAccordionMode, setExpandedAccordionMode] = useState('dare');
     const [customSplitMyShare, setCustomSplitMyShare] = useState(1200);
     const [captainName, setCaptainName] = useState('Rahul Sharma');
     const [captainPhone, setCaptainPhone] = useState('+91 98765 43210');
@@ -342,8 +342,8 @@ export default function TurfDetailPage() {
                     ? dareDepositAmount
                     : Math.round(totalRent / perPlayerCount);
 
-    const opponentShare = paymentMode === 'full' 
-        ? 0 
+    const opponentShare = paymentMode === 'full'
+        ? 0
         : paymentMode === 'dare'
             ? dareDepositAmount
             : Math.max(0, totalRent - myShare);
@@ -578,7 +578,7 @@ export default function TurfDetailPage() {
                         {/* Booking Sector — Clean 4-Step Flow Starting Directly on Date & Time */}
                         <div className="relative">
                             <div className="relative bg-white border border-[#E5E7EB] rounded-[20px] p-6 sm:p-8 shadow-[0_15px_45px_rgba(0,0,0,0.08)] space-y-6">
-                                
+
                                 {/* Top 4-Step Tab Navigation */}
                                 <div className="flex items-center gap-2 sm:gap-3 overflow-x-auto pb-4 pt-1 no-scrollbar border-b border-[#E2E8F0] mb-6">
                                     {[
@@ -598,13 +598,12 @@ export default function TurfDetailPage() {
                                                 onClick={() => {
                                                     if (isPast) setBookingStep(st.num)
                                                 }}
-                                                className={`px-5 py-2.5 rounded-full text-xs font-black uppercase tracking-wider whitespace-nowrap transition-all duration-200 flex items-center gap-2 shadow-xs ${
-                                                    isActive
+                                                className={`px-5 py-2.5 rounded-full text-xs font-black uppercase tracking-wider whitespace-nowrap transition-all duration-200 flex items-center gap-2 shadow-xs ${isActive
                                                         ? 'bg-[#111827] text-white border border-[#111827] shadow-md cursor-default'
                                                         : isPast
-                                                        ? 'bg-white text-[#10B981] border border-emerald-300 hover:bg-emerald-50 cursor-pointer'
-                                                        : 'bg-slate-100 text-slate-400 border border-[#E2E8F0] cursor-not-allowed opacity-50 select-none'
-                                                }`}
+                                                            ? 'bg-white text-[#10B981] border border-emerald-300 hover:bg-emerald-50 cursor-pointer'
+                                                            : 'bg-slate-100 text-slate-400 border border-[#E2E8F0] cursor-not-allowed opacity-50 select-none'
+                                                    }`}
                                             >
                                                 {isPast && <span>✓</span>}
                                                 <span>{st.label}</span>
@@ -644,11 +643,10 @@ export default function TurfDetailPage() {
                                                                 setDuration(hr)
                                                                 setSelectedSlot(null)
                                                             }}
-                                                            className={`px-4 py-2 rounded-full text-xs font-black uppercase tracking-wider transition-all cursor-pointer ${
-                                                                duration === hr
+                                                            className={`px-4 py-2 rounded-full text-xs font-black uppercase tracking-wider transition-all cursor-pointer ${duration === hr
                                                                     ? 'bg-[#111827] text-white shadow-xs'
                                                                     : 'text-slate-500 hover:text-[#111827]'
-                                                            }`}
+                                                                }`}
                                                         >
                                                             {hr} {hr === 1 ? 'HOUR' : 'HOURS'}
                                                         </button>
@@ -670,11 +668,10 @@ export default function TurfDetailPage() {
                                                                 setSelectedDateObj(d)
                                                                 setSelectedDate(d.fullDateString)
                                                             }}
-                                                            className={`flex-shrink-0 w-20 py-4 px-2 rounded-[20px] flex flex-col items-center justify-center transition-all duration-200 cursor-pointer ${
-                                                                isSel
+                                                            className={`flex-shrink-0 w-20 py-4 px-2 rounded-[20px] flex flex-col items-center justify-center transition-all duration-200 cursor-pointer ${isSel
                                                                     ? 'bg-[#111827] text-white border-2 border-[#10B981] shadow-md scale-[1.02]'
                                                                     : 'bg-white border border-[#E2E8F0] text-slate-500 hover:border-slate-400 shadow-xs'
-                                                            }`}
+                                                                }`}
                                                         >
                                                             <span className={`text-xs font-bold mb-1 ${isSel ? 'text-slate-300' : 'text-slate-500'}`}>{d.dayShort}</span>
                                                             <span className={`text-3xl font-black my-0.5 ${isSel ? 'text-white' : 'text-[#111827]'}`}>{d.dateNum}</span>
@@ -731,19 +728,18 @@ export default function TurfDetailPage() {
                                                                 if (!canFulfillConsecutive && duration > 1) return;
                                                                 handleSelectSlot(s.id)
                                                             }}
-                                                            className={`py-3.5 px-3 rounded-[22px] text-center flex flex-col items-center justify-center gap-1 min-h-[76px] transition-all duration-200 ${
-                                                                isSlotInSelectedRange
+                                                            className={`py-3.5 px-3 rounded-[22px] text-center flex flex-col items-center justify-center gap-1 min-h-[76px] transition-all duration-200 ${isSlotInSelectedRange
                                                                     ? 'bg-[#10B981] text-white border-2 border-[#059669] shadow-lg shadow-emerald-500/20 scale-[1.02] cursor-pointer'
                                                                     : isBooked
-                                                                    ? 'bg-[#F8FAFC] text-slate-300 border border-slate-100 opacity-75 cursor-not-allowed'
-                                                                    : isMaintenance
-                                                                    ? 'bg-[#FEFCE8] text-[#854D0E] border-2 border-[#FDE047] cursor-not-allowed'
-                                                                    : isStaffUnavail
-                                                                    ? 'bg-[#F1F5F9] text-slate-600 border-2 border-slate-200 cursor-not-allowed'
-                                                                    : !canFulfillConsecutive && duration > 1
-                                                                    ? 'bg-slate-50 border border-slate-200 text-slate-400 opacity-60 cursor-not-allowed'
-                                                                    : 'bg-[#ECFDF5] border-2 border-[#10B981] hover:bg-emerald-100/60 text-slate-900 cursor-pointer shadow-xs'
-                                                            }`}
+                                                                        ? 'bg-[#F8FAFC] text-slate-300 border border-slate-100 opacity-75 cursor-not-allowed'
+                                                                        : isMaintenance
+                                                                            ? 'bg-[#FEFCE8] text-[#854D0E] border-2 border-[#FDE047] cursor-not-allowed'
+                                                                            : isStaffUnavail
+                                                                                ? 'bg-[#F1F5F9] text-slate-600 border-2 border-slate-200 cursor-not-allowed'
+                                                                                : !canFulfillConsecutive && duration > 1
+                                                                                    ? 'bg-slate-50 border border-slate-200 text-slate-400 opacity-60 cursor-not-allowed'
+                                                                                    : 'bg-[#ECFDF5] border-2 border-[#10B981] hover:bg-emerald-100/60 text-slate-900 cursor-pointer shadow-xs'
+                                                                }`}
                                                         >
                                                             <span className={`text-sm sm:text-base font-black tracking-tight ${isSlotInSelectedRange ? 'text-white' : isBooked ? 'text-slate-300 line-through' : isMaintenance ? 'text-[#854D0E]' : isStaffUnavail ? 'text-slate-700' : 'text-[#111827]'}`}>
                                                                 {formattedTime(s.time)}
@@ -800,15 +796,13 @@ export default function TurfDetailPage() {
 
                                             {/* ADD VERIFIED UMPIRE ADD-ON (Tier 2 Verification) - Only shown if Turf Owner enabled service */}
                                             {isTurfUmpireAvailable && (
-                                                <div className={`mt-5 p-4 sm:p-5 rounded-2xl border-2 transition-all duration-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 ${
-                                                    hasVerifiedUmpire 
-                                                        ? 'bg-emerald-50/80 border-[#10B981] shadow-md shadow-emerald-500/10' 
+                                                <div className={`mt-5 p-4 sm:p-5 rounded-2xl border-2 transition-all duration-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 ${hasVerifiedUmpire
+                                                        ? 'bg-emerald-50/80 border-[#10B981] shadow-md shadow-emerald-500/10'
                                                         : 'bg-white border-slate-200 hover:border-emerald-300 shadow-xs'
-                                                }`}>
+                                                    }`}>
                                                     <div className="flex items-start gap-3.5">
-                                                        <div className={`w-11 h-11 rounded-2xl flex items-center justify-center text-xl font-bold shrink-0 transition-colors ${
-                                                            hasVerifiedUmpire ? 'bg-[#10B981] text-white shadow-md shadow-emerald-500/20' : 'bg-slate-100 text-slate-700'
-                                                        }`}>
+                                                        <div className={`w-11 h-11 rounded-2xl flex items-center justify-center text-xl font-bold shrink-0 transition-colors ${hasVerifiedUmpire ? 'bg-[#10B981] text-white shadow-md shadow-emerald-500/20' : 'bg-slate-100 text-slate-700'
+                                                            }`}>
                                                             ⚖️
                                                         </div>
                                                         <div>
@@ -829,11 +823,10 @@ export default function TurfDetailPage() {
                                                             setHasVerifiedUmpire(!hasVerifiedUmpire)
                                                             if (addToast) addToast(!hasVerifiedUmpire ? '✓ Added Verified Umpire (+₹300) to booking!' : 'Removed Verified Umpire add-on', 'info')
                                                         }}
-                                                        className={`px-5 py-2.5 rounded-xl font-black text-xs transition-all cursor-pointer whitespace-nowrap w-full sm:w-auto text-center ${
-                                                            hasVerifiedUmpire 
-                                                                ? 'bg-emerald-700 hover:bg-emerald-800 text-white shadow-xs' 
+                                                        className={`px-5 py-2.5 rounded-xl font-black text-xs transition-all cursor-pointer whitespace-nowrap w-full sm:w-auto text-center ${hasVerifiedUmpire
+                                                                ? 'bg-emerald-700 hover:bg-emerald-800 text-white shadow-xs'
                                                                 : 'bg-[#10B981] hover:bg-emerald-600 text-white shadow-md shadow-emerald-500/20'
-                                                        }`}
+                                                            }`}
                                                     >
                                                         {hasVerifiedUmpire ? '✓ Added (+₹300)' : '+ Add ₹300'}
                                                     </button>
@@ -877,20 +870,6 @@ export default function TurfDetailPage() {
                                         <div className="space-y-4">
                                             {[
                                                 {
-                                                    id: 'full',
-                                                    icon: '💳',
-                                                    title: 'I pay full amount',
-                                                    desc: `You pay ₹${totalRent.toLocaleString('en-IN')} now. Collect from your team later offline.`,
-                                                    details: {
-                                                        youPay: `₹${totalRent.toLocaleString('en-IN')}`,
-                                                        youPaySub: 'Your Initial Share',
-                                                        opponentPay: '₹0 (Free Invite)',
-                                                        opponentPaySub: 'Opponent Required Share',
-                                                        ruleTitle: 'CONDITION RULE',
-                                                        rule: 'Slot 100% Locked immediately. No opponent payment required.'
-                                                    }
-                                                },
-                                                {
                                                     id: 'dare',
                                                     icon: '🔥',
                                                     title: 'Dare to play — Loser pays all',
@@ -933,6 +912,20 @@ export default function TurfDetailPage() {
                                                         rule: `Rent divided equally across ${perPlayerCount} players. Payment links generated automatically for each slot.`
                                                     }
                                                 },
+                                                {
+                                                    id: 'full',
+                                                    icon: '💳',
+                                                    title: 'I pay full amount',
+                                                    desc: `You pay ₹${totalRent.toLocaleString('en-IN')} now. Collect from your team later offline.`,
+                                                    details: {
+                                                        youPay: `₹${totalRent.toLocaleString('en-IN')}`,
+                                                        youPaySub: 'Your Initial Share',
+                                                        opponentPay: '₹0 (Free Invite)',
+                                                        opponentPaySub: 'Opponent Required Share',
+                                                        ruleTitle: 'CONDITION RULE',
+                                                        rule: 'Slot 100% Locked immediately. No opponent payment required.'
+                                                    }
+                                                },
                                             ].map((opt) => {
                                                 const isSelected = paymentMode === opt.id
                                                 const isExpanded = expandedAccordionMode === opt.id
@@ -940,11 +933,10 @@ export default function TurfDetailPage() {
                                                 return (
                                                     <div
                                                         key={opt.id}
-                                                        className={`rounded-[22px] border transition-all duration-200 overflow-hidden ${
-                                                            isSelected
+                                                        className={`rounded-[22px] border transition-all duration-200 overflow-hidden ${isSelected
                                                                 ? 'bg-emerald-50/60 border-2 border-[#10B981] shadow-md ring-2 ring-[#10B981]/20'
                                                                 : 'bg-white border-[#E2E8F0] hover:border-[#10B981]/50 hover:shadow-xs'
-                                                        }`}
+                                                            }`}
                                                     >
                                                         {/* Card Header Bar */}
                                                         <div
@@ -993,11 +985,10 @@ export default function TurfDetailPage() {
                                                                                             e.stopPropagation()
                                                                                             setPerPlayerCount(num)
                                                                                         }}
-                                                                                        className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer border ${
-                                                                                            perPlayerCount === num
+                                                                                        className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer border ${perPlayerCount === num
                                                                                                 ? 'bg-[#111827] text-[#C8FF2E] border-[#111827] shadow-sm scale-105'
                                                                                                 : 'bg-slate-100 text-slate-700 border-slate-200 hover:bg-slate-200'
-                                                                                        }`}
+                                                                                            }`}
                                                                                     >
                                                                                         {num} Players
                                                                                     </button>
@@ -1157,9 +1148,8 @@ export default function TurfDetailPage() {
                                                         {teammates.map(member => (
                                                             <div key={member.id} className="bg-white border border-[#E5E7EB] rounded-xl p-2.5 flex items-center justify-between text-xs shadow-xs">
                                                                 <div className="flex items-center gap-2">
-                                                                    <div className={`w-6 h-6 rounded-full flex items-center justify-center font-bold text-[10px] ${
-                                                                        member.tag === 'You' ? 'bg-blue-50 text-blue-600 border border-blue-200' : 'bg-slate-100 text-[#6B7280]'
-                                                                    }`}>
+                                                                    <div className={`w-6 h-6 rounded-full flex items-center justify-center font-bold text-[10px] ${member.tag === 'You' ? 'bg-blue-50 text-blue-600 border border-blue-200' : 'bg-slate-100 text-[#6B7280]'
+                                                                        }`}>
                                                                         {member.tag}
                                                                     </div>
                                                                     <div>
@@ -1169,11 +1159,10 @@ export default function TurfDetailPage() {
                                                                         </div>
                                                                     </div>
                                                                 </div>
-                                                                <span className={`text-[10px] px-2.5 py-0.5 rounded-full font-black border ${
-                                                                    member.status === 'Paid' || member.isCaptain
+                                                                <span className={`text-[10px] px-2.5 py-0.5 rounded-full font-black border ${member.status === 'Paid' || member.isCaptain
                                                                         ? 'bg-green-50 text-[#16A34A] border-green-200'
                                                                         : 'bg-amber-50 text-amber-700 border-amber-200'
-                                                                }`}>
+                                                                    }`}>
                                                                     {member.isCaptain || member.status === 'Paid' ? 'Paid' : 'Pending'}
                                                                 </span>
                                                             </div>
