@@ -1,0 +1,95 @@
+# Guest User Data Storage – Secure Implementation Plan
+
+## Goal
+Enable the system to capture and persist minimal user information (e.g., name, mobile, email) for bookings made without a logged‑in account, while ensuring data security, privacy compliance, and protection against abuse.
+
+## User Review Required
+> [!IMPORTANT] Review the proposed data model and security controls. Confirm any regulatory requirements (e.g., GDPR, local data protection laws) that may affect storage of personal data without explicit user authentication.
+
+## Open Questions
+- Should we collect **email** in addition to **mobile** for verification, or rely on mobile only?
+- What **retention period** is acceptable for guest data (e.g., delete after 90 days of completed booking)?
+- Do we need **CAPTCHA** or **rate‑limiting** on the guest‑booking endpoint?
+- Are there any **encryption‑at‑rest** mandates for storing personal identifiers?
+- Should we flag guest records for later **anonymisation** or **export** on user request?
+
+## Proposed Changes
+---
+### 1. Database Schema
+- **Create `guest_users` table** to hold minimal identifiable data.
+  - `id` VARCHAR(50) PRIMARY KEY (UUID)
+  - `name` VARCHAR(100) NOT NULL
+  - `mobile_number` VARCHAR(20) NOT NULL
+  - `email` VARCHAR(100) NULL (optional)
+  - `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  - `expires_at` TIMESTAMP NULL (set based on retention policy)
+  - `hashed_mobile` CHAR(64) NULL (store SHA‑256 hash for lookup without exposing raw value)
+- **Modify `bookings` table**
+  - Add nullable `guest_user_id` VARCHAR(50) FOREIGN KEY REFERENCES `guest_users(id)` ON DELETE SET NULL.
+  - Keep existing `user_id` for authenticated users.
+- **Add indexes** on `guest_users.mobile_number` (hashed column) for fast lookup.
+
+---
+### 2. API Layer (Backend)
+- **New endpoint** `POST /api/guest-bookings` (or extend existing booking API to accept a `guest` payload).
+  - Accept JSON: `{ name, mobile, email?, slotId, paymentInfo? }`.
+  - Validate input server‑side (length, format, regex for mobile/email).
+  - **Rate limiting**: 5 requests per minute per IP; configurable via middleware.
+  - **CAPTCHA** integration (Google reCAPTCHA v3) to mitigate bots.
+- **Workflow**
+  1. Validate payload.
+  2. Generate a **guest_user_id** (UUID).
+  3. Store guest data in `guest_users`.
+  4. Create booking record referencing `guest_user_id`.
+  5. If payment is required, proceed with existing payment flow, linking via `booking_id`.
+  6. Return a **booking confirmation token** to the client (no session required).
+- **Audit logging**: Insert a row into `audit_logs` (or existing log table) noting creation of a guest user and booking.
+
+---
+### 3. Security Measures
+- **Encryption at rest**: Enable MySQL Transparent Data Encryption (TDE) or encrypt `guest_users` columns using `AES_ENCRYPT` for `mobile_number` and `email`.
+- **Hashing**: Store a SHA‑256 hash of the mobile number to allow lookup (e.g., if the same guest re‑books) without revealing raw data.
+- **PCI‑DSS** compliance for payment data remains unchanged (handled by `payments` table).
+- **Input sanitisation**: Use parameterised queries (already present with `mysql2/promise`).
+- **CORS & CSRF**: Ensure the endpoint respects existing CORS policies and includes CSRF tokens if the frontend uses them.
+- **Data retention script**: Add a scheduled job (cron) that **purges** guest records older than the configured retention period (e.g., 90 days after `created_at`).
+
+---
+### 4. Front‑end Adjustments
+- Add a **“Guest Booking”** UI flow in the booking component.
+  - Collect name, mobile, optional email.
+  - Show reCAPTCHA widget.
+  - Display a brief privacy notice, linking to the updated privacy policy.
+- On success, store the returned **booking token** locally (e.g., in `localStorage`) for the user to retrieve the confirmation.
+
+---
+### 5. GDPR / Privacy Compliance
+- Update **Privacy Policy** to describe how guest data is stored, used, and deleted.
+- Provide an **opt‑out / data‑deletion** endpoint that accepts a `guest_user_id` and removes all associated records (subject to retention limits).
+- Ensure **data minimisation**: only collect fields necessary for booking and contact.
+
+---
+### 6. Testing & Verification
+- **Unit tests** for the new controller/service handling guest data.
+- **Integration tests** covering the full guest‑booking flow, including rate‑limit and CAPTCHA failures.
+- **Security tests**: Verify that raw mobile numbers are not exposed via API responses or logs.
+- **Pen‑test**: Run an OWASP ZAP scan on the new endpoint to confirm no injection or XSS vectors.
+- **Data purge verification**: Simulate aged records and assert they are removed by the cron job.
+
+## Verification Plan
+### Automated Tests
+- `npm test` (or existing test runner) with added test suites.
+- CI pipeline should fail if any security rule (e.g., plain‑text mobile) is violated.
+
+### Manual Verification
+- Perform a guest booking via the UI, inspect the database to ensure:
+  * Record exists in `guest_users` (hashed mobile, optional encrypted email).
+  * `bookings.guest_user_id` points to that record.
+  * No `user_id` is set.
+- Check that rate limiting blocks rapid repeated attempts.
+- Verify that the data‑retention script correctly deletes records after the retention window.
+
+---
+**Next Steps**
+1. Review the plan and answer the open questions.
+2. Approve to start implementation.
