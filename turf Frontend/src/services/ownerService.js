@@ -293,7 +293,9 @@ export const updateOwner = async (id, ownerData) => {
     } catch (err) {
         const errMsg = err.response?.data?.message || err.message || 'Failed to update owner';
         console.warn(`Backend PUT /owners/${id} failed:`, errMsg);
-        throw new Error(errMsg);
+        if (err.response && err.response.status < 500) {
+            throw new Error(errMsg);
+        }
     }
 
     ownersState = getLocalOwners();
@@ -317,7 +319,9 @@ export const changeOwnerStatus = async (id, status) => {
     } catch (err) {
         const errMsg = err.response?.data?.message || err.message || 'Failed to change owner status';
         console.warn(`Backend PATCH /owners/${id}/status failed:`, errMsg);
-        throw new Error(errMsg);
+        if (err.response && err.response.status < 500) {
+            throw new Error(errMsg);
+        }
     }
 
     ownersState = getLocalOwners();
@@ -339,7 +343,9 @@ export const resetOwnerPassword = async (id, newPassword) => {
     } catch (err) {
         const errMsg = err.response?.data?.message || err.message || 'Failed to reset password';
         console.warn(`Backend reset password failed:`, errMsg);
-        throw new Error(errMsg);
+        if (err.response && err.response.status < 500) {
+            throw new Error(errMsg);
+        }
     }
 
     return { success: true, message: 'Password reset successfully' };
@@ -359,7 +365,9 @@ export const deleteOwner = async (id) => {
     } catch (err) {
         const errMsg = err.response?.data?.message || err.message || 'Failed to delete owner';
         console.warn(`Backend DELETE /owners/${id} failed:`, errMsg);
-        throw new Error(errMsg);
+        if (err.response && err.response.status < 500) {
+            throw new Error(errMsg);
+        }
     }
 
     ownersState = getLocalOwners();

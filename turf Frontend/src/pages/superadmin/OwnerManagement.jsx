@@ -870,16 +870,18 @@ export default function OwnerManagement() {
                                     label="Mobile Number"
                                     placeholder="e.g. 9876543210"
                                     value={formData.mobile}
-                                    onChange={e => setFormData({ ...formData, mobile: e.target.value })}
+                                    onChange={e => setFormData({ ...formData, mobile: e.target.value.replace(/\D/g, '').slice(0, 10) })}
                                     disabled={isSaving}
                                     required
+                                    maxLength={10}
                                 />
                                 <Input
                                     label="Alternative Mobile"
                                     placeholder="e.g. 9876543211"
                                     value={formData.alternateMobile}
-                                    onChange={e => setFormData({ ...formData, alternateMobile: e.target.value })}
+                                    onChange={e => setFormData({ ...formData, alternateMobile: e.target.value.replace(/\D/g, '').slice(0, 10) })}
                                     disabled={isSaving}
+                                    maxLength={10}
                                 />
                             </div>
                             {!editingOwner && (
