@@ -24,6 +24,7 @@ router.get('/:id/cancellation-quote', MatchPaymentController.getCancellationQuot
 
 // Admin Match Payment Controls & Dispute Resolution
 router.get('/admin/overview', MatchPaymentController.getAdminMatchPayments);
+router.get('/admin/disputes', MatchPaymentController.getDisputedMatches);
 router.post('/admin/resolve-dispute', MatchPaymentController.resolveDispute);
 
 module.exports = router;

@@ -242,7 +242,7 @@ export default function PaymentLogs() {
             value: isStatsLoading ? '—' : (stats?.summary?.totalTransactions ?? 0).toLocaleString(),
             change: `${stats?.summary?.completedCount ?? 0} completed`,
             trend: 'up', icon: <HiChartBar />,
-            cardBg: 'bg-white/82 backdrop-blur-[18px] border-t-2 border-blue-500',
+            cardBg: 'bg-white/85 backdrop-blur-[18px] border-t-2 border-blue-500',
             iconBg: 'bg-blue-500 text-white'
         },
         {
@@ -250,15 +250,15 @@ export default function PaymentLogs() {
             value: isStatsLoading ? '—' : fmtINR(stats?.summary?.totalRevenue),
             change: `Net platform earnings`,
             trend: 'up', icon: <HiCash />,
-            cardBg: 'bg-white/82 backdrop-blur-[18px] border-t-2 border-[#16A34A]',
+            cardBg: 'bg-white/85 backdrop-blur-[18px] border-t-2 border-[#16A34A]',
             iconBg: 'bg-[#16A34A] text-white'
         },
         {
             label: 'Total Commission',
             value: isStatsLoading ? '—' : fmtINR(stats?.summary?.totalCommission),
-            change: 'Platform commission earned',
+            change: 'Platform commission',
             trend: 'up', icon: <HiCreditCard />,
-            cardBg: 'bg-white/82 backdrop-blur-[18px] border-t-2 border-purple-500',
+            cardBg: 'bg-white/85 backdrop-blur-[18px] border-t-2 border-purple-500',
             iconBg: 'bg-purple-500 text-white'
         },
         {
@@ -266,7 +266,7 @@ export default function PaymentLogs() {
             value: isStatsLoading ? '—' : fmtINR(stats?.summary?.pendingPayments),
             change: `${stats?.summary?.pendingCount ?? 0} pending`,
             trend: 'down', icon: <HiClock />,
-            cardBg: 'bg-white/82 backdrop-blur-[18px] border-t-2 border-amber-500',
+            cardBg: 'bg-white/85 backdrop-blur-[18px] border-t-2 border-amber-500',
             iconBg: 'bg-amber-500 text-white'
         },
         {
@@ -274,7 +274,7 @@ export default function PaymentLogs() {
             value: isStatsLoading ? '—' : fmtINR(stats?.summary?.refundedAmount),
             change: `${stats?.summary?.refundedCount ?? 0} refunds`,
             trend: 'down', icon: <HiReceiptRefund />,
-            cardBg: 'bg-white/82 backdrop-blur-[18px] border-t-2 border-rose-500',
+            cardBg: 'bg-white/85 backdrop-blur-[18px] border-t-2 border-rose-500',
             iconBg: 'bg-rose-500 text-white'
         },
     ]
@@ -321,30 +321,46 @@ export default function PaymentLogs() {
                 </button>
             </div>
 
-            {/* 5 KPI Stat Cards (125px Height, 24px Radius) */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-5">
+            {/* 5 KPI Stat Cards (Responsive, Clean Stacked Layout) */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4.5">
                 {summaryCards.map((card) => (
                     <div 
                         key={card.label} 
                         style={{
-                            border: '1px solid rgba(255, 255, 255, 0.7)'
+                            border: '1px solid rgba(255, 255, 255, 0.8)'
                         }}
-                        className={`rounded-[24px] shadow-[0_18px_45px_rgba(15,23,42,0.08)] hover:shadow-[0_25px_50px_rgba(34,197,94,0.12)] p-5 h-[125px] flex flex-col justify-between hover:-translate-y-1.5 hover:scale-[1.02] transition-all duration-300 ${card.cardBg}`}
+                        className={`rounded-[22px] shadow-[0_12px_35px_rgba(15,23,42,0.06)] hover:shadow-[0_20px_45px_rgba(34,197,94,0.12)] p-4.5 min-h-[128px] flex flex-col justify-between hover:-translate-y-1 hover:scale-[1.015] transition-all duration-200 overflow-hidden ${card.cardBg}`}
                     >
-                        <div className="flex items-center justify-between">
-                            <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">{card.label}</span>
-                            <div className={`w-9 h-9 rounded-2xl flex items-center justify-center text-base shadow-2xs ${card.iconBg}`}>
+                        <div className="flex items-center justify-between gap-2">
+                            <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider truncate" title={card.label}>
+                                {card.label}
+                            </span>
+                            <div className={`w-8 h-8 rounded-xl flex items-center justify-center text-sm shadow-2xs shrink-0 ${card.iconBg}`}>
                                 {card.icon}
                             </div>
                         </div>
-                        <div className="flex items-baseline justify-between">
-                            <span className="text-[32px] font-black text-slate-900 leading-none tracking-tight">
+                        <div className="mt-2.5 flex flex-col gap-1">
+                            <span 
+                                className="text-xl sm:text-2xl xl:text-[22px] 2xl:text-[25px] font-black text-slate-900 leading-tight tracking-tight truncate" 
+                                title={card.value}
+                            >
                                 {card.value}
                             </span>
                             {card.change && (
-                                <span className={`text-[10px] font-extrabold ${card.trend === 'up' ? 'text-[#16A34A]' : 'text-rose-600'}`}>
-                                    {card.change}
-                                </span>
+                                <div className="flex items-center">
+                                    <span 
+                                        className={`text-[11px] font-bold tracking-tight truncate ${
+                                            card.trend === 'up' 
+                                                ? 'text-[#16A34A]' 
+                                                : card.trend === 'down' && card.label.includes('Refund') 
+                                                    ? 'text-rose-600' 
+                                                    : 'text-amber-600'
+                                        }`}
+                                        title={card.change}
+                                    >
+                                        {card.change}
+                                    </span>
+                                </div>
                             )}
                         </div>
                     </div>

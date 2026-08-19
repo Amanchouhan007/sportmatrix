@@ -103,6 +103,10 @@ app.use('/api/v1/mobile-sync', mobileSyncRouter);
 const matchPaymentRouter = require('./modules/bookings/matchPayment.routes');
 app.use('/api/v1/match-payments', matchPaymentRouter);
 
+// Corporate & Bulk Booking Proposals Routes registration
+const corporateRouter = require('./modules/corporate/corporate.routes');
+app.use('/api/v1/corporate', corporateRouter);
+
 // Start Background Expiry & Reconciliation Worker
 const MatchExpiryService = require('./services/matchExpiry.service');
 const MatchReconciliationService = require('./services/matchReconciliation.service');

@@ -4,6 +4,7 @@ import Input from '../ui/Input'
 import Button from '../ui/Button'
 import Badge from '../ui/Badge'
 import { useToast } from '../ui/Toast'
+import { lookupGuestBookings } from '../../services/guestBookingService'
 
 export default function GuestBookingLookupModal({ isOpen, onClose }) {
     const { addToast } = useToast()
@@ -11,7 +12,7 @@ export default function GuestBookingLookupModal({ isOpen, onClose }) {
     const [results, setResults] = useState(null)
     const [searching, setSearching] = useState(false)
 
-    const handleSearch = (e) => {
+    const handleSearch = async (e) => {
         e.preventDefault()
         if (!query.trim()) {
             if (addToast) addToast({ message: 'Please enter your Mobile Number or Booking ID', type: 'warning' })
@@ -19,8 +20,11 @@ export default function GuestBookingLookupModal({ isOpen, onClose }) {
         }
 
         setSearching(true)
-        setTimeout(() => {
-            try {
+        try {
+            const apiResults = await lookupGuestBookings(query.trim())
+            if (Array.isArray(apiResults) && apiResults.length > 0) {
+                setResults(apiResults)
+            } else {
                 const rawBookings = localStorage.getItem('customer_bookings')
                 const parsed = rawBookings ? JSON.parse(rawBookings) : []
                 const qClean = query.trim().toLowerCase()
@@ -34,25 +38,15 @@ export default function GuestBookingLookupModal({ isOpen, onClose }) {
                 if (found.length > 0) {
                     setResults(found)
                 } else {
-                    // Demo fallback lookup result
-                    setResults([
-                        {
-                            id: `BK-GUEST-${Math.floor(1000 + Math.random() * 9000)}`,
-                            venue: 'Royal Cricket Ground (Vijay Nagar)',
-                            sport: 'Cricket 16-Over',
-                            date: 'TODAY',
-                            time: '06:00 PM - 07:00 PM',
-                            status: 'Confirmed',
-                            amount: '₹1,000'
-                        }
-                    ])
+                    setResults([])
                 }
-            } catch (err) {
-                console.error(err)
-            } finally {
-                setSearching(false)
             }
-        }, 500)
+        } catch (err) {
+            console.error('Guest lookup error:', err)
+            setResults([])
+        } finally {
+            setSearching(false)
+        }
     }
 
     return (

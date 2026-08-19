@@ -35,7 +35,7 @@ export default function TurfMapExplorer() {
             }
             if (filters.sport) params.append('sport', filters.sport);
             
-            const res = await axios.get(`${url}${params.toString()}`);
+            const res = await axios.get(`${url}${params.toString()}`, { timeout: 2000 });
             if (res.data.success) {
                 let fetchedTurfs = res.data.data;
                 

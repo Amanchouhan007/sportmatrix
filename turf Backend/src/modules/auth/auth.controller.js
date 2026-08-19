@@ -375,11 +375,104 @@ const changePassword = async (req, res) => {
     }
 };
 
+/**
+ * Get all users across the platform (Super Admin User Management)
+ */
+const getAllUsers = async (req, res) => {
+    try {
+        const { role, status, search } = req.query;
+        let query = `SELECT id, name, email, role, mobile, status, created_at, updated_at FROM users WHERE 1=1`;
+        const params = [];
+
+        if (role && role !== 'ALL') {
+            query += ` AND role = ?`;
+            params.push(role);
+        }
+
+        if (status && status !== 'ALL') {
+            query += ` AND status = ?`;
+            params.push(status);
+        }
+
+        if (search) {
+            query += ` AND (name LIKE ? OR email LIKE ? OR mobile LIKE ?)`;
+            const term = `%${search}%`;
+            params.push(term, term, term);
+        }
+
+        query += ` ORDER BY created_at DESC`;
+
+        const [users] = await db.query(query, params);
+
+        return res.status(200).json({
+            success: true,
+            count: users.length,
+            data: users.map(u => ({
+                id: u.id,
+                name: u.name,
+                email: u.email,
+                role: u.role,
+                mobile: u.mobile,
+                status: u.status,
+                joined: new Date(u.created_at).toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' })
+            }))
+        });
+    } catch (error) {
+        console.error('Fetch all users error:', error);
+        return res.status(500).json({
+            success: false,
+            message: 'Error fetching users: ' + error.message
+        });
+    }
+};
+
+/**
+ * Toggle or update user status (ACTIVE / SUSPENDED / INACTIVE)
+ */
+const updateUserStatus = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { status } = req.body;
+
+        if (!status) {
+            return res.status(400).json({
+                success: false,
+                message: 'Status is required'
+            });
+        }
+
+        const normalizedStatus = status.toUpperCase() === 'ACTIVE' ? 'ACTIVE' : 'INACTIVE';
+
+        const [result] = await db.query('UPDATE users SET status = ? WHERE id = ?', [normalizedStatus, id]);
+
+        if (result.affectedRows === 0) {
+            return res.status(404).json({
+                success: false,
+                message: 'User not found'
+            });
+        }
+
+        return res.status(200).json({
+            success: true,
+            message: `User status updated to ${normalizedStatus}`,
+            data: { id, status: normalizedStatus }
+        });
+    } catch (error) {
+        console.error('Update user status error:', error);
+        return res.status(500).json({
+            success: false,
+            message: 'Error updating user status: ' + error.message
+        });
+    }
+};
+
 module.exports = {
     register,
     login,
     logout,
     getProfile,
     updateProfile,
-    changePassword
+    changePassword,
+    getAllUsers,
+    updateUserStatus
 };

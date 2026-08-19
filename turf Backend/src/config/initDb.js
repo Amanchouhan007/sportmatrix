@@ -777,6 +777,28 @@ async function initializeDatabase() {
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
         `);
 
+        // Corporate & Bulk Booking Proposals
+        await connection.query(`
+            CREATE TABLE IF NOT EXISTS corporate_bookings (
+                id VARCHAR(50) PRIMARY KEY,
+                company_name VARCHAR(150) NOT NULL,
+                contact_person VARCHAR(100),
+                phone VARCHAR(20) NOT NULL,
+                email VARCHAR(100),
+                event_type VARCHAR(100) DEFAULT 'Corporate Tournament',
+                city VARCHAR(100) DEFAULT 'Indore',
+                estimated_players VARCHAR(100) DEFAULT '10-20 Players',
+                budget VARCHAR(100) DEFAULT '₹25,000 - ₹50,000',
+                event_date DATE NULL,
+                status ENUM('NEW', 'CONTACTED', 'QUOTATION_SENT', 'CONVERTED', 'REJECTED') DEFAULT 'NEW',
+                notes TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                INDEX idx_status (status),
+                INDEX idx_created (created_at)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+        `);
+
         // Seed Subscription Plans if empty
         const [planCountRows] = await connection.query('SELECT COUNT(*) as count FROM subscription_plans');
         if (planCountRows[0].count === 0) {

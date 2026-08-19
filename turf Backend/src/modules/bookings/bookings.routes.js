@@ -5,12 +5,18 @@ const {
     getUpcomingBookings,
     getBookingHistory,
     getBookingLedgerSummary,
-    updateBookingStatus
+    updateBookingStatus,
+    createGuestBooking,
+    lookupGuestBookingsByPhone
 } = require('./bookings.controller');
 
 const { verifyToken, optionalToken } = require('../../middleware/auth.middleware');
 
 const router = express.Router();
+
+// Guest booking routes (Public)
+router.post('/guest', createGuestBooking);
+router.get('/guest-lookup', lookupGuestBookingsByPhone);
 
 router.get('/summary', optionalToken, getBookingLedgerSummary);
 router.put('/:id/status', optionalToken, updateBookingStatus);
@@ -22,3 +28,4 @@ router.get('/history', optionalToken, getBookingHistory);
 router.get('/', optionalToken, getBookingHistory);
 
 module.exports = router;
+

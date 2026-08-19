@@ -567,6 +567,10 @@ export default function BranchManagement() {
                         </span>
                         <input
                             type="text"
+                            autoComplete="off"
+                            autoCorrect="off"
+                            autoCapitalize="off"
+                            spellCheck="false"
                             placeholder="Search by branch name, code, city, owner..."
                             value={searchTerm}
                             onChange={e => {

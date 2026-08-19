@@ -13,6 +13,7 @@ import TurfMapExplorer from '../../components/TurfMapExplorer'
 import TeamPaymentModesSection from '../../components/website/TeamPaymentModesSection'
 import LiveCricketChallengeCard from '../../components/website/LiveCricketChallengeCard'
 import CorporateBookingSection from '../../components/website/CorporateBookingSection'
+import MembershipCheckoutModal from '../../components/membership/MembershipCheckoutModal'
 function useReveal() {
     const ref = useRef(null)
     const [v, setV] = useState(false)
@@ -85,6 +86,20 @@ export default function HomePage() {
     const [homePlans, setHomePlans] = useState([])
     const [isChallengeVisible, setIsChallengeVisible] = useState(true)
     const [billingCycle, setBillingCycle] = useState('monthly')
+    const [isCheckoutModalOpen, setIsCheckoutModalOpen] = useState(false)
+    const [selectedCheckoutPlan, setSelectedCheckoutPlan] = useState(null)
+
+    const handleGetStartedPlan = (p) => {
+        const numericPrice = typeof p.price === 'string' ? parseInt(p.price.replace(/,/g, ''), 10) : (p.numericPrice || p.price || 999)
+        setSelectedCheckoutPlan({
+            ...p,
+            id: p.name ? p.name.toUpperCase().replace(/\s+/g, '_') : 'STARTER',
+            rawId: p.name ? p.name.toUpperCase().replace(/\s+/g, '_') : 'STARTER',
+            numericPrice: isNaN(numericPrice) ? 999 : numericPrice,
+            period: p.period || (billingCycle === 'yearly' ? '/YEAR' : '/MO')
+        })
+        setIsCheckoutModalOpen(true)
+    }
 
     /* ── Fetch Upcoming Tournaments & Subscription Plans ── */
     useEffect(() => {
@@ -230,14 +245,52 @@ const resolveOriginCoordinates = (locString, userGPS, explicitCoords) => {
         setShowResults(false)
     }
 
-    // Dynamic Dare Challenge details based on selected location
+    // Dynamic Multi-Match Dare Challenge Pool based on selected location & top turfs
     const activeCityName = appliedFilters.location || searchValues.location || 'Indore'
-    const dynamicDareVenue = activeCityName.toLowerCase().includes('indore') || !appliedFilters.location
-        ? 'Indore Turf Arena, Vijay Nagar, Indore'
-        : `${activeCityName} Sports Arena`
-    const dynamicChallenger = activeCityName.toLowerCase().includes('indore') || !appliedFilters.location
-        ? 'Indore Warriors XI'
-        : `${activeCityName} Strikers XI`
+    const topTurfsList = (filteredTurfs.length > 0 ? filteredTurfs : allTurfs).slice(0, 4)
+
+    const challengerTeamNames = [
+        'Indore Strikers XI',
+        'Vijay Nagar Royals',
+        'Palasia Smashers',
+        'Indore Super Kings'
+    ]
+
+    const timeSlots = [
+        'Tonight, 8:30 PM – 9:30 PM',
+        'Tonight, 9:30 PM – 10:30 PM',
+        'Tomorrow, 7:00 AM – 8:00 AM',
+        'Tomorrow, 8:00 PM – 9:00 PM'
+    ]
+
+    // Read any user-created open challenges from localStorage if present
+    let localOpenChallenges = []
+    try {
+        const saved = JSON.parse(localStorage.getItem('open_challenges') || '[]')
+        if (Array.isArray(saved)) localOpenChallenges = saved
+    } catch (_) {}
+
+    const dynamicChallenges = [
+        ...localOpenChallenges,
+        ...topTurfsList.map((turf, idx) => {
+            const matchFee = turf.price ? turf.price * 2 : 1800
+            const depositFee = Math.round(matchFee * 0.3)
+            const teamName = activeCityName.toLowerCase().includes('indore') || !appliedFilters.location
+                ? challengerTeamNames[idx % challengerTeamNames.length]
+                : `${activeCityName} ${['Warriors', 'Strikers', 'Royals', 'Super Kings'][idx % 4]} XI`
+
+            return {
+                id: turf.id,
+                challengerTeam: teamName,
+                venueName: `${turf.name}, ${turf.location || turf.city}`,
+                matchTime: timeSlots[idx % timeSlots.length],
+                matchFee,
+                depositFee,
+                sportName: 'Box Cricket',
+                badge: idx === 0 ? '🔥 HOT DARE' : '⚔️ OPEN MATCH'
+            }
+        })
+    ]
 
     return (
         <div className="bg-white relative selection:bg-[#C8FF2E]/40 min-h-screen text-[#111827]">
@@ -538,15 +591,10 @@ const resolveOriginCoordinates = (locString, userGPS, explicitCoords) => {
                         </div>
                     </div>
 
-                    {/* FLOATING SIDE LIVE CRICKET CHALLENGE POPUP (Dynamic to Indore / Active City) */}
+                    {/* FLOATING SIDE LIVE CRICKET CHALLENGE POPUP (Dynamic Multi-Match Feed) */}
                     {isChallengeVisible && (
                         <LiveCricketChallengeCard
-                            turfId={filteredTurfs[0]?.id || 6}
-                            challengerTeam={dynamicChallenger}
-                            venueName={dynamicDareVenue}
-                            matchTime="Tonight, 8:00 PM – 9:00 PM"
-                            matchFee={1200}
-                            depositFee={100}
+                            challenges={dynamicChallenges}
                             onDismiss={() => setIsChallengeVisible(false)}
                         />
                     )}
@@ -924,8 +972,9 @@ const resolveOriginCoordinates = (locString, userGPS, explicitCoords) => {
                                 )}
 
                                 <button
-                                    onClick={() => navigate('/membership')}
-                                    className="w-full py-3.5 text-[10px] font-black italic tracking-[0.2em] uppercase rounded-[14px] border transition-all duration-300 cursor-pointer bg-[#C8FF2E] hover:bg-[#B5F000] text-[#111827] border-[#B5F000] shadow-[0_12px_25px_rgba(184,255,44,0.28)]"
+                                    type="button"
+                                    onClick={() => handleGetStartedPlan(p)}
+                                    className="w-full py-3.5 text-[10px] font-black italic tracking-[0.2em] uppercase rounded-[14px] border transition-all duration-300 cursor-pointer bg-[#C8FF2E] hover:bg-[#B5F000] text-[#111827] border-[#B5F000] shadow-[0_12px_25px_rgba(184,255,44,0.28)] active:scale-95"
                                 >
                                     GET STARTED
                                 </button>
@@ -1040,6 +1089,13 @@ const resolveOriginCoordinates = (locString, userGPS, explicitCoords) => {
                     </div>
                 </div>
             </section>
+            {/* Interactive Checkout & Registration Modal for GET STARTED */}
+            <MembershipCheckoutModal
+                isOpen={isCheckoutModalOpen}
+                onClose={() => setIsCheckoutModalOpen(false)}
+                plan={selectedCheckoutPlan}
+                billingCycle={billingCycle}
+            />
         </div>
     )
 }

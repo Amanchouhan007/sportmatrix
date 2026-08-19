@@ -64,46 +64,90 @@ const generateUpcomingDays = () => {
     return list
 }
 
-// Generate dynamic time slots based on selected venue price and actual current time
-const generateDynamicSlots = (basePrice = 1200, selectedDateObj = null) => {
-    const rawSlots = [
-        { id: '06:00', time: '6:00 AM', factor: 0.8, status: 'available' },
-        { id: '07:00', time: '7:00 AM', factor: 0.8, status: 'available' },
-        { id: '08:00', time: '8:00 AM', factor: 0.8, status: 'staff_unavailable' },
-        { id: '09:00', time: '9:00 AM', factor: 1.0, status: 'booked' },
-        { id: '10:00', time: '10:00 AM', factor: 1.0, status: 'available' },
-        { id: '11:00', time: '11:00 AM', factor: 1.0, status: 'available' },
-        { id: '12:00', time: '12:00 PM', factor: 1.0, status: 'maintenance' },
-        { id: '13:00', time: '1:00 PM', factor: 1.0, status: 'available' },
-        { id: '14:00', time: '2:00 PM', factor: 1.0, status: 'available' },
-        { id: '15:00', time: '3:00 PM', factor: 1.15, status: 'available' },
-        { id: '16:00', time: '4:00 PM', factor: 1.15, status: 'available' },
-        { id: '17:00', time: '5:00 PM', factor: 1.25, status: 'available' },
-        { id: '18:00', time: '6:00 PM', factor: 1.25, status: 'available' },
-        { id: '19:00', time: '7:00 PM', factor: 1.25, status: 'available' },
-        { id: '20:00', time: '8:00 PM', factor: 1.25, status: 'booked' },
-        { id: '21:00', time: '9:00 PM', factor: 1.25, status: 'available' },
+// Generate dynamic time slots based on selected venue price and actual date
+const generateDynamicSlots = (basePrice = 1200, selectedDateObj = null, venueId = 16) => {
+    const rawTimes = [
+        { id: '06:00', time: '6:00 AM' },
+        { id: '07:00', time: '7:00 AM' },
+        { id: '08:00', time: '8:00 AM' },
+        { id: '09:00', time: '9:00 AM' },
+        { id: '10:00', time: '10:00 AM' },
+        { id: '11:00', time: '11:00 AM' },
+        { id: '12:00', time: '12:00 PM' },
+        { id: '13:00', time: '1:00 PM' },
+        { id: '14:00', time: '2:00 PM' },
+        { id: '15:00', time: '3:00 PM' },
+        { id: '16:00', time: '4:00 PM' },
+        { id: '17:00', time: '5:00 PM' },
+        { id: '18:00', time: '6:00 PM' },
+        { id: '19:00', time: '7:00 PM' },
+        { id: '20:00', time: '8:00 PM' },
+        { id: '21:00', time: '9:00 PM' },
+        { id: '22:00', time: '10:00 PM' },
     ]
+
+    const dateNum = selectedDateObj?.dateNum || 9
+    const dayShort = (selectedDateObj?.dayShort || 'TODAY').toUpperCase()
+    const fullDate = selectedDateObj?.fullDateString || ''
+    const isWeekend = dayShort.includes('SAT') || dayShort.includes('SUN')
 
     const now = new Date()
     const currentHour = now.getHours()
     const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
+    const isToday = !selectedDateObj || selectedDateObj.dayShort === 'TODAY' || fullDate === todayStr
 
-    const isToday = !selectedDateObj || selectedDateObj.dayShort === 'TODAY' || selectedDateObj.fullDateString === todayStr
-
-    return rawSlots.map(s => {
+    return rawTimes.map((s, i) => {
         const slotHour = parseInt(s.id.split(':')[0], 10)
-        let effectiveStatus = s.status
+        const isPeakHour = slotHour >= 18 && slotHour <= 22
+        const isEarlyMorning = slotHour < 8
 
-        // Real-time time management: if the date is TODAY and slot hour <= currentHour, slot has passed!
+        let factor = 1.0
+        if (isPeakHour) factor = isWeekend ? 1.30 : 1.28
+        else if (isEarlyMorning) factor = 0.85
+        else if (isWeekend && slotHour >= 14) factor = 1.15
+
+        let status = 'available'
+
+        if (dayShort.includes('SUN')) {
+            if (dateNum === 9) {
+                if ([0, 1, 3, 4, 5, 7, 11, 15].includes(i)) status = 'booked'
+            } else {
+                if ([0, 1, 2, 4, 7, 12, 14, 15, 16].includes(i)) status = 'booked'
+            }
+        } else if (dayShort.includes('MON')) {
+            if ([0, 1, 3, 4, 5, 7, 11, 15].includes(i)) status = 'booked'
+            else if (i === 6) status = 'maintenance' // 12:00 PM
+            else if (i === 2) status = 'staff_unavailable' // 8:00 AM
+        } else if (dayShort.includes('TUE')) {
+            if ([2, 4, 8, 12, 15].includes(i)) status = 'booked'
+            else if (i === 5) status = 'maintenance' // 11:00 AM
+        } else if (dayShort.includes('WED')) {
+            if ([3, 7, 11, 14, 15].includes(i)) status = 'booked'
+            else if (i === 1) status = 'staff_unavailable' // 7:00 AM
+        } else if (dayShort.includes('THU')) {
+            if ([0, 2, 5, 8, 11, 15].includes(i)) status = 'booked'
+            else if (i === 7) status = 'maintenance' // 1:00 PM
+        } else if (dayShort.includes('FRI')) {
+            if ([1, 3, 5, 8, 10, 12, 13, 14, 16].includes(i)) status = 'booked'
+        } else if (dayShort.includes('SAT')) {
+            if ([0, 1, 2, 4, 6, 8, 11, 13, 14, 15].includes(i)) status = 'booked'
+            else if (i === 3) status = 'staff_unavailable' // 9:00 AM
+        } else {
+            const hash = (dateNum * 11 + i * 17 + (venueId || 16) * 5) % 100
+            if (hash < 40) status = 'booked'
+            else if (hash === 91) status = 'maintenance'
+            else if (hash === 92) status = 'staff_unavailable'
+        }
+
+        // Real-time time management: if the date is TODAY and slot hour <= currentHour, slot has passed
         if (isToday && slotHour <= currentHour) {
-            effectiveStatus = 'booked'
+            status = 'booked'
         }
 
         return {
             ...s,
-            status: effectiveStatus,
-            price: Math.round((basePrice * s.factor) / 50) * 50
+            status,
+            price: Math.round((basePrice * factor) / 50) * 50
         }
     })
 }

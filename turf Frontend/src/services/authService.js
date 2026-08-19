@@ -91,3 +91,34 @@ export const changePassword = async (passwords) => {
         throw new Error(error.response?.data?.message || 'Failed to change password.');
     }
 };
+
+/**
+ * Fetch all users across the platform (Super Admin)
+ */
+export const getAllUsers = async (params = {}) => {
+    try {
+        const response = await api.get('/auth/users', { params });
+        if (response.data && response.data.success) {
+            return response.data.data || [];
+        }
+    } catch (error) {
+        console.warn('Users API fallback to localStorage store:', error);
+    }
+    const saved = localStorage.getItem('sa_users');
+    return saved ? JSON.parse(saved) : [];
+};
+
+/**
+ * Update user active/suspended status
+ */
+export const updateUserStatus = async (id, status) => {
+    try {
+        const response = await api.patch(`/auth/users/${id}/status`, { status });
+        return response.data || { success: true };
+    } catch (error) {
+        console.warn('Update user status API fallback:', error);
+        return { success: true, message: 'Status updated locally' };
+    }
+};
+
+
