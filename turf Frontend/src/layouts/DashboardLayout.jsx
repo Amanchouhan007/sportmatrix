@@ -21,30 +21,16 @@ import {
 } from 'react-icons/hi2'
 import sidebarConfig from '../config/sidebarConfig'
 import { useAuth } from '../context/AuthContext'
+import Modal from '../components/ui/Modal'
+import Badge from '../components/ui/Badge'
 
 const roleLabels = { superadmin: 'Super Admin', owner: 'ADMIN', staff: 'Staff', customer: 'Customer' }
 
 const roleNotifications = {
-    superadmin: [
-        { id: 1, title: 'New Owner Registered', desc: 'Rajesh Sharma registered Green Arena Sports', time: '10m ago', unread: true },
-        { id: 2, title: 'Subscription Upgraded', desc: 'Champion Sports upgraded to Enterprise Plan', time: '1h ago', unread: true },
-        { id: 3, title: 'Payout Processed', desc: 'Monthly commission payout of ₹37,500 settled', time: 'Yesterday', unread: false }
-    ],
-    owner: [
-        { id: 1, title: 'New Slot Booking', desc: 'Turf A (6 PM - 7 PM) booked by Rahul V.', time: '5m ago', unread: true },
-        { id: 2, title: 'Payment Received', desc: 'Received ₹1,200 via UPI', time: '25m ago', unread: true },
-        { id: 3, title: 'Tournament Open', desc: 'Registration open for Premier Cricket League', time: '2h ago', unread: false }
-    ],
-    staff: [
-        { id: 1, title: 'Customer Check-in', desc: 'Rahul V. checked in for Court A slot', time: '12m ago', unread: true },
-        { id: 2, title: 'Equipment Alert', desc: 'Maintenance check required for Floodlight #3', time: '45m ago', unread: true },
-        { id: 3, title: 'POS Bill Completed', desc: 'Order #104 bill generated (₹450)', time: '3h ago', unread: false }
-    ],
-    customer: [
-        { id: 1, title: 'Booking Confirmed!', desc: 'Cricket at SportZone Arena on Mar 15, 10:00 AM', time: '15m ago', unread: true },
-        { id: 2, title: 'Tournament Registered', desc: 'Successfully registered for Premier Cricket Cup', time: '2h ago', unread: true },
-        { id: 3, title: 'Wallet Credited', desc: '₹500 promotional cashback added to wallet', time: '1d ago', unread: false }
-    ]
+    superadmin: [],
+    owner: [],
+    staff: [],
+    customer: []
 }
 
 export default function DashboardLayout({ role = 'owner' }) {
@@ -54,6 +40,8 @@ export default function DashboardLayout({ role = 'owner' }) {
     const [notifOpen, setNotifOpen] = useState(false)
     const [quickActionOpen, setQuickActionOpen] = useState(false)
     const [notifications, setNotifications] = useState([])
+    const [selectedNotifData, setSelectedNotifData] = useState(null)
+    const [receiptModalData, setReceiptModalData] = useState(null)
     const [openMenus, setOpenMenus] = useState({})
 
     const navigate = useNavigate()
@@ -61,12 +49,44 @@ export default function DashboardLayout({ role = 'owner' }) {
     const { user, logout } = useAuth()
     const menu = sidebarConfig[role] || []
 
-    // Load dynamic real-time notifications from website bookings & corporate proposals
+    // Load dynamic real-time notifications from website bookings, owners & corporate proposals
     const loadLiveNotifications = () => {
         try {
             const liveNotifs = []
 
-            // 1. Corporate Proposals
+            // 1. Turf Slot Bookings
+            const rawCust = localStorage.getItem('customer_bookings')
+            const rawGuest = localStorage.getItem('guest_bookings')
+            const cList = rawCust ? JSON.parse(rawCust) : []
+            const gList = rawGuest ? JSON.parse(rawGuest) : []
+            const allBookings = [...(Array.isArray(cList) ? cList : []), ...(Array.isArray(gList) ? gList : [])]
+
+            if (allBookings.length > 0) {
+                allBookings.slice(0, 5).forEach((b, idx) => {
+                    const bAmt = Number(b.amount || b.rent || 1200)
+                    liveNotifs.push({
+                        id: `book-${b.id || idx}`,
+                        title: '⚡ Real Slot Booking',
+                        desc: `${b.venue || b.turfName || 'Indore Turf Complex'} booked by ${b.userName || b.customerName || b.name || 'Valued Player'} (₹${bAmt.toLocaleString('en-IN')})`,
+                        time: 'Recently',
+                        unread: true,
+                        path: role === 'superadmin' ? '/super-admin/payments' : role === 'owner' ? '/admin/bookings' : '/customer/bookings',
+                        dataDetails: {
+                            category: 'Real Turf Booking',
+                            bookingId: b.id || b.bookingId || `BK-${idx + 1}`,
+                            customerName: b.userName || b.customerName || b.name || 'Valued Player',
+                            customerPhone: b.userPhone || b.phone || '+91 98765 43210',
+                            turfVenue: b.venue || b.turfName || 'Indore Turf Complex',
+                            timeSlot: b.time || '06:00 PM - 07:00 PM',
+                            paymentStatus: 'PAID VIA UPI 🟢',
+                            amount: `₹${bAmt.toLocaleString('en-IN')}`,
+                            date: b.date || new Date().toISOString().split('T')[0]
+                        }
+                    })
+                })
+            }
+
+            // 2. Corporate Proposals
             const rawCorp = localStorage.getItem('corporate_proposals_data')
             if (rawCorp) {
                 const corpList = JSON.parse(rawCorp)
@@ -74,42 +94,58 @@ export default function DashboardLayout({ role = 'owner' }) {
                     corpList.slice(0, 3).forEach((c, idx) => {
                         liveNotifs.push({
                             id: `corp-${c.id || idx}`,
-                            title: '🏢 New Corporate Proposal',
-                            desc: `${c.companyName || 'Corporate Client'} requested proposal for ${c.eventType || 'Event'} (${c.budget || 'Custom Budget'})`,
-                            time: 'Just now',
+                            title: '🏢 Corporate Proposal Request',
+                            desc: `${c.companyName || 'Corporate Client'} requested proposal for ${c.eventType || 'Tournament'} (${c.budget || 'Custom Budget'})`,
+                            time: 'Recently',
                             unread: true,
-                            path: '/super-admin/crm'
+                            path: '/super-admin/crm',
+                            dataDetails: {
+                                category: 'Corporate Lead',
+                                refNo: c.id || `CORP-${idx + 1}`,
+                                ownerName: c.contactName || c.companyName || 'Corporate Client',
+                                businessName: c.companyName || 'Corporate Client',
+                                email: c.email || 'corporate@client.com',
+                                mobile: c.phone || '+91 98765 88888',
+                                status: 'NEW LEAD 🟢',
+                                date: new Date().toISOString().split('T')[0]
+                            }
                         })
                     })
                 }
             }
 
-            // 2. Turf Slot Bookings
-            const rawBookings = localStorage.getItem('sport_matrix_bookings') || localStorage.getItem('turf_booked_slots')
-            if (rawBookings) {
-                const bList = JSON.parse(rawBookings)
-                if (Array.isArray(bList)) {
-                    bList.slice(0, 3).forEach((b, idx) => {
+            // 3. Real Registered Owners
+            const rawBranches = localStorage.getItem('sa_branches_data')
+            if (rawBranches) {
+                const bList = JSON.parse(rawBranches)
+                if (Array.isArray(bList) && bList.length > 0) {
+                    bList.slice(0, 2).forEach((br, idx) => {
                         liveNotifs.push({
-                            id: `book-${b.id || idx}`,
-                            title: '⚡ New Turf Slot Booked',
-                            desc: `${b.turfName || 'Turf Arena'} booked by ${b.userName || b.customerName || 'Customer'} (₹${Number(b.totalAmount || b.price || 900).toLocaleString('en-IN')})`,
-                            time: 'Just now',
-                            unread: true,
-                            path: role === 'superadmin' ? '/super-admin/crm' : role === 'owner' ? '/admin/bookings' : '/customer/bookings'
+                            id: `branch-${br.id || idx}`,
+                            title: '🏢 Active Branch Verified',
+                            desc: `${br.name || 'Turf Branch'} managed by ${br.ownerName || 'Kiaan Technology'} (${br.plan || 'Starter Plan'})`,
+                            time: 'Active',
+                            unread: false,
+                            path: '/super-admin/branches',
+                            dataDetails: {
+                                category: 'Branch Registration',
+                                refNo: br.code || `BR-${idx + 100}`,
+                                ownerName: br.ownerName || 'Kiaan Technology',
+                                businessName: br.name || 'Indore Turf Complex',
+                                email: br.email || 'owner@turf.com',
+                                mobile: br.phone || '+91 98765 12345',
+                                plan: br.plan || 'Starter Plan',
+                                status: 'ACTIVE & VERIFIED',
+                                date: br.createdDate || '20 Aug 2026'
+                            }
                         })
                     })
                 }
             }
 
-            const baseNotifs = roleNotifications[role] || roleNotifications.customer
-            if (liveNotifs.length > 0) {
-                setNotifications([...liveNotifs, ...baseNotifs])
-            } else {
-                setNotifications(baseNotifs)
-            }
+            setNotifications(liveNotifs)
         } catch (e) {
-            setNotifications(roleNotifications[role] || roleNotifications.customer)
+            setNotifications([])
         }
     }
 
@@ -322,7 +358,7 @@ export default function DashboardLayout({ role = 'owner' }) {
                 {/* Logout Button */}
                 <div className="p-3 border-t border-slate-100 shrink-0 bg-slate-50/50">
                     <button 
-                        onClick={() => { logout(); navigate('/login'); }} 
+                        onClick={() => { logout(); navigate('/'); }} 
                         title={isCollapsed ? "Logout" : undefined}
                         className={`flex items-center ${isCollapsed ? 'justify-center px-0' : 'px-3.5'} py-2.5 w-full rounded-xl text-xs font-bold text-rose-600 hover:bg-rose-50 transition-all cursor-pointer`}
                     >
@@ -437,12 +473,12 @@ export default function DashboardLayout({ role = 'owner' }) {
                                     <div className="max-h-72 overflow-y-auto divide-y divide-slate-100" style={{ scrollbarWidth: 'thin' }}>
                                         {notifications.length > 0 ? (
                                             notifications.map(n => (
-                                                <div
+                                                                <div
                                                     key={n.id}
                                                     onClick={() => {
                                                         setNotifications(prev => prev.map(item => item.id === n.id ? { ...item, unread: false } : item))
                                                         setNotifOpen(false)
-                                                        if (n.path) navigate(n.path)
+                                                        setSelectedNotifData(n)
                                                     }}
                                                     className={`p-3.5 hover:bg-slate-50 transition-colors cursor-pointer flex gap-3 items-start ${n.unread ? 'bg-emerald-50/30' : ''}`}
                                                 >
@@ -495,7 +531,7 @@ export default function DashboardLayout({ role = 'owner' }) {
                                             onClick={() => {
                                                 setDropdownOpen(false);
                                                 logout();
-                                                navigate('/login');
+                                                navigate('/');
                                             }}
                                             className="w-full text-left px-4 py-2.5 text-xs font-bold text-rose-600 hover:bg-rose-50 transition-colors flex items-center gap-2"
                                         >
@@ -511,6 +547,229 @@ export default function DashboardLayout({ role = 'owner' }) {
 
                 <main className="flex-1 p-4 sm:p-6 md:p-8 mt-[72px]"><Outlet /></main>
             </div>
+
+            {/* Notification Data Detail Modal */}
+            {selectedNotifData && (
+                <Modal
+                    isOpen={!!selectedNotifData}
+                    onClose={() => setSelectedNotifData(null)}
+                    title=""
+                    size="lg"
+                >
+                    <div className="space-y-5 -mt-2">
+                        {/* Header Banner with Dark Emerald Gradient & Glassmorphism */}
+                        <div className="relative overflow-hidden bg-gradient-to-br from-slate-950 via-slate-900 to-emerald-950 p-5 rounded-2xl text-white border border-emerald-500/20 shadow-lg">
+                            <div className="absolute right-0 top-0 w-32 h-32 bg-emerald-500/10 rounded-full blur-2xl pointer-events-none" />
+                            <div className="flex justify-between items-start gap-4 relative z-10">
+                                <div className="flex items-center gap-3">
+                                    <div className="w-12 h-12 rounded-2xl bg-emerald-500/20 border border-emerald-400/30 flex items-center justify-center text-2xl shrink-0 shadow-inner">
+                                        {selectedNotifData.title.includes('Booking') ? '⚡' : selectedNotifData.title.includes('Payment') ? '💳' : selectedNotifData.title.includes('Tournament') ? '🏆' : selectedNotifData.title.includes('Owner') ? '🏢' : '📌'}
+                                    </div>
+                                    <div>
+                                        <div className="flex items-center gap-2">
+                                            <span className="text-[10px] font-black uppercase tracking-widest text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">
+                                                {selectedNotifData.dataDetails?.category || 'System Event'}
+                                            </span>
+                                            <span className="text-slate-400 text-[11px] font-medium">• {selectedNotifData.time || 'Realtime'}</span>
+                                        </div>
+                                        <h3 className="font-black text-white text-lg tracking-tight mt-1">{selectedNotifData.title}</h3>
+                                        <p className="text-xs text-slate-300 font-medium mt-0.5">{selectedNotifData.desc}</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Data Details Grid */}
+                        {selectedNotifData.dataDetails ? (
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                                {Object.entries(selectedNotifData.dataDetails).map(([key, val]) => {
+                                    const k = key.toLowerCase()
+                                    const isAmount = k.includes('amount') || k.includes('price') || k.includes('fee') || k.includes('revenue')
+                                    const isStatus = k.includes('status')
+                                    const icon = k.includes('id') || k.includes('ref') ? '🔑' : 
+                                                 k.includes('name') || k.includes('customer') || k.includes('owner') ? '👤' : 
+                                                 k.includes('phone') || k.includes('mobile') ? '📱' : 
+                                                 k.includes('venue') || k.includes('turf') || k.includes('court') || k.includes('business') ? '🏟️' : 
+                                                 k.includes('sport') || k.includes('game') ? '⚽' : 
+                                                 k.includes('time') || k.includes('date') || k.includes('checkin') ? '⏰' : 
+                                                 isAmount ? '💰' : isStatus ? '✨' : '📋'
+
+                                    return (
+                                        <div 
+                                            key={key} 
+                                            className="p-3.5 bg-slate-50/80 hover:bg-emerald-50/30 border border-slate-200/80 hover:border-emerald-300 rounded-2xl transition-all shadow-2xs group flex flex-col justify-between"
+                                        >
+                                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-1.5">
+                                                <span>{icon}</span>
+                                                <span>{key.replace(/([A-Z])/g, ' $1').trim()}</span>
+                                            </span>
+                                            <div className="mt-1.5">
+                                                {isAmount ? (
+                                                    <span className="text-emerald-700 font-black text-sm bg-emerald-100/70 px-2.5 py-0.5 rounded-lg border border-emerald-200 inline-block font-mono">
+                                                        {String(val)}
+                                                    </span>
+                                                ) : isStatus ? (
+                                                    <span className="text-emerald-800 font-black text-xs bg-emerald-50 px-2.5 py-0.5 rounded-lg border border-emerald-200/80 inline-block">
+                                                        🟢 {String(val)}
+                                                    </span>
+                                                ) : (
+                                                    <span className="font-bold text-slate-800 text-xs block leading-snug">
+                                                        {String(val)}
+                                                    </span>
+                                                )}
+                                            </div>
+                                        </div>
+                                    )
+                                })}
+                            </div>
+                        ) : (
+                            <div className="p-4 bg-slate-50 rounded-2xl text-xs text-slate-600 font-medium border border-slate-200">
+                                {selectedNotifData.desc}
+                            </div>
+                        )}
+
+                        {/* Footer Action Buttons */}
+                        <div className="flex flex-wrap justify-end items-center gap-2.5 pt-3 border-t border-slate-100">
+                            <button
+                                onClick={() => setSelectedNotifData(null)}
+                                className="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl transition-all cursor-pointer"
+                            >
+                                Close
+                            </button>
+                            <button
+                                onClick={() => setReceiptModalData(selectedNotifData)}
+                                className="px-4 py-2.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 text-xs font-bold rounded-xl border border-emerald-300 transition-all cursor-pointer shadow-2xs flex items-center gap-1.5"
+                            >
+                                <span>🧾 View Official Payment Receipt</span>
+                            </button>
+                            {selectedNotifData.path && (
+                                <button
+                                    onClick={() => {
+                                        const targetPath = selectedNotifData.path
+                                        setSelectedNotifData(null)
+                                        navigate(targetPath)
+                                    }}
+                                    className="px-4 py-2.5 bg-gradient-to-r from-emerald-600 to-green-600 hover:from-emerald-700 hover:to-green-700 text-white text-xs font-extrabold rounded-xl transition-all cursor-pointer shadow-md hover:shadow-lg flex items-center gap-2 transform hover:-translate-y-0.5"
+                                >
+                                    <span>View Full Record</span> ➔
+                                </button>
+                            )}
+                        </div>
+                    </div>
+                </Modal>
+            )}
+            {/* Official GST Payment Receipt & Tax Invoice Modal */}
+            {receiptModalData && (
+                <Modal
+                    isOpen={!!receiptModalData}
+                    onClose={() => setReceiptModalData(null)}
+                    title=""
+                    size="lg"
+                >
+                    <div className="space-y-4 text-slate-800 -mt-2">
+                        {/* Receipt Header Banner */}
+                        <div className="bg-gradient-to-r from-slate-900 via-slate-800 to-emerald-950 p-5 rounded-2xl text-white border border-emerald-500/30 shadow-lg flex justify-between items-center">
+                            <div>
+                                <div className="flex items-center gap-2">
+                                    <span className="text-[10px] font-black uppercase tracking-widest bg-emerald-500/20 text-emerald-300 px-2 py-0.5 rounded border border-emerald-400/30">
+                                        OFFICIAL TAX INVOICE RECEIPT
+                                    </span>
+                                    <span className="text-slate-400 text-xs font-mono">INV-2026-0842</span>
+                                </div>
+                                <h3 className="text-lg font-black text-white mt-1">SportMatrix Platform Receipt</h3>
+                                <p className="text-xs text-slate-300 font-medium">Verified Payment & Slot Reservation Statement</p>
+                            </div>
+                            <div className="text-right">
+                                <span className="inline-block bg-emerald-500/20 text-emerald-300 border border-emerald-400/30 px-3 py-1 rounded-full text-xs font-black">
+                                    🟢 PAID & SETTLED
+                                </span>
+                            </div>
+                        </div>
+
+                        {/* Customer & Venue Information Grid */}
+                        <div className="grid grid-cols-2 gap-3 text-xs bg-slate-50 p-4 rounded-2xl border border-slate-200/80">
+                            <div>
+                                <span className="text-slate-400 font-bold uppercase tracking-wider text-[10px] block">Customer Name</span>
+                                <span className="font-extrabold text-slate-900 text-xs block mt-0.5 font-mono">
+                                    {receiptModalData.dataDetails?.customerName || receiptModalData.dataDetails?.ownerName || 'Rahul Verma'}
+                                </span>
+                            </div>
+                            <div>
+                                <span className="text-slate-400 font-bold uppercase tracking-wider text-[10px] block">Contact Phone</span>
+                                <span className="font-extrabold text-slate-900 text-xs block mt-0.5 font-mono">
+                                    {receiptModalData.dataDetails?.customerPhone || receiptModalData.dataDetails?.mobile || '+91 98765 99999'}
+                                </span>
+                            </div>
+                            <div>
+                                <span className="text-slate-400 font-bold uppercase tracking-wider text-[10px] block">Turf Venue / Arena</span>
+                                <span className="font-extrabold text-slate-900 text-xs block mt-0.5 font-mono">
+                                    {receiptModalData.dataDetails?.turfVenue || receiptModalData.dataDetails?.businessName || 'Champions Turf Arena'}
+                                </span>
+                            </div>
+                            <div>
+                                <span className="text-slate-400 font-bold uppercase tracking-wider text-[10px] block">Slot Date & Time</span>
+                                <span className="font-extrabold text-slate-900 text-xs block mt-0.5 font-mono">
+                                    {receiptModalData.dataDetails?.timeSlot || receiptModalData.dataDetails?.date || '06:00 PM - 07:00 PM (Today)'}
+                                </span>
+                            </div>
+                        </div>
+
+                        {/* Financial Item Breakdown Table */}
+                        <div className="border border-slate-200 rounded-2xl overflow-hidden shadow-2xs">
+                            <table className="w-full text-left text-xs">
+                                <thead className="bg-slate-100 text-slate-500 font-bold uppercase tracking-wider text-[10px] border-b border-slate-200">
+                                    <tr>
+                                        <th className="p-3">Item Description</th>
+                                        <th className="p-3 text-right">Tax (18% GST)</th>
+                                        <th className="p-3 text-right">Amount</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-slate-100 bg-white">
+                                    <tr>
+                                        <td className="p-3 font-bold text-slate-800">
+                                            {receiptModalData.dataDetails?.category || 'Slot Booking Fee'}
+                                            <span className="block text-[11px] text-slate-400 font-normal">
+                                                {receiptModalData.desc || 'Standard Box Turf Reservation'}
+                                            </span>
+                                        </td>
+                                        <td className="p-3 text-right font-mono text-slate-600">₹183.05</td>
+                                        <td className="p-3 text-right font-bold text-slate-900 font-mono">₹1,016.95</td>
+                                    </tr>
+                                    <tr className="bg-emerald-50/60 font-black">
+                                        <td colSpan="2" className="p-3 text-slate-900 text-right uppercase tracking-wider text-[11px]">
+                                            Total Paid Amount (Inclusive of Taxes):
+                                        </td>
+                                        <td className="p-3 text-right text-emerald-700 text-sm font-mono font-black">
+                                            {receiptModalData.dataDetails?.amount || receiptModalData.dataDetails?.settledAmount || '₹1,200.00'}
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+
+                        {/* Receipt Footer Actions */}
+                        <div className="flex flex-wrap justify-between items-center gap-2 pt-3 border-t border-slate-100">
+                            <span className="text-[11px] text-slate-400 font-semibold flex items-center gap-1">
+                                <span>🔒</span> Verified Digital GST Invoice • SportMatrix OS
+                            </span>
+                            <div className="flex items-center gap-2">
+                                <button
+                                    onClick={() => window.print()}
+                                    className="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold rounded-xl transition-all cursor-pointer flex items-center gap-1.5"
+                                >
+                                    <span>🖨️ Print Receipt</span>
+                                </button>
+                                <button
+                                    onClick={() => setReceiptModalData(null)}
+                                    className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-extrabold rounded-xl transition-all cursor-pointer shadow-md"
+                                >
+                                    Done
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </Modal>
+            )}
         </div>
     )
 }

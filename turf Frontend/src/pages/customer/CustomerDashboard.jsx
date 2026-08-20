@@ -10,14 +10,10 @@ import { useAuth } from '../../context/AuthContext'
 export default function CustomerDashboard() {
     const { user } = useAuth()
     const navigate = useNavigate()
-    const DEFAULT_DEMO = [
-        { id: 'BK-701', sport: 'Cricket 🏏', venue: 'Champions Turf Arena (Vijay Nagar)', date: '2026-08-15', time: '06:00 PM', status: 'Confirmed' },
-        { id: 'BK-702', sport: 'Football ⚽', venue: 'SkyLine Sports Arena (Palasia)', date: '2026-08-18', time: '07:00 PM', status: 'Confirmed' },
-        { id: 'BK-703', sport: 'Box Cricket 🏏', venue: 'Velocity Sports Hub (Rau)', date: '2026-08-22', time: '08:00 PM', status: 'Pending' }
-    ]
+    const DEFAULT_DEMO = []
 
     const [stats, setStats] = useState({ activeTournaments: 4, activeTeams: 2, matchesPlayed: 14 })
-    const [myBookings, setMyBookings] = useState(DEFAULT_DEMO)
+    const [myBookings, setMyBookings] = useState([])
 
     useEffect(() => {
         const fetchDashboardData = async () => {
@@ -44,18 +40,21 @@ export default function CustomerDashboard() {
 
         // Load customer's personal bookings
         try {
-            const raw = localStorage.getItem('customer_bookings')
-            if (raw) {
-                const parsed = JSON.parse(raw)
-                if (Array.isArray(parsed) && parsed.length > 0) {
-                    const currentEmail = (user?.email || '').toLowerCase()
-                    const currentUserId = user?.id || ''
-                    const currentPhone = user?.phone || user?.mobile || ''
+            const rawCustomer = localStorage.getItem('customer_bookings')
+            const rawGuest = localStorage.getItem('guest_bookings')
+            const cList = rawCustomer ? JSON.parse(rawCustomer) : []
+            const gList = rawGuest ? JSON.parse(rawGuest) : []
+            const allBookings = [...(Array.isArray(cList) ? cList : []), ...(Array.isArray(gList) ? gList : [])]
 
-                    const filtered = parsed.filter(b => {
-                        if (b.isGuest || b.userEmail === 'guest@sportmatrix.com') return false
-                        const bEmail = (b.userEmail || '').toLowerCase()
-                        const bUserId = b.userId || ''
+            if (allBookings.length > 0) {
+                const currentEmail = (user?.email || '').toLowerCase()
+                const currentUserId = user?.id || ''
+                const currentPhone = user?.phone || user?.mobile || ''
+
+                if (user && (currentEmail || currentUserId || currentPhone)) {
+                    const filtered = allBookings.filter(b => {
+                        const bEmail = (b.userEmail || b.email || '').toLowerCase()
+                        const bUserId = b.userId || b.id || ''
                         const bPhone = b.customerPhone || b.phone || ''
 
                         if (currentEmail && bEmail && bEmail === currentEmail) return true
@@ -65,8 +64,12 @@ export default function CustomerDashboard() {
                     })
                     if (filtered.length > 0) {
                         setMyBookings(filtered)
+                        return
                     }
                 }
+                setMyBookings(allBookings)
+            } else {
+                setMyBookings([])
             }
         } catch (e) { }
     }, [user?.email, user?.id])

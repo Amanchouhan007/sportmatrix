@@ -124,66 +124,66 @@ export default function CorporateQuoteModal({ isOpen, onClose, lead, onQuoteSent
     }
 
     return (
-        <Modal isOpen={isOpen} onClose={onClose} title="💼 Set Custom Price & Send Corporate Quotation">
+        <Modal isOpen={isOpen} onClose={onClose} title="💼 Set Custom Price & Send Corporate Quotation" size="xl">
             {quoteSuccess && generatedQuoteSummary ? (
-                <div className="text-center py-5 space-y-4 text-slate-800">
-                    <div className="w-16 h-16 bg-emerald-100 border-4 border-emerald-400 rounded-full flex items-center justify-center mx-auto text-emerald-600 text-3xl animate-bounce shadow-md">
+                <div className="text-center py-2 space-y-3 text-slate-800 max-w-2xl mx-auto">
+                    <div className="w-12 h-12 bg-emerald-100 border-4 border-emerald-400 rounded-full flex items-center justify-center mx-auto text-emerald-600 text-2xl animate-bounce shadow-md">
                         ✓
                     </div>
                     <div>
-                        <h3 className="text-xl font-black text-slate-900">Official Quotation Dispatched!</h3>
-                        <p className="text-xs text-slate-500 mt-1">
+                        <h3 className="text-lg font-black text-slate-900">Official Quotation Dispatched!</h3>
+                        <p className="text-xs text-slate-500 mt-0.5">
                             Quotation generated for <strong>{lead.name || lead.companyName}</strong>
                         </p>
                     </div>
 
                     {/* Official Quotation Card Preview */}
-                    <div className="bg-slate-900 text-white rounded-3xl p-5 text-left border border-slate-800 shadow-xl space-y-3 max-w-md mx-auto">
-                        <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-                            <div className="flex items-center gap-2">
-                                <span className="p-1.5 rounded-xl bg-emerald-500/20 text-[#C8FF2E]">
-                                    <HiOfficeBuilding className="w-5 h-5" />
-                                </span>
+                    <div className="bg-slate-950 text-white rounded-2xl p-4 text-left border border-slate-800 shadow-xl space-y-3">
+                        <div className="flex items-center justify-between border-b border-slate-800 pb-2.5">
+                            <div className="flex items-center gap-2.5">
+                                <div className="p-2 rounded-xl bg-emerald-500/20 text-[#C8FF2E]">
+                                    <HiOfficeBuilding className="w-4 h-4" />
+                                </div>
                                 <div>
                                     <h4 className="font-black text-sm text-white">{lead.name || lead.companyName}</h4>
                                     <span className="text-[10px] text-slate-400 font-mono">Arena: {lead.turfBranch || lead.preferredTurf || 'Champion Turf Ground'}</span>
                                 </div>
                             </div>
-                            <span className="px-2.5 py-1 rounded-full bg-emerald-500/20 text-[#C8FF2E] font-black text-xs border border-emerald-500/30">
+                            <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-[#C8FF2E] font-black text-xs border border-emerald-500/30">
                                 {generatedQuoteSummary.status}
                             </span>
                         </div>
 
-                        <div className="grid grid-cols-2 gap-2 text-xs py-1">
-                            <div>
-                                <span className="text-slate-400 text-[10px] block">Base Rate</span>
-                                <span className="font-mono font-bold text-slate-200">₹{basePrice.toLocaleString('en-IN')}</span>
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs py-1">
+                            <div className="p-2 rounded-xl bg-slate-900 border border-slate-800">
+                                <span className="text-slate-400 text-[9px] uppercase tracking-wider font-bold block">Base Rate</span>
+                                <span className="font-mono font-black text-slate-100 text-xs">₹{basePrice.toLocaleString('en-IN')}</span>
                             </div>
-                            <div>
-                                <span className="text-slate-400 text-[10px] block">Corporate Discount</span>
-                                <span className="font-mono font-bold text-rose-400">-₹{discount.toLocaleString('en-IN')}</span>
+                            <div className="p-2 rounded-xl bg-slate-900 border border-slate-800">
+                                <span className="text-slate-400 text-[9px] uppercase tracking-wider font-bold block">Discount</span>
+                                <span className="font-mono font-black text-rose-400 text-xs">-₹{discount.toLocaleString('en-IN')}</span>
                             </div>
-                            <div>
-                                <span className="text-slate-400 text-[10px] block">18% GST Tax</span>
-                                <span className="font-mono font-bold text-amber-300">+₹{gstAmount.toLocaleString('en-IN')}</span>
+                            <div className="p-2 rounded-xl bg-slate-900 border border-slate-800">
+                                <span className="text-slate-400 text-[9px] uppercase tracking-wider font-bold block">18% GST Tax</span>
+                                <span className="font-mono font-black text-amber-300 text-xs">+₹{gstAmount.toLocaleString('en-IN')}</span>
                             </div>
-                            <div>
-                                <span className="text-slate-400 text-[10px] block">50% Advance Due</span>
-                                <span className="font-mono font-bold text-[#C8FF2E]">₹{advanceAmount.toLocaleString('en-IN')}</span>
+                            <div className="p-2 rounded-xl bg-slate-900 border border-slate-800">
+                                <span className="text-slate-400 text-[9px] uppercase tracking-wider font-bold block">50% Advance</span>
+                                <span className="font-mono font-black text-[#C8FF2E] text-xs">₹{advanceAmount.toLocaleString('en-IN')}</span>
                             </div>
                         </div>
 
-                        <div className="border-t border-slate-800 pt-3 flex items-center justify-between">
-                            <span className="text-xs text-slate-300 font-bold uppercase tracking-wider">Total Quoted Amount</span>
+                        <div className="border-t border-slate-800 pt-2 flex items-center justify-between">
+                            <span className="text-xs text-slate-300 font-bold uppercase tracking-wider">Total Quoted Package</span>
                             <span className="text-xl font-black text-[#C8FF2E] font-mono">₹{finalTotal.toLocaleString('en-IN')}</span>
                         </div>
 
                         {generatedQuoteSummary.addons?.length > 0 && (
-                            <div className="pt-1 text-[11px] text-slate-400 border-t border-slate-800/80">
-                                <span className="font-bold text-slate-300 block mb-1">Included Addons ({generatedQuoteSummary.addons.length}):</span>
-                                <div className="flex flex-wrap gap-1">
+                            <div className="pt-2 text-xs text-slate-400 border-t border-slate-800">
+                                <span className="font-bold text-slate-300 block mb-1 text-[11px]">Included Addons ({generatedQuoteSummary.addons.length}):</span>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 max-h-32 overflow-y-auto pr-1">
                                     {generatedQuoteSummary.addons.map((a, i) => (
-                                        <span key={i} className="px-2 py-0.5 rounded-md bg-slate-800 text-slate-300 text-[10px]">
+                                        <span key={i} className="px-2 py-1 rounded-lg bg-slate-900 text-emerald-400 text-[10px] font-semibold border border-slate-800 truncate" title={a}>
                                             ✓ {a}
                                         </span>
                                     ))}
@@ -192,73 +192,73 @@ export default function CorporateQuoteModal({ isOpen, onClose, lead, onQuoteSent
                         )}
                     </div>
 
-                    <div className="flex items-center justify-center gap-2 pt-2">
-                        <Button 
+                    <div className="flex items-center justify-center pt-2">
+                        <button 
                             onClick={onClose} 
-                            className="bg-[#111827] text-white font-bold text-xs px-6 py-2.5 rounded-xl hover:bg-black cursor-pointer shadow-md"
+                            className="bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-xs px-8 py-3 rounded-xl cursor-pointer shadow-lg transition-all"
                         >
                             Done & Return to CRM
-                        </Button>
+                        </button>
                     </div>
                 </div>
             ) : (
-                <div className="space-y-4 text-xs text-slate-800">
+                <div className="space-y-5 text-xs text-slate-800">
                     {/* 1. Client Request Summary Banner */}
-                    <div className="bg-slate-50 border border-slate-200 rounded-2xl p-3.5 space-y-2">
-                        <div className="flex items-start justify-between">
-                            <div className="flex items-center gap-2">
-                                <div className="w-8 h-8 rounded-xl bg-purple-100 text-purple-700 font-black flex items-center justify-center text-sm">
+                    <div className="bg-gradient-to-r from-slate-900 via-slate-800 to-emerald-950 text-white rounded-2xl p-4 shadow-md border border-emerald-500/20 space-y-3">
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                            <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 rounded-2xl bg-emerald-500/20 border border-emerald-400/30 flex items-center justify-center text-xl shrink-0">
                                     🏢
                                 </div>
                                 <div>
-                                    <h4 className="font-black text-slate-900 text-sm">{lead.name || lead.companyName || 'Corporate Client'}</h4>
-                                    <div className="flex items-center gap-2 text-[11px] text-slate-500 font-medium mt-0.5">
-                                        <span className="flex items-center gap-1 font-mono"><HiPhone className="w-3 h-3 text-emerald-600" /> {lead.phone}</span>
-                                        {lead.email && <span className="flex items-center gap-1"><HiMail className="w-3 h-3 text-blue-600" /> {lead.email}</span>}
+                                    <h4 className="font-black text-white text-base tracking-tight">{lead.name || lead.companyName || 'Corporate Client'}</h4>
+                                    <div className="flex items-center gap-3 text-xs text-slate-300 font-medium mt-0.5">
+                                        <span className="flex items-center gap-1 font-mono"><HiPhone className="w-3.5 h-3.5 text-emerald-400" /> {lead.phone}</span>
+                                        {lead.email && <span className="flex items-center gap-1"><HiMail className="w-3.5 h-3.5 text-blue-400" /> {lead.email}</span>}
                                     </div>
                                 </div>
                             </div>
-                            <span className="px-2 py-0.5 rounded-full bg-purple-100 text-purple-800 font-black text-[10px] border border-purple-200">
+                            <span className="px-3 py-1 rounded-full bg-emerald-500/20 text-[#C8FF2E] font-black text-xs border border-emerald-500/30">
                                 Corporate Lead
                             </span>
                         </div>
 
                         {/* Preferred Arena, Date & Budget info */}
-                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-2 border-t border-slate-200/80 text-[11px]">
-                            <div>
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 pt-3 border-t border-slate-700/80 text-xs">
+                            <div className="p-2 rounded-xl bg-slate-900/60 border border-slate-700/50">
                                 <span className="text-slate-400 block text-[10px] font-bold">🏟️ Preferred Arena</span>
-                                <span className="font-bold text-emerald-700 truncate block">{lead.turfBranch || lead.preferredTurf || 'Champion Turf Ground'}</span>
+                                <span className="font-bold text-emerald-300 truncate block mt-0.5">{lead.turfBranch || lead.preferredTurf || 'Champion Turf Ground'}</span>
                             </div>
-                            <div>
+                            <div className="p-2 rounded-xl bg-slate-900/60 border border-slate-700/50">
                                 <span className="text-slate-400 block text-[10px] font-bold">📅 Date / Slot</span>
-                                <span className="font-semibold text-slate-800 truncate block">{lead.preferredSlot || 'Full Day Knockout'}</span>
+                                <span className="font-semibold text-slate-200 truncate block mt-0.5">{lead.preferredSlot || 'Full Day Knockout'}</span>
                             </div>
-                            <div>
+                            <div className="p-2 rounded-xl bg-slate-900/60 border border-slate-700/50">
                                 <span className="text-slate-400 block text-[10px] font-bold">👥 Players</span>
-                                <span className="font-semibold text-slate-800">{lead.teamName || lead.estimatedPlayers || '40-50 Players'}</span>
+                                <span className="font-semibold text-slate-200 block mt-0.5">{lead.teamName || lead.estimatedPlayers || '40-50 Players'}</span>
                             </div>
-                            <div>
+                            <div className="p-2 rounded-xl bg-slate-900/60 border border-slate-700/50">
                                 <span className="text-slate-400 block text-[10px] font-bold">💰 Client Budget</span>
-                                <span className="font-bold text-amber-700">{lead.budget || '₹60k - ₹1.2L'}</span>
+                                <span className="font-black text-[#C8FF2E] block mt-0.5">{lead.budget || '₹60k - ₹1.2L'}</span>
                             </div>
                         </div>
                     </div>
 
                     {/* 2. Admin Price Quote Inputs */}
-                    <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-2xs space-y-3">
-                        <div className="flex items-center justify-between">
-                            <h4 className="font-black text-slate-900 uppercase tracking-wider text-[11px] flex items-center gap-1.5">
+                    <div className="bg-slate-50/80 border border-slate-200/90 rounded-2xl p-4 space-y-3.5">
+                        <div className="flex items-center justify-between border-b border-slate-200/80 pb-2">
+                            <h4 className="font-black text-slate-900 uppercase tracking-wider text-xs flex items-center gap-1.5">
                                 <HiCurrencyRupee className="w-4 h-4 text-emerald-600" />
                                 <span>Set Official Admin Quotation Pricing</span>
                             </h4>
-                            <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+                            <span className="text-[10px] font-bold text-emerald-700 bg-emerald-100/80 px-2.5 py-0.5 rounded-full border border-emerald-200">
                                 Dynamic GST Engine
                             </span>
                         </div>
 
-                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
                             <div>
-                                <label className="font-bold text-slate-700 block mb-1">Base Price Quote (₹) *</label>
+                                <label className="font-bold text-slate-700 block mb-1 text-xs">Base Price Quote (₹) *</label>
                                 <Input
                                     type="number"
                                     min="0"
@@ -270,7 +270,7 @@ export default function CorporateQuoteModal({ isOpen, onClose, lead, onQuoteSent
                                 />
                             </div>
                             <div>
-                                <label className="font-bold text-slate-700 block mb-1">Corporate Discount (₹)</label>
+                                <label className="font-bold text-slate-700 block mb-1 text-xs">Corporate Discount (₹)</label>
                                 <Input
                                     type="number"
                                     min="0"
@@ -281,11 +281,11 @@ export default function CorporateQuoteModal({ isOpen, onClose, lead, onQuoteSent
                                 />
                             </div>
                             <div>
-                                <label className="font-bold text-slate-700 block mb-1">Advance Deposit %</label>
+                                <label className="font-bold text-slate-700 block mb-1 text-xs">Advance Deposit %</label>
                                 <select
                                     value={advancePercent}
                                     onChange={(e) => setAdvancePercent(Number(e.target.value))}
-                                    className="w-full h-[38px] px-3 rounded-xl border border-slate-300 text-xs font-semibold text-slate-800 bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                                    className="w-full h-[42px] px-3 rounded-xl border border-slate-300 text-xs font-semibold text-slate-800 bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500 shadow-2xs"
                                 >
                                     <option value={50}>50% Advance (Standard)</option>
                                     <option value={30}>30% Token Advance</option>
@@ -296,7 +296,7 @@ export default function CorporateQuoteModal({ isOpen, onClose, lead, onQuoteSent
                         </div>
 
                         {/* GST Toggle */}
-                        <div className="flex items-center justify-between pt-1">
+                        <div className="flex items-center justify-between pt-1 bg-white p-3 rounded-xl border border-slate-200/80">
                             <label className="flex items-center gap-2 cursor-pointer select-none">
                                 <input
                                     type="checkbox"
@@ -306,47 +306,47 @@ export default function CorporateQuoteModal({ isOpen, onClose, lead, onQuoteSent
                                 />
                                 <span className="font-bold text-slate-800">Apply 18% GST (Tax Deductible Invoice for Corporate)</span>
                             </label>
-                            <span className="font-mono font-bold text-slate-600">
+                            <span className="font-mono font-black text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-lg border border-emerald-200">
                                 {includeGst ? `+₹${gstAmount.toLocaleString('en-IN')}` : 'GST Exempt'}
                             </span>
                         </div>
                     </div>
 
                     {/* 3. Included Package Addons */}
-                    <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-2xs space-y-2.5">
-                        <div className="flex items-center justify-between">
-                            <label className="font-black text-slate-900 uppercase tracking-wider text-[11px] flex items-center gap-1.5">
+                    <div className="bg-slate-50/80 border border-slate-200/90 rounded-2xl p-4 space-y-3">
+                        <div className="flex items-center justify-between border-b border-slate-200/80 pb-2">
+                            <label className="font-black text-slate-900 uppercase tracking-wider text-xs flex items-center gap-1.5">
                                 <HiSparkles className="w-4 h-4 text-amber-500" />
                                 <span>Included Complimentary Package Addons</span>
                             </label>
-                            <span className="text-[11px] font-mono font-bold text-slate-500">
+                            <span className="text-xs font-mono font-bold text-emerald-700 bg-emerald-100/60 px-2.5 py-0.5 rounded-lg border border-emerald-200">
                                 Addons Value: ₹{addonsTotal.toLocaleString('en-IN')}
                             </span>
                         </div>
 
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                             {AVAILABLE_ADDONS.map((addon) => {
                                 const isChecked = selectedAddons.includes(addon.id)
                                 return (
                                     <div
                                         key={addon.id}
                                         onClick={() => toggleAddon(addon.id)}
-                                        className={`p-2.5 rounded-xl border transition-all cursor-pointer flex items-center justify-between select-none ${
+                                        className={`p-3 rounded-xl border transition-all cursor-pointer flex items-center justify-between select-none ${
                                             isChecked 
-                                                ? 'bg-emerald-50/70 border-emerald-300 text-emerald-950 font-bold shadow-2xs' 
-                                                : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'
+                                                ? 'bg-emerald-50 border-emerald-400 text-emerald-950 font-bold shadow-2xs' 
+                                                : 'bg-white border-slate-200/90 text-slate-600 hover:bg-slate-100'
                                         }`}
                                     >
-                                        <div className="flex items-center gap-2 pr-2">
+                                        <div className="flex items-center gap-2.5 pr-2">
                                             <input
                                                 type="checkbox"
                                                 checked={isChecked}
                                                 onChange={() => {}}
-                                                className="w-3.5 h-3.5 rounded text-emerald-600 focus:ring-emerald-500 cursor-pointer accent-[#16A34A]"
+                                                className="w-4 h-4 rounded text-emerald-600 focus:ring-emerald-500 cursor-pointer accent-[#16A34A]"
                                             />
-                                            <span className="text-[11px]">{addon.label}</span>
+                                            <span className="text-xs font-bold">{addon.label}</span>
                                         </div>
-                                        <span className="font-mono text-[10px] text-slate-500 shrink-0">₹{addon.price.toLocaleString('en-IN')}</span>
+                                        <span className="font-mono text-xs text-slate-600 shrink-0 font-bold">₹{addon.price.toLocaleString('en-IN')}</span>
                                     </div>
                                 )
                             })}
@@ -355,35 +355,35 @@ export default function CorporateQuoteModal({ isOpen, onClose, lead, onQuoteSent
 
                     {/* 4. Admin Notes to Company */}
                     <div>
-                        <label className="font-bold text-slate-700 block mb-1">Admin Notes / Terms for Corporate HR</label>
+                        <label className="font-bold text-slate-700 block mb-1 text-xs">Admin Notes / Terms for Corporate HR</label>
                         <textarea
                             rows={2}
                             value={adminNotes}
                             onChange={(e) => setAdminNotes(e.target.value)}
-                            className="w-full p-2.5 rounded-xl border border-slate-300 text-xs font-medium text-slate-800 bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500 resize-none"
+                            className="w-full p-3 rounded-xl border border-slate-300 text-xs font-semibold text-slate-800 bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500 resize-none shadow-2xs"
                             placeholder="Enter special perks, venue terms, umpire coordination details..."
                         />
                     </div>
 
                     {/* 5. Live Pricing Summary & Submit Buttons */}
-                    <div className="bg-slate-900 text-white rounded-2xl p-4 flex flex-col sm:flex-row items-center justify-between gap-3 shadow-lg">
+                    <div className="bg-slate-950 text-white rounded-2xl p-5 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-xl border border-slate-800">
                         <div>
                             <div className="text-[10px] text-slate-400 uppercase tracking-widest font-black">Final Quoted Package Total</div>
-                            <div className="flex items-baseline gap-2">
-                                <span className="text-2xl font-black text-[#C8FF2E] font-mono">₹{finalTotal.toLocaleString('en-IN')}</span>
-                                {includeGst && <span className="text-[10px] text-emerald-400 font-bold">(incl. 18% GST)</span>}
+                            <div className="flex items-baseline gap-2 mt-0.5">
+                                <span className="text-3xl font-black text-[#C8FF2E] font-mono">₹{finalTotal.toLocaleString('en-IN')}</span>
+                                {includeGst && <span className="text-xs text-emerald-400 font-bold">(incl. 18% GST)</span>}
                             </div>
-                            <div className="text-[10px] text-slate-400 font-mono mt-0.5">
-                                Advance Required: <strong className="text-white">₹{advanceAmount.toLocaleString('en-IN')}</strong> ({advancePercent}%)
+                            <div className="text-xs text-slate-300 font-mono mt-1">
+                                Advance Required: <strong className="text-[#C8FF2E] font-extrabold">₹{advanceAmount.toLocaleString('en-IN')}</strong> ({advancePercent}%)
                             </div>
                         </div>
 
-                        <div className="flex items-center gap-2 w-full sm:w-auto">
+                        <div className="flex items-center gap-2.5 w-full sm:w-auto">
                             <button
                                 type="button"
                                 disabled={isSubmitting}
                                 onClick={() => handleSendQuote('QUOTE_SENT')}
-                                className="flex-1 sm:flex-none px-4 py-2.5 rounded-xl bg-[#C8FF2E] hover:bg-[#bbf324] text-slate-950 font-black text-xs shadow-md transition-all flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
+                                className="flex-1 sm:flex-none px-5 py-3 rounded-xl bg-[#C8FF2E] hover:bg-[#bbf324] text-slate-950 font-black text-xs shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50 transform hover:-translate-y-0.5"
                             >
                                 <span>📤 Send Official Quote</span>
                             </button>
@@ -391,9 +391,9 @@ export default function CorporateQuoteModal({ isOpen, onClose, lead, onQuoteSent
                                 type="button"
                                 disabled={isSubmitting}
                                 onClick={() => handleSendQuote('CONFIRMED')}
-                                className="flex-1 sm:flex-none px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs shadow-md transition-all flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
+                                className="flex-1 sm:flex-none px-5 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50 transform hover:-translate-y-0.5"
                             >
-                                <span>✅ Confirm & Lock Slot</span>
+                                <span>✅ Confirm & Lock</span>
                             </button>
                         </div>
                     </div>

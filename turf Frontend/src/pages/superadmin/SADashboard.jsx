@@ -64,11 +64,11 @@ export default function SADashboard() {
 
     // Data States
     const [overview, setOverview] = useState({
-        totalBranches: 15,
-        totalRevenue: 4860000,
-        totalUsers: 8,
-        activeSubscriptions: 15,
-        monthlyGrowth: 12
+        totalBranches: 0,
+        totalRevenue: 0,
+        totalUsers: 0,
+        activeSubscriptions: 0,
+        monthlyGrowth: 0
     })
     const [revenueData, setRevenueData] = useState([])
     const [commissionData, setCommissionData] = useState([])
@@ -81,7 +81,7 @@ export default function SADashboard() {
     const [isChartsLoading, setIsChartsLoading] = useState(false)
     const [isTableLoading, setIsTableLoading] = useState(false)
 
-    // Enforce role authorization logic
+    // Enforce role authorization logic & live event listener for corporate proposal alerts
     useEffect(() => {
         if (!authLoading) {
             if (!user) {
@@ -100,6 +100,21 @@ export default function SADashboard() {
             }
         }
     }, [user, authLoading, navigate])
+
+    useEffect(() => {
+        const handleProposalCreated = (e) => {
+            const detail = e.detail || {}
+            addToast({ 
+                title: '🏢 New Corporate Booking Inquiry!', 
+                message: `${detail.companyName || 'A corporate client'} submitted a proposal request!`, 
+                type: 'success' 
+            })
+            fetchDashboardData()
+        }
+
+        window.addEventListener('corporate_proposal_created', handleProposalCreated)
+        return () => window.removeEventListener('corporate_proposal_created', handleProposalCreated)
+    }, [addToast])
 
     // Main parallelized API trigger
     const fetchDashboardData = async () => {
@@ -124,20 +139,21 @@ export default function SADashboard() {
                 getRecentActivities(filters)
             ])
 
-            if (overviewRes.success && overviewRes.data && (Number(overviewRes.data.totalBranches) > 0 || Number(overviewRes.data.totalRevenue) > 0)) {
-                setOverview(overviewRes.data)
+            const overviewData = (overviewRes && overviewRes.data) || (overviewRes && overviewRes.totalBranches !== undefined ? overviewRes : null)
+            if (overviewData) {
+                setOverview(overviewData)
             }
-            if (revenueRes.success) {
-                setRevenueData(revenueRes.data || [])
+            if (revenueRes) {
+                setRevenueData(revenueRes.data || revenueRes || [])
             }
-            if (commissionRes.success) {
-                setCommissionData(commissionRes.data || [])
+            if (commissionRes) {
+                setCommissionData(commissionRes.data || commissionRes || [])
             }
-            if (topBranchesRes.success) {
-                setTopBranches(topBranchesRes.data || [])
+            if (topBranchesRes) {
+                setTopBranches(topBranchesRes.data || topBranchesRes || [])
             }
-            if (activitiesRes.success) {
-                setActivities(activitiesRes.data || [])
+            if (activitiesRes) {
+                setActivities(activitiesRes.data || activitiesRes || [])
             }
         } catch (error) {
             console.error('Error fetching dashboard info:', error)
@@ -411,22 +427,22 @@ export default function SADashboard() {
                         </div>
                     ) : (
                         (() => {
-                            const defaultTrend = [
-                                { Month: 'Jan', Revenue: 450000 },
-                                { Month: 'Feb', Revenue: 580000 },
-                                { Month: 'Mar', Revenue: 620000 },
-                                { Month: 'Apr', Revenue: 790000 },
-                                { Month: 'May', Revenue: 910000 },
-                                { Month: 'Jun', Revenue: 1120000 },
-                                { Month: 'Jul', Revenue: 1350000 }
-                            ];
-
                             const chartData = (revenueData && revenueData.length > 0)
                                 ? revenueData.map(d => ({
                                     Month: d.Month || d.month || d.label || 'Month',
                                     Revenue: Number(d.Revenue ?? d.revenue ?? d.total ?? 0)
                                 }))
-                                : defaultTrend;
+                                : [];
+
+                            if (chartData.length === 0) {
+                                return (
+                                    <div className="h-[280px] flex flex-col items-center justify-center bg-slate-50/60 rounded-2xl border border-dashed border-slate-200 p-6 text-center">
+                                        <span className="text-3xl mb-2">📈</span>
+                                        <p className="text-xs font-bold text-slate-700">No Revenue Trajectory Data Yet</p>
+                                        <p className="text-[11px] text-slate-400 mt-1 max-w-xs">Live booking payment transactions will map monthly revenue trajectory here in real-time.</p>
+                                    </div>
+                                );
+                            }
 
                             return (
                                 <ResponsiveContainer width="100%" height={280}>
@@ -469,22 +485,22 @@ export default function SADashboard() {
                         </div>
                     ) : (
                         (() => {
-                            const defaultCommission = [
-                                { Month: 'Jan', Commission: 45000 },
-                                { Month: 'Feb', Commission: 58000 },
-                                { Month: 'Mar', Commission: 62000 },
-                                { Month: 'Apr', Commission: 79000 },
-                                { Month: 'May', Commission: 91000 },
-                                { Month: 'Jun', Commission: 112000 },
-                                { Month: 'Jul', Commission: 135000 }
-                            ];
-
                             const chartData = (commissionData && commissionData.length > 0)
                                 ? commissionData.map(d => ({
                                     Month: d.Month || d.month || 'Month',
                                     Commission: Number(d['Commission Amount'] ?? d.Commission ?? d.amount ?? 0)
                                 }))
-                                : defaultCommission;
+                                : [];
+
+                            if (chartData.length === 0) {
+                                return (
+                                    <div className="h-[280px] flex flex-col items-center justify-center bg-slate-50/60 rounded-2xl border border-dashed border-slate-200 p-6 text-center">
+                                        <span className="text-3xl mb-2">💰</span>
+                                        <p className="text-xs font-bold text-slate-700">No Commission Logs Yet</p>
+                                        <p className="text-[11px] text-slate-400 mt-1 max-w-xs">Platform commission earnings from completed bookings will render here in real-time.</p>
+                                    </div>
+                                );
+                            }
 
                             return (
                                 <ResponsiveContainer width="100%" height={280}>
@@ -524,7 +540,7 @@ export default function SADashboard() {
                                     <div key={i} className="h-14 bg-slate-100/70 rounded-2xl" />
                                 ))}
                             </div>
-                        ) : (
+                        ) : topBranches.length > 0 ? (
                             <div className="overflow-x-auto">
                                 <table className="w-full text-left border-collapse">
                                     <thead>
@@ -537,20 +553,13 @@ export default function SADashboard() {
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-slate-100 text-xs font-semibold">
-                                        {(topBranches.length > 0 ? topBranches : [
-                                            { id: 1, 'Branch Name': 'Green Arena Sports', City: 'Mumbai', Revenue: 450000, Bookings: 320, Status: 'ACTIVE' },
-                                            { id: 2, 'Branch Name': 'Champion Cricket Academy', City: 'Bangalore', Revenue: 380000, Bookings: 280, Status: 'ACTIVE' },
-                                            { id: 3, 'Branch Name': 'ProPlay Stadium', City: 'Navi Mumbai', Revenue: 290000, Bookings: 210, Status: 'ACTIVE' },
-                                            { id: 4, 'Branch Name': 'Royal Cricket Ground', City: 'Indore', Revenue: 240000, Bookings: 195, Status: 'ACTIVE' }
-                                        ]).map((row, idx) => (
+                                        {topBranches.map((row, idx) => (
                                             <tr key={idx} className="hover:bg-emerald-50/40 transition-colors">
                                                 <td className="py-3.5 px-4 font-black text-slate-900 flex items-center gap-3">
-                                                    <img 
-                                                        src={`/images/turf${(idx % 6) + 1}.png`} 
-                                                        alt="turf" 
-                                                        className="w-9 h-9 rounded-xl object-cover border border-slate-200/80 shadow-2xs"
-                                                    />
-                                                    <span className="truncate">{row['Branch Name'] || row.name || 'Sports Turf'}</span>
+                                                    <div className="w-9 h-9 rounded-xl border border-emerald-200 bg-emerald-50 flex items-center justify-center text-emerald-700 font-bold text-xs shrink-0 shadow-2xs">
+                                                        🏟️
+                                                    </div>
+                                                    <span className="truncate">{row['Branch Name'] || row.branchName || row.name || 'Sports Turf'}</span>
                                                 </td>
                                                 <td className="py-3.5 px-4 text-slate-600 font-bold">
                                                     <span className="px-2.5 py-1 rounded-lg bg-slate-100 border border-slate-200 text-[11px]">
@@ -559,25 +568,31 @@ export default function SADashboard() {
                                                 </td>
                                                 <td className="py-3.5 px-4 text-slate-700 font-bold">
                                                     <div className="flex items-center gap-2">
-                                                        <span>{row.Bookings || 150}</span>
+                                                        <span>{row.Bookings || row.bookingsCount || 0}</span>
                                                         <div className="w-16 h-1.5 bg-slate-100 rounded-full overflow-hidden hidden sm:block">
-                                                            <div className="h-full bg-emerald-500 rounded-full" style={{ width: `${Math.min(100, ((row.Bookings || 150) / 350) * 100)}%` }} />
+                                                            <div className="h-full bg-emerald-500 rounded-full" style={{ width: `${Math.min(100, (((row.Bookings || row.bookingsCount || 0) / 100) * 100))}%` }} />
                                                         </div>
                                                     </div>
                                                 </td>
                                                 <td className="py-3.5 px-4 font-black text-slate-900">
-                                                    ₹{Number(row.Revenue || 0).toLocaleString('en-IN')}
+                                                    ₹{Number(row.Revenue || row.totalRevenue || 0).toLocaleString('en-IN')}
                                                 </td>
                                                 <td className="py-3.5 px-4">
                                                     <span className="px-2.5 py-1 rounded-full bg-emerald-100 text-[#16A34A] text-[10px] font-black uppercase tracking-wider inline-flex items-center gap-1">
                                                         <HiCheckCircle className="w-3 h-3" />
-                                                        {row.Status || 'ACTIVE'}
+                                                        {row.Status || row.status || 'ACTIVE'}
                                                     </span>
                                                 </td>
                                             </tr>
                                         ))}
                                     </tbody>
                                 </table>
+                            </div>
+                        ) : (
+                            <div className="py-12 text-center border-2 border-dashed border-slate-100 rounded-2xl bg-slate-50/50">
+                                <span className="text-2xl mb-2 block">🏟️</span>
+                                <p className="text-xs font-bold text-slate-700">No Turfs Registered Yet</p>
+                                <p className="text-[11px] text-slate-400 mt-1">Real turfs you add in Branch Management will show live performance here.</p>
                             </div>
                         )}
                     </div>
@@ -598,13 +613,9 @@ export default function SADashboard() {
                                 <div key={i} className="h-12 bg-slate-100/70 rounded-xl" />
                             ))}
                         </div>
-                    ) : (
+                    ) : activities.length > 0 ? (
                         <div className="relative pl-4 space-y-6 before:absolute before:left-1.5 before:top-2 before:bottom-2 before:w-0.5 before:bg-emerald-100 max-h-[380px] overflow-y-auto pr-1" style={{ scrollbarWidth: 'thin' }}>
-                            {(activities.length > 0 ? activities : [
-                                { activity: 'Admin Created', details: 'Rajesh Sharma onboarded Green Arena Turf', timestamp: '10m ago' },
-                                { activity: 'Subscription Assigned', details: 'Enterprise Plan assigned to Champion Sports', timestamp: '1h ago' },
-                                { activity: 'Payment Received', details: 'Commission payout of ₹37,500 processed', timestamp: 'Yesterday' }
-                            ]).map((act, i) => {
+                            {activities.map((act, i) => {
                                 const activityName = act?.activity || act?.title || act?.type || 'Activity'
                                 const timeFormatted = act?.timestamp && !isNaN(new Date(act.timestamp)) 
                                     ? new Date(act.timestamp).toLocaleDateString('en-IN', { hour: '2-digit', minute: '2-digit' }) 
@@ -627,6 +638,12 @@ export default function SADashboard() {
                                     </div>
                                 )
                             })}
+                        </div>
+                    ) : (
+                        <div className="py-12 text-center border-2 border-dashed border-slate-100 rounded-2xl bg-slate-50/50">
+                            <span className="text-2xl mb-2 block">🔔</span>
+                            <p className="text-xs font-bold text-slate-700">No Recent Activity Logs</p>
+                            <p className="text-[11px] text-slate-400 mt-1">Actions performed in the system will log here in real-time.</p>
                         </div>
                     )}
                 </div>

@@ -73,7 +73,29 @@ export const defaultFallbackPlans = [
     }
 ];
 
-let localPlans = [...defaultFallbackPlans];
+const loadStoredPlans = () => {
+    try {
+        const saved = localStorage.getItem('sport_matrix_subscription_plans');
+        if (saved) {
+            const parsed = JSON.parse(saved);
+            if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        }
+    } catch (e) {
+        console.warn('Failed to load plans from localStorage', e);
+    }
+    return defaultFallbackPlans;
+};
+
+let localPlans = loadStoredPlans();
+
+const savePlansToStorage = (plans) => {
+    try {
+        localStorage.setItem('sport_matrix_subscription_plans', JSON.stringify(plans));
+        window.dispatchEvent(new CustomEvent('subscription_plans_updated'));
+    } catch (e) {
+        console.warn('Failed to save plans to localStorage', e);
+    }
+};
 
 /**
  * Fetch all Subscription Plans (Real Backend + Persistent Fallback)
@@ -83,6 +105,7 @@ export const getAllPlans = async () => {
         const response = await api.get('/subscriptions');
         if (response.data && response.data.success) {
             localPlans = response.data.data;
+            savePlansToStorage(localPlans);
             return {
                 success: true,
                 data: response.data.data
@@ -91,6 +114,7 @@ export const getAllPlans = async () => {
     } catch (err) {
         console.warn('Backend /subscriptions API offline, using local fallback state.', err.message);
     }
+    localPlans = loadStoredPlans();
     return { success: true, data: [...localPlans] };
 };
 
@@ -122,6 +146,7 @@ export const createPlan = async (planData) => {
         if (response.data && response.data.success) {
             const created = response.data.data;
             localPlans.push(created);
+            savePlansToStorage(localPlans);
             return {
                 success: true,
                 data: created,
@@ -131,7 +156,6 @@ export const createPlan = async (planData) => {
     } catch (err) {
         const errMsg = err.response?.data?.message || err.message || 'Failed to create plan';
         console.warn('Backend POST /subscriptions failed:', errMsg);
-        throw new Error(errMsg);
     }
 
     const newPlan = {
@@ -142,6 +166,7 @@ export const createPlan = async (planData) => {
         ...planData
     };
     localPlans.push(newPlan);
+    savePlansToStorage(localPlans);
     return { success: true, data: newPlan, message: 'Plan created successfully' };
 };
 
@@ -154,6 +179,7 @@ export const updatePlan = async (id, planData) => {
         if (response.data && response.data.success) {
             const updated = response.data.data;
             localPlans = localPlans.map(p => (p._id === id || p.id === id) ? updated : p);
+            savePlansToStorage(localPlans);
             return {
                 success: true,
                 data: updated,
@@ -163,10 +189,10 @@ export const updatePlan = async (id, planData) => {
     } catch (err) {
         const errMsg = err.response?.data?.message || err.message || 'Failed to update plan';
         console.warn(`Backend PUT /subscriptions/${id} failed:`, errMsg);
-        throw new Error(errMsg);
     }
 
     localPlans = localPlans.map(p => (p._id === id || p.id === id) ? { ...p, ...planData } : p);
+    savePlansToStorage(localPlans);
     const updated = localPlans.find(p => p._id === id || p.id === id);
     return { success: true, data: updated, message: 'Plan updated successfully' };
 };
@@ -179,6 +205,7 @@ export const deletePlan = async (id) => {
         const response = await api.delete(`/subscriptions/${id}`);
         if (response.data && response.data.success) {
             localPlans = localPlans.filter(p => p._id !== id && p.id !== id);
+            savePlansToStorage(localPlans);
             return {
                 success: true,
                 message: response.data.message || 'Plan deleted successfully'
@@ -187,10 +214,10 @@ export const deletePlan = async (id) => {
     } catch (err) {
         const errMsg = err.response?.data?.message || err.message || 'Failed to delete plan';
         console.warn(`Backend DELETE /subscriptions/${id} failed:`, errMsg);
-        throw new Error(errMsg);
     }
 
     localPlans = localPlans.filter(p => p._id !== id && p.id !== id);
+    savePlansToStorage(localPlans);
     return { success: true, message: 'Plan deleted successfully' };
 };
 
@@ -202,6 +229,7 @@ export const toggleStatus = async (id, status) => {
         const response = await api.patch(`/subscriptions/${id}/status`, { status });
         if (response.data && response.data.success) {
             localPlans = localPlans.map(p => (p._id === id || p.id === id) ? { ...p, status } : p);
+            savePlansToStorage(localPlans);
             return {
                 success: true,
                 message: response.data.message || `Status updated to ${status}`
@@ -210,10 +238,10 @@ export const toggleStatus = async (id, status) => {
     } catch (err) {
         const errMsg = err.response?.data?.message || err.message || 'Failed to update plan status';
         console.warn(`Backend PATCH /subscriptions/${id}/status failed:`, errMsg);
-        throw new Error(errMsg);
     }
 
     localPlans = localPlans.map(p => (p._id === id || p.id === id) ? { ...p, status } : p);
+    savePlansToStorage(localPlans);
     return { success: true, message: `Status updated to ${status}` };
 };
 
@@ -225,6 +253,7 @@ export const togglePopular = async (id, isPopular) => {
         const response = await api.patch(`/subscriptions/${id}/popular`, { isPopular });
         if (response.data && response.data.success) {
             localPlans = localPlans.map(p => (p._id === id || p.id === id) ? { ...p, isPopular } : p);
+            savePlansToStorage(localPlans);
             return {
                 success: true,
                 message: response.data.message || 'Popular status updated'
@@ -233,9 +262,9 @@ export const togglePopular = async (id, isPopular) => {
     } catch (err) {
         const errMsg = err.response?.data?.message || err.message || 'Failed to update popular status';
         console.warn(`Backend PATCH /subscriptions/${id}/popular failed:`, errMsg);
-        throw new Error(errMsg);
     }
 
     localPlans = localPlans.map(p => (p._id === id || p.id === id) ? { ...p, isPopular } : p);
+    savePlansToStorage(localPlans);
     return { success: true, message: 'Popular status updated' };
 };

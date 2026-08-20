@@ -1,4 +1,4 @@
-export default function BracketComponent({ rounds = [] }) {
+export default function BracketComponent({ rounds = [], onMatchClick }) {
     return (
         <div className="w-full relative">
             <div className="flex gap-12 min-w-max py-6 px-4">
@@ -11,7 +11,12 @@ export default function BracketComponent({ rounds = [] }) {
                         </div>
 
                         {round.matches.map((match, mi) => (
-                            <div key={mi} className="relative group p-px rounded-2xl bg-[#E5E7EB] hover:bg-[#16A34A]/40 transition-colors duration-300 shadow-xs">
+                            <div 
+                                key={mi} 
+                                onClick={() => onMatchClick?.(match, round.name, ri, mi)}
+                                title="Click to edit scores, assign umpire, or control match"
+                                className={`relative group p-px rounded-2xl bg-[#E5E7EB] hover:bg-[#16A34A]/60 hover:ring-2 hover:ring-[#16A34A]/40 transition-all duration-300 shadow-xs ${onMatchClick ? 'cursor-pointer' : ''}`}
+                            >
                                 <div className="bg-white rounded-2xl overflow-hidden flex flex-col relative z-10 border border-[#E5E7EB]">
                                     {match.teams.map((team, ti) => (
                                         <div

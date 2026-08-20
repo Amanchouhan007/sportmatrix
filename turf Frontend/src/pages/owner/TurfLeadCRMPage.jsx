@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { HiUserGroup, HiPlus, HiSearch, HiFilter, HiPaperAirplane, HiDownload, HiTrash, HiPencilAlt, HiSparkles, HiPhone, HiTag, HiOutlineRefresh, HiCheck } from 'react-icons/hi'
 import { getCrmLeads, saveCrmLead, deleteCrmLead, AVAILABLE_TURF_BRANCHES } from '../../services/crmService'
+import { getCorporateProposals } from '../../services/corporateService'
 import OfferBroadcastModal from '../../components/crm/OfferBroadcastModal'
 import { useToast } from '../../components/ui/Toast'
 import CustomSelect from '../../components/ui/CustomSelect'
@@ -29,8 +30,47 @@ export default function TurfLeadCRMPage() {
     const [formPreferredSlot, setFormPreferredSlot] = useState('Weekend Evening')
     const [formNotes, setFormNotes] = useState('')
 
+    const loadLeadsData = async () => {
+        const crmData = getCrmLeads()
+        try {
+            const corpData = await getCorporateProposals()
+            if (Array.isArray(corpData) && corpData.length > 0) {
+                const mappedCorp = corpData.map(c => ({
+                    id: c.id ? String(c.id) : `corp_${Date.now()}`,
+                    name: c.company_name || c.companyName || c.contact_person || 'Corporate Client',
+                    phone: c.phone || '+91 98765 00000',
+                    email: c.email || '',
+                    role: 'organizer',
+                    teamName: `${c.estimated_players || c.estimatedPlayers || '40-50 Players'} • ${c.company_name || c.companyName || 'Corporate'}`,
+                    preferredSport: c.event_type || c.eventType || 'Corporate Tournament',
+                    preferredSlot: c.time_slot || c.timeSlot || 'Full Day Arena Booking',
+                    turfBranch: c.preferred_turf || c.preferredTurf || 'SportZone Arena',
+                    status: c.status || 'NEW',
+                    notes: `Corporate proposal request (Budget: ${c.budget || 'Custom'})`,
+                    createdAt: c.created_at ? c.created_at.split('T')[0] : (c.createdAt ? c.createdAt.split('T')[0] : new Date().toISOString().split('T')[0])
+                }))
+                setLeads([...mappedCorp, ...crmData])
+                return
+            }
+        } catch (e) {}
+        setLeads(crmData)
+    }
+
     useEffect(() => {
-        setLeads(getCrmLeads())
+        loadLeadsData()
+
+        const handleProposalCreated = (e) => {
+            const detail = e.detail || {}
+            addToast({ 
+                title: '🏢 New Corporate Proposal Received!', 
+                message: `${detail.companyName || 'Corporate Client'} requested a booking proposal!`, 
+                type: 'success' 
+            })
+            loadLeadsData()
+        }
+
+        window.addEventListener('corporate_proposal_created', handleProposalCreated)
+        return () => window.removeEventListener('corporate_proposal_created', handleProposalCreated)
     }, [])
 
     // Dynamic config for form field labels & placeholders based on Lead Category
@@ -434,9 +474,24 @@ export default function TurfLeadCRMPage() {
             {isAddModalOpen && (
                 <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/80 backdrop-blur-sm p-4 animate-in fade-in duration-200">
                     <div className="bg-white border border-slate-200 rounded-3xl p-6 max-w-md w-full shadow-2xl space-y-4">
-                        <h3 className="text-xl font-black text-slate-900 tracking-tight">
-                            Add New CRM Lead / Contact
-                        </h3>
+                        <div className="flex items-center justify-between">
+                            <h3 className="text-xl font-black text-slate-900 tracking-tight">
+                                Add New CRM Lead / Contact
+                            </h3>
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    setFormName('Vikram Malhotra')
+                                    setFormPhone('+91 98765 43210')
+                                    setFormTeamName('Andheri Strikers')
+                                    setFormPreferredSlot('Weekend Evening 6-9 PM')
+                                    setFormNotes('Requires 2 astro turf courts for friendly league')
+                                }}
+                                className="px-3 py-1 text-[11px] font-black bg-emerald-100 hover:bg-emerald-200 text-emerald-700 rounded-lg transition-all"
+                            >
+                                ⚡ Quick Autofill
+                            </button>
+                        </div>
                         
                         <form onSubmit={handleAddLead} className="space-y-3 text-xs">
                             {/* Category Selector */}

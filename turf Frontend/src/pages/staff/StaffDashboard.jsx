@@ -1,12 +1,13 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import StatCard from '../../components/ui/StatCard'
 import DataTable from '../../components/ui/DataTable'
 import Badge from '../../components/ui/Badge'
 import Button from '../../components/ui/Button'
 import Modal from '../../components/ui/Modal'
 import CustomDatePicker from '../../components/ui/CustomDatePicker'
+import api from '../../services/api'
 
-// Initial data for today's bookings
+// Initial data for today's bookings fallback
 const initialBookings = [
     { id: 'BK-001', customer: 'Rahul K.', sport: 'Cricket', time: '10:00 AM', court: 'Turf A', amount: 800, status: 'Confirmed', date: '2026-08-14' },
     { id: 'BK-002', customer: 'Priya S.', sport: 'Football', time: '11:30 AM', court: 'Turf B', amount: 900, status: 'Pending', date: '2026-08-14' },
@@ -15,10 +16,31 @@ const initialBookings = [
 ]
 
 export default function StaffDashboard() {
-    const [bookings] = useState(initialBookings)
-    const [selectedDate, setSelectedDate] = useState('2026-08-14')
+    const [bookings, setBookings] = useState(initialBookings)
+    const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0])
     const [selectedBooking, setSelectedBooking] = useState(null)
     const [isViewOpen, setIsViewOpen] = useState(false)
+
+    // Load live real-time bookings from backend API
+    useEffect(() => {
+        api.get('/billing/history')
+            .then(res => {
+                if (res.data && res.data.success && Array.isArray(res.data.data) && res.data.data.length > 0) {
+                    const mapped = res.data.data.map(b => ({
+                        id: b.paymentId || b.id,
+                        customer: b.user || b.customer || 'Valued Player',
+                        sport: b.type === 'BOOKING' ? 'Cricket' : 'Sports',
+                        time: '05:25 PM',
+                        court: 'Court A',
+                        amount: b.amount || 1200,
+                        status: b.status === 'CONFIRMED' || b.status === 'COMPLETED' ? 'Confirmed' : 'Pending',
+                        date: b.date ? b.date.split('T')[0] : '2026-08-20'
+                    }))
+                    setBookings(mapped)
+                }
+            })
+            .catch(e => console.warn('StaffDashboard API fetch note:', e.message))
+    }, [])
 
     // Calculate dynamic stats
     const stats = {

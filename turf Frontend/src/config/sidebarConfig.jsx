@@ -13,9 +13,9 @@ const sidebarConfig = {
         { isHeader: true, label: 'DASHBOARD' },
         { label: 'Dashboard', icon: <HiHome />, path: '/super-admin' },
         { isHeader: true, label: 'MANAGEMENT' },
-        { label: 'Owners', icon: <HiUsers />, path: '/super-admin/owners' },
+        { label: 'Turfs & Owners', icon: <HiOfficeBuilding />, path: '/super-admin/branches' },
+        { label: 'Subscription Plans', icon: <HiCreditCard />, path: '/super-admin/subscriptions' },
         { label: 'User Management', icon: <HiUser />, path: '/super-admin/users' },
-        { label: 'Subscriptions', icon: <HiCreditCard />, path: '/super-admin/subscriptions' },
         { label: 'Global Lead CRM', icon: <HiUserGroup />, path: '/super-admin/crm' },
         {
             isCollapsible: true,
@@ -34,7 +34,7 @@ const sidebarConfig = {
         { label: 'Payment Logs', icon: <HiClipboardList />, path: '/super-admin/payments' },
         { label: 'Dispute Resolution', icon: <HiExclamationCircle />, path: '/super-admin/disputes' },
         { isHeader: true, label: 'SETTINGS' },
-        { label: 'Settings', icon: <HiCog />, path: '/super-admin/settings' },
+        { label: 'System Settings', icon: <HiCog />, path: '/super-admin/settings' },
     ],
     owner: [
         { label: 'Dashboard', icon: <HiHome />, path: '/admin' },

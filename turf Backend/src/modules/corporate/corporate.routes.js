@@ -3,9 +3,11 @@ const router = express.Router();
 const corporateController = require('./corporate.controller');
 
 // Public route: Submit corporate booking proposal
+router.post('/', corporateController.createCorporateProposal);
 router.post('/proposals', corporateController.createCorporateProposal);
 
 // Admin/Owner routes: View, update and manage corporate proposals
+router.get('/', corporateController.getAllCorporateProposals);
 router.get('/proposals', corporateController.getAllCorporateProposals);
 router.get('/proposals/:id', corporateController.getCorporateProposalById);
 router.patch('/proposals/:id/status', corporateController.updateProposalStatus);

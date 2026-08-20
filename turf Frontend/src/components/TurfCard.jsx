@@ -102,6 +102,17 @@ export default function TurfCard({ turf, onMouseEnter, onMouseLeave, i = 0 }) {
         navigate(`/booking/${turf.id}${promoParam}`)
     }
 
+    const getTurfHourlyPrice = (t) => {
+        if (!t) return 1000;
+        const val = t.pricePerHour ?? t.price ?? t.price_per_hour ?? t.hourlyRate ?? t.hourly_rate ?? t.minPrice ?? t.startPrice;
+        if (val !== undefined && val !== null && val !== '') {
+            const num = Number(val);
+            if (!isNaN(num) && num > 0) return num;
+        }
+        return 1000;
+    };
+    const hourlyPrice = getTurfHourlyPrice(turf);
+
     return (
         <div
             id={`turf-card-${turf.id}`}
@@ -158,7 +169,7 @@ export default function TurfCard({ turf, onMouseEnter, onMouseLeave, i = 0 }) {
 
                     <div className="absolute bottom-2 left-2 z-[2] text-[8.5px] sm:text-[9px] font-black text-white flex items-center gap-1.5 drop-shadow-md whitespace-nowrap bg-black/60 backdrop-blur-md px-2 py-0.5 rounded-full border border-white/20">
                         <span className="w-1.5 h-1.5 rounded-full bg-[#C8FF2E] shadow-[0_0_8px_rgba(200,255,46,0.8)] animate-pulse"></span>
-                        Open: 6:00 AM – 11:00 PM
+                        Open: {turf.openingTime || '6:00 AM'} – {turf.closingTime || '11:00 PM'}
                     </div>
                 </div>
             </div>
@@ -180,7 +191,7 @@ export default function TurfCard({ turf, onMouseEnter, onMouseLeave, i = 0 }) {
                 <div className="flex items-center gap-1 mb-1.5">
                     <div className="flex items-center text-amber-500">
                         <span className="text-xs">⭐</span>
-                        <span className="text-xs font-black text-[#111827] ml-0.5">{turf.rating || '4.5'}</span>
+                        <span className="text-xs font-black text-[#111827] ml-0.5">{turf.rating || '4.8'}</span>
                     </div>
                     <span className="text-[10px] text-[#6B7280] font-medium">(120)</span>
                 </div>
@@ -196,21 +207,21 @@ export default function TurfCard({ turf, onMouseEnter, onMouseLeave, i = 0 }) {
                         {turf.rating >= 4.7 ? 'Excellent' : turf.rating >= 4.4 ? 'Very Good' : turf.rating >= 4.0 ? 'Good' : 'Average'}
                     </span>
                     <span className="text-[8.5px] sm:text-[9px] font-black text-amber-700 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-[6px] flex items-center gap-0.5">
-                        {Number(turf.price) < 600 ? 'Value' : Number(turf.price) < 900 ? 'Budget' : Number(turf.price) < 1200 ? 'Premium' : 'Expensive'}
+                        {hourlyPrice < 600 ? 'Value' : hourlyPrice < 900 ? 'Budget' : hourlyPrice < 1200 ? 'Premium' : 'Expensive'}
                     </span>
                 </div>
 
                 <div className="flex flex-wrap items-center mb-1.5">
                     <span className="text-[9.5px] sm:text-[10px] font-medium text-[#4B5563] line-clamp-2 leading-tight">
                         {(()=>{
-                            const dim = turf.dimensions || '90 × 45 ft';
+                            const dim = turf.turfSize || turf.dimensions || '5,000 Sq.Ft';
                             const m = dim.match(/(\d+)\s*(?:[×x*X]|by)\s*(\d+)/);
-                            const sqft = m ? (parseInt(m[1], 10) * parseInt(m[2], 10)).toLocaleString('en-IN') : '4,050';
+                            const sqft = m ? (parseInt(m[1], 10) * parseInt(m[2], 10)).toLocaleString('en-IN') : (dim.includes('Sq.Ft') ? dim : `${dim}`);
                             return (
                                 <>
-                                    <strong className="text-[#111827] font-bold">📏 {sqft} Sq.Ft</strong>
+                                    <strong className="text-[#111827] font-bold">📏 {sqft}</strong>
                                     <span className="text-slate-300 mx-1">•</span>
-                                    <span>TurfPro Synthetic Arena</span>
+                                    <span>{turf.surfaceType || 'TurfPro Synthetic Arena'}</span>
                                 </>
                             );
                         })()}
@@ -218,30 +229,28 @@ export default function TurfCard({ turf, onMouseEnter, onMouseLeave, i = 0 }) {
                 </div>
 
                 {/* ── PROFESSIONAL IN-CARD COUPON STRIP (Swiggy / Zomato Pro Style) ── */}
-                {promo && (
-                    <div 
-                        onClick={handleBookNow}
-                        className="my-1.5 py-1 px-2 rounded-lg bg-gradient-to-r from-emerald-50 via-teal-50 to-emerald-50 border border-dashed border-emerald-400/90 flex items-center justify-between gap-1.5 transition-all hover:bg-emerald-100/60 cursor-pointer group/promo select-none"
-                    >
-                        <div className="flex items-center gap-1.5 min-w-0 flex-1 overflow-hidden">
-                            <span className="text-xs shrink-0">{promo.icon}</span>
-                            <span className="text-[9.5px] sm:text-[10px] font-black text-emerald-950 truncate tracking-tight">
-                                {promo.tag}
-                            </span>
-                        </div>
-                        <div className="flex items-center gap-1 shrink-0">
-                            <span className="font-mono font-black text-[8.5px] sm:text-[9px] bg-emerald-700 text-white px-1.5 py-0.5 rounded shadow-2xs uppercase tracking-wider">
-                                {promo.code}
-                            </span>
-                        </div>
+                <div 
+                    onClick={handleBookNow}
+                    className="my-1.5 py-1 px-2 rounded-lg bg-gradient-to-r from-emerald-50 via-teal-50 to-emerald-50 border border-dashed border-emerald-400/90 flex items-center justify-between gap-1.5 transition-all hover:bg-emerald-100/60 cursor-pointer group/promo select-none"
+                >
+                    <div className="flex items-center gap-1.5 min-w-0 flex-1 overflow-hidden">
+                        <span className="text-xs shrink-0">{promo?.icon || '⚡'}</span>
+                        <span className="text-[9.5px] sm:text-[10px] font-black text-emerald-950 truncate tracking-tight">
+                            {turf.discountOffer || promo?.tag || '20% OFF FIRST MATCH'}
+                        </span>
                     </div>
-                )}
+                    <div className="flex items-center gap-1 shrink-0">
+                        <span className="font-mono font-black text-[8.5px] sm:text-[9px] bg-emerald-700 text-white px-1.5 py-0.5 rounded shadow-2xs uppercase tracking-wider">
+                            {turf.couponCode || promo?.code || 'CRICKET20'}
+                        </span>
+                    </div>
+                </div>
 
                 <div className="border-t border-[#E5E7EB] pt-2 mt-auto flex items-center justify-between gap-1.5">
                     <div className="flex flex-col min-w-0">
                         <span className="text-[8px] text-[#6B7280] uppercase tracking-widest font-black mb-0.5 leading-none">Starts From</span>
                         <div className="flex items-baseline text-[#111827]">
-                            <span className="text-[16px] sm:text-[18px] font-black leading-none tracking-tight text-[#111827]">₹{Number(turf.price).toLocaleString('en-IN')}</span>
+                            <span className="text-[16px] sm:text-[18px] font-black leading-none tracking-tight text-[#111827]">₹{hourlyPrice.toLocaleString('en-IN')}</span>
                             <span className="text-[9px] sm:text-[9.5px] text-[#6B7280] font-bold ml-0.5">/hr</span>
                         </div>
                     </div>

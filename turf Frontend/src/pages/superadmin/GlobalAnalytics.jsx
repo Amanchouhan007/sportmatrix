@@ -225,11 +225,7 @@ export default function GlobalAnalytics() {
                     bookingsCount: Number(b.bookingsCount ?? b.bookings ?? b.Bookings ?? 0),
                     revenue: Number(b.revenue ?? b.Revenue ?? 0)
                 }));
-                setTopBranches(mappedBranches.length > 0 ? mappedBranches : [
-                    { _id: 'br_001', branchName: 'Green Arena Turf', city: 'Mumbai', ownerName: 'Rajesh Sharma', bookingsCount: 1450, revenue: 1740000 },
-                    { _id: 'br_002', branchName: 'Champion Cricket Academy', city: 'Bangalore', ownerName: 'Suresh Patil', bookingsCount: 1280, revenue: 1920000 },
-                    { _id: 'br_003', branchName: 'Royal Cricket Ground', city: 'Indore', ownerName: 'Vikramaditya Roy', bookingsCount: 950, revenue: 570000 }
-                ]);
+                setTopBranches(mappedBranches);
             }
 
             if (topSportsRes && topSportsRes.success) {

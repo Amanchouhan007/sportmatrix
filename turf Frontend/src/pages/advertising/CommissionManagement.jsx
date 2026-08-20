@@ -10,76 +10,15 @@ import Pagination from '../../components/ui/Pagination'
 import { useToast } from '../../components/ui/Toast'
 import { FiDollarSign, FiFileText, FiCheckCircle, FiClock, FiDownload, FiCreditCard } from 'react-icons/fi'
 
-const INITIAL_COMMISSIONS = [
-    {
-        bookingId: 'BK-9021',
-        adId: 'AD-1001',
-        adName: 'Champions Night Drive',
-        turfName: 'Champions Turf Arena',
-        bookingAmount: '₹3,500',
-        commission: '₹420 (12%)',
-        ownerAmount: '₹3,080',
-        invoiceNo: 'INV-2026-001',
-        paymentStatus: 'Pending',
-        date: '2026-08-01'
-    },
-    {
-        bookingId: 'BK-9022',
-        adId: 'AD-1002',
-        adName: 'Monsoon 25% Off',
-        turfName: 'SkyLine Football Turf',
-        bookingAmount: '₹2,400',
-        commission: '₹240 (10%)',
-        ownerAmount: '₹2,160',
-        invoiceNo: 'INV-2026-002',
-        paymentStatus: 'Paid',
-        date: '2026-08-01'
-    },
-    {
-        bookingId: 'BK-9023',
-        adId: 'AD-1003',
-        adName: 'Banner Impression Push',
-        turfName: 'Velocity Sports Hub',
-        bookingAmount: '₹5,000',
-        commission: '₹750 (15%)',
-        ownerAmount: '₹4,250',
-        invoiceNo: 'INV-2026-003',
-        paymentStatus: 'Pending',
-        date: '2026-08-02'
-    },
-    {
-        bookingId: 'BK-9024',
-        adId: 'AD-1004',
-        adName: 'Weekday Discount',
-        turfName: 'GreenField Box Cricket',
-        bookingAmount: '₹1,800',
-        commission: '₹144 (8%)',
-        ownerAmount: '₹1,656',
-        invoiceNo: 'INV-2026-004',
-        paymentStatus: 'Paid',
-        date: '2026-08-02'
-    },
-    {
-        bookingId: 'BK-9025',
-        adId: 'AD-1005',
-        adName: 'Guaranteed Tournament Slot',
-        turfName: 'Apex Turf & Arena',
-        bookingAmount: '₹6,200',
-        commission: '₹868 (14%)',
-        ownerAmount: '₹5,332',
-        invoiceNo: 'INV-2026-005',
-        paymentStatus: 'Pending',
-        date: '2026-08-02'
-    }
-]
+const INITIAL_COMMISSIONS = []
 
 export default function CommissionManagement() {
     const navigate = useNavigate()
     const location = useLocation()
     const basePath = location.pathname.startsWith('/super-admin') ? '/super-admin' : location.pathname.startsWith('/staff') ? '/staff' : '/admin'
     const { addToast } = useToast()
-    const [commissions, setCommissions] = useState(INITIAL_COMMISSIONS)
-    const [summary, setSummary] = useState({ totalPool: 2422, pendingPayouts: 2038, settledCommissions: 384 })
+    const [commissions, setCommissions] = useState([])
+    const [summary, setSummary] = useState({ totalPool: 0, pendingPayouts: 0, settledCommissions: 0 })
     const [search, setSearch] = useState('')
     const [statusFilter, setStatusFilter] = useState('ALL')
     const [currentPage, setCurrentPage] = useState(1)
@@ -91,9 +30,7 @@ export default function CommissionManagement() {
             const res = await fetch('http://localhost:5000/api/v1/ads/commissions');
             const data = await res.json();
             if (data.success) {
-                if (Array.isArray(data.data) && data.data.length > 0) {
-                    setCommissions(data.data);
-                }
+                setCommissions(Array.isArray(data.data) ? data.data : []);
                 if (data.summary) {
                     setSummary(data.summary);
                 }
@@ -107,7 +44,7 @@ export default function CommissionManagement() {
         fetchLiveCommissions();
     }, []);
 
-    const activeCommissionsList = (commissions && commissions.length > 0) ? commissions : INITIAL_COMMISSIONS;
+    const activeCommissionsList = commissions;
 
     const filteredData = activeCommissionsList.filter(item => {
         if (!item) return false;
@@ -341,7 +278,13 @@ export default function CommissionManagement() {
 
                         <div className="grid grid-cols-2 gap-3 text-xs bg-surface-50/50 p-4 rounded-2xl border border-surface-100">
                             <div><span className="text-surface-500">Invoice No:</span> <span className="font-bold text-surface-900 block">{selectedInvoice.invoiceNo}</span></div>
-                            <div><span className="text-surface-500">Date:</span> <span className="font-bold text-surface-900 block">{selectedInvoice.date}</span></div>
+                            <div>
+                                <span className="text-surface-500">Date & Time:</span> 
+                                <span className="font-bold text-surface-900 block flex items-center gap-1.5 mt-0.5">
+                                    <span>📅 {selectedInvoice.date}</span>
+                                    <span className="text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-lg border border-emerald-200 font-mono font-extrabold text-[11px]">⏰ {selectedInvoice.time || '10:45 AM'}</span>
+                                </span>
+                            </div>
                             <div><span className="text-surface-500">Booking ID:</span> <span className="font-bold text-surface-900 block">{selectedInvoice.bookingId}</span></div>
                             <div><span className="text-surface-500">Ad Campaign:</span> <span className="font-bold text-primary-600 block">{selectedInvoice.adId}</span></div>
                         </div>

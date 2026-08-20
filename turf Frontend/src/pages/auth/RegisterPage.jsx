@@ -45,20 +45,23 @@ export default function RegisterPage() {
                     </form>
                 ) : (
                     <form onSubmit={handleSubmit} className="space-y-5">
-                        <div className="text-center p-6 bg-primary-50 rounded-2xl mb-4">
-                            <p className="text-sm text-surface-600">We sent a verification code to</p>
-                            <p className="font-semibold text-surface-900 mt-1">{form.phone || '+91 98765 43210'}</p>
+                        <div className="text-center p-5 bg-emerald-50 border border-emerald-200 rounded-2xl mb-4">
+                            <p className="text-xs text-emerald-800 font-medium">We simulated sending a verification code to</p>
+                            <p className="font-extrabold text-slate-900 text-base mt-1 font-mono">{form.phone || '+91 98765 43210'}</p>
+                            <span className="inline-block mt-2 px-3 py-1 bg-emerald-100 text-emerald-800 text-[11px] font-bold rounded-lg border border-emerald-300">
+                                💡 Demo Mode Active: Use OTP <strong className="font-mono">1234</strong> or any 4 digits!
+                            </span>
                         </div>
                         <div>
                             <label className="block text-sm font-medium text-surface-700 mb-1.5">Enter OTP</label>
                             <div className="flex gap-3 justify-center">
                                 {[0, 1, 2, 3].map((i) => (
-                                    <input key={i} maxLength={1} className="w-14 h-14 text-center text-xl font-bold rounded-xl border border-surface-200 focus:border-primary-500 focus:ring-2 focus:ring-primary-500 outline-none bg-white text-surface-900" />
+                                    <input key={i} maxLength={1} defaultValue={i + 1} className="w-14 h-14 text-center text-xl font-bold rounded-xl border border-surface-200 focus:border-primary-500 focus:ring-2 focus:ring-primary-500 outline-none bg-white text-surface-900" />
                                 ))}
                             </div>
                         </div>
                         <Button type="submit" fullWidth size="lg">Verify & Create Account</Button>
-                        <p className="text-center text-sm text-surface-400">Didn&apos;t receive? <button className="text-primary-600 font-medium cursor-pointer">Resend OTP</button></p>
+                        <p className="text-center text-sm text-surface-400">Didn&apos;t receive? <button type="button" onClick={() => alert('Demo Mode: Use OTP 1234')} className="text-primary-600 font-medium cursor-pointer">Resend OTP (Use 1234)</button></p>
                     </form>
                 )}
 

@@ -222,9 +222,9 @@ const getCommissions = async (req, res) => {
         return res.status(200).json({
             success: true,
             summary: {
-                totalPool: poolRes[0]?.total || 2422,
-                pendingPayouts: pendingRes[0]?.total || 2038,
-                settledCommissions: settledRes[0]?.total || 384
+                totalPool: Number(poolRes[0]?.total || 0),
+                pendingPayouts: Number(pendingRes[0]?.total || 0),
+                settledCommissions: Number(settledRes[0]?.total || 0)
             },
             data: formatted
         });

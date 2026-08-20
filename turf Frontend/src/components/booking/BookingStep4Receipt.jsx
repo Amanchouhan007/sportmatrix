@@ -29,6 +29,135 @@ export default function BookingStep4Receipt({
         }
     }
 
+    const triggerFastBookingReceiptPrint = () => {
+        const bookingId = bookingResult?.bookingId || 'SM-BK-9831'
+        const venueName = selectedVenue?.name || 'SportMatrix Turf Arena'
+        const venueLocation = `${selectedVenue?.location || 'Indore'}, ${selectedVenue?.city || 'Madhya Pradesh'}`
+        const dateLabel = `${selectedDateObj?.formattedLabel || 'Today'} · ${slotTimeLabel}`
+        const paidAmount = `₹${myPaymentAmount?.toLocaleString('en-IN')}`
+        const payModeLabel = paymentMode?.replace(/_/g, ' ') || 'UPI'
+        const customerName = user?.name || 'Valued Player'
+        const customerEmail = user?.email || 'player@sportmatrix.com'
+        const currentDate = new Date().toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'medium' })
+
+        const iframeHTML = `
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <title>Booking Receipt ${bookingId}</title>
+                <style>
+                    @page { size: A4 portrait; margin: 8mm; }
+                    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; color: #111827; margin: 0; padding: 15px; background: #fff; }
+                    .card { max-width: 650px; margin: 0 auto; border: 2px solid #111827; border-radius: 12px; padding: 24px; }
+                    .header { border-bottom: 2px solid #16a34a; padding-bottom: 12px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: flex-start; }
+                    .brand { font-size: 22px; font-weight: 900; }
+                    .brand span { color: #16a34a; }
+                    .badge { background: #ecfdf5; color: #065f46; font-size: 10px; font-weight: 800; padding: 3px 8px; border-radius: 12px; border: 1px solid #a7f3d0; }
+                    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px; }
+                    .box { background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; padding: 12px; font-size: 11px; }
+                    .box h4 { margin: 0 0 6px 0; font-size: 10px; text-transform: uppercase; color: #6b7280; }
+                    .box p { margin: 2px 0; font-weight: 600; }
+                    table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+                    th { background: #111827; color: #fff; font-size: 10px; padding: 8px 12px; text-align: left; text-transform: uppercase; }
+                    td { border-bottom: 1px solid #e5e7eb; padding: 10px 12px; font-size: 12px; font-weight: 500; }
+                    .text-right { text-align: right; }
+                    .total { background: #111827; color: #fff; padding: 14px 18px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; }
+                    .total-val { font-size: 20px; font-weight: 900; color: #c8ff2e; font-family: monospace; }
+                    .footer { text-align: center; margin-top: 20px; font-size: 10px; color: #6b7280; }
+                </style>
+            </head>
+            <body>
+                <div class="card">
+                    <div class="header">
+                        <div>
+                            <div class="brand">SPORTMATRIX<span>.</span></div>
+                            <div style="font-size: 11px; color: #4b5563; font-weight: bold; margin-top: 2px;">SportMatrix Slot Reservation Receipt</div>
+                        </div>
+                        <div style="text-align: right;">
+                            <span class="badge">MATCH SLOT LOCKED & CONFIRMED</span>
+                            <div style="font-size: 12px; font-weight: 800; margin-top: 4px;">Ref: ${bookingId}</div>
+                        </div>
+                    </div>
+
+                    <div class="grid">
+                        <div class="box">
+                            <h4>Player Information</h4>
+                            <p style="font-size: 12px; color: #111827; font-weight: 800;">${customerName}</p>
+                            <p>${customerEmail}</p>
+                            <p>Date Generated: ${currentDate}</p>
+                        </div>
+                        <div class="box">
+                            <h4>Turf Match Details</h4>
+                            <p>Venue: <strong>${venueName}</strong></p>
+                            <p>Location: <strong>${venueLocation}</strong></p>
+                            <p>Slot: <strong>${dateLabel}</strong></p>
+                            <p>Mode: <strong>${payModeLabel}</strong></p>
+                        </div>
+                    </div>
+
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Slot Description</th>
+                                <th class="text-right">Payment Mode</th>
+                                <th class="text-right">Tax (GST)</th>
+                                <th class="text-right">Net Paid</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>
+                                    <strong>${venueName} — Match Slot Lock</strong><br>
+                                    <span style="font-size: 10px; color: #6b7280;">${dateLabel}</span>
+                                </td>
+                                <td class="text-right">${payModeLabel}</td>
+                                <td class="text-right">₹0.00</td>
+                                <td class="text-right" style="font-weight: 800;">${paidAmount}</td>
+                            </tr>
+                        </tbody>
+                    </table>
+
+                    <div class="total">
+                        <div>
+                            <div style="font-size: 9px; text-transform: uppercase; color: #9ca3af;">Total Amount Paid (Zero GST Tax)</div>
+                            <div style="font-size: 11px; color: #10b981; font-weight: bold;">Verified Electronic Payment Completed</div>
+                        </div>
+                        <div class="total-val">${paidAmount}</div>
+                    </div>
+
+                    <div class="footer">
+                        <p style="margin: 0;">Verified Official Receipt · SportMatrix OS Support: support@sportmatrix.com</p>
+                    </div>
+                </div>
+            </body>
+            </html>
+        `
+
+        let iframe = document.getElementById('fast-booking-receipt-frame')
+        if (!iframe) {
+            iframe = document.createElement('iframe')
+            iframe.id = 'fast-booking-receipt-frame'
+            iframe.style.position = 'fixed'
+            iframe.style.right = '0'
+            iframe.style.bottom = '0'
+            iframe.style.width = '0'
+            iframe.style.height = '0'
+            iframe.style.border = '0'
+            iframe.style.visibility = 'hidden'
+            document.body.appendChild(iframe)
+        }
+
+        const doc = iframe.contentWindow.document
+        doc.open()
+        doc.write(iframeHTML)
+        doc.close()
+
+        setTimeout(() => {
+            iframe.contentWindow.focus()
+            iframe.contentWindow.print()
+        }, 50)
+    }
+
     return (
         <div className="bg-white border border-[#E5E7EB] rounded-3xl p-6 sm:p-8 shadow-sm space-y-7 text-center animate-in zoom-in-95 duration-200">
             {/* Animated Check Success Badge */}
@@ -116,7 +245,7 @@ export default function BookingStep4Receipt({
                     </div>
                 )}
 
-                <div className="flex items-center gap-2 bg-white border border-emerald-200 p-2 rounded-xl">
+                <div className="flex items-center gap-2 bg-[#F7F9FC] border border-emerald-200 p-2 rounded-xl">
                     <span className="text-[11px] font-mono text-slate-600 truncate flex-1 text-left px-2">
                         {window.location.origin}/booking/{selectedVenue.id}?mode={paymentMode.toLowerCase()}&pay=opponent
                     </span>
@@ -140,7 +269,7 @@ export default function BookingStep4Receipt({
 
                     <button
                         type="button"
-                        onClick={() => window.print()}
+                        onClick={triggerFastBookingReceiptPrint}
                         className="py-3 bg-slate-900 hover:bg-slate-800 text-white font-black text-xs uppercase tracking-wider rounded-xl transition-all cursor-pointer shadow-md flex items-center justify-center gap-2"
                     >
                         <span>📄 Download PDF / Print</span>

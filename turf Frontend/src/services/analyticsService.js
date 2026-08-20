@@ -15,20 +15,20 @@ export const getOverview = async (filters = {}) => {
     return {
         success: true,
         data: {
-            totalRevenue: 4860000,
-            monthlyRevenue: 1350000,
-            yearlyRevenue: 4860000,
-            revenueGrowthPercentage: 18.5,
-            totalBookings: 4140,
-            todayBookings: 38,
-            monthlyBookings: 1120,
-            cancelledBookings: 14,
-            totalOwners: 8,
-            totalStaff: 28,
-            totalCustomers: 1284,
-            newRegistrations: 145,
-            totalBranches: 15,
-            activeBranches: 15,
+            totalRevenue: 0,
+            monthlyRevenue: 0,
+            yearlyRevenue: 0,
+            revenueGrowthPercentage: 0,
+            totalBookings: 0,
+            todayBookings: 0,
+            monthlyBookings: 0,
+            cancelledBookings: 0,
+            totalOwners: 0,
+            totalStaff: 0,
+            totalCustomers: 0,
+            newRegistrations: 0,
+            totalBranches: 0,
+            activeBranches: 0,
             suspendedBranches: 0,
             inactiveBranches: 0
         }
@@ -49,15 +49,7 @@ export const getRevenueAnalytics = async (filters = {}) => {
     }
     return {
         success: true,
-        data: [
-            { label: 'Jan', revenue: 450000 },
-            { label: 'Feb', revenue: 580000 },
-            { label: 'Mar', revenue: 620000 },
-            { label: 'Apr', revenue: 790000 },
-            { label: 'May', revenue: 910000 },
-            { label: 'Jun', revenue: 1120000 },
-            { label: 'Jul', revenue: 1350000 }
-        ]
+        data: []
     };
 };
 
@@ -75,15 +67,7 @@ export const getBookingAnalytics = async (filters = {}) => {
     }
     return {
         success: true,
-        data: [
-            { month: 'Jan', completed: 420, cancelled: 15 },
-            { month: 'Feb', completed: 550, cancelled: 18 },
-            { month: 'Mar', completed: 610, cancelled: 12 },
-            { month: 'Apr', completed: 740, cancelled: 20 },
-            { month: 'May', completed: 880, cancelled: 25 },
-            { month: 'Jun', completed: 1050, cancelled: 30 },
-            { month: 'Jul', completed: 1210, cancelled: 28 }
-        ]
+        data: []
     };
 };
 
@@ -101,15 +85,7 @@ export const getUserAnalytics = async (filters = {}) => {
     }
     return {
         success: true,
-        data: [
-            { label: 'Jan', OWNER: 2, STAFF: 5, CUSTOMER: 120, total: 127 },
-            { label: 'Feb', OWNER: 3, STAFF: 8, CUSTOMER: 210, total: 221 },
-            { label: 'Mar', OWNER: 5, STAFF: 12, CUSTOMER: 350, total: 367 },
-            { label: 'Apr', OWNER: 7, STAFF: 18, CUSTOMER: 520, total: 545 },
-            { label: 'May', OWNER: 9, STAFF: 22, CUSTOMER: 780, total: 811 },
-            { label: 'Jun', OWNER: 11, STAFF: 26, CUSTOMER: 1050, total: 1087 },
-            { label: 'Jul', OWNER: 12, STAFF: 28, CUSTOMER: 1284, total: 1324 }
-        ]
+        data: []
     };
 };
 
@@ -127,14 +103,7 @@ export const getBranchAnalytics = async (filters = {}) => {
     }
     return {
         success: true,
-        data: [
-            { month: 'Jan', active: 4, pending: 0 },
-            { month: 'Feb', active: 5, pending: 1 },
-            { month: 'Mar', active: 6, pending: 0 },
-            { month: 'Apr', active: 7, pending: 1 },
-            { month: 'May', active: 7, pending: 0 },
-            { month: 'Jun', active: 8, pending: 0 }
-        ]
+        data: []
     };
 };
 
@@ -152,9 +121,7 @@ export const getSportsAnalytics = async (filters = {}) => {
     }
     return {
         success: true,
-        data: [
-            { sport: 'Cricket', bookingsCount: 1420, revenue: 1420000 }
-        ]
+        data: []
     };
 };
 
@@ -172,11 +139,7 @@ export const getSubscriptionAnalytics = async (filters = {}) => {
     }
     return {
         success: true,
-        data: [
-            { planName: 'Starter', count: 18, totalUsers: 18, revenue: 17982, name: 'Starter', value: 18 },
-            { planName: 'Professional', count: 24, totalUsers: 24, revenue: 59976, name: 'Professional', value: 24 },
-            { planName: 'Enterprise', count: 6, totalUsers: 6, revenue: 29994, name: 'Enterprise', value: 6 }
-        ]
+        data: []
     };
 };
 
@@ -194,11 +157,7 @@ export const getTopOwners = async (filters = {}) => {
     }
     return {
         success: true,
-        data: [
-            { _id: 'own_001', id: 'own_001', fullName: 'Rajesh Sharma', ownerName: 'Rajesh Sharma', businessName: 'Green Arena Sports', revenue: 1740000, branchesCount: 2, branches: 2 },
-            { _id: 'own_002', id: 'own_002', fullName: 'Champion Cricket Academy', ownerName: 'Champion Cricket Academy', businessName: 'Champion Sports Hub', revenue: 1920000, branchesCount: 2, branches: 2 },
-            { _id: 'own_003', id: 'own_003', fullName: 'Suresh Patil', ownerName: 'Suresh Patil', businessName: 'Royal Cricket Ground', revenue: 570000, branchesCount: 1, branches: 1 }
-        ]
+        data: []
     };
 };
 
@@ -216,11 +175,7 @@ export const getTopBranches = async (filters = {}) => {
     }
     return {
         success: true,
-        data: [
-            { _id: 'br_001', id: 'br_001', branchName: 'Green Arena Turf', city: 'Mumbai', ownerName: 'Rajesh Sharma', bookingsCount: 1450, bookings: 1450, revenue: 1740000 },
-            { _id: 'br_002', id: 'br_002', branchName: 'Champion Cricket Academy', city: 'Bangalore', ownerName: 'Suresh Patil', bookingsCount: 1280, bookings: 1280, revenue: 1920000 },
-            { _id: 'br_003', id: 'br_003', branchName: 'Royal Cricket Ground', city: 'Indore', ownerName: 'Vikramaditya Roy', bookingsCount: 950, bookings: 950, revenue: 570000 }
-        ]
+        data: []
     };
 };
 
@@ -238,9 +193,7 @@ export const getTopSports = async (filters = {}) => {
     }
     return {
         success: true,
-        data: [
-            { sport: 'Cricket', name: 'Cricket', bookingsCount: 1420, bookings: 1420, revenue: 1420000 }
-        ]
+        data: []
     };
 };
 

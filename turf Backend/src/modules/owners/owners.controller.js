@@ -121,17 +121,31 @@ const createOwner = async (req, res) => {
         }
 
         // 4. Hash password securely
-        const passwordHash = await bcrypt.hash(password, 10);
+        const rawPassword = (password && password.trim()) ? password.trim() : 'password123';
+        const passwordHash = await bcrypt.hash(rawPassword, 10);
 
-        // 5. Generate unique Owner ID
+        // 5. Generate unique IDs
+        const userId = `usr_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
         const ownerId = `own_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
 
         // 6. Execute Transaction
         await conn.beginTransaction();
 
+        // Sync into users table for authentication access
+        try {
+            await conn.query(
+                `INSERT INTO users (id, name, email, password_hash, role, mobile, avatar, status) 
+                 VALUES (?, ?, ?, ?, 'OWNER', ?, ?, ?)
+                 ON DUPLICATE KEY UPDATE name = VALUES(name), password_hash = VALUES(password_hash), mobile = VALUES(mobile), status = VALUES(status)`,
+                [userId, fullName.trim(), normalizedEmail, passwordHash, normalizedMobile, profileImage || null, status]
+            );
+        } catch (uErr) {
+            console.warn('Sync to users table skipped:', uErr.message);
+        }
+
         const insertQuery = `
             INSERT INTO owners (
-                id, full_name, email, mobile, alternate_mobile, password_hash, status,
+                id, user_id, full_name, email, mobile, alternate_mobile, status,
                 business_name, business_type, gst_number, pan_number,
                 country, state, city, zip_code, full_address, profile_image,
                 created_by, updated_by
@@ -140,11 +154,11 @@ const createOwner = async (req, res) => {
 
         await conn.query(insertQuery, [
             ownerId,
+            userId,
             fullName.trim(),
             normalizedEmail,
             normalizedMobile,
             alternateMobile ? alternateMobile.trim() : null,
-            passwordHash,
             status,
             businessName ? businessName.trim() : null,
             businessType ? businessType.trim() : null,
@@ -159,18 +173,6 @@ const createOwner = async (req, res) => {
             createdBy || req.user?.id || 'SYSTEM',
             createdBy || req.user?.id || 'SYSTEM'
         ]);
-
-        // Also sync into users table for authentication access
-        try {
-            await conn.query(
-                `INSERT INTO users (id, name, email, password_hash, role, mobile, avatar, status) 
-                 VALUES (?, ?, ?, ?, 'OWNER', ?, ?, ?)
-                 ON DUPLICATE KEY UPDATE name = VALUES(name), password_hash = VALUES(password_hash), mobile = VALUES(mobile), status = VALUES(status)`,
-                [ownerId, fullName.trim(), normalizedEmail, passwordHash, normalizedMobile, profileImage || null, status]
-            );
-        } catch (uErr) {
-            console.warn('Sync to users table skipped:', uErr.message);
-        }
 
         await conn.commit();
         conn.release();
@@ -219,12 +221,15 @@ const getOwners = async (req, res) => {
             params.push(q, q, q, q, q);
         }
 
-        const offset = (Number(page) - 1) * Number(limit);
-        const countSql = sql.replace('SELECT *', 'SELECT COUNT(*) as count');
-        const [[{ count }]] = await db.query(countSql, params);
+        const [countRows] = await db.query('SELECT COUNT(*) as count FROM owners');
+        const count = countRows[0]?.count || 0;
+
+        const pageNum = Number(page) || 1;
+        const limitNum = Number(limit) || 10;
+        const offset = (pageNum - 1) * limitNum;
 
         sql += ' ORDER BY created_at DESC LIMIT ? OFFSET ?';
-        params.push(Number(limit), offset);
+        params.push(limitNum, offset);
 
         const [rows] = await db.query(sql, params);
         const owners = rows.map(formatOwner);

@@ -63,13 +63,16 @@ export const AuthProvider = ({ children }) => {
     };
 
     /**
-     * Log out current user, clear storage and state
+     * Log out current user, clear storage and state, and redirect to main website homepage
      */
     const logout = () => {
         localStorage.removeItem('token');
         localStorage.removeItem('user');
         setUser(null);
         setToken(null);
+        if (typeof window !== 'undefined') {
+            window.location.href = '/';
+        }
     };
 
     /**

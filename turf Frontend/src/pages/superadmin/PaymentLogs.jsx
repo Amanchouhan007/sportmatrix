@@ -82,10 +82,14 @@ const applyDatePreset = (days) => {
 // ── Format currency ──────────────────────────────────────────────────────────
 const fmtINR = (v) => `₹${Number(v || 0).toLocaleString('en-IN')}`
 
-// ── Format date ──────────────────────────────────────────────────────────────
+// ── Format date & time ────────────────────────────────────────────────────────
 const fmtDate = (d) => {
     if (!d) return '—'
-    return new Date(d).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })
+    const dateObj = new Date(d)
+    if (isNaN(dateObj.getTime())) return d
+    const formattedDate = dateObj.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })
+    const formattedTime = dateObj.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true })
+    return `${formattedDate} • ${formattedTime}`
 }
 
 export default function PaymentLogs() {
@@ -154,11 +158,11 @@ export default function PaymentLogs() {
 
         try {
             const res = await getPaymentLogs(buildParams(page))
-            if (res && res.success) {
-                setLogs(res.data || [])
-                setPagination(res.pagination || { total: 0, page, limit: 20, totalPages: 1 })
-                setCurrentPage(page)
-            }
+            let apiLogs = (res && res.success && Array.isArray(res.data)) ? res.data : []
+            
+            setLogs(apiLogs)
+            setPagination(res?.pagination || { total: apiLogs.length, page, limit: 20, totalPages: 1 })
+            setCurrentPage(page)
         } catch (err) {
             const status = err.response?.status
             if      (status === 401) addToast({ title: 'Unauthorized', message: 'Your session has expired. Please log in again.', type: 'error' })

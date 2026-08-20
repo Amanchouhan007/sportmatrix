@@ -38,7 +38,7 @@ export default function InventoryPage() {
     useEffect(() => {
         const fetchInventory = async () => {
             try {
-                const res = await fetch('http://localhost:5000/api/v1/inventory?branchId=br_001');
+                const res = await fetch('http://localhost:5000/api/v1/inventory');
                 const data = await res.json();
                 if (data.success && Array.isArray(data.data) && data.data.length > 0) {
                     setItems(data.data);

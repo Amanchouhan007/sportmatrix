@@ -818,20 +818,20 @@ export default function CustomerLeaderboard() {
 
                 <div className="overflow-x-auto">
                     <table className="w-full text-left text-xs">
-                        <thead className="bg-slate-50 text-slate-600 font-black uppercase text-[10px] tracking-wider border-b border-slate-200">
+                        <thead className="bg-slate-100/90 text-slate-800 font-black uppercase text-[10px] tracking-widest border-b-2 border-slate-200">
                             <tr>
-                                <th className="py-3.5 px-4 text-center">Rank</th>
-                                <th className="py-3.5 px-4">Player & Team</th>
-                                <th className="py-3.5 px-4">Verification Tier</th>
-                                <th className="py-3.5 px-4 text-center">Matches</th>
-                                <th className="py-3.5 px-4 text-center">Runs (Avg / SR)</th>
-                                <th className="py-3.5 px-4 text-center">Wkts (Econ)</th>
-                                <th className="py-3.5 px-4 text-center">MVPs</th>
-                                <th className="py-3.5 px-4 text-right">PPS Score</th>
-                                <th className="py-3.5 px-4 text-center">Action</th>
+                                <th className="py-3.5 px-4 text-center text-slate-700">Rank</th>
+                                <th className="py-3.5 px-4 text-slate-700">Player & Team</th>
+                                <th className="py-3.5 px-4 text-slate-700">Verification Tier</th>
+                                <th className="py-3.5 px-4 text-center text-slate-700">Matches</th>
+                                <th className="py-3.5 px-4 text-center text-slate-700">Runs (Avg / SR)</th>
+                                <th className="py-3.5 px-4 text-center text-slate-700">Wkts (Econ)</th>
+                                <th className="py-3.5 px-4 text-center text-slate-700">MVPs</th>
+                                <th className="py-3.5 px-4 text-right text-slate-700">PPS Score</th>
+                                <th className="py-3.5 px-4 text-center text-slate-700">Action</th>
                             </tr>
                         </thead>
-                        <tbody className="divide-y divide-slate-100 font-medium">
+                        <tbody className="divide-y divide-slate-150 font-medium">
                             {rankedPlayers.map((player, idx) => {
                                 const isCurrentCustomer = player.name.includes('(You)') || player.name.toLowerCase().includes(activeCustomerProfile.fullName.toLowerCase())
                                 return (

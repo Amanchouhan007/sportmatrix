@@ -45,8 +45,10 @@ const validateCreateOwner = (req, res, next) => {
         errors.push('A valid Mobile number is required.');
     }
 
-    if (!password || typeof password !== 'string' || password.length < 6) {
-        errors.push('Password is required and must be at least 6 characters long.');
+    if (!password) {
+        req.body.password = 'Owner@12345';
+    } else if (typeof password !== 'string' || password.length < 6) {
+        errors.push('Password must be at least 6 characters long.');
     }
 
     if (status && !['ACTIVE', 'INACTIVE', 'SUSPENDED'].includes(status)) {

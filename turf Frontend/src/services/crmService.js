@@ -8,112 +8,70 @@ export const AVAILABLE_TURF_BRANCHES = [
     'ProPlay Cricket Arena'
 ]
 
-const INITIAL_CRM_LEADS = [
-    {
-        id: 'lead_001',
-        name: 'Rahul Sharma',
-        phone: '+91 98765 11111',
-        role: 'team', // 'team' | 'player' | 'umpire' | 'organizer'
-        teamName: 'Andheri Strikers',
-        preferredSport: 'Cricket',
-        preferredSlot: 'Weekend Evenings (6 PM - 9 PM)',
-        turfBranch: 'SportZone Arena',
-        status: 'Hot Lead',
-        totalBookings: 12,
-        notes: 'Plays 8-a-side box cricket every Saturday.',
-        createdAt: '2026-07-15'
-    },
-    {
-        id: 'lead_002',
-        name: 'Vikram Malhotra',
-        phone: '+91 98222 33344',
-        role: 'umpire',
-        teamName: 'BCA Certified Official',
-        preferredSport: 'Cricket',
-        preferredSlot: 'All Days',
-        turfBranch: 'Champion Cricket Ground',
-        status: 'Active',
-        totalBookings: 24,
-        notes: 'Senior Umpire. Available for weekend tournaments. Fee: ₹500/match.',
-        createdAt: '2026-06-10'
-    },
-    {
-        id: 'lead_003',
-        name: 'Amit Kumar',
-        phone: '+91 97111 22334',
-        role: 'player',
-        teamName: 'Free Agent Player',
-        preferredSport: 'Cricket',
-        preferredSlot: 'Morning Slots (6 AM - 10 AM)',
-        turfBranch: 'SportZone Arena',
-        status: 'Active',
-        totalBookings: 5,
-        notes: 'Top batsman, looking for open challenge matches.',
-        createdAt: '2026-08-01'
-    },
-    {
-        id: 'lead_004',
-        name: 'Indore Premier League Org',
-        phone: '+91 99888 77665',
-        role: 'organizer',
-        teamName: 'IPL Indore Event Group',
-        preferredSport: 'Cricket',
-        preferredSlot: 'Full Day Weekend',
-        turfBranch: 'Royal Cricket Ground',
-        status: 'Hot Lead',
-        totalBookings: 2,
-        notes: 'Looking to book full turf for 3-day tournament in Sept.',
-        createdAt: '2026-07-28'
-    },
-    {
-        id: 'lead_005',
-        name: 'Siddharth Roy',
-        phone: '+91 91234 56789',
-        role: 'umpire',
-        teamName: 'Licensed Referee',
-        preferredSport: 'Cricket',
-        preferredSlot: 'Sunday Afternoon',
-        turfBranch: 'GameVault Center',
-        status: 'Active',
-        totalBookings: 18,
-        notes: 'Specialist in Box Cricket rules. Fee: ₹400/match.',
-        createdAt: '2026-05-20'
-    },
-    {
-        id: 'lead_006',
-        name: 'Dadar Destroyers Captain',
-        phone: '+91 98765 43222',
-        role: 'team',
-        teamName: 'Dadar Destroyers',
-        preferredSport: 'Cricket',
-        preferredSlot: 'Night Floodlight Slots',
-        turfBranch: 'Skyline Turf',
-        status: 'Active',
-        totalBookings: 8,
-        notes: 'Aggressive team. Loves Dare-to-Play challenge matches.',
-        createdAt: '2026-08-05'
+export const isDemoLead = (item) => {
+    if (!item) return true;
+    const name = (item.name || item.contactPerson || item.companyName || item.customerName || '').toLowerCase();
+    const phone = (item.phone || item.customerPhone || '').replace(/\D/g, '');
+    const notes = (item.notes || '').toLowerCase();
+
+    const demoKeywords = [
+        'techcorp', 'wrf captain', 'wrf', 'customer@gmail', 'labcoordinator',
+        'aascdsads', 'turf admin', 'website player', 'dummy', 'test company', 'sample', 'afwe'
+    ];
+    const demoPhones = ['123', '2255', '122355', '2345688', '123456', '9876500000', '1234567890'];
+
+    if (demoKeywords.some(d => name.includes(d) || notes.includes(d))) return true;
+    if (demoPhones.some(p => phone === p || (p.length >= 6 && phone.includes(p)))) return true;
+    if (name.includes('kiaan') && (phone === '122355' || phone.includes('122355') || phone === '123456')) return true;
+    return false;
+};
+
+export const purgeDemoLeadsFromLocalStorage = () => {
+    try {
+        const keys = ['turf_crm_leads', 'corporate_leads'];
+        keys.forEach(k => {
+            const raw = localStorage.getItem(k);
+            if (raw) {
+                const arr = JSON.parse(raw);
+                if (Array.isArray(arr)) {
+                    const cleaned = arr.filter(item => !isDemoLead(item));
+                    localStorage.setItem(k, JSON.stringify(cleaned));
+                }
+            }
+        });
+    } catch (e) {
+        console.warn('LocalStorage demo lead purge note:', e);
     }
-]
+};
+
+const INITIAL_CRM_LEADS = []
 
 export const getCrmLeads = () => {
     try {
+        purgeDemoLeadsFromLocalStorage();
         const stored = localStorage.getItem('turf_crm_leads')
         let customLeads = stored ? JSON.parse(stored) : []
 
         // Dynamically pull customer bookings made on website
-        const bookings = JSON.parse(localStorage.getItem('customer_bookings') || '[]')
-        const bookingLeads = bookings.map(b => ({
-            id: `lead_bk_${b.id}`,
-            name: b.customerName || b.captainName || 'Website Player',
-            phone: b.customerPhone || b.captainPhone || '+91 98765 00000',
-            role: 'team',
-            teamName: b.teamAName || `${b.customerName || 'Player'}'s Team`,
+        const rawCust = localStorage.getItem('customer_bookings')
+        const rawGuest = localStorage.getItem('guest_bookings')
+        const cList = rawCust ? JSON.parse(rawCust) : []
+        const gList = rawGuest ? JSON.parse(rawGuest) : []
+        const allBookings = [...(Array.isArray(cList) ? cList : []), ...(Array.isArray(gList) ? gList : [])]
+
+        const bookingLeads = allBookings.map((b, idx) => ({
+            id: b.id || b.bookingId || `bmt_lead_${idx + 1}`,
+            name: b.userName || b.customerName || b.name || 'Valued Player',
+            phone: b.userPhone || b.phone || b.customerPhone || '+91 98765 43210',
+            role: 'player',
+            teamName: b.sport ? `${b.sport} Booking` : 'Turf Player',
             preferredSport: b.sport || 'Cricket',
-            preferredSlot: `${b.time || '6:00 PM'} (${b.date || 'Today'})`,
-            turfBranch: b.venue || 'SportZone Arena',
-            status: 'Hot Lead',
+            preferredSlot: `${b.time || b.slotTime || '05:25 PM'} (${b.date || b.slotDate || 'Today'})`,
+            turfBranch: b.venue || b.turfName || '📍 Indore Turf Complex',
+            status: b.status === 'Cancelled' ? 'Cancelled' : 'Confirmed',
             totalBookings: 1,
-            notes: `Website booking ${b.id} (${b.amount || 'Paid'})`,
+            amount: b.amount ? `₹${Number(b.amount).toLocaleString('en-IN')}` : '₹1,500',
+            notes: `Real Slot Booking ${b.id || `BK-${idx + 1}`} (Paid via UPI)`,
             createdAt: b.createdAt ? b.createdAt.split('T')[0] : new Date().toISOString().split('T')[0]
         }))
 
@@ -149,8 +107,9 @@ export const getCrmLeads = () => {
             createdAt: g.createdAt ? g.createdAt.split('T')[0] : new Date().toISOString().split('T')[0]
         }))
 
-        // Combine all lead sources
-        const allList = [...customLeads, ...corpLeads, ...bookingLeads, ...guestBookings, ...INITIAL_CRM_LEADS]
+        // Combine all real-time lead sources & filter out demo data
+        const allList = [...customLeads, ...corpLeads, ...bookingLeads, ...guestBookings]
+            .filter(item => !isDemoLead(item))
 
         // Deduplicate leads by unique Phone Number or ID
         const seen = new Set()
@@ -166,7 +125,7 @@ export const getCrmLeads = () => {
 
         return deduplicated
     } catch {
-        return INITIAL_CRM_LEADS
+        return []
     }
 }
 
@@ -183,6 +142,12 @@ export const saveCrmLead = (leadData) => {
         }
         const updated = [newLead, ...customLeads]
         localStorage.setItem('turf_crm_leads', JSON.stringify(updated))
+
+        // Async post to backend REST API
+        import('./api').then(mod => {
+            mod.default.post('/crm/leads', leadData).catch(e => console.warn('Backend REST CRM post note:', e.message))
+        })
+
         return newLead
     } catch (err) {
         console.error('Failed to save CRM lead:', err)
@@ -200,6 +165,12 @@ export const deleteCrmLead = (id) => {
     const leads = getCrmLeads()
     const updated = leads.filter(l => l.id !== id)
     localStorage.setItem('turf_crm_leads', JSON.stringify(updated))
+
+    // Async delete from backend REST API
+    import('./api').then(mod => {
+        mod.default.delete(`/crm/leads/${id}`).catch(e => console.warn('Backend REST CRM delete note:', e.message))
+    })
+
     return updated
 }
 

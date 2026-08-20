@@ -95,6 +95,12 @@ const getDashboardSummary = async (req, res) => {
         const [branchesRes] = await db.query(`SELECT COUNT(*) as count FROM branches`);
         const totalBranches = Number(branchesRes[0]?.count || 0);
 
+        const [activeRes] = await db.query(`SELECT COUNT(*) as count FROM branches WHERE status = 'ACTIVE'`);
+        const activeBranches = Number(activeRes[0]?.count || totalBranches);
+
+        const [inactiveRes] = await db.query(`SELECT COUNT(*) as count FROM branches WHERE status != 'ACTIVE'`);
+        const inactiveBranches = Number(inactiveRes[0]?.count || 0);
+
         const [paymentsRes] = await db.query(`SELECT COALESCE(SUM(amount), 0) as total FROM payments WHERE status = 'COMPLETED'`);
         const [bookingsRes] = await db.query(`SELECT COALESCE(SUM(amount), 0) as total FROM bookings WHERE status = 'CONFIRMED'`);
         const totalRevenue = Math.max(Number(paymentsRes[0]?.total || 0), Number(bookingsRes[0]?.total || 0));
@@ -109,6 +115,8 @@ const getDashboardSummary = async (req, res) => {
             success: true,
             data: {
                 totalBranches,
+                activeBranches,
+                inactiveBranches,
                 totalRevenue,
                 totalUsers,
                 activeSubscriptions,
@@ -146,19 +154,6 @@ const getRevenueGrowth = async (req, res) => {
             revenue: Number(r.Revenue || 0)
         }));
 
-        // Fallback default sample data if no payments logged yet
-        if (formattedData.length === 0) {
-            formattedData = [
-                { Month: 'Jan', Revenue: 450000, month: 'Jan', revenue: 450000 },
-                { Month: 'Feb', Revenue: 520000, month: 'Feb', revenue: 520000 },
-                { Month: 'Mar', Revenue: 610000, month: 'Mar', revenue: 610000 },
-                { Month: 'Apr', Revenue: 750000, month: 'Apr', revenue: 750000 },
-                { Month: 'May', Revenue: 890000, month: 'May', revenue: 890000 },
-                { Month: 'Jun', Revenue: 1040000, month: 'Jun', revenue: 1040000 },
-                { Month: 'Jul', Revenue: 1220000, month: 'Jul', revenue: 1220000 }
-            ];
-        }
-
         return res.status(200).json({
             success: true,
             data: formattedData
@@ -194,18 +189,6 @@ const getCommissionGrowth = async (req, res) => {
             commission: Number(r.Commission || 0)
         }));
 
-        if (formattedData.length === 0) {
-            formattedData = [
-                { Month: 'Jan', 'Commission Amount': 70000, month: 'Jan', commission: 70000 },
-                { Month: 'Feb', 'Commission Amount': 82500, month: 'Feb', commission: 82500 },
-                { Month: 'Mar', 'Commission Amount': 95000, month: 'Mar', commission: 95000 },
-                { Month: 'Apr', 'Commission Amount': 105000, month: 'Apr', commission: 105000 },
-                { Month: 'May', 'Commission Amount': 117500, month: 'May', commission: 117500 },
-                { Month: 'Jun', 'Commission Amount': 140000, month: 'Jun', commission: 140000 },
-                { Month: 'Jul', 'Commission Amount': 155000, month: 'Jul', commission: 155000 }
-            ];
-        }
-
         return res.status(200).json({
             success: true,
             data: formattedData
@@ -224,35 +207,33 @@ const getCommissionGrowth = async (req, res) => {
  */
 const getTopBranches = async (req, res) => {
     try {
-        const [rows] = await db.query(`
-            SELECT 
-                t.id as _id,
-                t.name as 'Branch Name',
-                t.city as City,
-                COALESCE(SUM(b.amount), 1500000) as Revenue,
-                COUNT(b.id) as Bookings,
-                t.status as Status,
-                t.name as branchName,
-                t.city as city,
-                COUNT(b.id) as bookingsCount,
-                COALESCE(SUM(b.amount), 1500000) as totalRevenue,
-                t.status as status
-            FROM turfs t
-            LEFT JOIN bookings b ON b.turf_id = t.id
-            GROUP BY t.id, t.name, t.city, t.status
-            ORDER BY Revenue DESC
-            LIMIT 5
-        `);
-
-        let formattedBranches = rows;
-        if (formattedBranches.length === 0) {
-            formattedBranches = [
-                { _id: 'br_001', 'Branch Name': 'Green Arena Football Turf', City: 'Mumbai', Revenue: 1740000, Bookings: 1450, Status: 'ACTIVE', branchName: 'Green Arena Football Turf', city: 'Mumbai', bookingsCount: 1450, totalRevenue: 1740000, status: 'ACTIVE' },
-                { _id: 'br_002', 'Branch Name': 'Champion Cricket Academy', City: 'Bangalore', Revenue: 1920000, Bookings: 1280, Status: 'ACTIVE', branchName: 'Champion Cricket Academy', city: 'Bangalore', bookingsCount: 1280, totalRevenue: 1920000, status: 'ACTIVE' },
-                { _id: 'br_003', 'Branch Name': 'Royal Cricket Ground', City: 'Indore', Revenue: 570000, Bookings: 950, Status: 'ACTIVE', branchName: 'Royal Cricket Ground', city: 'Indore', bookingsCount: 950, totalRevenue: 570000, status: 'ACTIVE' },
-                { _id: 'br_004', 'Branch Name': 'Skyline Football Turf', City: 'Mumbai', Revenue: 1232000, Bookings: 880, Status: 'ACTIVE', branchName: 'Skyline Football Turf', city: 'Mumbai', bookingsCount: 880, totalRevenue: 1232000, status: 'ACTIVE' }
-            ];
+        let rows = [];
+        try {
+            const [queryResult] = await db.query(`
+                SELECT 
+                    br.id as _id,
+                    br.branch_name as 'Branch Name',
+                    br.city as City,
+                    COALESCE(SUM(b.amount), 0) as Revenue,
+                    COUNT(b.id) as Bookings,
+                    br.status as Status,
+                    br.branch_name as branchName,
+                    br.city as city,
+                    COUNT(b.id) as bookingsCount,
+                    COALESCE(SUM(b.amount), 0) as totalRevenue,
+                    br.status as status
+                FROM branches br
+                LEFT JOIN bookings b ON b.branch_id = br.id
+                GROUP BY br.id, br.branch_name, br.city, br.status
+                ORDER BY totalRevenue DESC
+                LIMIT 5
+            `);
+            rows = queryResult;
+        } catch (dbErr) {
+            console.warn('Top branches query note:', dbErr.message);
         }
+
+        let formattedBranches = rows || [];
 
         return res.status(200).json({
             success: true,
@@ -327,10 +308,10 @@ const getRecentActivities = async (req, res) => {
             const [turfRows] = await db.query(`
                 SELECT 
                     id, 
-                    name, 
+                    branch_name as name, 
                     city, 
                     created_at 
-                FROM turfs 
+                FROM branches 
                 ORDER BY created_at DESC 
                 LIMIT 5
             `);
@@ -369,6 +350,32 @@ const getRecentActivities = async (req, res) => {
             });
         } catch (e) {
             console.warn('Booking activities query note:', e.message);
+        }
+
+        // 5. Fetch recent Corporate Proposals
+        try {
+            const [corpRows] = await db.query(`
+                SELECT 
+                    id, 
+                    company_name, 
+                    contact_person,
+                    event_type,
+                    city, 
+                    created_at 
+                FROM corporate_bookings 
+                ORDER BY created_at DESC 
+                LIMIT 5
+            `);
+            corpRows.forEach(c => {
+                activities.push({
+                    id: `corp_${c.id}`,
+                    activity: 'Admin Created',
+                    details: `${c.contact_person || c.company_name} registered (${c.company_name})`,
+                    timestamp: c.created_at || new Date().toISOString()
+                });
+            });
+        } catch (e) {
+            console.warn('Corporate proposal activities query note:', e.message);
         }
 
         // Sort combined list by timestamp DESC

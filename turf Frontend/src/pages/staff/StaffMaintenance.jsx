@@ -1,9 +1,10 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import DataTable from '../../components/ui/DataTable'
 import Badge from '../../components/ui/Badge'
 import Button from '../../components/ui/Button'
 import Modal from '../../components/ui/Modal'
 import { useToast } from '../../components/ui/Toast'
+import api from '../../services/api'
 
 const initialTasks = [
     { id: 'MT-001', task: 'Fix floodlight #3', area: 'Turf B', priority: 'Urgent', due: 'Mar 3', status: 'Completed' },
@@ -16,6 +17,25 @@ export default function StaffMaintenance() {
     const [tasks, setTasks] = useState(initialTasks)
     const [isViewOpen, setIsViewOpen] = useState(false)
     const [selectedTask, setSelectedTask] = useState(null)
+
+    // Connect to backend REST API
+    useEffect(() => {
+        api.get('/maintenance/tickets')
+            .then(res => {
+                if (res.data && res.data.success && Array.isArray(res.data.data) && res.data.data.length > 0) {
+                    const mapped = res.data.data.map(t => ({
+                        id: t.id,
+                        task: t.issue_description || t.asset_name,
+                        area: t.category || 'Turf Arena',
+                        priority: t.priority === 'CRITICAL' || t.priority === 'HIGH' ? 'Urgent' : 'Medium',
+                        due: 'Today',
+                        status: t.status === 'RESOLVED' ? 'Completed' : t.status === 'IN_PROGRESS' ? 'In Progress' : 'Open'
+                    }))
+                    setTasks(prev => [...mapped, ...prev])
+                }
+            })
+            .catch(e => console.warn('StaffMaintenance API note:', e.message))
+    }, [])
 
     const handleStartTask = (taskId) => {
         setTasks(prev => prev.map(t => 

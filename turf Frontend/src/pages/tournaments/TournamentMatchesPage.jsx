@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import DataTable from '../../components/ui/DataTable'
 import Button from '../../components/ui/Button'
 import Badge from '../../components/ui/Badge'
@@ -83,6 +83,38 @@ export default function TournamentMatchesPage() {
         redCards: '0',
         remarks: ''
     })
+
+    // Fetch live matches from MySQL DB via REST API
+    useEffect(() => {
+        const fetchMatches = async () => {
+            try {
+                const res = await fetch('http://localhost:5000/api/v1/tournaments/matches/all')
+                const data = await res.json()
+                if (data.success && Array.isArray(data.data) && data.data.length > 0) {
+                    const mapped = data.data.map(m => ({
+                        id: m.id,
+                        roundName: m.round_name || 'Playoffs',
+                        matchNumber: m.match_number,
+                        team1Name: m.team1_name,
+                        team1Score: m.team1_score,
+                        team2Name: m.team2_name,
+                        team2Score: m.team2_score,
+                        winnerName: m.winner_name,
+                        status: m.status || 'Scheduled',
+                        scheduledDate: '2026-03-20',
+                        scheduledTime: '19:00',
+                        yellowCards: 0,
+                        redCards: 0,
+                        remarks: m.live_state_json ? 'Live Scorer Console Enabled' : ''
+                    }))
+                    setMatches(mapped)
+                }
+            } catch (err) {
+                console.warn('API fetch matches note:', err.message)
+            }
+        }
+        fetchMatches()
+    }, [])
 
     const handleOpenScoreModal = (match) => {
         setScoreModal({ open: true, match })
