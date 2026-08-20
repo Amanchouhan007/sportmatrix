@@ -1,0 +1,75 @@
+# Implementation Plan - 100% Backend Integration Refactings
+
+This plan outlines the technical steps to achieve 100% production-ready backend integration for the **Sport Turfs** platform by centralizing API URLs, standardizing ID schemas across frontend/backend, and enforcing atomic 5-minute slot hold locks in MySQL/Redis.
+
+---
+
+## User Review Required
+
+> [!IMPORTANT]
+> **Key Technical Decisions for Review:**
+> 1. **Centralized API Client**: All raw `fetch('http://localhost:5000/...')` calls across 14+ frontend components will be migrated to use standard helper methods from `src/services/api.js` configured with `import.meta.env.VITE_API_URL`.
+> 2. **ID Normalization Strategy**: Both numeric IDs (e.g. `16`, `1`) and string IDs (e.g. `br_001`, `turf_16`) will be accepted and parsed dynamically in backend controllers via an `normalizeId` utility.
+> 3. **Atomic Slot Lock**: During Step 3 checkout, a 5-minute atomic database hold (`status = 'HELD'`, `expires_at = NOW() + INTERVAL 5 MINUTE`) will be written to MySQL with a unique `holdId` to guarantee two users cannot lock or purchase the same slot concurrently.
+
+---
+
+## Proposed Changes
+
+---
+
+### Component 1: Centralize API Base URL (Frontend)
+
+Migrate all scattered `http://localhost:5000` URLs across frontend pages to use the centralized Axios instance and environment variables in [`src/services/api.js`](file:///c:/Users/91969/OneDrive/Desktop/Kiaan/sport-turfs/turf%20Frontend/src/services/api.js).
+
+#### [MODIFY] [`api.js`](file:///c:/Users/91969/OneDrive/Desktop/Kiaan/sport-turfs/turf%20Frontend/src/services/api.js)
+- Ensure fallback to `import.meta.env.VITE_API_URL` / `import.meta.env.VITE_SERVER_URL`.
+- Add standard helper methods for GET, POST, PUT, DELETE requests with automatic error logging and toast notifications.
+
+#### [MODIFY] [`TurfDetailPage.jsx`](file:///c:/Users/91969/OneDrive/Desktop/Kiaan/sport-turfs/turf%20Frontend/src/pages/website/TurfDetailPage.jsx)
+- Replace inline `fetch('http://localhost:5000/api/v1/...')` with centralized `api.get()` / `api.post()`.
+
+#### [MODIFY] [`SlotBookingPage.jsx`](file:///c:/Users/91969/OneDrive/Desktop/Kiaan/sport-turfs/turf%20Frontend/src/pages/website/SlotBookingPage.jsx)
+- Update match payment creation and verification API calls to use centralized `api.post()`.
+
+#### [MODIFY] [`BookingManagement.jsx`](file:///c:/Users/91969/OneDrive/Desktop/Kiaan/sport-turfs/turf%20Frontend/src/pages/owner/BookingManagement.jsx)
+- Update booking summary, history, and status patch endpoints to use `api`.
+
+#### [NEW] [`turf Frontend/.env.example`](file:///c:/Users/91969/OneDrive/Desktop/Kiaan/sport-turfs/turf%20Frontend/.env.example)
+- Define default `VITE_API_URL=http://localhost:5000/api/v1` and `VITE_SERVER_URL=http://localhost:5000`.
+
+---
+
+### Component 2: Standardize Venue & User IDs (Frontend & Backend)
+
+Ensure seamless compatibility between frontend numeric IDs (`1`, `16`) and backend string IDs (`br_001`, `usr_101`).
+
+#### [NEW] [`idNormalizer.js`](file:///c:/Users/91969/OneDrive/Desktop/Kiaan/sport-turfs/turf%20Backend/src/utils/idNormalizer.js)
+- Create helper functions `normalizeTurfId(id)` and `normalizeUserId(id)` to map numeric IDs (e.g. `16`) to canonical database format (e.g. `br_001` or `turf_16`) and vice versa.
+
+#### [MODIFY] [`matchPayment.controller.js`](file:///c:/Users/91969/OneDrive/Desktop/Kiaan/sport-turfs/turf%20Backend/src/modules/bookings/matchPayment.controller.js)
+- Use `idNormalizer` on incoming `turfId`, `slotId`, and `userId` payload properties before executing SQL queries.
+
+---
+
+### Component 3: Atomic 5-Minute Slot Hold Lock Engine (Backend)
+
+Prevent double-booking by enforcing database transaction level locks and 5-minute expiration timers.
+
+#### [MODIFY] [`matchPayment.routes.js`](file:///c:/Users/91969/OneDrive/Desktop/Kiaan/sport-turfs/turf%20Backend/src/modules/bookings/matchPayment.routes.js) / [`matchPayment.service.js`](file:///c:/Users/91969/OneDrive/Desktop/Kiaan/sport-turfs/turf%20Backend/src/modules/bookings/matchPayment.service.js)
+- Implement `SELECT ... FOR UPDATE` or atomic `INSERT INTO slot_holds (slot_id, user_id, expires_at) VALUES (?, ?, NOW() + INTERVAL 5 MINUTE)` query.
+- If a slot is already held by another user and `expires_at > NOW()`, return HTTP 409 Conflict error (`"Slot is currently being locked by another user. Try again in 5 minutes"`).
+- Automatically release expired holds in `MatchExpiryService`.
+
+---
+
+## Verification Plan
+
+### Automated Tests
+- Test backend endpoints with `curl` / `fetch` tests for concurrent booking requests on the same slot ID.
+- Verify HTTP 409 Conflict return code when two requests attempt to hold the same slot concurrently.
+
+### Manual Verification
+- Test booking flow on `http://localhost:5173/turf/16` and `http://localhost:5173/booking/16` in browser.
+- Verify environment variable overrides (`VITE_API_URL`).
+- Verify slot status changes to Locked/Held immediately upon proceeding to Step 3.
