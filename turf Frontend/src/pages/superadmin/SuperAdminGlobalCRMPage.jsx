@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react'
-import { HiShieldCheck, HiSearch, HiPaperAirplane, HiDownload, HiFilter, HiPhone, HiGlobeAlt } from 'react-icons/hi'
+import { HiShieldCheck, HiSearch, HiPaperAirplane, HiDownload, HiFilter, HiPhone, HiGlobeAlt, HiOfficeBuilding, HiCurrencyRupee } from 'react-icons/hi'
 import { getCrmLeads } from '../../services/crmService'
+import { getCorporateProposals } from '../../services/corporateService'
 import OfferBroadcastModal from '../../components/crm/OfferBroadcastModal'
+import CorporateQuoteModal from '../../components/superadmin/CorporateQuoteModal'
 import { useToast } from '../../components/ui/Toast'
 import CustomSelect from '../../components/ui/CustomSelect'
 import CustomDatePicker from '../../components/ui/CustomDatePicker'
@@ -16,10 +18,59 @@ export default function SuperAdminGlobalCRMPage() {
     const [isBroadcastModalOpen, setIsBroadcastModalOpen] = useState(false)
     const [selectedLeadForBroadcast, setSelectedLeadForBroadcast] = useState(null)
     const [selectedLeadsForBroadcast, setSelectedLeadsForBroadcast] = useState([])
+    const [isQuoteModalOpen, setIsQuoteModalOpen] = useState(false)
+    const [selectedLeadForQuote, setSelectedLeadForQuote] = useState(null)
     const { addToast } = useToast()
 
+    const loadAllLeads = async () => {
+        const crmData = getCrmLeads()
+        try {
+            const corpData = await getCorporateProposals()
+            if (Array.isArray(corpData) && corpData.length > 0) {
+                const mappedCorp = corpData.map(c => ({
+                    id: c.id ? String(c.id) : `corp_${Date.now()}`,
+                    proposalId: c.id,
+                    name: c.company_name || c.companyName || c.contact_person || c.contactPerson || 'Corporate Contact',
+                    contactPerson: c.contact_person || c.contactPerson,
+                    companyName: c.company_name || c.companyName,
+                    phone: c.phone || '+91 98765 00000',
+                    email: c.email || '',
+                    role: 'corporate',
+                    teamName: `${c.estimated_players || c.estimatedPlayers || '40-50 Players'} • ${c.event_type || c.eventType || 'Tournament'}`,
+                    preferredSport: c.event_type || c.eventType || 'Corporate Tournament',
+                    preferredSlot: c.time_slot || c.timeSlot || (c.event_date ? `${c.event_date} (Full Day)` : 'Full Day Arena Booking'),
+                    turfBranch: c.preferred_turf || c.preferredTurf || (c.city ? `🏟️ ${c.city} Turf Complex` : 'Champion Turf Ground (Palasia, Indore)'),
+                    budget: c.budget || '₹60,000 - ₹1,20,000',
+                    status: c.status || 'NEW',
+                    quotedPrice: c.quotedPrice || c.quoted_price || null,
+                    quoteData: c.quoteData || null,
+                    totalBookings: 1,
+                    notes: `Corporate request for ${c.company_name || c.companyName} (${c.estimated_players || c.estimatedPlayers || '40+ Players'}, Budget: ${c.budget || 'Custom'})`,
+                    createdAt: c.created_at ? c.created_at.split('T')[0] : (c.createdAt ? c.createdAt.split('T')[0] : new Date().toISOString().split('T')[0])
+                }))
+
+                // Merge and deduplicate by phone/ID
+                const combined = [...mappedCorp, ...crmData]
+                const seen = new Set()
+                const deduplicated = []
+                for (const item of combined) {
+                    const key = item.phone ? item.phone.replace(/\D/g, '') : item.id
+                    if (!seen.has(key)) {
+                        seen.add(key)
+                        deduplicated.push(item)
+                    }
+                }
+                setLeads(deduplicated)
+                return
+            }
+        } catch (e) {
+            console.warn('Corp proposals sync note:', e)
+        }
+        setLeads(crmData)
+    }
+
     useEffect(() => {
-        setLeads(getCrmLeads())
+        loadAllLeads()
     }, [])
 
     const handleOpenBroadcast = (lead) => {
@@ -113,7 +164,7 @@ export default function SuperAdminGlobalCRMPage() {
             </div>
 
             {/* Global Stats */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 sm:grid-cols-5 gap-4">
                 <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm">
                     <div className="text-[10px] font-black uppercase text-slate-400">Total Registered Contacts</div>
                     <div className="text-2xl font-black text-slate-900 mt-1">{filteredLeads.length}</div>
@@ -121,6 +172,10 @@ export default function SuperAdminGlobalCRMPage() {
                 <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm">
                     <div className="text-[10px] font-black uppercase text-slate-400">Total Teams & Captains</div>
                     <div className="text-2xl font-black text-emerald-600 mt-1">{filteredLeads.filter(l => l.role === 'team').length}</div>
+                </div>
+                <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm">
+                    <div className="text-[10px] font-black uppercase text-slate-400">Corporate Proposals</div>
+                    <div className="text-2xl font-black text-indigo-600 mt-1">{filteredLeads.filter(l => l.role === 'corporate').length}</div>
                 </div>
                 <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm">
                     <div className="text-[10px] font-black uppercase text-slate-400">Active Umpires</div>
@@ -153,6 +208,7 @@ export default function SuperAdminGlobalCRMPage() {
                         onChange={(val) => setSelectedRole(val)}
                         options={[
                             { value: 'all', label: '👥 All Roles' },
+                            { value: 'corporate', label: '🏢 Corporate & Bulk Proposals' },
                             { value: 'team', label: '🏏 Teams / Captains' },
                             { value: 'player', label: '⚡ Players' },
                             { value: 'umpire', label: '🚩 Umpires / Referees' },
@@ -177,6 +233,10 @@ export default function SuperAdminGlobalCRMPage() {
                         <HiSearch className="absolute left-3.5 top-2.5 text-slate-400 w-4 h-4" />
                         <input
                             type="text"
+                            autoComplete="off"
+                            autoCorrect="off"
+                            autoCapitalize="off"
+                            spellCheck="false"
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
                             placeholder="Search name, phone, team..."
@@ -260,8 +320,16 @@ export default function SuperAdminGlobalCRMPage() {
                                             </div>
                                         </td>
                                         <td className="py-3.5 px-4">
-                                            <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase bg-slate-100 text-slate-800 border border-slate-300">
-                                                {lead.role === 'team' ? 'Captain / Team' : lead.role === 'organizer' ? 'Tournament Org' : lead.role}
+                                            <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase border ${
+                                                lead.role === 'corporate' 
+                                                    ? 'bg-purple-100 text-purple-800 border-purple-300' 
+                                                    : lead.role === 'team'
+                                                    ? 'bg-emerald-100 text-emerald-800 border-emerald-300'
+                                                    : lead.role === 'umpire'
+                                                    ? 'bg-amber-100 text-amber-800 border-amber-300'
+                                                    : 'bg-slate-100 text-slate-800 border-slate-300'
+                                            }`}>
+                                                {lead.role === 'corporate' ? '🏢 Corporate' : lead.role === 'team' ? 'Captain / Team' : lead.role === 'organizer' ? 'Tournament Org' : lead.role}
                                             </span>
                                         </td>
                                         <td className="py-3.5 px-4 font-semibold text-emerald-700">
@@ -277,18 +345,43 @@ export default function SuperAdminGlobalCRMPage() {
                                             {lead.teamName || '—'}
                                         </td>
                                         <td className="py-3.5 px-4">
-                                            <span className="px-2 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-200 font-bold text-[10px]">
-                                                {lead.status}
-                                            </span>
+                                            {lead.status?.includes('Quote Sent') ? (
+                                                <span className="px-2 py-0.5 rounded-full bg-purple-100 text-purple-800 border border-purple-300 font-black text-[10px] whitespace-nowrap">
+                                                    💼 {lead.status}
+                                                </span>
+                                            ) : lead.status?.includes('Confirmed') ? (
+                                                <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300 font-black text-[10px] whitespace-nowrap">
+                                                    ✅ {lead.status}
+                                                </span>
+                                            ) : (
+                                                <span className="px-2 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-200 font-bold text-[10px]">
+                                                    {lead.status}
+                                                </span>
+                                            )}
                                         </td>
                                         <td className="py-3.5 px-4 text-right">
-                                            <button
-                                                onClick={() => handleOpenBroadcast(lead)}
-                                                className="px-3 py-1.5 rounded-lg bg-[#25D366] hover:bg-[#20bd5a] text-white font-bold text-[11px] shadow-sm cursor-pointer flex items-center gap-1 transition-all ml-auto"
-                                            >
-                                                <HiPaperAirplane className="w-3 h-3 rotate-90" />
-                                                <span>Global Broadcast</span>
-                                            </button>
+                                            <div className="flex items-center justify-end gap-1.5">
+                                                {lead.role === 'corporate' && (
+                                                    <button
+                                                        onClick={() => {
+                                                            setSelectedLeadForQuote(lead)
+                                                            setIsQuoteModalOpen(true)
+                                                        }}
+                                                        className="px-3 py-1.5 rounded-lg bg-purple-600 hover:bg-purple-700 text-white font-black text-[11px] shadow-sm cursor-pointer flex items-center gap-1 transition-all"
+                                                        title="Set Custom Price & Send Quote"
+                                                    >
+                                                        <HiCurrencyRupee className="w-3.5 h-3.5" />
+                                                        <span>Set Price Quote</span>
+                                                    </button>
+                                                )}
+                                                <button
+                                                    onClick={() => handleOpenBroadcast(lead)}
+                                                    className="px-3 py-1.5 rounded-lg bg-[#25D366] hover:bg-[#20bd5a] text-white font-bold text-[11px] shadow-sm cursor-pointer flex items-center gap-1 transition-all"
+                                                >
+                                                    <HiPaperAirplane className="w-3 h-3 rotate-90" />
+                                                    <span className="hidden sm:inline">Broadcast</span>
+                                                </button>
+                                            </div>
                                         </td>
                                     </tr>
                                 )
@@ -308,6 +401,19 @@ export default function SuperAdminGlobalCRMPage() {
                 }}
                 selectedLead={selectedLeadForBroadcast}
                 selectedLeads={selectedLeadsForBroadcast}
+            />
+
+            {/* CORPORATE ADMIN PRICE QUOTE MODAL */}
+            <CorporateQuoteModal
+                isOpen={isQuoteModalOpen}
+                onClose={() => {
+                    setIsQuoteModalOpen(false)
+                    setSelectedLeadForQuote(null)
+                }}
+                lead={selectedLeadForQuote}
+                onQuoteSent={() => {
+                    loadAllLeads()
+                }}
             />
         </div>
     )

@@ -4,6 +4,7 @@ import Badge from '../../components/ui/Badge'
 import Button from '../../components/ui/Button'
 import ConfirmDialog from '../../components/ui/ConfirmDialog'
 import { useToast } from '../../components/ui/Toast'
+import { getAllUsers, updateUserStatus } from '../../services/authService'
 
 const initialUsers = [
     { id: 1, name: 'Hitesha Borase', email: 'superadmin@gmail.com', role: 'Super Admin', joined: 'Jan 01, 2026', status: 'Active' },
@@ -20,19 +21,35 @@ export default function UserManagement() {
         const saved = localStorage.getItem('sa_users')
         return saved ? JSON.parse(saved) : initialUsers
     })
-
+    const [loading, setLoading] = useState(false)
     const [activeTab, setActiveTab] = useState('All')
     const [confirm, setConfirm] = useState({ open: false, user: null })
 
     useEffect(() => {
-        localStorage.setItem('sa_users', JSON.stringify(users))
-    }, [users])
+        const loadUsers = async () => {
+            setLoading(true)
+            try {
+                const data = await getAllUsers()
+                if (Array.isArray(data) && data.length > 0) {
+                    setUsers(data)
+                }
+            } catch (err) {
+                console.error(err)
+            } finally {
+                setLoading(false)
+            }
+        }
+        loadUsers()
+    }, [])
 
-    const handleToggleStatus = () => {
+    const handleToggleStatus = async () => {
         const user = confirm.user
         const newStatus = user.status === 'Active' ? 'Suspended' : 'Active'
         setUsers(prev => prev.map(u => u.id === user.id ? { ...u, status: newStatus } : u))
         setConfirm({ open: false, user: null })
+        try {
+            await updateUserStatus(user.id, newStatus)
+        } catch (e) { }
         addToast({ 
             title: 'Status Updated', 
             message: `${user.name} is now ${newStatus}`, 

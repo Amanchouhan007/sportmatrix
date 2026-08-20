@@ -53,9 +53,7 @@ export default function DashboardLayout({ role = 'owner' }) {
     const [dropdownOpen, setDropdownOpen] = useState(false)
     const [notifOpen, setNotifOpen] = useState(false)
     const [quickActionOpen, setQuickActionOpen] = useState(false)
-    const [notifications, setNotifications] = useState(roleNotifications[role] || roleNotifications.customer)
-    
-    // Collapsible Menu Open States
+    const [notifications, setNotifications] = useState([])
     const [openMenus, setOpenMenus] = useState({})
 
     const navigate = useNavigate()
@@ -63,8 +61,62 @@ export default function DashboardLayout({ role = 'owner' }) {
     const { user, logout } = useAuth()
     const menu = sidebarConfig[role] || []
 
+    // Load dynamic real-time notifications from website bookings & corporate proposals
+    const loadLiveNotifications = () => {
+        try {
+            const liveNotifs = []
+
+            // 1. Corporate Proposals
+            const rawCorp = localStorage.getItem('corporate_proposals_data')
+            if (rawCorp) {
+                const corpList = JSON.parse(rawCorp)
+                if (Array.isArray(corpList)) {
+                    corpList.slice(0, 3).forEach((c, idx) => {
+                        liveNotifs.push({
+                            id: `corp-${c.id || idx}`,
+                            title: '🏢 New Corporate Proposal',
+                            desc: `${c.companyName || 'Corporate Client'} requested proposal for ${c.eventType || 'Event'} (${c.budget || 'Custom Budget'})`,
+                            time: 'Just now',
+                            unread: true,
+                            path: '/super-admin/crm'
+                        })
+                    })
+                }
+            }
+
+            // 2. Turf Slot Bookings
+            const rawBookings = localStorage.getItem('sport_matrix_bookings') || localStorage.getItem('turf_booked_slots')
+            if (rawBookings) {
+                const bList = JSON.parse(rawBookings)
+                if (Array.isArray(bList)) {
+                    bList.slice(0, 3).forEach((b, idx) => {
+                        liveNotifs.push({
+                            id: `book-${b.id || idx}`,
+                            title: '⚡ New Turf Slot Booked',
+                            desc: `${b.turfName || 'Turf Arena'} booked by ${b.userName || b.customerName || 'Customer'} (₹${Number(b.totalAmount || b.price || 900).toLocaleString('en-IN')})`,
+                            time: 'Just now',
+                            unread: true,
+                            path: role === 'superadmin' ? '/super-admin/crm' : role === 'owner' ? '/admin/bookings' : '/customer/bookings'
+                        })
+                    })
+                }
+            }
+
+            const baseNotifs = roleNotifications[role] || roleNotifications.customer
+            if (liveNotifs.length > 0) {
+                setNotifications([...liveNotifs, ...baseNotifs])
+            } else {
+                setNotifications(baseNotifs)
+            }
+        } catch (e) {
+            setNotifications(roleNotifications[role] || roleNotifications.customer)
+        }
+    }
+
     useEffect(() => {
-        setNotifications(roleNotifications[role] || roleNotifications.customer)
+        loadLiveNotifications()
+        window.addEventListener('storage', loadLiveNotifications)
+        return () => window.removeEventListener('storage', loadLiveNotifications)
     }, [role])
 
     // Auto-expand parent menu if current location matches any child item
@@ -297,6 +349,10 @@ export default function DashboardLayout({ role = 'owner' }) {
                             <HiSearch className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                             <input 
                                 type="text" 
+                                autoComplete="off"
+                                autoCorrect="off"
+                                autoCapitalize="off"
+                                spellCheck="false"
                                 placeholder="Search turf, owner, booking..." 
                                 className="w-full pl-10 pr-12 py-2 rounded-xl bg-slate-50 border border-slate-200/90 text-xs font-semibold text-slate-900 placeholder:text-slate-400 focus:bg-white focus:border-[#10B981] focus:ring-2 focus:ring-[#10B981]/20 outline-none transition-all"
                             />
@@ -385,6 +441,8 @@ export default function DashboardLayout({ role = 'owner' }) {
                                                     key={n.id}
                                                     onClick={() => {
                                                         setNotifications(prev => prev.map(item => item.id === n.id ? { ...item, unread: false } : item))
+                                                        setNotifOpen(false)
+                                                        if (n.path) navigate(n.path)
                                                     }}
                                                     className={`p-3.5 hover:bg-slate-50 transition-colors cursor-pointer flex gap-3 items-start ${n.unread ? 'bg-emerald-50/30' : ''}`}
                                                 >

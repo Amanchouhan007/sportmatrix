@@ -19,7 +19,7 @@ export default function CorporateBookingSection() {
                         {/* Left Column: Heading & Perks */}
                         <div className="lg:col-span-7 space-y-6">
                             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-black uppercase tracking-widest">
-                                <HiOfficeBuilding className="text-sm" /> CORPORATE & BULK EVENT HIRE
+                                <HiOfficeBuilding className="text-sm" /> CORPORATE & BULK EVENT BOOKING
                             </div>
 
                             <h2 className="text-3xl sm:text-4xl font-black tracking-tight leading-tight">

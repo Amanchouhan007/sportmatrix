@@ -1,4 +1,4 @@
-import { useState, useEffect, Fragment } from 'react'
+import { useState, useEffect, useMemo, Fragment } from 'react'
 import { createPortal } from 'react-dom'
 import { useNavigate } from 'react-router-dom'
 import Badge from '../../components/ui/Badge'
@@ -75,7 +75,38 @@ export default function OwnerManagement() {
     const [pagination, setPagination] = useState({ total: 0, page: 1, limit: 10, pages: 1 })
     const [page, setPage] = useState(1)
     const [searchTerm, setSearchTerm] = useState('')
+    const [isSearchFocused, setIsSearchFocused] = useState(false)
     const [statusFilter, setStatusFilter] = useState('ALL')
+
+    // Smart In-App Suggestions matching SportMatrix UI theme
+    const searchSuggestions = useMemo(() => {
+        if (!isSearchFocused && !searchTerm.trim()) return []
+        const term = searchTerm.toLowerCase().trim()
+        const pool = []
+
+        owners.forEach(o => {
+            if (o.email && (!term || o.email.toLowerCase().includes(term))) {
+                pool.push({ type: 'email', label: o.email, subtext: o.name || 'Owner Email', icon: '✉️', value: o.email })
+            }
+            if (o.name && (!term || o.name.toLowerCase().includes(term))) {
+                pool.push({ type: 'name', label: o.name, subtext: o.email || 'Owner Name', icon: '👤', value: o.name })
+            }
+            if (o.businessName && (!term || o.businessName.toLowerCase().includes(term))) {
+                pool.push({ type: 'business', label: o.businessName, subtext: `${o.name || ''} • ${o.city || 'Indore'}`, icon: '🏢', value: o.businessName })
+            }
+            if (o.phone && (!term || o.phone.includes(term))) {
+                pool.push({ type: 'phone', label: o.phone, subtext: o.name || 'Phone Contact', icon: '📱', value: o.phone })
+            }
+        })
+
+        // Deduplicate suggestions by label
+        const seen = new Set()
+        return pool.filter(item => {
+            if (!item.label || seen.has(item.label.toLowerCase())) return false
+            seen.add(item.label.toLowerCase())
+            return true
+        }).slice(0, 6)
+    }, [owners, searchTerm, isSearchFocused])
 
     // Expanded Row ID state
     const [expandedRowId, setExpandedRowId] = useState(null)
@@ -510,17 +541,73 @@ export default function OwnerManagement() {
                 {/* Search + Filter Bar Toolbar */}
                 <div className="flex flex-col md:flex-row items-center justify-between gap-4 pb-4 border-b border-slate-100">
                     <div className="relative w-full md:w-96">
-                        <FiSearch className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                        <FiSearch className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 z-10 pointer-events-none" />
                         <input
                             type="text"
+                            name="owner_search_input_no_autofill"
+                            id="owner_search_input"
+                            autoComplete="off"
+                            autoCorrect="off"
+                            autoCapitalize="off"
+                            spellCheck="false"
                             placeholder="Search owner, email, or business..."
                             value={searchTerm}
+                            onFocus={() => setIsSearchFocused(true)}
                             onChange={e => {
                                 setSearchTerm(e.target.value)
                                 setPage(1)
+                                setIsSearchFocused(true)
                             }}
                             className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200/80 bg-slate-50/70 text-slate-900 text-xs font-semibold outline-none focus:bg-white focus:border-[#22C55E] focus:ring-2 focus:ring-[#22C55E]/10 transition-all placeholder:text-slate-400"
                         />
+
+                        {/* SportMatrix Custom Themed Suggestions Dropdown */}
+                        {isSearchFocused && searchSuggestions.length > 0 && (
+                            <>
+                                <div 
+                                    className="fixed inset-0 z-40" 
+                                    onClick={() => setIsSearchFocused(false)} 
+                                />
+                                <div className="absolute left-0 top-full mt-2 w-full min-w-[280px] sm:min-w-[340px] bg-white border border-slate-200/90 rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.14)] p-2 z-50 animate-in fade-in zoom-in-95 duration-150 backdrop-blur-xl">
+                                    <div className="px-3 py-1.5 flex items-center justify-between border-b border-slate-100 text-[10px] font-black text-slate-400 uppercase tracking-wider">
+                                        <span className="flex items-center gap-1">⚡ <span>Suggestions</span></span>
+                                        <span className="text-[#16A34A]">{searchSuggestions.length} found</span>
+                                    </div>
+                                    <div className="py-1 space-y-1 max-h-64 overflow-y-auto" style={{ scrollbarWidth: 'thin' }}>
+                                        {searchSuggestions.map((item, idx) => (
+                                            <button
+                                                key={`${item.type}-${item.label}-${idx}`}
+                                                type="button"
+                                                onMouseDown={(e) => {
+                                                    e.preventDefault()
+                                                    setSearchTerm(item.value || item.label)
+                                                    setIsSearchFocused(false)
+                                                    setPage(1)
+                                                }}
+                                                className="w-full text-left px-3 py-2 rounded-xl text-xs flex items-center justify-between gap-2.5 hover:bg-emerald-50/80 hover:text-emerald-950 transition-all cursor-pointer group"
+                                            >
+                                                <div className="flex items-center gap-2.5 min-w-0">
+                                                    <span className="w-7 h-7 rounded-lg bg-slate-100 group-hover:bg-[#C8FF2E] group-hover:text-black flex items-center justify-center text-xs shrink-0 transition-colors shadow-2xs">
+                                                        {item.icon}
+                                                    </span>
+                                                    <div className="min-w-0">
+                                                        <p className="font-bold text-slate-900 group-hover:text-[#16A34A] truncate">
+                                                            {item.label}
+                                                        </p>
+                                                        <p className="text-[10px] text-slate-500 truncate font-medium">
+                                                            {item.subtext}
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                                <span className="text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 group-hover:bg-emerald-100 group-hover:text-emerald-800 shrink-0">
+                                                    {item.type}
+                                                </span>
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+                            </>
+                        )}
                     </div>
 
                     <div className="flex items-center gap-2 w-full md:w-auto overflow-x-auto pb-1 md:pb-0" style={{ scrollbarWidth: 'thin' }}>
@@ -870,16 +957,18 @@ export default function OwnerManagement() {
                                     label="Mobile Number"
                                     placeholder="e.g. 9876543210"
                                     value={formData.mobile}
-                                    onChange={e => setFormData({ ...formData, mobile: e.target.value })}
+                                    onChange={e => setFormData({ ...formData, mobile: e.target.value.replace(/\D/g, '').slice(0, 10) })}
                                     disabled={isSaving}
                                     required
+                                    maxLength={10}
                                 />
                                 <Input
                                     label="Alternative Mobile"
                                     placeholder="e.g. 9876543211"
                                     value={formData.alternateMobile}
-                                    onChange={e => setFormData({ ...formData, alternateMobile: e.target.value })}
+                                    onChange={e => setFormData({ ...formData, alternateMobile: e.target.value.replace(/\D/g, '').slice(0, 10) })}
                                     disabled={isSaving}
+                                    maxLength={10}
                                 />
                             </div>
                             {!editingOwner && (

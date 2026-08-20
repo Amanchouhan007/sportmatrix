@@ -77,23 +77,23 @@ export default function StatCard({
             {/* Top color accent strip */}
             <div className={`absolute top-0 left-0 right-0 h-1 ${finalAccent} transition-all duration-300 group-hover:h-1.5`} />
 
-            <div className="flex items-start justify-between gap-3">
-                <div className="space-y-2 min-w-0">
-                    <p className="text-[11px] font-extrabold text-slate-500 uppercase tracking-widest truncate">{label}</p>
-                    <p className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight leading-none truncate">{value}</p>
+            <div className="flex items-start justify-between gap-2.5 sm:gap-3">
+                <div className="space-y-1.5 sm:space-y-2 min-w-0 flex-1">
+                    <p className="text-[10px] sm:text-[11px] font-extrabold text-slate-500 uppercase tracking-widest truncate">{label}</p>
+                    <p className="text-xl sm:text-2xl lg:text-3xl font-black text-slate-900 tracking-tight leading-tight break-words">{value}</p>
                     {change && (
-                        <div className="flex items-center gap-1.5 pt-1">
-                            <span className={`text-[11px] font-extrabold px-2 py-0.5 rounded-md flex items-center gap-1 ${
+                        <div className="flex items-center gap-1.5 pt-0.5 sm:pt-1">
+                            <span className={`text-[10px] sm:text-[11px] font-extrabold px-1.5 sm:px-2 py-0.5 rounded-md flex items-center gap-1 ${
                                 trend === 'up' ? 'text-emerald-700 bg-emerald-50 border border-emerald-200/60' : 'text-rose-700 bg-rose-50 border border-rose-200/60'
                             }`}>
-                                <span className="text-[10px]">{trend === 'up' ? '▲' : '▼'}</span>
+                                <span className="text-[9px] sm:text-[10px]">{trend === 'up' ? '▲' : '▼'}</span>
                                 {change}
                             </span>
                         </div>
                     )}
                 </div>
                 {icon && (
-                    <div className={`w-11 h-11 rounded-2xl flex items-center justify-center text-lg shrink-0 transition-transform duration-300 group-hover:scale-110 shadow-2xs ${finalIconBg}`}>
+                    <div className={`w-9 h-9 sm:w-11 sm:h-11 rounded-xl sm:rounded-2xl flex items-center justify-center text-base sm:text-lg shrink-0 transition-transform duration-300 group-hover:scale-110 shadow-2xs ${finalIconBg}`}>
                         {icon}
                     </div>
                 )}

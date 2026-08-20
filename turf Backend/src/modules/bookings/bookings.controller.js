@@ -382,11 +382,125 @@ const updateBookingStatus = async (req, res) => {
     }
 };
 
+/**
+ * Guest booking creation (without requiring logged-in session)
+ */
+const createGuestBooking = async (req, res) => {
+    const { turfName, customerName, phone, slotDate, slotTime, duration, amount, paymentMode, paymentStatus } = req.body;
+
+    if (!customerName || !phone) {
+        return res.status(400).json({
+            success: false,
+            message: 'customerName and phone are required.'
+        });
+    }
+
+    try {
+        const id = `GBK-${Date.now()}`;
+        const notesObj = {
+            turfName: turfName || 'Indore Turf Arena',
+            slotDate: slotDate || new Date().toISOString().split('T')[0],
+            slotTime: slotTime || '06:00 PM',
+            paymentMode: paymentMode || 'UPI',
+            paymentStatus: paymentStatus || 'PAID',
+            isGuest: true
+        };
+
+        const [result] = await db.query(
+            `INSERT INTO bookings (customer_name, mobile_number, amount, duration, notes, status) 
+             VALUES (?, ?, ?, ?, ?, 'CONFIRMED')`,
+            [customerName.trim(), phone.trim(), amount || 900, duration || 1, JSON.stringify(notesObj)]
+        );
+
+        return res.status(201).json({
+            success: true,
+            message: 'Guest booking created successfully',
+            data: {
+                id: `GBK-${result.insertId}`,
+                bookingId: result.insertId,
+                customerName: customerName.trim(),
+                phone: phone.trim(),
+                turfName: turfName || 'Indore Turf Arena',
+                slotDate,
+                slotTime,
+                amount: amount || 900,
+                status: 'CONFIRMED'
+            }
+        });
+    } catch (error) {
+        console.error('Guest booking error:', error);
+        return res.status(500).json({
+            success: false,
+            message: 'Failed to create guest booking: ' + error.message
+        });
+    }
+};
+
+/**
+ * Lookup guest bookings by phone number
+ */
+const lookupGuestBookingsByPhone = async (req, res) => {
+    try {
+        const { phone } = req.query;
+
+        if (!phone) {
+            return res.status(400).json({
+                success: false,
+                message: 'Phone number query parameter is required.'
+            });
+        }
+
+        const cleanPhone = phone.replace(/[^0-9]/g, '').slice(-10);
+
+        const [bookings] = await db.query(
+            `SELECT b.*, s.slot_date, s.start_time, s.end_time, s.court_name 
+             FROM bookings b 
+             LEFT JOIN slots s ON b.slot_id = s.id 
+             WHERE b.mobile_number LIKE ? 
+             ORDER BY b.created_at DESC`,
+            [`%${cleanPhone}%`]
+        );
+
+        return res.status(200).json({
+            success: true,
+            count: bookings.length,
+            data: bookings.map(b => {
+                let parsedNotes = {};
+                try {
+                    parsedNotes = JSON.parse(b.notes || '{}');
+                } catch (e) { }
+
+                return {
+                    id: `BK-${b.id}`,
+                    bookingId: b.id,
+                    customerName: b.customer_name,
+                    phone: b.mobile_number,
+                    amount: b.amount,
+                    duration: b.duration,
+                    status: b.status,
+                    turfName: parsedNotes.turfName || 'Indore Turf Arena',
+                    slotDate: b.slot_date || parsedNotes.slotDate,
+                    slotTime: b.start_time || parsedNotes.slotTime,
+                    createdAt: b.created_at
+                };
+            })
+        });
+    } catch (error) {
+        console.error('Lookup guest bookings error:', error);
+        return res.status(500).json({
+            success: false,
+            message: 'Failed to lookup guest bookings: ' + error.message
+        });
+    }
+};
+
 module.exports = {
     createBooking,
     cancelBooking,
     getUpcomingBookings,
     getBookingHistory,
     getBookingLedgerSummary,
-    updateBookingStatus
+    updateBookingStatus,
+    createGuestBooking,
+    lookupGuestBookingsByPhone
 };

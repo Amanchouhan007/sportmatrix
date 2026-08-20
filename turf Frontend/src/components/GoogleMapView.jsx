@@ -119,11 +119,51 @@ export default function GoogleMapView({ turfs, center, hoveredTurfId, onMarkerCl
     };
 
     if (!isLoaded) return (
-        <div className="w-full h-full bg-slate-900 animate-pulse flex items-center justify-center border border-white/5">
-            <div className="flex flex-col items-center gap-3">
-                <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
-                <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">Loading Premium Map...</span>
+        <div className="w-full h-full relative bg-[#0B132B] rounded-2xl overflow-hidden border border-white/10 flex flex-col items-center justify-center p-6 select-none">
+            {/* FLOATING GLASS HEADER */}
+            <div className="absolute top-4 left-4 right-4 z-10 flex justify-between items-start">
+                <div className="bg-slate-900/90 backdrop-blur-md border border-emerald-500/30 px-4 py-2.5 rounded-2xl shadow-xl flex flex-col gap-0.5">
+                    <h3 className="text-sm font-black text-white uppercase tracking-tight flex items-center gap-2">
+                        <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
+                        {turfs.length} Active Indore Turfs
+                    </h3>
+                    <div className="flex items-center gap-2 text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                        <span>Radius: <span className="text-emerald-400">{radius === 'All' ? 'ALL' : `${radius} KM`}</span></span>
+                        <span className="w-1 h-1 rounded-full bg-slate-600"></span>
+                        <span className="flex items-center gap-0.5 text-slate-300"><HiLocationMarker className="text-emerald-400" /> Indore</span>
+                    </div>
+                </div>
             </div>
+
+            {/* Interactive Vector Grid of Turfs */}
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 w-full max-w-lg mt-12 z-10">
+                {turfs.slice(0, 6).map((turf) => (
+                    <button
+                        key={turf.id}
+                        type="button"
+                        onClick={() => {
+                            if (onMarkerClick) onMarkerClick(turf.id);
+                        }}
+                        className={`p-3 rounded-xl border text-left transition-all cursor-pointer ${
+                            hoveredTurfId === turf.id
+                                ? 'bg-emerald-950/80 border-emerald-400 shadow-lg scale-105 ring-1 ring-emerald-400'
+                                : 'bg-slate-900/80 border-white/10 hover:border-emerald-500/50 hover:bg-slate-800'
+                        }`}
+                    >
+                        <div className="flex items-center justify-between gap-1 mb-1">
+                            <span className="text-xs font-black text-white truncate">{turf.name}</span>
+                            <span className="text-[10px] font-bold text-amber-400 font-mono">★{turf.rating || '4.8'}</span>
+                        </div>
+                        <div className="flex items-center justify-between text-[10px] font-bold text-slate-400">
+                            <span className="text-emerald-400 font-mono">₹{turf.price}/hr</span>
+                            <span className="text-slate-500 truncate">{turf.area || 'Indore'}</span>
+                        </div>
+                    </button>
+                ))}
+            </div>
+
+            {/* Ambient Background Grid Pattern */}
+            <div className="absolute inset-0 bg-[radial-gradient(#10b981_1px,transparent_1px)] [background-size:24px_24px] opacity-10 pointer-events-none" />
         </div>
     );
 

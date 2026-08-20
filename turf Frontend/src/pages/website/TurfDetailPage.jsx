@@ -1,6 +1,22 @@
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useMemo } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { HiLocationMarker, HiStar, HiArrowLeft, HiShieldCheck, HiClock, HiPhone, HiMail, HiLightBulb, HiCheckCircle, HiX } from 'react-icons/hi'
+import { 
+    HiLocationMarker, 
+    HiStar, 
+    HiArrowLeft, 
+    HiShieldCheck, 
+    HiClock, 
+    HiPhone, 
+    HiMail, 
+    HiLightBulb, 
+    HiCheckCircle, 
+    HiX,
+    HiCalendar,
+    HiChevronLeft,
+    HiChevronRight,
+    HiChevronDown,
+    HiCheck
+} from 'react-icons/hi'
 import SlotGrid from '../../components/ui/SlotGrid'
 import { useToast } from '../../components/ui/Toast'
 import { useAuth } from '../../context/AuthContext'
@@ -11,6 +27,7 @@ import TurfReviewsSection from '../../components/turf-detail/TurfReviewsSection'
 import TurfBookingSuccessModal from '../../components/turf-detail/TurfBookingSuccessModal'
 import PaymentModal from '../../components/booking/PaymentModal'
 import VenueSwitchModal from '../../components/booking/VenueSwitchModal'
+import CorporateBookingModal from '../../components/website/CorporateBookingModal'
 
 const defaultTurfData = {
     id: 1, name: 'SportZone Arena', location: 'Andheri West, Mumbai', rating: 4.8, reviews: 124,
@@ -54,8 +71,6 @@ const allTurfsList = [
     { id: 12, name: 'Pune Cricket Arena', location: 'Kothrud, Pune', city: 'Pune', rating: 4.5, price: 1000, image: '/images/turf2.png', sports: ['Cricket'], amenities: ['Floodlights', 'Parking', 'Washroom', 'Seating'], lat: 18.5074, lng: 73.8077 },
 ]
 
-
-
 /* ── Reviews Data ── */
 const reviewsData = [
     { id: 1, name: 'Arjun Mehta', avatar: '🧑‍💼', rating: 5, date: '2 weeks ago', text: 'Absolutely phenomenal turf! The LED floodlights are incredible for evening matches. Surface quality is top-notch — probably the best in Mumbai. Booking process was seamless too.' },
@@ -97,20 +112,125 @@ function SectionLabel({ children, accent = 'emerald' }) {
     )
 }
 
-const generateSlots = (hourlyPrice = 1200, selectedDate = null) => {
-    const times = ['06:00', '07:00', '08:00', '09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00', '18:00', '19:00', '20:00', '21:00', '22:00']
+const monthNames = [
+    'January', 'February', 'March', 'April', 'May', 'June',
+    'July', 'August', 'September', 'October', 'November', 'December'
+]
+const dayNamesShort = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+const dayNamesFull = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
+
+// Generate all dates for any given year and month in the calendar
+const generateMonthDates = (year, month) => {
+    const totalDays = new Date(year, month + 1, 0).getDate()
+    const now = new Date()
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+    const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
+
+    const list = []
+    for (let day = 1; day <= totalDays; day++) {
+        const d = new Date(year, month, day)
+        const dayOfWeek = d.getDay()
+        const dayShort = dayNamesShort[dayOfWeek]
+        const fullDayName = dayNamesFull[dayOfWeek]
+        const monthShort = monthNames[month].slice(0, 3)
+        const fullDateString = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`
+        const isToday = fullDateString === todayStr
+        const isPast = d < today
+
+        list.push({
+            id: `date-${fullDateString}`,
+            fullDateString,
+            dayShort: isToday ? 'Today' : dayShort,
+            dateNum: day,
+            monthShort,
+            monthIndex: month,
+            year,
+            isToday,
+            isPast,
+            isWeekend: dayOfWeek === 0 || dayOfWeek === 6,
+            formattedLabel: `${fullDayName.toUpperCase()}, ${day} ${monthShort.toUpperCase()} ${year}`
+        })
+    }
+    return list
+}
+
+const generateSlotsForDate = (hourlyPrice = 1200, selectedDateObj = null, turfId = 16) => {
+    const times = [
+        '06:00', '07:00', '08:00', '09:00', '10:00', '11:00',
+        '12:00', '13:00', '14:00', '15:00', '16:00', '17:00',
+        '18:00', '19:00', '20:00', '21:00', '22:00'
+    ]
+
+    const dateNum = selectedDateObj?.dateNum || 19
+    const dayShort = (selectedDateObj?.dayShort || 'Sun').toUpperCase()
+    const fullDate = selectedDateObj?.fullDateString || ''
+    const isWeekend = dayShort.includes('SAT') || dayShort.includes('SUN')
+    const isPastDate = !!selectedDateObj?.isPast
+
     const now = new Date()
     const currentHour = now.getHours()
     const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
-    const isToday = !selectedDate || selectedDate === todayStr
+    const isToday = selectedDateObj?.isToday || selectedDateObj?.dayShort === 'TODAY' || fullDate === todayStr
 
     return times.map((t, i) => {
         const slotHour = parseInt(t.split(':')[0], 10)
-        const factor = i < 5 ? 0.8 : (i >= 11 && i <= 16 ? 1.25 : 1.0)
-        const slotPrice = Math.round((hourlyPrice * factor) / 50) * 50
-        let status = [3, 7, 11, 15].includes(i) ? 'booked' : i === 5 ? 'blocked' : 'available'
+        const isPeakHour = slotHour >= 18 && slotHour <= 22
+        const isEarlyMorning = slotHour < 8
 
-        if (isToday && slotHour <= currentHour) {
+        // Pricing: Peak hours = +25% to +28% (₹1,150/hr for ₹900/hr turf), early morning = -15%
+        let factor = 1.0
+        if (isPeakHour) factor = isWeekend ? 1.30 : 1.28
+        else if (isEarlyMorning) factor = 0.85
+        else if (isWeekend && slotHour >= 14) factor = 1.15
+
+        const slotPrice = Math.round((hourlyPrice * factor) / 50) * 50
+
+        // If the date itself has already passed
+        if (isPastDate) {
+            return {
+                id: i,
+                time: t,
+                price: slotPrice,
+                status: 'booked',
+                isPassed: true
+            }
+        }
+
+        // Real-time slot management: if TODAY and slot hour has elapsed
+        const isSlotPassedToday = isToday && slotHour <= currentHour
+
+        // Distinct, realistic schedule tailored for each day
+        let status = 'available'
+
+        if (dayShort === 'SUN' || dayShort.includes('SUNDAY')) {
+            if ([0, 1, 2, 4, 7, 12, 14, 15, 16].includes(i)) status = 'booked'
+        } else if (dayShort === 'MON' || dayShort.includes('MONDAY')) {
+            if ([0, 1, 3, 4, 5, 7, 11, 15].includes(i)) status = 'booked'
+            else if (i === 6) status = 'maintenance' // 12:00 PM
+            else if (i === 2) status = 'staff_unavailable' // 8:00 AM
+        } else if (dayShort === 'TUE' || dayShort.includes('TUESDAY')) {
+            if ([2, 4, 8, 12, 15].includes(i)) status = 'booked'
+            else if (i === 5) status = 'maintenance' // 11:00 AM
+        } else if (dayShort === 'WED' || dayShort.includes('WEDNESDAY')) {
+            if ([3, 7, 11, 14, 15].includes(i)) status = 'booked'
+            else if (i === 1) status = 'staff_unavailable' // 7:00 AM
+        } else if (dayShort === 'THU' || dayShort.includes('THURSDAY')) {
+            if ([0, 2, 5, 8, 11, 15].includes(i)) status = 'booked'
+            else if (i === 7) status = 'maintenance' // 1:00 PM
+        } else if (dayShort === 'FRI' || dayShort.includes('FRIDAY')) {
+            if ([1, 3, 5, 8, 10, 12, 13, 14, 16].includes(i)) status = 'booked'
+        } else if (dayShort === 'SAT' || dayShort.includes('SATURDAY')) {
+            if ([0, 1, 2, 4, 6, 8, 11, 13, 14, 15].includes(i)) status = 'booked'
+            else if (i === 3) status = 'staff_unavailable' // 9:00 AM
+        } else {
+            const hash = (dateNum * 11 + i * 17 + (turfId || 16) * 5) % 100
+            if (hash < 40) status = 'booked'
+            else if (hash === 91) status = 'maintenance'
+            else if (hash === 92) status = 'staff_unavailable'
+        }
+
+        // Lock slot if it has elapsed today
+        if (isSlotPassedToday) {
             status = 'booked'
         }
 
@@ -119,6 +239,7 @@ const generateSlots = (hourlyPrice = 1200, selectedDate = null) => {
             time: t,
             price: slotPrice,
             status,
+            isPassed: isSlotPassedToday
         }
     })
 }
@@ -129,8 +250,6 @@ export default function TurfDetailPage() {
     const { user } = useAuth() || {}
     const [selectedSport, setSelectedSport] = useState('Cricket')
     const [selectedMediaId, setSelectedMediaId] = useState(0)
-    const [selectedDate, setSelectedDate] = useState('2026-03-15')
-    const [selectedSlot, setSelectedSlot] = useState(null)
     const [duration, setDuration] = useState(1)
     const [isDeploying, setIsDeploying] = useState(false)
     const [bookingSuccessModal, setBookingSuccessModal] = useState(false)
@@ -139,7 +258,6 @@ export default function TurfDetailPage() {
     const addToast = toastContext?.addToast
 
     const activeTurf = allTurfsList.find(t => t.id === Number(id)) || allTurfsList[0];
-    const slots = generateSlots(activeTurf.price)
     const videoRef = useRef(null)
 
     const defaultFallbackImage = activeTurf.image || '/images/turf1.png';
@@ -153,6 +271,7 @@ export default function TurfDetailPage() {
     ];
 
     const [isMediaModalOpen, setIsMediaModalOpen] = useState(false);
+    const [isCorpModalOpen, setIsCorpModalOpen] = useState(false);
     const [customMediaList, setCustomMediaList] = useState(() => {
         try {
             const saved = localStorage.getItem(`turf_media_${activeTurf.id}`) || localStorage.getItem('turf_media_custom');
@@ -259,17 +378,144 @@ export default function TurfDetailPage() {
     };
 
     const [bookingStep, setBookingStep] = useState(1);
-    const dateList = [
-        { id: 'd-1', fullDateString: '2026-08-09', dayShort: 'Sun', dateNum: 9, monthShort: 'Aug', formattedLabel: 'SUNDAY, 9 AUG' },
-        { id: 'd-2', fullDateString: '2026-08-10', dayShort: 'Mon', dateNum: 10, monthShort: 'Aug', formattedLabel: 'MONDAY, 10 AUG' },
-        { id: 'd-3', fullDateString: '2026-08-11', dayShort: 'Tue', dateNum: 11, monthShort: 'Aug', formattedLabel: 'TUESDAY, 11 AUG' },
-        { id: 'd-4', fullDateString: '2026-08-12', dayShort: 'Wed', dateNum: 12, monthShort: 'Aug', formattedLabel: 'WEDNESDAY, 12 AUG' },
-        { id: 'd-5', fullDateString: '2026-08-13', dayShort: 'Thu', dateNum: 13, monthShort: 'Aug', formattedLabel: 'THURSDAY, 13 AUG' },
-        { id: 'd-6', fullDateString: '2026-08-14', dayShort: 'Fri', dateNum: 14, monthShort: 'Aug', formattedLabel: 'FRIDAY, 14 AUG' },
-        { id: 'd-7', fullDateString: '2026-08-15', dayShort: 'Sat', dateNum: 15, monthShort: 'Aug', formattedLabel: 'SATURDAY, 15 AUG' },
-        { id: 'd-8', fullDateString: '2026-08-16', dayShort: 'Sun', dateNum: 16, monthShort: 'Aug', formattedLabel: 'SUNDAY, 16 AUG' },
-    ];
-    const [selectedDateObj, setSelectedDateObj] = useState(dateList[0]);
+    const dateStripRef = useRef(null);
+    const [viewYear, setViewYear] = useState(2026);
+    const [viewMonth, setViewMonth] = useState(7); // 7 = August (0-indexed)
+    const [isCalendarModalOpen, setIsCalendarModalOpen] = useState(false);
+    const [isMonthDropdownOpen, setIsMonthDropdownOpen] = useState(false);
+    const [isYearDropdownOpen, setIsYearDropdownOpen] = useState(false);
+    const monthDropdownRef = useRef(null);
+    const yearDropdownRef = useRef(null);
+
+    useEffect(() => {
+        const handleClickOutside = (e) => {
+            if (monthDropdownRef.current && !monthDropdownRef.current.contains(e.target)) {
+                setIsMonthDropdownOpen(false);
+            }
+            if (yearDropdownRef.current && !yearDropdownRef.current.contains(e.target)) {
+                setIsYearDropdownOpen(false);
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
+
+    // Current month dates (all dates 1 to 28/30/31 for active month)
+    const currentMonthDates = useMemo(() => {
+        return generateMonthDates(viewYear, viewMonth);
+    }, [viewYear, viewMonth]);
+
+    const [selectedDateObj, setSelectedDateObj] = useState(() => {
+        const nowObj = new Date();
+        const curDates = generateMonthDates(nowObj.getFullYear(), nowObj.getMonth());
+        return curDates.find(d => d.isToday) || curDates.find(d => !d.isPast) || curDates[0];
+    });
+    const [selectedDate, setSelectedDate] = useState(() => selectedDateObj?.fullDateString || '');
+    const [selectedSlot, setSelectedSlot] = useState(12); // Default to 6:00 PM
+
+    // Generate dynamic date-specific slots whenever activeTurf or selectedDateObj changes
+    const slots = useMemo(() => {
+        return generateSlotsForDate(activeTurf.price, selectedDateObj, activeTurf.id);
+    }, [activeTurf.price, selectedDateObj, activeTurf.id]);
+
+    const handlePrevMonth = () => {
+        const now = new Date();
+        const curYear = now.getFullYear();
+        const curMonth = now.getMonth();
+
+        // Prevent navigating into past months
+        if (viewYear === curYear && viewMonth <= curMonth) {
+            if (addToast) addToast('Cannot book slots for past months.', 'info');
+            return;
+        }
+        if (viewMonth === 0) {
+            if (viewYear <= curYear) return;
+            setViewMonth(11);
+            setViewYear(prev => prev - 1);
+        } else {
+            setViewMonth(prev => prev - 1);
+        }
+    };
+
+    const handleNextMonth = () => {
+        if (viewMonth === 11) {
+            setViewMonth(0);
+            setViewYear(prev => prev + 1);
+        } else {
+            setViewMonth(prev => prev + 1);
+        }
+    };
+
+    const handleSelectMonth = (mIndex) => {
+        const now = new Date();
+        const curYear = now.getFullYear();
+        const curMonth = now.getMonth();
+        const m = Number(mIndex);
+        if (viewYear === curYear && m < curMonth) {
+            if (addToast) addToast('Cannot select a past month.', 'info');
+            return;
+        }
+        setViewMonth(m);
+    };
+
+    const handleSelectYear = (y) => {
+        const now = new Date();
+        const yr = Number(y);
+        if (yr < now.getFullYear()) {
+            if (addToast) addToast('Cannot select a past year.', 'info');
+            return;
+        }
+        setViewYear(yr);
+    };
+
+    const scrollDateStrip = (direction) => {
+        if (dateStripRef.current) {
+            const scrollAmount = direction === 'left' ? -260 : 260;
+            dateStripRef.current.scrollBy({ left: scrollAmount, behavior: 'smooth' });
+        }
+    };
+
+    const handleDateSelect = (d) => {
+        if (d?.isPast) {
+            if (addToast) addToast('Cannot select a past date.', 'warning');
+            return;
+        }
+        setSelectedDateObj(d);
+        setSelectedDate(d.fullDateString);
+        if (d.year !== viewYear || d.monthIndex !== viewMonth) {
+            setViewYear(d.year);
+            setViewMonth(d.monthIndex);
+        }
+        setIsCalendarModalOpen(false);
+
+        // Get slots on the selected date to maintain a valid active selection
+        const nextSlots = generateSlotsForDate(activeTurf.price, d, activeTurf.id);
+        const isCurrentAvailable = selectedSlot !== null && nextSlots.some(s => s.id === selectedSlot && s.status === 'available');
+
+        if (!isCurrentAvailable) {
+            // Find 6:00 PM (18:00) or 7:00 PM (19:00) or first available slot
+            const prime = nextSlots.find(s => s.time === '18:00' && s.status === 'available')
+                || nextSlots.find(s => s.time === '19:00' && s.status === 'available')
+                || nextSlots.find(s => s.time === '20:00' && s.status === 'available')
+                || nextSlots.find(s => s.status === 'available');
+            if (prime) {
+                setSelectedSlot(prime.id);
+            }
+        }
+    };
+
+    const handleJumpToToday = () => {
+        const now = new Date();
+        const curYear = now.getFullYear();
+        const curMonth = now.getMonth();
+        const curDay = now.getDate();
+        const dates = generateMonthDates(curYear, curMonth);
+        const todayObj = dates.find(d => d.dateNum === curDay) || dates[0];
+        setViewYear(curYear);
+        setViewMonth(curMonth);
+        handleDateSelect(todayObj);
+    };
+
     const [paymentMode, setPaymentMode] = useState('dare');
     const [expandedAccordionMode, setExpandedAccordionMode] = useState('dare');
     const [customSplitMyShare, setCustomSplitMyShare] = useState(1200);
@@ -296,7 +542,7 @@ export default function TurfDetailPage() {
         setSelectedSlot(slotId);
     };
 
-    const currentSlot = slots.find(s => s.id === selectedSlot) || slots[12] || slots[0];
+    const currentSlot = slots.find(s => s.id === selectedSlot) || slots.find(s => s.status === 'available') || slots[0];
 
     // Check if this Turf offers Verified Umpire Service (Configured by Turf Owner)
     const isTurfUmpireAvailable = (() => {
@@ -307,11 +553,11 @@ export default function TurfDetailPage() {
         return activeTurf?.hasUmpireService !== false
     })()
 
-    const selectedSlotIndex = slots.findIndex(s => s.id === selectedSlot)
+    const selectedSlotIndex = slots.findIndex(s => s.id === (currentSlot?.id ?? selectedSlot))
     const selectedConsecutiveSlots = selectedSlotIndex !== -1
         ? slots.slice(selectedSlotIndex, Math.min(slots.length, selectedSlotIndex + duration))
         : []
-    const baseSlotPrice = slots[selectedSlotIndex]?.price || activeTurf.price || 1200
+    const baseSlotPrice = currentSlot?.price || activeTurf.price || 1200
     const grossSlotRent = selectedConsecutiveSlots.reduce((sum, slot) => sum + (slot.price || baseSlotPrice), 0)
     const umpireFee = (hasVerifiedUmpire && isTurfUmpireAvailable) ? 300 : 0;
     const totalRent = (grossSlotRent || (baseSlotPrice * duration)) + umpireFee;
@@ -575,6 +821,35 @@ export default function TurfDetailPage() {
                             </div>
                         </div>
 
+                        {/* Corporate & Bulk Booking Quick Option Card */}
+                        <div className="bg-gradient-to-r from-[#1E1B4B] via-[#0F172A] to-[#1E293B] text-white rounded-[22px] p-4 sm:p-5 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-lg border border-purple-500/30">
+                            <div className="flex items-center gap-3.5">
+                                <div className="w-11 h-11 rounded-2xl bg-purple-500/20 border border-purple-400/40 text-2xl flex items-center justify-center shrink-0">
+                                    🏢
+                                </div>
+                                <div>
+                                    <div className="flex items-center gap-2">
+                                        <h3 className="font-black text-sm uppercase tracking-wide text-[#C8FF2E]">
+                                            Corporate Outing or Tournament Booking?
+                                        </h3>
+                                        <span className="px-2 py-0.5 rounded-full bg-purple-400/20 text-purple-200 font-bold text-[10px] border border-purple-400/30">
+                                            GST Invoices
+                                        </span>
+                                    </div>
+                                    <p className="text-xs text-slate-300 mt-0.5">
+                                        Request custom quote for <strong>{turfData.name} ({turfData.location})</strong> with dedicated umpires, bulk player rates & PO credit terms.
+                                    </p>
+                                </div>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={() => setIsCorpModalOpen(true)}
+                                className="w-full sm:w-auto px-5 py-2.5 bg-[#C8FF2E] hover:bg-[#b5f000] text-[#111827] font-black text-xs uppercase tracking-wider rounded-xl transition-all cursor-pointer shadow-md shrink-0 border border-[#b5f000]"
+                            >
+                                Get Corporate Quote →
+                            </button>
+                        </div>
+
                         {/* Booking Sector — Clean 4-Step Flow Starting Directly on Date & Time */}
                         <div className="relative">
                             <div className="relative bg-white border border-[#E5E7EB] rounded-[20px] p-6 sm:p-8 shadow-[0_15px_45px_rgba(0,0,0,0.08)] space-y-6">
@@ -633,8 +908,8 @@ export default function TurfDetailPage() {
                                             </div>
 
                                             {/* Duration Selector */}
-                                            <div className="flex items-center gap-2.5">
-                                                <span className="text-xs font-black tracking-wider text-slate-500 uppercase">DURATION:</span>
+                                            <div className="flex flex-wrap items-center gap-2 sm:gap-2.5">
+                                                <span className="text-[11px] sm:text-xs font-black tracking-wider text-slate-500 uppercase">DURATION:</span>
                                                 <div className="flex items-center bg-[#F1F5F9] border border-slate-200 rounded-full p-1 shadow-xs">
                                                     {[1, 2, 3].map(hr => (
                                                         <button
@@ -643,57 +918,324 @@ export default function TurfDetailPage() {
                                                                 setDuration(hr)
                                                                 setSelectedSlot(null)
                                                             }}
-                                                            className={`px-4 py-2 rounded-full text-xs font-black uppercase tracking-wider transition-all cursor-pointer ${duration === hr
+                                                            className={`px-3 sm:px-4 py-1.5 sm:py-2 rounded-full text-[11px] sm:text-xs font-black uppercase tracking-wider transition-all cursor-pointer ${duration === hr
                                                                     ? 'bg-[#111827] text-white shadow-xs'
                                                                     : 'text-slate-500 hover:text-[#111827]'
                                                                 }`}
                                                         >
-                                                            {hr} {hr === 1 ? 'HOUR' : 'HOURS'}
+                                                            {hr} {hr === 1 ? 'HR' : 'HRS'}
                                                         </button>
                                                     ))}
                                                 </div>
                                             </div>
                                         </div>
 
-                                        {/* Horizontal Date Selector */}
-                                        <div>
-                                            <label className="text-xs font-black tracking-widest text-slate-400 uppercase block mb-3">SELECT DATE</label>
-                                            <div className="flex gap-3 overflow-x-auto pb-3 pt-1 no-scrollbar">
-                                                {dateList.map(d => {
-                                                    const isSel = selectedDateObj.id === d.id
-                                                    return (
+                                        {/* Horizontal Date Selector with Month Switcher & Full Year Calendar */}
+                                        <div className="bg-white border border-[#E5E7EB] rounded-2xl sm:rounded-3xl p-3 sm:p-5 shadow-xs space-y-3 relative">
+                                            {/* Month Header & Calendar Actions */}
+                                            <div className="flex flex-wrap items-center justify-between gap-2.5 pb-2.5 border-b border-slate-100">
+                                                <div className="flex flex-wrap items-center gap-2">
+                                                    <span className="text-[11px] font-black uppercase tracking-widest text-[#6B7280]">SELECT DATE</span>
+
+                                                    {/* Custom UI Themed Month & Year Stepper & Dropdowns */}
+                                                    <div className="flex items-center bg-[#F8FAFC] border border-slate-200/90 rounded-full p-1 shadow-xs gap-1">
                                                         <button
-                                                            key={d.id}
-                                                            onClick={() => {
-                                                                setSelectedDateObj(d)
-                                                                setSelectedDate(d.fullDateString)
-                                                            }}
-                                                            className={`flex-shrink-0 w-20 py-4 px-2 rounded-[20px] flex flex-col items-center justify-center transition-all duration-200 cursor-pointer ${isSel
-                                                                    ? 'bg-[#111827] text-white border-2 border-[#10B981] shadow-md scale-[1.02]'
-                                                                    : 'bg-white border border-[#E2E8F0] text-slate-500 hover:border-slate-400 shadow-xs'
-                                                                }`}
+                                                            type="button"
+                                                            onClick={handlePrevMonth}
+                                                            title="Previous Month"
+                                                            className="w-6 h-6 rounded-full hover:bg-white text-slate-700 hover:text-[#10B981] flex items-center justify-center transition-all cursor-pointer font-bold hover:shadow-xs"
                                                         >
-                                                            <span className={`text-xs font-bold mb-1 ${isSel ? 'text-slate-300' : 'text-slate-500'}`}>{d.dayShort}</span>
-                                                            <span className={`text-3xl font-black my-0.5 ${isSel ? 'text-white' : 'text-[#111827]'}`}>{d.dateNum}</span>
-                                                            <span className={`text-xs font-bold mt-1 ${isSel ? 'text-slate-300' : 'text-slate-500'}`}>{d.monthShort}</span>
+                                                            <HiChevronLeft className="w-3.5 h-3.5" />
                                                         </button>
-                                                    )
-                                                })}
+
+                                                        {/* Custom Month Dropdown */}
+                                                        <div className="relative" ref={monthDropdownRef}>
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => {
+                                                                    setIsMonthDropdownOpen(!isMonthDropdownOpen);
+                                                                    setIsYearDropdownOpen(false);
+                                                                }}
+                                                                className={`px-2.5 py-1 rounded-full text-xs font-black transition-all flex items-center gap-1 cursor-pointer ${
+                                                                    isMonthDropdownOpen 
+                                                                        ? 'bg-[#111827] text-white shadow-xs' 
+                                                                        : 'bg-white hover:bg-emerald-50 text-[#111827] border border-slate-200 hover:border-emerald-300'
+                                                                }`}
+                                                            >
+                                                                <span>{monthNames[viewMonth]}</span>
+                                                                <HiChevronDown className={`w-3 h-3 transition-transform ${isMonthDropdownOpen ? 'rotate-180 text-emerald-400' : 'text-slate-400'}`} />
+                                                            </button>
+
+                                                            {/* Custom Themed Month Menu Popup */}
+                                                            {isMonthDropdownOpen && (
+                                                                <div className="absolute top-full mt-2 left-0 z-50 bg-[#111827] border-2 border-emerald-500 text-white rounded-2xl shadow-2xl p-2 w-64 animate-in fade-in zoom-in-95 duration-150 backdrop-blur-xl">
+                                                                    <div className="text-[10px] font-black text-amber-300 uppercase tracking-wider px-2 py-1 border-b border-slate-700 mb-1 flex items-center justify-between">
+                                                                        <span>Select Month</span>
+                                                                        <span className="text-slate-400 font-mono">{viewYear}</span>
+                                                                    </div>
+                                                                    <div className="grid grid-cols-3 gap-1.5 p-1">
+                                                                        {monthNames.map((name, idx) => {
+                                                                            const isCurrent = viewMonth === idx;
+                                                                            return (
+                                                                                <button
+                                                                                    key={name}
+                                                                                    type="button"
+                                                                                    onClick={() => {
+                                                                                        handleSelectMonth(idx);
+                                                                                        setIsMonthDropdownOpen(false);
+                                                                                    }}
+                                                                                    className={`py-1.5 px-2 rounded-xl text-xs font-bold transition-all text-center cursor-pointer ${
+                                                                                        isCurrent
+                                                                                            ? 'bg-[#10B981] text-white font-black shadow-md shadow-emerald-500/30'
+                                                                                            : 'hover:bg-slate-800 text-slate-300 hover:text-white'
+                                                                                    }`}
+                                                                                >
+                                                                                    {name.slice(0, 3)}
+                                                                                </button>
+                                                                            );
+                                                                        })}
+                                                                    </div>
+                                                                </div>
+                                                            )}
+                                                        </div>
+
+                                                        {/* Custom Year Dropdown */}
+                                                        <div className="relative" ref={yearDropdownRef}>
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => {
+                                                                    setIsYearDropdownOpen(!isYearDropdownOpen);
+                                                                    setIsMonthDropdownOpen(false);
+                                                                }}
+                                                                className={`px-2 py-1 rounded-full text-xs font-black transition-all flex items-center gap-1 cursor-pointer ${
+                                                                    isYearDropdownOpen 
+                                                                        ? 'bg-[#111827] text-white shadow-xs' 
+                                                                        : 'bg-white hover:bg-emerald-50 text-[#111827] border border-slate-200 hover:border-emerald-300'
+                                                                }`}
+                                                            >
+                                                                <span>{viewYear}</span>
+                                                                <HiChevronDown className={`w-3 h-3 transition-transform ${isYearDropdownOpen ? 'rotate-180 text-emerald-400' : 'text-slate-400'}`} />
+                                                            </button>
+
+                                                            {/* Custom Themed Year Menu Popup */}
+                                                            {isYearDropdownOpen && (
+                                                                <div className="absolute top-full mt-2 left-0 z-50 bg-[#111827] border-2 border-emerald-500 text-white rounded-2xl shadow-2xl p-2 w-32 animate-in fade-in zoom-in-95 duration-150 backdrop-blur-xl">
+                                                                    <div className="text-[10px] font-black text-amber-300 uppercase tracking-wider px-2 py-1 border-b border-slate-700 mb-1">
+                                                                        Year
+                                                                    </div>
+                                                                    <div className="flex flex-col gap-1 p-1">
+                                                                        {[2025, 2026, 2027, 2028].map(yr => {
+                                                                            const isCurrent = viewYear === yr;
+                                                                            return (
+                                                                                <button
+                                                                                    key={yr}
+                                                                                    type="button"
+                                                                                    onClick={() => {
+                                                                                        handleSelectYear(yr);
+                                                                                        setIsYearDropdownOpen(false);
+                                                                                    }}
+                                                                                    className={`py-1.5 px-2 rounded-xl text-xs font-bold transition-all text-left flex items-center justify-between cursor-pointer ${
+                                                                                        isCurrent
+                                                                                            ? 'bg-[#10B981] text-white font-black shadow-md'
+                                                                                            : 'hover:bg-slate-800 text-slate-300 hover:text-white'
+                                                                                    }`}
+                                                                                >
+                                                                                    <span>{yr}</span>
+                                                                                    {isCurrent && <HiCheck className="w-3.5 h-3.5 text-white" />}
+                                                                                </button>
+                                                                            );
+                                                                        })}
+                                                                    </div>
+                                                                </div>
+                                                            )}
+                                                        </div>
+
+                                                        <button
+                                                            type="button"
+                                                            onClick={handleNextMonth}
+                                                            title="Next Month"
+                                                            className="w-6 h-6 rounded-full hover:bg-white text-slate-700 hover:text-[#10B981] flex items-center justify-center transition-all cursor-pointer font-bold hover:shadow-xs"
+                                                        >
+                                                            <HiChevronRight className="w-3.5 h-3.5" />
+                                                        </button>
+                                                    </div>
+                                                </div>
+
+                                                <div className="flex items-center gap-2">
+                                                    <button
+                                                        type="button"
+                                                        onClick={handleJumpToToday}
+                                                        className="text-[11px] font-black text-slate-700 bg-slate-100 hover:bg-slate-200 border border-slate-200 px-3.5 py-1.5 rounded-full transition-all cursor-pointer shadow-xs hover:border-slate-300"
+                                                    >
+                                                        Today
+                                                    </button>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setIsCalendarModalOpen(!isCalendarModalOpen)}
+                                                        className="text-[11px] font-black text-emerald-900 bg-emerald-50 hover:bg-emerald-100 border border-emerald-300 px-3.5 py-1.5 rounded-full transition-all cursor-pointer flex items-center gap-1.5 shadow-xs"
+                                                    >
+                                                        <HiCalendar className="w-3.5 h-3.5 text-emerald-700" />
+                                                        <span>{isCalendarModalOpen ? 'Close Calendar' : '📅 Full Calendar'}</span>
+                                                    </button>
+                                                </div>
+                                            </div>
+
+                                            {/* Full Calendar Dropdown Modal if open */}
+                                            {isCalendarModalOpen && (
+                                                <div className="bg-white border-2 border-emerald-500/80 rounded-3xl p-4 sm:p-5 shadow-[0_20px_50px_rgba(0,0,0,0.12)] animate-in zoom-in-95 duration-150 z-30 ring-4 ring-emerald-500/10">
+                                                    <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+                                                        <div className="flex items-center gap-2">
+                                                            <span className="text-base sm:text-lg font-black text-[#111827] uppercase tracking-tight flex items-center gap-1.5">
+                                                                <span className="text-[#16A34A]">{monthNames[viewMonth]}</span> 
+                                                                <span>{viewYear}</span>
+                                                            </span>
+                                                        </div>
+                                                        <div className="flex items-center gap-1.5">
+                                                            <button
+                                                                type="button"
+                                                                onClick={handlePrevMonth}
+                                                                title="Previous Month"
+                                                                className="w-8 h-8 rounded-full bg-slate-100 hover:bg-[#C8FF2E] text-slate-700 hover:text-black font-black flex items-center justify-center text-sm transition-all cursor-pointer shadow-2xs border border-slate-200"
+                                                            >
+                                                                ‹
+                                                            </button>
+                                                            <button
+                                                                type="button"
+                                                                onClick={handleNextMonth}
+                                                                title="Next Month"
+                                                                className="w-8 h-8 rounded-full bg-slate-100 hover:bg-[#C8FF2E] text-slate-700 hover:text-black font-black flex items-center justify-center text-sm transition-all cursor-pointer shadow-2xs border border-slate-200"
+                                                            >
+                                                                ›
+                                                            </button>
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => setIsCalendarModalOpen(false)}
+                                                                title="Close Calendar"
+                                                                className="w-8 h-8 rounded-full bg-rose-50 text-rose-600 hover:bg-rose-100 flex items-center justify-center text-xs ml-1 cursor-pointer transition-all border border-rose-200 font-bold"
+                                                            >
+                                                                ✕
+                                                            </button>
+                                                        </div>
+                                                    </div>
+
+                                                    {/* 7 Days Grid Header */}
+                                                    <div className="grid grid-cols-7 gap-1 sm:gap-2 text-center text-[10.5px] sm:text-xs font-black text-slate-400 py-2.5 border-b border-slate-100 tracking-wider">
+                                                        <span>SU</span><span>MO</span><span>TU</span><span>WE</span><span>TH</span><span>FR</span><span>SA</span>
+                                                    </div>
+
+                                                    {/* Day Cells Matrix */}
+                                                    <div className="grid grid-cols-7 gap-1 sm:gap-2 pt-2.5">
+                                                        {/* Empty cells before month start */}
+                                                        {Array.from({ length: new Date(viewYear, viewMonth, 1).getDay() }).map((_, i) => (
+                                                            <div key={`empty-${i}`} className="h-9 sm:h-10" />
+                                                        ))}
+                                                        {currentMonthDates.map((d) => {
+                                                            const isSelected = selectedDateObj?.fullDateString === d.fullDateString
+                                                            const isPast = d.isPast
+
+                                                            return (
+                                                                <button
+                                                                    key={d.id}
+                                                                    type="button"
+                                                                    disabled={isPast}
+                                                                    onClick={() => !isPast && handleDateSelect(d)}
+                                                                    title={isPast ? `${d.formattedLabel} (Unavailable)` : d.formattedLabel}
+                                                                    className={`h-9 sm:h-10 rounded-xl sm:rounded-2xl text-xs sm:text-sm font-black transition-all flex items-center justify-center ${
+                                                                        isPast
+                                                                            ? 'opacity-30 text-slate-400 cursor-not-allowed select-none bg-slate-50 border border-slate-100'
+                                                                            : isSelected
+                                                                                ? 'bg-[#111827] text-[#C8FF2E] font-black shadow-md border-2 border-[#111827] scale-105 cursor-pointer ring-2 ring-emerald-500/30'
+                                                                                : d.isToday
+                                                                                    ? 'bg-emerald-50 text-emerald-800 border-2 border-emerald-400 hover:border-emerald-600 cursor-pointer shadow-xs'
+                                                                                    : 'bg-white border border-slate-200/80 text-[#111827] hover:border-[#10B981] hover:bg-emerald-50 hover:text-[#16A34A] cursor-pointer shadow-2xs'
+                                                                    }`}
+                                                                >
+                                                                    <span>{d.dateNum}</span>
+                                                                </button>
+                                                            )
+                                                        })}
+                                                    </div>
+                                                </div>
+                                            )}
+
+                                            {/* Horizontal Scrollable Date Strip with Navigation Arrows */}
+                                            <div className="relative group/strip">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => scrollDateStrip('left')}
+                                                    className="absolute left-0 top-1/2 -translate-y-1/2 z-10 w-7 h-7 rounded-full bg-white/90 shadow-md border border-slate-200 text-slate-700 hover:bg-white flex items-center justify-center transition-all opacity-0 group-hover/strip:opacity-100 cursor-pointer -ml-2"
+                                                >
+                                                    <HiChevronLeft className="w-4 h-4" />
+                                                </button>
+
+                                                <div 
+                                                    ref={dateStripRef}
+                                                    className="flex gap-2 sm:gap-2.5 overflow-x-auto pb-2 pt-1 scroll-smooth no-scrollbar"
+                                                    style={{ WebkitOverflowScrolling: 'touch' }}
+                                                >
+                                                    {currentMonthDates.map(d => {
+                                                        const isSel = selectedDateObj?.fullDateString === d.fullDateString
+                                                        const isPast = d.isPast
+
+                                                        return (
+                                                            <button
+                                                                key={d.id}
+                                                                type="button"
+                                                                disabled={isPast}
+                                                                onClick={() => !isPast && handleDateSelect(d)}
+                                                                title={isPast ? `${d.formattedLabel} (Unavailable)` : d.formattedLabel}
+                                                                className={`flex-shrink-0 w-[66px] sm:w-20 py-2.5 sm:py-3 px-1 sm:px-2 rounded-[18px] sm:rounded-[20px] flex flex-col items-center justify-center transition-all duration-200 ${
+                                                                    isPast
+                                                                        ? 'bg-slate-50 border border-slate-200 text-slate-400 cursor-not-allowed opacity-40 select-none shadow-none'
+                                                                        : isSel
+                                                                            ? 'bg-[#111827] text-white border-2 border-[#10B981] shadow-lg scale-[1.03] cursor-pointer'
+                                                                            : d.isToday
+                                                                                ? 'bg-emerald-50/80 border-2 border-emerald-300 text-emerald-800 hover:border-emerald-500 shadow-xs cursor-pointer'
+                                                                                : 'bg-white border border-[#E2E8F0] text-slate-500 hover:border-slate-400 shadow-xs cursor-pointer'
+                                                                }`}
+                                                            >
+                                                                <span className={`text-[10px] sm:text-xs font-bold mb-0.5 ${
+                                                                    isPast ? 'text-slate-400' : isSel ? 'text-slate-300' : d.isToday ? 'text-emerald-700 font-black' : 'text-slate-500'
+                                                                }`}>
+                                                                    {d.dayShort}
+                                                                </span>
+                                                                <span className={`text-xl sm:text-3xl font-black my-0.5 leading-none ${
+                                                                    isPast ? 'text-slate-400' : isSel ? 'text-white' : 'text-[#111827]'
+                                                                }`}>
+                                                                    {d.dateNum}
+                                                                </span>
+                                                                <span className={`text-[9px] sm:text-[10px] font-bold mt-0.5 ${
+                                                                    isPast ? 'text-slate-400' : isSel ? 'text-slate-300' : d.isToday ? 'text-emerald-600 font-black' : 'text-slate-400'
+                                                                }`}>
+                                                                    {d.monthShort}
+                                                                </span>
+                                                            </button>
+                                                        )
+                                                    })}
+                                                </div>
+
+                                                <button
+                                                    type="button"
+                                                    onClick={() => scrollDateStrip('right')}
+                                                    className="absolute right-0 top-1/2 -translate-y-1/2 z-10 w-7 h-7 rounded-full bg-white/90 shadow-md border border-slate-200 text-slate-700 hover:bg-white flex items-center justify-center transition-all opacity-0 group-hover/strip:opacity-100 cursor-pointer -mr-2"
+                                                >
+                                                    <HiChevronRight className="w-4 h-4" />
+                                                </button>
                                             </div>
                                         </div>
 
                                         {/* Slot Grid */}
                                         <div>
-                                            <div className="flex items-center justify-between mb-4">
-                                                <label className="text-xs font-black tracking-wider text-slate-500 uppercase">AVAILABLE SLOTS — {selectedDateObj.formattedLabel}</label>
-                                                <div className="flex items-center gap-4 text-xs uppercase tracking-wider font-extrabold">
-                                                    <span className="flex items-center gap-1.5 text-slate-500"><span className="w-3 h-3 rounded-full border border-slate-300 bg-white" /> AVAILABLE</span>
-                                                    <span className="flex items-center gap-1.5 text-[#10B981] font-black"><span className="w-3 h-3 rounded-full bg-[#10B981]" /> SELECTED</span>
-                                                    <span className="flex items-center gap-1.5 text-slate-400"><span className="w-3 h-3 rounded-full bg-slate-300" /> BOOKED</span>
+                                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 mb-4">
+                                                <label className="text-[11px] sm:text-xs font-black tracking-wider text-slate-600 uppercase">AVAILABLE SLOTS — {selectedDateObj.formattedLabel}</label>
+                                                <div className="flex flex-wrap items-center gap-3 sm:gap-4 text-[10px] sm:text-xs uppercase tracking-wider font-extrabold">
+                                                    <span className="flex items-center gap-1.5 text-slate-500"><span className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full border border-slate-300 bg-white" /> AVAILABLE</span>
+                                                    <span className="flex items-center gap-1.5 text-[#10B981] font-black"><span className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full bg-[#10B981]" /> SELECTED</span>
+                                                    <span className="flex items-center gap-1.5 text-slate-400"><span className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full bg-slate-300" /> BOOKED</span>
                                                 </div>
                                             </div>
 
-                                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
+                                            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2.5 sm:gap-4">
                                                 {slots.map((s, index) => {
                                                     const selectedIndex = slots.findIndex(slotObj => slotObj.id === selectedSlot || (selectedSlot === null && slotObj.time === '18:00'))
                                                     const isSlotInSelectedRange = selectedIndex !== -1 && index >= selectedIndex && index < selectedIndex + duration
@@ -701,8 +1243,8 @@ export default function TurfDetailPage() {
                                                     const rangePosition = index - selectedIndex + 1
 
                                                     const isBooked = s.status === 'booked'
-                                                    const isMaintenance = s.status === 'maintenance' || s.id === 6
-                                                    const isStaffUnavail = s.status === 'blocked' || s.id === 2
+                                                    const isMaintenance = s.status === 'maintenance'
+                                                    const isStaffUnavail = s.status === 'staff_unavailable' || s.status === 'blocked'
                                                     const isDisabled = isBooked || isMaintenance || isStaffUnavail
 
                                                     const canFulfillConsecutive = Array.from({ length: duration }).every((_, i) => {
@@ -741,7 +1283,7 @@ export default function TurfDetailPage() {
                                                                                     : 'bg-[#ECFDF5] border-2 border-[#10B981] hover:bg-emerald-100/60 text-slate-900 cursor-pointer shadow-xs'
                                                                 }`}
                                                         >
-                                                            <span className={`text-sm sm:text-base font-black tracking-tight ${isSlotInSelectedRange ? 'text-white' : isBooked ? 'text-slate-300 line-through' : isMaintenance ? 'text-[#854D0E]' : isStaffUnavail ? 'text-slate-700' : 'text-[#111827]'}`}>
+                                                            <span className={`text-sm sm:text-base font-black tracking-tight ${isSlotInSelectedRange ? 'text-white' : isBooked ? 'text-slate-400' : isMaintenance ? 'text-[#854D0E]' : isStaffUnavail ? 'text-slate-700' : 'text-[#111827]'}`}>
                                                                 {formattedTime(s.time)}
                                                             </span>
 
@@ -944,24 +1486,24 @@ export default function TurfDetailPage() {
                                                                 setPaymentMode(opt.id)
                                                                 setExpandedAccordionMode(isExpanded ? null : opt.id)
                                                             }}
-                                                            className="p-4 sm:p-5 flex items-center justify-between cursor-pointer select-none"
+                                                            className="p-3.5 sm:p-5 flex items-start sm:items-center justify-between cursor-pointer select-none gap-2.5"
                                                         >
-                                                            <div className="flex items-center gap-3.5 sm:gap-4">
-                                                                <div className={`w-11 h-11 rounded-xl border flex items-center justify-center text-xl flex-shrink-0 ${isSelected ? 'bg-[#111827] text-white border-[#10B981]' : 'bg-slate-100 border-[#E2E8F0]'}`}>
+                                                            <div className="flex items-start sm:items-center gap-3 sm:gap-4 min-w-0">
+                                                                <div className={`w-9 h-9 sm:w-11 sm:h-11 rounded-xl border flex items-center justify-center text-base sm:text-xl flex-shrink-0 mt-0.5 sm:mt-0 ${isSelected ? 'bg-[#111827] text-white border-[#10B981]' : 'bg-slate-100 border-[#E2E8F0]'}`}>
                                                                     {opt.icon}
                                                                 </div>
-                                                                <div>
-                                                                    <div className="flex flex-wrap items-center gap-2">
-                                                                        <h3 className="text-sm sm:text-base font-black text-[#111827] leading-tight">
+                                                                <div className="min-w-0">
+                                                                    <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+                                                                        <h3 className="text-xs sm:text-base font-black text-[#111827] leading-tight">
                                                                             {opt.title}
                                                                         </h3>
                                                                         {opt.badge && (
-                                                                            <span className="text-[9px] font-black uppercase tracking-wider bg-[#C8FF2E] text-[#111827] px-2.5 py-0.5 rounded-full border border-[#B5F000] shadow-xs">
+                                                                            <span className="text-[8.5px] sm:text-[9px] font-black uppercase tracking-wider bg-[#C8FF2E] text-[#111827] px-2 sm:px-2.5 py-0.5 rounded-full border border-[#B5F000] shadow-xs">
                                                                                 {opt.badge}
                                                                             </span>
                                                                         )}
                                                                     </div>
-                                                                    <p className="text-xs text-slate-500 font-medium mt-1 leading-relaxed">
+                                                                    <p className="text-[11px] sm:text-xs text-slate-500 font-medium mt-1 leading-relaxed">
                                                                         {opt.desc}
                                                                     </p>
 
@@ -1594,6 +2136,12 @@ export default function TurfDetailPage() {
                     setIsVenueModalOpen(false);
                     navigate(`/turf/${venue.id}`);
                 }}
+            />
+            <CorporateBookingModal
+                isOpen={isCorpModalOpen}
+                onClose={() => setIsCorpModalOpen(false)}
+                preselectedTurf={turfData}
+                preselectedCity={turfData.city || 'Indore'}
             />
         </div>
     )

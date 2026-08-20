@@ -112,7 +112,7 @@ export default function TurfCard({ turf, onMouseEnter, onMouseLeave, i = 0 }) {
             className={`group relative flex flex-col h-full bg-white border border-[#E5E7EB] rounded-[18px] overflow-hidden transition-all duration-300 hover:-translate-y-[6px] hover:border-[#16A34A]/40 shadow-[0_15px_45px_rgba(0,0,0,0.08)] hover:shadow-[0_25px_60px_rgba(0,0,0,0.14)] cursor-pointer`}
         >
             {/* Image Section */}
-            <div className="relative h-[168px] w-full shrink-0 overflow-hidden">
+            <div className="relative h-[155px] sm:h-[168px] w-full shrink-0 overflow-hidden">
                 <div className="relative w-full h-full overflow-hidden">
                     <img
                         src={turf.image || fallbackImage}
@@ -147,31 +147,31 @@ export default function TurfCard({ turf, onMouseEnter, onMouseLeave, i = 0 }) {
                                 background: promo.bg, 
                                 boxShadow: promo.shadow 
                             }}
-                            className="absolute top-2.5 left-2.5 z-10 border-2 border-white/80 rounded-xl px-2.5 py-1 flex items-center gap-1.5 backdrop-blur-md transition-all duration-300 group-hover:scale-105 shadow-lg select-none cursor-pointer max-w-[calc(100%-48px)] overflow-hidden"
+                            className="absolute top-2 left-2 sm:top-2.5 sm:left-2.5 z-10 border sm:border-2 border-white/80 rounded-xl px-2 sm:px-2.5 py-0.5 sm:py-1 flex items-center gap-1 sm:gap-1.5 backdrop-blur-md transition-all duration-300 group-hover:scale-105 shadow-lg select-none cursor-pointer max-w-[calc(100%-48px)] overflow-hidden"
                         >
-                            <span className="text-xs animate-bounce shrink-0 drop-shadow-md">{promo.icon}</span>
-                            <span className="text-[10px] sm:text-[10.5px] font-black text-white uppercase tracking-wider drop-shadow-md truncate">
+                            <span className="text-[11px] sm:text-xs animate-bounce shrink-0 drop-shadow-md">{promo.icon}</span>
+                            <span className="text-[9.5px] sm:text-[10.5px] font-black text-white uppercase tracking-wider drop-shadow-md truncate">
                                 {promo.tag}
                             </span>
                         </div>
                     )}
 
-                    <div className="absolute bottom-2 left-2 z-[2] text-[9px] font-black text-white flex items-center gap-1.5 drop-shadow-md whitespace-nowrap bg-black/60 backdrop-blur-md px-2 py-0.5 rounded-full border border-white/20">
+                    <div className="absolute bottom-2 left-2 z-[2] text-[8.5px] sm:text-[9px] font-black text-white flex items-center gap-1.5 drop-shadow-md whitespace-nowrap bg-black/60 backdrop-blur-md px-2 py-0.5 rounded-full border border-white/20">
                         <span className="w-1.5 h-1.5 rounded-full bg-[#C8FF2E] shadow-[0_0_8px_rgba(200,255,46,0.8)] animate-pulse"></span>
                         Open: 6:00 AM – 11:00 PM
                     </div>
                 </div>
             </div>
 
-            <div className="px-3.5 py-2.5 flex flex-col flex-1 relative z-10 bg-white">
+            <div className="px-3 sm:px-3.5 py-2.5 flex flex-col flex-1 relative z-10 bg-white">
 
                 <div className="flex items-start justify-between gap-1 mb-1">
-                    <h3 className="text-[14px] font-black text-[#111827] leading-snug line-clamp-1 group-hover:text-[#16A34A] transition-colors">
+                    <h3 className="text-[13.5px] sm:text-[14px] font-black text-[#111827] leading-snug line-clamp-1 group-hover:text-[#16A34A] transition-colors">
                         {turf.name}
                     </h3>
                 </div>
 
-                <div className="flex items-center gap-1.5 text-[11px] text-[#6B7280] font-semibold mb-1">
+                <div className="flex items-center gap-1.5 text-[10.5px] sm:text-[11px] text-[#6B7280] font-semibold mb-1">
                     <span className="truncate">📍 {turf.location || turf.city}</span>
                     <span>•</span>
                     <span className="text-[#10B981] font-bold shrink-0">{turf.distance ? `${Number(turf.distance).toFixed(1)} km` : '1.2 km'}</span>
@@ -186,22 +186,22 @@ export default function TurfCard({ turf, onMouseEnter, onMouseLeave, i = 0 }) {
                 </div>
 
                 <div className="flex flex-wrap items-center gap-1.5 mb-1.5">
-                    <span className="text-[9px] font-bold text-[#111827] bg-slate-100 px-2 py-0.5 rounded-[6px] border border-[#E5E7EB] flex items-center gap-0.5">
+                    <span className="text-[8.5px] sm:text-[9px] font-bold text-[#111827] bg-slate-100 px-2 py-0.5 rounded-[6px] border border-[#E5E7EB] flex items-center gap-0.5">
                         {(turf.amenities || []).join(' ').toLowerCase().includes('covered') ? 'Covered' : 'Open'}
                     </span>
-                    <span className={`text-[9px] font-black px-2 py-0.5 rounded-[6px] border flex items-center gap-0.5
+                    <span className={`text-[8.5px] sm:text-[9px] font-black px-2 py-0.5 rounded-[6px] border flex items-center gap-0.5
                         ${turf.rating >= 4.4 ? 'text-[#16A34A] border-green-200 bg-green-50' :
                             turf.rating >= 4.0 ? 'text-amber-600 border-amber-200 bg-amber-50' :
                                 'text-gray-600 border-gray-200 bg-gray-50'}`}>
                         {turf.rating >= 4.7 ? 'Excellent' : turf.rating >= 4.4 ? 'Very Good' : turf.rating >= 4.0 ? 'Good' : 'Average'}
                     </span>
-                    <span className="text-[9px] font-black text-amber-700 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-[6px] flex items-center gap-0.5">
+                    <span className="text-[8.5px] sm:text-[9px] font-black text-amber-700 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-[6px] flex items-center gap-0.5">
                         {Number(turf.price) < 600 ? 'Value' : Number(turf.price) < 900 ? 'Budget' : Number(turf.price) < 1200 ? 'Premium' : 'Expensive'}
                     </span>
                 </div>
 
                 <div className="flex flex-wrap items-center mb-1.5">
-                    <span className="text-[10px] font-medium text-[#4B5563] line-clamp-2 leading-tight">
+                    <span className="text-[9.5px] sm:text-[10px] font-medium text-[#4B5563] line-clamp-2 leading-tight">
                         {(()=>{
                             const dim = turf.dimensions || '90 × 45 ft';
                             const m = dim.match(/(\d+)\s*(?:[×x*X]|by)\s*(\d+)/);
@@ -210,8 +210,7 @@ export default function TurfCard({ turf, onMouseEnter, onMouseLeave, i = 0 }) {
                                 <>
                                     <strong className="text-[#111827] font-bold">📏 {sqft} Sq.Ft</strong>
                                     <span className="text-slate-300 mx-1">•</span>
-                                    <span>Turf</span>
-                                    <span>Pro Synthetic Turf Arena</span>
+                                    <span>TurfPro Synthetic Arena</span>
                                 </>
                             );
                         })()}
@@ -226,12 +225,12 @@ export default function TurfCard({ turf, onMouseEnter, onMouseLeave, i = 0 }) {
                     >
                         <div className="flex items-center gap-1.5 min-w-0 flex-1 overflow-hidden">
                             <span className="text-xs shrink-0">{promo.icon}</span>
-                            <span className="text-[10px] font-black text-emerald-950 truncate tracking-tight">
+                            <span className="text-[9.5px] sm:text-[10px] font-black text-emerald-950 truncate tracking-tight">
                                 {promo.tag}
                             </span>
                         </div>
                         <div className="flex items-center gap-1 shrink-0">
-                            <span className="font-mono font-black text-[9px] bg-emerald-700 text-white px-1.5 py-0.5 rounded shadow-2xs uppercase tracking-wider">
+                            <span className="font-mono font-black text-[8.5px] sm:text-[9px] bg-emerald-700 text-white px-1.5 py-0.5 rounded shadow-2xs uppercase tracking-wider">
                                 {promo.code}
                             </span>
                         </div>
@@ -242,8 +241,8 @@ export default function TurfCard({ turf, onMouseEnter, onMouseLeave, i = 0 }) {
                     <div className="flex flex-col min-w-0">
                         <span className="text-[8px] text-[#6B7280] uppercase tracking-widest font-black mb-0.5 leading-none">Starts From</span>
                         <div className="flex items-baseline text-[#111827]">
-                            <span className="text-[17px] sm:text-[18px] font-black leading-none tracking-tight text-[#111827]">₹{Number(turf.price).toLocaleString('en-IN')}</span>
-                            <span className="text-[9.5px] text-[#6B7280] font-bold ml-0.5">/hr</span>
+                            <span className="text-[16px] sm:text-[18px] font-black leading-none tracking-tight text-[#111827]">₹{Number(turf.price).toLocaleString('en-IN')}</span>
+                            <span className="text-[9px] sm:text-[9.5px] text-[#6B7280] font-bold ml-0.5">/hr</span>
                         </div>
                     </div>
 
@@ -251,7 +250,7 @@ export default function TurfCard({ turf, onMouseEnter, onMouseLeave, i = 0 }) {
                         <button
                             type="button"
                             onClick={handleBookNow}
-                            className="px-4 py-2 rounded-xl text-xs font-black text-[#111827] bg-[#C8FF2E] hover:bg-[#B5F000] transition-all duration-300 shadow-[0_3px_12px_rgba(200,255,46,0.35)] hover:shadow-[0_5px_18px_rgba(200,255,46,0.55)] hover:scale-105 active:scale-95 cursor-pointer border border-[#B5F000]"
+                            className="px-3.5 sm:px-4 py-1.5 sm:py-2 rounded-xl text-[11px] sm:text-xs font-black text-[#111827] bg-[#C8FF2E] hover:bg-[#B5F000] transition-all duration-300 shadow-[0_3px_12px_rgba(200,255,46,0.35)] hover:shadow-[0_5px_18px_rgba(200,255,46,0.55)] hover:scale-105 active:scale-95 cursor-pointer border border-[#B5F000]"
                         >
                             Book Now
                         </button>

@@ -1,4 +1,3 @@
-import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import './index.css'
 import App from './App'
@@ -7,11 +6,8 @@ import App from './App'
 const preloader = document.querySelector('.sm-preloader, .cinematic-preloader')
 if (preloader) {
   preloader.classList.add('fade-out')
-  setTimeout(() => preloader.remove(), 150)
+  setTimeout(() => preloader.remove(), 100)
 }
 
-createRoot(document.getElementById('root')).render(
-  <StrictMode>
-    <App />
-  </StrictMode>
-)
+createRoot(document.getElementById('root')).render(<App />)
+

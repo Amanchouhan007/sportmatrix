@@ -468,6 +468,7 @@ export default function OwnerPOS() {
                         body * { visibility: hidden; background: white !important; color: black !important; }
                         #printable-receipt, #printable-receipt * { visibility: visible; }
                         #printable-receipt { 
+                            display: block !important;
                             position: fixed; 
                             left: 0; 
                             top: 0; 
@@ -1113,7 +1114,7 @@ export default function OwnerPOS() {
 
             {/* Thermal Print Invoice structure */}
             {lastBill && (
-                <div id="printable-receipt" style={{ display: 'none' }} className="bg-white p-8 max-w-sm mx-auto text-left font-mono">
+                <div id="printable-receipt" className="hidden print:block bg-white p-8 max-w-sm mx-auto text-left font-mono">
                     <div className="text-center border-b border-dashed pb-4 mb-4">
                         <h2 className="text-base font-black uppercase">SPORTMATRIX ENTERPRISE POS</h2>
                         <p className="text-[10px] text-gray-500 mt-0.5">Champions Turf Arena, Indore (M.P.)</p>

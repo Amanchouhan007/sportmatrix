@@ -530,6 +530,25 @@ class MatchPaymentController {
     }
 
     /**
+     * GET /api/v1/match-payments/admin/disputes
+     * Fetch all matches flagged with score disputes.
+     */
+    static async getDisputedMatches(req, res) {
+        try {
+            const [disputes] = await pool.query(
+                `SELECT m.*, r.team_a_score_captain_a, r.team_b_score_captain_a, r.team_a_score_captain_b, r.team_b_score_captain_b, r.status as result_status, r.admin_notes 
+                 FROM matches m 
+                 JOIN match_results r ON m.id = r.match_id 
+                 WHERE r.status = 'DISPUTED' OR m.match_status = 'DISPUTED'
+                 ORDER BY m.created_at DESC`
+            );
+            return res.json({ success: true, count: disputes.length, data: disputes });
+        } catch (error) {
+            return res.status(500).json({ success: false, message: error.message });
+        }
+    }
+
+    /**
      * POST /api/v1/match-payments/admin/resolve-dispute
      * Admin dispute resolution.
      */

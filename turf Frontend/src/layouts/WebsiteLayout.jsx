@@ -86,7 +86,7 @@ export default function WebsiteLayout({ children }) {
                         ))}
                     </nav>                    {/* Auth & Guest Lookup Buttons (Desktop & Tablet Action Group) */}
                     <div className="flex items-center gap-2 sm:gap-2.5 shrink-0">
-                        {/* 🏢 Corporate Hire Button with Neon Lime Theme Glow */}
+                        {/* 🏢 Corporate Booking Button with Neon Lime Theme Glow */}
                         <button 
                             type="button"
                             onClick={() => setIsCorpOpen(true)} 
@@ -96,7 +96,7 @@ export default function WebsiteLayout({ children }) {
                             <span className="w-5 h-5 sm:w-6 sm:h-6 rounded-lg bg-emerald-500/20 text-[#C8FF2E] flex items-center justify-center text-xs sm:text-sm shadow-inner group-hover:scale-125 group-hover:rotate-12 group-hover:bg-[#C8FF2E] group-hover:text-slate-950 group-hover:shadow-[0_0_12px_rgba(200,255,46,0.7)] transition-all duration-300 shrink-0">
                                 🏢
                             </span>
-                            <span className="hidden xs:inline md:inline text-slate-100 group-hover:text-[#C8FF2E] transition-colors drop-shadow-sm font-black">Corporate Hire</span>
+                            <span className="hidden xs:inline md:inline text-slate-100 group-hover:text-[#C8FF2E] transition-colors drop-shadow-sm font-black">Corporate Booking</span>
                             <span className="w-1.5 h-1.5 rounded-full bg-[#C8FF2E] animate-ping hidden md:inline-block shadow-[0_0_6px_#C8FF2E]" />
                         </button>
 
@@ -157,7 +157,7 @@ export default function WebsiteLayout({ children }) {
                                     <span className="text-lg group-hover:scale-110 transition-transform">🏢</span>
                                     <span className="text-[10px] font-black uppercase tracking-wider text-[#C8FF2E]">Corporate</span>
                                 </div>
-                                <span className="text-xs font-black text-white group-hover:text-[#C8FF2E] transition-colors">Corporate Hire</span>
+                                <span className="text-xs font-black text-white group-hover:text-[#C8FF2E] transition-colors">Corporate Booking</span>
                                 <span className="text-[9.5px] text-emerald-300 font-bold mt-0.5">GST Invoices & Events →</span>
                             </button>
 

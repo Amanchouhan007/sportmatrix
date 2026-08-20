@@ -117,8 +117,40 @@ export const getCrmLeads = () => {
             createdAt: b.createdAt ? b.createdAt.split('T')[0] : new Date().toISOString().split('T')[0]
         }))
 
-        // Combine custom leads, website bookings, and initial leads
-        const allList = [...customLeads, ...bookingLeads, ...INITIAL_CRM_LEADS]
+        // Dynamically pull corporate & bulk booking proposal leads
+        const corpLeads = JSON.parse(localStorage.getItem('corporate_leads') || '[]').map(c => ({
+            id: `lead_corp_${c.id}`,
+            name: c.contactPerson || c.companyName || 'Corporate Lead',
+            phone: c.phone || '+91 98765 00000',
+            role: 'corporate',
+            teamName: c.companyName || 'Corporate League',
+            preferredSport: c.eventType || 'Corporate Tournament',
+            preferredSlot: `${c.estimatedPlayers || 'Bulk'} (${c.city || 'Indore'})`,
+            turfBranch: c.city ? `${c.city} Turf Complex` : 'Indore Turf Arena',
+            status: c.status || 'Corporate Proposal',
+            totalBookings: 1,
+            notes: `Corporate event request for ${c.companyName} (${c.estimatedPlayers || '20+ players'}, Budget: ${c.budget || 'Custom'})`,
+            createdAt: c.createdAt ? c.createdAt.split('T')[0] : new Date().toISOString().split('T')[0]
+        }))
+
+        // Dynamically pull guest bookings
+        const guestBookings = JSON.parse(localStorage.getItem('guest_bookings') || '[]').map(g => ({
+            id: `lead_gbk_${g.id || Date.now()}`,
+            name: g.customerName || g.name || 'Guest User',
+            phone: g.phone || g.mobileNumber || '+91 98765 00000',
+            role: 'individual',
+            teamName: `${g.customerName || 'Guest'}'s Squad`,
+            preferredSport: 'Cricket / Football',
+            preferredSlot: `${g.slotTime || '6:00 PM'} (${g.slotDate || 'Today'})`,
+            turfBranch: g.turfName || 'Indore Turf Arena',
+            status: 'Guest Booking',
+            totalBookings: 1,
+            notes: `Guest reservation for ${g.turfName || 'Arena'} (₹${g.amount || 900})`,
+            createdAt: g.createdAt ? g.createdAt.split('T')[0] : new Date().toISOString().split('T')[0]
+        }))
+
+        // Combine all lead sources
+        const allList = [...customLeads, ...corpLeads, ...bookingLeads, ...guestBookings, ...INITIAL_CRM_LEADS]
 
         // Deduplicate leads by unique Phone Number or ID
         const seen = new Set()
