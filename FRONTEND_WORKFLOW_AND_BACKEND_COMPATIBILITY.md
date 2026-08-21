@@ -38,7 +38,7 @@ This document describes the complete workflow of the **Sport Turfs Frontend Appl
      - 💳 **I pay full amount** (`FULL_PAY`)
 3. **Step 3 (Lock Slot & Details)**:
    - User enters captain name, phone, and team names.
-   - Frontend attempts API POST to `http://localhost:5000/api/v1/match-payments/create` and `/verify`.
+   - Frontend attempts API POST to `http://localhost:5005/api/v1/match-payments/create` and `/verify`.
 4. **Step 4 (Receipt & Confirmation)**:
    - Match ID & WhatsApp share links generated; booking saved in `customer_bookings` or `guest_bookings` in `localStorage`.
 
@@ -63,7 +63,7 @@ This document describes the complete workflow of the **Sport Turfs Frontend Appl
 To guarantee that connecting to the backend causes **zero runtime errors** and **zero breaking changes**, the following non-disruptive enhancements have been added:
 
 ### 1. Added Centralized Frontend Environment File ([`.env`](file:///c:/Users/91969/OneDrive/Desktop/Kiaan/sport-turfs/turf%20Frontend/.env))
-- Created `.env` in the frontend root defining `VITE_API_URL=http://localhost:5000/api/v1` and `VITE_SERVER_URL=http://localhost:5000`.
+- Created `.env` in the frontend root defining `VITE_API_URL=http://localhost:5005/api/v1` and `VITE_SERVER_URL=http://localhost:5005`.
 
 ### 2. Enhanced API Service with Graceful Fallback Interceptor ([`api.js`](file:///c:/Users/91969/OneDrive/Desktop/Kiaan/sport-turfs/turf%20Frontend/src/services/api.js))
 - Added an Axios response interceptor that catches network disconnects or API errors. If the backend is offline, it returns a clean error payload instead of throwing an unhandled exception.

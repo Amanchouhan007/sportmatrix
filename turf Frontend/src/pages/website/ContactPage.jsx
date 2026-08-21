@@ -15,7 +15,7 @@ export default function ContactPage() {
     const [sentSuccessModal, setSentSuccessModal] = useState(false)
     const [sentData, setSentData] = useState(null)
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault()
         if (submitting) return
 
@@ -25,8 +25,19 @@ export default function ContactPage() {
         }
 
         setSubmitting(true)
-        setTimeout(() => {
-            setSubmitting(false)
+        try {
+            const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5005/api/v1';
+            await fetch(`${API_URL}/crm/leads`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    fullName: form.name,
+                    email: form.email,
+                    notes: `Subject: ${form.subject || 'General Inquiry'} | Message: ${form.message}`,
+                    source: 'Contact Page Inquiry',
+                    status: 'NEW'
+                })
+            });
             const details = {
                 ticketId: `TKT-${Math.floor(100000 + Math.random() * 900000)}`,
                 name: form.name,
@@ -37,10 +48,15 @@ export default function ContactPage() {
             setSentData(details)
             setSentSuccessModal(true)
             if (addToast) {
-                addToast('Your inquiry message has been sent successfully!', 'success')
+                addToast('Your inquiry message has been submitted successfully!', 'success')
             }
             setForm({ name: '', email: '', subject: '', message: '' })
-        }, 800)
+        } catch (err) {
+            console.error('Error submitting contact lead:', err)
+            if (addToast) addToast('Network error while submitting inquiry.', 'error')
+        } finally {
+            setSubmitting(false)
+        }
     }
 
     return (

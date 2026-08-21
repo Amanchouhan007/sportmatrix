@@ -86,12 +86,18 @@ class SlotHoldService {
      */
     static async expireStaleHolds() {
         try {
+            const [tables] = await pool.query("SHOW TABLES LIKE 'slot_holds'");
+            if (!tables || tables.length === 0) return 0;
+
+            const [cols] = await pool.query("SHOW COLUMNS FROM slot_holds LIKE 'status'");
+            if (!cols || cols.length === 0) return 0;
+
             const [result] = await pool.query(
                 `UPDATE slot_holds SET status = 'EXPIRED' WHERE status = 'ACTIVE' AND expires_at <= NOW()`
             );
-            return result.affectedRows;
+            return result.affectedRows || 0;
         } catch (error) {
-            console.error('[SlotHoldService] Error expiring stale holds:', error);
+            console.warn('[SlotHoldService] Expiry task note:', error.message);
             return 0;
         }
     }

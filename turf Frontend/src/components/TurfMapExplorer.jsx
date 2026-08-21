@@ -25,20 +25,21 @@ export default function TurfMapExplorer() {
         setLoading(true);
         setError(null);
         try {
-            let url = 'http://localhost:5000/api/v1/turfs/filter?';
+            const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5005/api/v1';
+            let url = `${API_URL}/turfs/filter?`;
             const params = new URLSearchParams();
-            
+
             if (userLocation) {
                 params.append('lat', userLocation.lat);
                 params.append('lng', userLocation.lng);
                 params.append('radius', radius === 'All' ? 500 : radius);
             }
             if (filters.sport) params.append('sport', filters.sport);
-            
+
             const res = await axios.get(`${url}${params.toString()}`, { timeout: 2000 });
             if (res.data.success) {
                 let fetchedTurfs = res.data.data;
-                
+
                 if (filters.sort === 'Highest Rated') {
                     fetchedTurfs.sort((a, b) => parseFloat(b.rating) - parseFloat(a.rating));
                 } else if (filters.sort === 'Price Low to High') {
@@ -92,7 +93,7 @@ export default function TurfMapExplorer() {
         if (viewMode === 'map_only') {
             setViewMode('map_list'); // Switch to split view to see card
         }
-        
+
         // Use a short timeout to ensure the DOM updates if we just switched view mode
         setTimeout(() => {
             const element = itemRefs.current[turfId];
@@ -121,7 +122,7 @@ export default function TurfMapExplorer() {
                         {turfs.length} Results <span className="text-slate-600 mx-1">•</span> Within {radius === 'All' ? 'All ranges' : `${radius} KM`}
                     </p>
                 </div>
-                
+
                 <div className="flex flex-wrap items-center gap-3 w-full lg:w-auto overflow-x-auto hide-scrollbar scrollbar-hide">
                     {/* Radius */}
                     <div className="flex items-center gap-1.5 shrink-0">
@@ -136,7 +137,7 @@ export default function TurfMapExplorer() {
                             ))}
                         </select>
                     </div>
-                    
+
                     <div className="w-px h-4 bg-white/10 hidden sm:block shrink-0"></div>
 
                     {/* Sport */}
@@ -172,20 +173,20 @@ export default function TurfMapExplorer() {
 
                     {/* View Toggles */}
                     <div className="flex items-center bg-slate-950 border border-white/10 rounded-xl p-1 shrink-0 ml-auto lg:ml-2">
-                        <button 
+                        <button
                             onClick={() => setViewMode('map_list')}
                             className={`px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all ${viewMode === 'map_list' ? 'bg-blue-600 text-white shadow-lg' : 'text-slate-400 hover:text-white'}`}
                         >
                             Both
                         </button>
-                        <button 
+                        <button
                             onClick={() => setViewMode('map_only')}
                             className={`p-1.5 rounded-lg transition-all ${viewMode === 'map_only' ? 'bg-blue-600 text-white shadow-lg' : 'text-slate-400 hover:text-white'}`}
                             title="Map Only"
                         >
                             <HiOutlineMap className="w-3.5 h-3.5" />
                         </button>
-                        <button 
+                        <button
                             onClick={() => setViewMode('list_only')}
                             className={`p-1.5 rounded-lg transition-all ${viewMode === 'list_only' ? 'bg-blue-600 text-white shadow-lg' : 'text-slate-400 hover:text-white'}`}
                             title="List Only"
@@ -195,15 +196,15 @@ export default function TurfMapExplorer() {
                     </div>
                 </div>
             </div>
-            
+
             <div className="flex flex-col lg:flex-row gap-6 relative bg-slate-900/40 p-6 rounded-[2.5rem] border border-white/10 backdrop-blur-2xl shadow-2xl">
                 {/* LEFT: MAP */}
                 {isMapVisible && (
                     <div className={`w-full ${mapWidthClass} h-[500px] lg:h-[600px] shrink-0 rounded-[2rem] overflow-hidden shadow-[0_0_40px_rgba(59,130,246,0.15)] border border-white/10 relative lg:sticky lg:top-[100px] bg-slate-950 p-[21px] transition-all duration-500`}>
                         <div className="w-full h-full rounded-2xl overflow-hidden relative border border-white/5 shadow-inner">
-                            <GoogleMapView 
-                                turfs={turfs} 
-                                center={userLocation} 
+                            <GoogleMapView
+                                turfs={turfs}
+                                center={userLocation}
                                 hoveredTurfId={hoveredTurfId}
                                 onMarkerClick={handleMarkerClick}
                                 radius={radius}
@@ -212,10 +213,10 @@ export default function TurfMapExplorer() {
                         </div>
                     </div>
                 )}
-                
+
                 {/* RIGHT: LIST */}
                 {isListVisible && (
-                    <div 
+                    <div
                         ref={listRef}
                         className={`w-full ${listWidthClass} h-[500px] lg:h-[600px] overflow-y-auto pr-3 custom-scrollbar flex flex-col gap-4 relative pb-4 transition-all duration-500`}
                     >
@@ -227,7 +228,7 @@ export default function TurfMapExplorer() {
                             .scrollbar-hide::-webkit-scrollbar { display: none; }
                             .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
                         `}</style>
-                        
+
                         {loading && (
                             <div className="absolute inset-0 z-10 flex flex-col gap-3 bg-[#020617]/50 backdrop-blur-sm pt-1">
                                 {[1, 2, 3, 4, 5, 6].map(i => (
@@ -235,7 +236,7 @@ export default function TurfMapExplorer() {
                                 ))}
                             </div>
                         )}
-                        
+
                         {!loading && turfs.length === 0 && (
                             <div className="flex flex-col items-center justify-center h-full text-center p-8 bg-slate-900/80 rounded-2xl border border-white/5 backdrop-blur-md">
                                 <div className="w-16 h-16 mb-4 bg-blue-500/10 rounded-full flex items-center justify-center border border-blue-500/20 shadow-[0_0_30px_rgba(59,130,246,0.15)]">
@@ -243,19 +244,19 @@ export default function TurfMapExplorer() {
                                 </div>
                                 <h3 className="text-base font-black text-white uppercase tracking-tight mb-2">No Turf Found</h3>
                                 <p className="text-[11px] text-slate-400 mb-6 max-w-[220px] font-medium leading-relaxed">We couldn't find any turfs matching your current filters and radius.</p>
-                                <button 
-                                    onClick={() => { setRadius('All'); setFilters({sport: '', sort: 'Nearest First'}); }}
+                                <button
+                                    onClick={() => { setRadius('All'); setFilters({ sport: '', sort: 'Nearest First' }); }}
                                     className="px-6 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-black text-[10px] uppercase tracking-widest rounded-xl transition-all shadow-[0_5px_15px_rgba(59,130,246,0.3)] hover:scale-[1.05]"
                                 >
                                     Clear Filters
                                 </button>
                             </div>
                         )}
-                        
+
                         {!loading && turfs.map(turf => (
                             <div key={turf.id} ref={el => itemRefs.current[turf.id] = el}>
-                                <TurfCardPremium 
-                                    turf={turf} 
+                                <TurfCardPremium
+                                    turf={turf}
                                     isActive={hoveredTurfId === turf.id}
                                     onMouseEnter={() => setHoveredTurfId(turf.id)}
                                     onClick={() => handleMarkerClick(turf.id)}

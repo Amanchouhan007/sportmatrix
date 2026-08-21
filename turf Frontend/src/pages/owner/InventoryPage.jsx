@@ -10,17 +10,11 @@ import CardGrid from '../../components/ui/CardGrid'
 import { useToast } from '../../components/ui/Toast'
 import { HiCube, HiExclamation, HiPlus, HiRefresh, HiShieldCheck, HiViewGrid, HiViewList } from 'react-icons/hi'
 
-const initialItems = [
-    { id: 1, name: 'Cricket Bats', category: 'Equipment', stock: 12, threshold: 5, value: '₹18,000', status: 'In Stock' },
-    { id: 2, name: 'Footballs', category: 'Equipment', stock: 3, threshold: 5, value: '₹4,500', status: 'Low Stock' },
-    { id: 3, name: 'Shuttle Cocks (Box)', category: 'Consumable', stock: 8, threshold: 10, value: '₹2,400', status: 'Low Stock' },
-    { id: 4, name: 'Water Bottles', category: 'Consumable', stock: 48, threshold: 20, value: '₹2,880', status: 'In Stock' },
-    { id: 5, name: 'First Aid Kit', category: 'Safety', stock: 6, threshold: 3, value: '₹3,000', status: 'In Stock' },
-]
+const initialItems = []
 
 export default function InventoryPage() {
     const { addToast } = useToast()
-    const [items, setItems] = useState(initialItems)
+    const [items, setItems] = useState([])
     const [modal, setModal] = useState(false)
     const [restockModal, setRestockModal] = useState(false)
     const [selectedItem, setSelectedItem] = useState(null)
@@ -38,13 +32,17 @@ export default function InventoryPage() {
     useEffect(() => {
         const fetchInventory = async () => {
             try {
-                const res = await fetch('http://localhost:5000/api/v1/inventory');
+                const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5005/api/v1';
+                const res = await fetch(`${API_URL}/inventory`);
                 const data = await res.json();
-                if (data.success && Array.isArray(data.data) && data.data.length > 0) {
+                if (data.success && Array.isArray(data.data)) {
                     setItems(data.data);
+                } else {
+                    setItems([]);
                 }
             } catch (e) {
                 console.error('Error fetching inventory from backend:', e);
+                setItems([]);
             }
         };
         fetchInventory();

@@ -23,30 +23,32 @@ const getLeads = async (req, res) => {
  * Create a new CRM lead
  */
 const createLead = async (req, res) => {
-    const { name, phone, role, teamName, preferredSport, preferredSlot, turfBranch, status, notes } = req.body;
+    const { name, fullName, email, phone, role, teamName, preferredSport, preferredSlot, turfBranch, status, notes } = req.body;
+    const leadName = name || fullName;
+    const leadPhone = phone || 'N/A';
 
-    if (!name || !phone) {
+    if (!leadName) {
         return res.status(400).json({
             success: false,
-            message: 'Name and Phone number are required fields.'
+            message: 'Name is a required field.'
         });
     }
 
     try {
         const leadId = `lead_${Date.now()}`;
         await db.query(`
-            INSERT INTO crm_leads (id, name, phone, role, team_name, preferred_sport, preferred_slot, turf_branch, status, notes)
+            INSERT INTO crm_leads (id, contact_name, phone, email, category, team_name, slot_preference, preferred_sport, status, notes)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `, [
             leadId,
-            name.trim(),
-            phone.trim(),
-            role || 'team',
+            leadName.trim(),
+            leadPhone.trim(),
+            email || null,
+            'CAPTAIN_TEAM',
             teamName || null,
-            preferredSport || 'Cricket',
             preferredSlot || 'Weekend Evening',
-            turfBranch || 'SportZone Arena',
-            status || 'Hot Lead',
+            preferredSport || 'Cricket',
+            status || 'NEW',
             notes || null
         ]);
 
@@ -55,14 +57,9 @@ const createLead = async (req, res) => {
             message: 'CRM lead created successfully',
             data: {
                 id: leadId,
-                name,
-                phone,
-                role: role || 'team',
-                teamName,
-                preferredSport,
-                preferredSlot,
-                turfBranch,
-                status: status || 'Hot Lead',
+                name: leadName,
+                phone: leadPhone,
+                email,
                 notes
             }
         });

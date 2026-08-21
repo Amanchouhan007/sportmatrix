@@ -23,7 +23,10 @@ const getAdvertisements = async (req, res) => {
 
         const [rows] = await db.query(sql, params);
 
-        const formatted = rows.map(r => ({
+        const demoAdIds = ['ad_101', 'ad_102', 'ad_103'];
+        const filteredRows = rows.filter(r => !demoAdIds.includes(r.id));
+
+        const formatted = filteredRows.map(r => ({
             id: r.id,
             _id: r.id,
             name: r.name,

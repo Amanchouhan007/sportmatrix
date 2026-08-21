@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { HiShieldCheck, HiSearch, HiPaperAirplane, HiDownload, HiFilter, HiPhone, HiGlobeAlt, HiOfficeBuilding, HiCurrencyRupee } from 'react-icons/hi'
-import { getCrmLeads, isDemoLead } from '../../services/crmService'
+import { getCrmLeads, isDemoLead, purgeDemoLeadsFromLocalStorage } from '../../services/crmService'
 import { getCorporateProposals } from '../../services/corporateService'
 import OfferBroadcastModal from '../../components/crm/OfferBroadcastModal'
 import CorporateQuoteModal from '../../components/superadmin/CorporateQuoteModal'
@@ -39,16 +39,16 @@ export default function SuperAdminGlobalCRMPage() {
     }
 
     const formatPhoneBadge = (phoneStr) => {
-        if (!phoneStr || phoneStr === '123' || phoneStr === '2255') return `+91 ${phoneStr || '98765 00000'}`
+        if (!phoneStr) return 'N/A'
         if (phoneStr.startsWith('+91')) return phoneStr
         if (phoneStr.length === 10 && /^\d+$/.test(phoneStr)) {
             return `+91 ${phoneStr.slice(0, 5)} ${phoneStr.slice(5)}`
         }
-        return `+91 ${phoneStr}`
+        return phoneStr.startsWith('+') ? phoneStr : `+91 ${phoneStr}`
     }
 
     const formatSlotDisplay = (slotStr) => {
-        if (!slotStr) return '06:00 PM • Today'
+        if (!slotStr) return 'N/A'
         if (slotStr.includes('(2026-')) {
             const [time, dateRaw] = slotStr.split('(')
             const cleanDate = dateRaw.replace(')', '').trim()
@@ -69,6 +69,7 @@ export default function SuperAdminGlobalCRMPage() {
     }
 
     const loadAllLeads = async () => {
+        purgeDemoLeadsFromLocalStorage()
         const crmData = getCrmLeads().filter(item => !isDemoLead(item))
         try {
             const corpData = await getCorporateProposals()
@@ -80,19 +81,19 @@ export default function SuperAdminGlobalCRMPage() {
                         name: c.company_name || c.companyName || c.contact_person || c.contactPerson || 'Corporate Contact',
                         contactPerson: c.contact_person || c.contactPerson,
                         companyName: c.company_name || c.companyName,
-                        phone: c.phone || '+91 98765 00000',
+                        phone: c.phone || '',
                         email: c.email || '',
                         role: 'corporate',
-                        teamName: `${c.estimated_players || c.estimatedPlayers || '40-50 Players'} • ${c.event_type || c.eventType || 'Tournament'}`,
+                        teamName: `${c.estimated_players || c.estimatedPlayers || 'Bulk Event'} • ${c.event_type || c.eventType || 'Tournament'}`,
                         preferredSport: c.event_type || c.eventType || 'Corporate Tournament',
                         preferredSlot: c.time_slot || c.timeSlot || (c.event_date ? `${c.event_date} (Full Day)` : 'Full Day Arena Booking'),
-                        turfBranch: c.preferred_turf || c.preferredTurf || (c.city ? `🏟️ ${c.city} Turf Complex` : 'Champion Turf Ground (Palasia, Indore)'),
-                        budget: c.budget || '₹60,000 - ₹1,20,000',
+                        turfBranch: c.preferred_turf || c.preferredTurf || (c.city ? `${c.city} Turf Complex` : 'N/A'),
+                        budget: c.budget || 'Custom',
                         status: c.status || 'NEW',
                         quotedPrice: c.quotedPrice || c.quoted_price || null,
                         quoteData: c.quoteData || null,
                         totalBookings: 1,
-                        notes: `Corporate request for ${c.company_name || c.companyName} (${c.estimated_players || c.estimatedPlayers || '40+ Players'}, Budget: ${c.budget || 'Custom'})`,
+                        notes: `Corporate request for ${c.company_name || c.companyName || 'Client'} (${c.estimated_players || c.estimatedPlayers || 'N/A Players'}, Budget: ${c.budget || 'Custom'})`,
                         createdAt: c.created_at ? c.created_at.split('T')[0] : (c.createdAt ? c.createdAt.split('T')[0] : new Date().toISOString().split('T')[0])
                     }))
                     .filter(item => !isDemoLead(item))

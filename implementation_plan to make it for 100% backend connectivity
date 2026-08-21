@@ -8,7 +8,7 @@ This plan outlines the technical steps to achieve 100% production-ready backend 
 
 > [!IMPORTANT]
 > **Key Technical Decisions for Review:**
-> 1. **Centralized API Client**: All raw `fetch('http://localhost:5000/...')` calls across 14+ frontend components will be migrated to use standard helper methods from `src/services/api.js` configured with `import.meta.env.VITE_API_URL`.
+> 1. **Centralized API Client**: All raw `fetch('http://localhost:5005/...')` calls across 14+ frontend components will be migrated to use standard helper methods from `src/services/api.js` configured with `import.meta.env.VITE_API_URL`.
 > 2. **ID Normalization Strategy**: Both numeric IDs (e.g. `16`, `1`) and string IDs (e.g. `br_001`, `turf_16`) will be accepted and parsed dynamically in backend controllers via an `normalizeId` utility.
 > 3. **Atomic Slot Lock**: During Step 3 checkout, a 5-minute atomic database hold (`status = 'HELD'`, `expires_at = NOW() + INTERVAL 5 MINUTE`) will be written to MySQL with a unique `holdId` to guarantee two users cannot lock or purchase the same slot concurrently.
 
@@ -20,14 +20,14 @@ This plan outlines the technical steps to achieve 100% production-ready backend 
 
 ### Component 1: Centralize API Base URL (Frontend)
 
-Migrate all scattered `http://localhost:5000` URLs across frontend pages to use the centralized Axios instance and environment variables in [`src/services/api.js`](file:///c:/Users/91969/OneDrive/Desktop/Kiaan/sport-turfs/turf%20Frontend/src/services/api.js).
+Migrate all scattered `http://localhost:5005` URLs across frontend pages to use the centralized Axios instance and environment variables in [`src/services/api.js`](file:///c:/Users/91969/OneDrive/Desktop/Kiaan/sport-turfs/turf%20Frontend/src/services/api.js).
 
 #### [MODIFY] [`api.js`](file:///c:/Users/91969/OneDrive/Desktop/Kiaan/sport-turfs/turf%20Frontend/src/services/api.js)
 - Ensure fallback to `import.meta.env.VITE_API_URL` / `import.meta.env.VITE_SERVER_URL`.
 - Add standard helper methods for GET, POST, PUT, DELETE requests with automatic error logging and toast notifications.
 
 #### [MODIFY] [`TurfDetailPage.jsx`](file:///c:/Users/91969/OneDrive/Desktop/Kiaan/sport-turfs/turf%20Frontend/src/pages/website/TurfDetailPage.jsx)
-- Replace inline `fetch('http://localhost:5000/api/v1/...')` with centralized `api.get()` / `api.post()`.
+- Replace inline `fetch('http://localhost:5005/api/v1/...')` with centralized `api.get()` / `api.post()`.
 
 #### [MODIFY] [`SlotBookingPage.jsx`](file:///c:/Users/91969/OneDrive/Desktop/Kiaan/sport-turfs/turf%20Frontend/src/pages/website/SlotBookingPage.jsx)
 - Update match payment creation and verification API calls to use centralized `api.post()`.
@@ -36,7 +36,7 @@ Migrate all scattered `http://localhost:5000` URLs across frontend pages to use 
 - Update booking summary, history, and status patch endpoints to use `api`.
 
 #### [NEW] [`turf Frontend/.env.example`](file:///c:/Users/91969/OneDrive/Desktop/Kiaan/sport-turfs/turf%20Frontend/.env.example)
-- Define default `VITE_API_URL=http://localhost:5000/api/v1` and `VITE_SERVER_URL=http://localhost:5000`.
+- Define default `VITE_API_URL=http://localhost:5005/api/v1` and `VITE_SERVER_URL=http://localhost:5005`.
 
 ---
 

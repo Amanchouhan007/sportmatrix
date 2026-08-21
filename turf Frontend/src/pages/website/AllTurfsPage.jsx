@@ -30,7 +30,8 @@ export default function AllTurfsPage() {
     useEffect(() => {
         const fetchRealBranches = async () => {
             try {
-                const res = await fetch('http://localhost:5000/api/v1/branches')
+                const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5005/api/v1';
+                const res = await fetch(`${API_URL}/branches`)
                 const data = await res.json()
                 if (data.success && data.data && Array.isArray(data.data.branches)) {
                     const mapped = data.data.branches.map((b, idx) => ({

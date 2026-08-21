@@ -1,3 +1,5 @@
+import api from './api';
+
 // Calculate Weighted Player Performance Score (PPS)
 export const calculatePPS = (player, tierWeight = 1.0) => {
     const battingAvgPart = (player.battingAvg || 0) * 0.30
@@ -13,192 +15,42 @@ export const calculatePPS = (player, tierWeight = 1.0) => {
     return Math.round(finalScore * 10) / 10
 }
 
-export const INITIAL_LEADERBOARD_PLAYERS = [
-    {
-        id: 'ply_indore_1',
-        name: 'Karan Malhotra',
-        avatar: '🔥',
-        team: 'Vijay Nagar Blasters',
-        city: 'Indore',
-        sport: 'Cricket',
-        role: 'Top-Order Batsman',
-        matches: 34,
-        runs: 1540,
-        battingAvg: 55.0,
-        strikeRate: 186.5,
-        wickets: 14,
-        economy: 7.80,
-        winRate: '82.4%',
-        mvps: 12,
-        highestScore: '124*',
-        bestBowling: '2/18',
-        verificationTier: 'Tier 3',
-        tierMultiplier: 2.0,
-        trustScore: 99,
-        badges: ['🏆 Indore Cup Champion', '⭐ 12x MVP', '🔥 Century Master']
-    },
-    {
-        id: 'ply_indore_2',
-        name: 'Vikramaditya Roy',
-        avatar: '🎯',
-        team: 'Palasia Super Strikers',
-        city: 'Indore',
-        sport: 'Cricket',
-        role: 'Fast Bowler & All-Rounder',
-        matches: 29,
-        runs: 560,
-        battingAvg: 28.0,
-        strikeRate: 148.0,
-        wickets: 48,
-        economy: 5.60,
-        winRate: '75.8%',
-        mvps: 8,
-        highestScore: '54*',
-        bestBowling: '5/10',
-        verificationTier: 'Tier 2',
-        tierMultiplier: 1.5,
-        trustScore: 97,
-        badges: ['⚖️ Paid Umpire Verified', '🎯 5-Wicket Haul', '⚡ Pace King']
-    },
-    {
-        id: 'ply_indore_3',
-        name: 'Rohit Soni',
-        avatar: '🏏',
-        team: 'Bhawarkua Royal Kings',
-        city: 'Indore',
-        sport: 'Cricket',
-        role: 'All-Rounder',
-        matches: 27,
-        runs: 1120,
-        battingAvg: 46.6,
-        strikeRate: 169.2,
-        wickets: 31,
-        economy: 6.90,
-        winRate: '70.3%',
-        mvps: 7,
-        highestScore: '92',
-        bestBowling: '4/22',
-        verificationTier: 'Tier 2',
-        tierMultiplier: 1.5,
-        trustScore: 96,
-        badges: ['⚖️ Paid Umpire Verified', '⭐ 7x MVP']
-    },
-    {
-        id: 'ply_indore_4',
-        name: 'Devendra Rathore',
-        avatar: '🛡️',
-        team: 'Annapurna Titans',
-        city: 'Indore',
-        sport: 'Cricket',
-        role: 'Opening Batsman',
-        matches: 24,
-        runs: 980,
-        battingAvg: 44.5,
-        strikeRate: 162.0,
-        wickets: 6,
-        economy: 8.20,
-        winRate: '66.7%',
-        mvps: 5,
-        highestScore: '86*',
-        bestBowling: '2/14',
-        verificationTier: 'Tier 3',
-        tierMultiplier: 2.0,
-        trustScore: 95,
-        badges: ['🏆 Tournament Elite', '⭐ 5x MVP']
-    },
-    {
-        id: 'ply_indore_5',
-        name: 'Shubham Joshi',
-        avatar: '🌪️',
-        team: 'Super Corridor Smashers',
-        city: 'Indore',
-        sport: 'Cricket',
-        role: 'Spin Bowler',
-        matches: 22,
-        runs: 240,
-        battingAvg: 20.0,
-        strikeRate: 130.0,
-        wickets: 38,
-        economy: 5.90,
-        winRate: '68.2%',
-        mvps: 6,
-        highestScore: '38',
-        bestBowling: '4/11',
-        verificationTier: 'Tier 2',
-        tierMultiplier: 1.5,
-        trustScore: 96,
-        badges: ['⚖️ Paid Umpire Verified', '🌪️ Spin Wizard']
-    },
-    {
-        id: 'ply_indore_6',
-        name: 'Yashwant Rao',
-        avatar: '⚡',
-        team: 'Rau Cricket Club',
-        city: 'Indore',
-        sport: 'Cricket',
-        role: 'Wicketkeeper Batsman',
-        matches: 26,
-        runs: 890,
-        battingAvg: 42.3,
-        strikeRate: 174.0,
-        wickets: 0,
-        economy: 0,
-        winRate: '65.4%',
-        mvps: 5,
-        highestScore: '88',
-        bestBowling: '—',
-        verificationTier: 'Tier 1',
-        tierMultiplier: 1.0,
-        trustScore: 93,
-        badges: ['✓ Captain Handshake', '🧤 26 Dismissals']
-    },
-    {
-        id: 'ply_indore_7',
-        name: 'Deepak Patel',
-        avatar: '🌟',
-        team: 'Scheme 54 Blasters',
-        city: 'Indore',
-        sport: 'Cricket',
-        role: 'All-Rounder',
-        matches: 20,
-        runs: 710,
-        battingAvg: 39.4,
-        strikeRate: 158.0,
-        wickets: 24,
-        economy: 7.10,
-        winRate: '65.0%',
-        mvps: 4,
-        highestScore: '74',
-        bestBowling: '3/16',
-        verificationTier: 'Tier 1',
-        tierMultiplier: 1.0,
-        trustScore: 92,
-        badges: ['✓ Captain Handshake']
-    },
-    {
-        id: 'ply_indore_8',
-        name: 'Aman Varma',
-        avatar: '🚀',
-        team: 'Mahalaxmi Nagar Kings',
-        city: 'Indore',
-        sport: 'Cricket',
-        role: 'Pinch Hitter',
-        matches: 19,
-        runs: 680,
-        battingAvg: 40.0,
-        strikeRate: 192.5,
-        wickets: 11,
-        economy: 8.40,
-        winRate: '63.1%',
-        mvps: 4,
-        highestScore: '79*',
-        bestBowling: '2/20',
-        verificationTier: 'Tier 2',
-        tierMultiplier: 1.5,
-        trustScore: 94,
-        badges: ['⚖️ Paid Umpire Verified', '🚀 Highest SR']
+export const fetchGlobalLeaderboard = async () => {
+    try {
+        const res = await api.get('/tournaments/leaderboard/global');
+        if (res && res.data && res.data.success && Array.isArray(res.data.data) && res.data.data.length > 0) {
+            return res.data.data.map(item => ({
+                id: item.id || item.team_id,
+                name: item.team_name || item.captain_name || 'Sports Team',
+                avatar: item.logo || '🏆',
+                team: item.team_name || 'Independent',
+                city: item.city || 'Indore',
+                sport: item.sport_type || 'Cricket',
+                role: 'Team Leader',
+                matches: item.matches_played || 0,
+                runs: (item.wins || 0) * 50,
+                battingAvg: item.points || 0,
+                strikeRate: 150.0,
+                wickets: item.goal_difference || item.draws || 0,
+                economy: 6.0,
+                winRate: `${Math.round(((item.wins || 0) / Math.max(1, item.matches_played || 1)) * 100)}%`,
+                mvps: item.wins || 0,
+                highestScore: `${item.goals_for || 0}`,
+                bestBowling: '—',
+                verificationTier: 'Tier 3',
+                tierMultiplier: 2.0,
+                trustScore: 98,
+                currentPPS: (item.points || 0) * 10 + (item.wins || 0) * 5,
+                badges: ['🏆 Verified Team']
+            }));
+        }
+    } catch (e) {
+        console.warn('Backend leaderboard fetch error:', e.message);
     }
-]
+    return getLeaderboardPlayers();
+};
+
+export const INITIAL_LEADERBOARD_PLAYERS = []
 
 // Get Master Merged Leaderboard List
 export const getLeaderboardPlayers = () => {
@@ -248,7 +100,7 @@ export const getLeaderboardPlayers = () => {
         return Array.from(playerMap.values()).sort((a, b) => b.currentPPS - a.currentPPS)
     } catch (e) {
         console.error('Error loading leaderboard players:', e)
-        return INITIAL_LEADERBOARD_PLAYERS
+        return []
     }
 }
 

@@ -155,10 +155,11 @@ const login = async (req, res) => {
             }
         }
 
-        if (user.status === 'INACTIVE') {
+        const uStatus = (user.status || '').toUpperCase();
+        if (uStatus === 'INACTIVE' || uStatus === 'SUSPENDED') {
             return res.status(403).json({
                 success: false,
-                message: 'Your account has been deactivated.'
+                message: 'Your account has been suspended/deactivated by Super Admin. Please contact platform support.'
             });
         }
 

@@ -51,71 +51,41 @@ const processPayment = async (req, res) => {
 /**
  * Get payment statistics aggregates for Super Admin
  */
-const MASTER_REAL_PAYMENT_LOGS = [
-    { paymentId: 'BMT-9AUG-17105', user: 'Valued Player', mobile: '+91 98765 43210', type: 'BOOKING', amount: 1500, commissionRate: 10, commissionAmount: 150, paymentMethod: 'UPI', status: 'CONFIRMED', date: '2026-08-20 17:25:00' },
-    { paymentId: 'BMT-9AUG-88286', user: 'Valued Player', mobile: '+91 98765 43210', type: 'BOOKING', amount: 1500, commissionRate: 10, commissionAmount: 150, paymentMethod: 'UPI', status: 'CONFIRMED', date: '2026-08-20 17:25:00' },
-    { paymentId: 'BMT-9AUG-31297', user: 'Valued Player', mobile: '+91 98765 43210', type: 'BOOKING', amount: 1500, commissionRate: 10, commissionAmount: 150, paymentMethod: 'UPI', status: 'CONFIRMED', date: '2026-08-20 17:25:00' },
-    { paymentId: 'BMT-9AUG-59025', user: 'Valued Player', mobile: '+91 98765 43210', type: 'BOOKING', amount: 1100, commissionRate: 10, commissionAmount: 110, paymentMethod: 'UPI', status: 'CONFIRMED', date: '2026-08-20 17:25:00' },
-    { paymentId: 'BMT-9AUG-22777', user: 'Valued Player', mobile: '+91 98765 43210', type: 'BOOKING', amount: 1500, commissionRate: 10, commissionAmount: 150, paymentMethod: 'UPI', status: 'CONFIRMED', date: '2026-08-20 17:25:00' },
-    { paymentId: 'BMT-9AUG-28067', user: 'Valued Player', mobile: '+91 98765 43210', type: 'BOOKING', amount: 1500, commissionRate: 10, commissionAmount: 150, paymentMethod: 'UPI', status: 'CONFIRMED', date: '2026-08-20 17:25:00' },
-    { paymentId: 'BMT-9AUG-45967', user: 'Valued Player', mobile: '+91 98765 43210', type: 'BOOKING', amount: 1500, commissionRate: 10, commissionAmount: 150, paymentMethod: 'UPI', status: 'CONFIRMED', date: '2026-08-20 17:25:00' },
-    { paymentId: 'BMT-9AUG-81215', user: 'Valued Player', mobile: '+91 98765 43210', type: 'BOOKING', amount: 1500, commissionRate: 10, commissionAmount: 150, paymentMethod: 'UPI', status: 'CONFIRMED', date: '2026-08-20 17:25:00' },
-    { paymentId: 'BMT-9AUG-41312', user: 'Valued Player', mobile: '+91 98765 43210', type: 'BOOKING', amount: 750, commissionRate: 10, commissionAmount: 75, paymentMethod: 'UPI', status: 'CONFIRMED', date: '2026-08-20 17:25:00' },
-    { paymentId: 'BMT-9AUG-32974', user: 'Valued Player', mobile: '+91 98765 43210', type: 'BOOKING', amount: 750, commissionRate: 10, commissionAmount: 75, paymentMethod: 'UPI', status: 'CONFIRMED', date: '2026-08-20 17:25:00' },
-    { paymentId: 'BMT-9AUG-77857', user: 'Valued Player', mobile: '+91 98765 43210', type: 'BOOKING', amount: 750, commissionRate: 10, commissionAmount: 75, paymentMethod: 'UPI', status: 'CONFIRMED', date: '2026-08-20 17:25:00' },
-    { paymentId: 'BMT-9AUG-97526', user: 'Valued Player', mobile: '+91 98765 43210', type: 'BOOKING', amount: 250, commissionRate: 10, commissionAmount: 25, paymentMethod: 'UPI', status: 'CONFIRMED', date: '2026-08-20 17:25:00' },
-    { paymentId: 'BMT-12AUG-17358', user: 'Valued Player', mobile: '+91 98765 43210', type: 'BOOKING', amount: 1500, commissionRate: 10, commissionAmount: 150, paymentMethod: 'UPI', status: 'CONFIRMED', date: '2026-08-20 17:25:00' },
-    { paymentId: 'BMT-9AUG-86604', user: 'Valued Player', mobile: '+91 98765 43210', type: 'BOOKING', amount: 900, commissionRate: 10, commissionAmount: 90, paymentMethod: 'UPI', status: 'CONFIRMED', date: '2026-08-20 17:25:00' },
-    { paymentId: 'BMT-9AUG-97978', user: 'Valued Player', mobile: '+91 98765 43210', type: 'BOOKING', amount: 750, commissionRate: 10, commissionAmount: 75, paymentMethod: 'UPI', status: 'CANCELLED', date: '2026-08-20 17:25:00' },
-    { paymentId: 'BMT-9AUG-34713', user: 'Valued Player', mobile: '+91 98765 43210', type: 'BOOKING', amount: 250, commissionRate: 10, commissionAmount: 25, paymentMethod: 'UPI', status: 'CANCELLED', date: '2026-08-20 17:25:00' },
-    { paymentId: 'BMT-9AUG-90546', user: 'Valued Player', mobile: '+91 98765 43210', type: 'BOOKING', amount: 250, commissionRate: 10, commissionAmount: 25, paymentMethod: 'UPI', status: 'CANCELLED', date: '2026-08-20 17:25:00' },
-    { paymentId: 'BMT-9AUG-45078', user: 'Valued Player', mobile: '+91 98765 43210', type: 'BOOKING', amount: 750, commissionRate: 10, commissionAmount: 75, paymentMethod: 'UPI', status: 'CANCELLED', date: '2026-08-20 17:25:00' },
-    { paymentId: 'BK-001', user: 'Valued Player', mobile: '+91 98765 43210', type: 'BOOKING', amount: 800, commissionRate: 10, commissionAmount: 80, paymentMethod: 'UPI', status: 'CANCELLED', date: '2026-08-20 17:25:00' },
-    { paymentId: 'BK-002', user: 'Valued Player', mobile: '+91 98765 43210', type: 'BOOKING', amount: 900, commissionRate: 10, commissionAmount: 90, paymentMethod: 'UPI', status: 'CANCELLED', date: '2026-08-20 17:25:00' },
-    { paymentId: 'BK-003', user: 'Valued Player', mobile: '+91 98765 43210', type: 'BOOKING', amount: 400, commissionRate: 10, commissionAmount: 40, paymentMethod: 'UPI', status: 'COMPLETED', date: '2026-08-20 17:25:00' },
-    { paymentId: 'BK-004', user: 'Valued Player', mobile: '+91 98765 43210', type: 'BOOKING', amount: 1200, commissionRate: 10, commissionAmount: 120, paymentMethod: 'UPI', status: 'CANCELLED', date: '2026-08-20 17:25:00' }
-].map(item => ({
-    _id: item.paymentId,
-    id: item.paymentId,
-    paymentId: item.paymentId,
-    transactionId: `TXN-${item.paymentId}`,
-    invoiceNumber: item.paymentId,
-    userId: { _id: item.paymentId, fullName: item.user, email: '', mobile: item.mobile },
-    user: item.user,
-    customer: item.user,
-    type: item.type,
-    amount: item.amount,
-    commissionAmount: item.commissionAmount,
-    commissionRate: item.commissionRate,
-    paymentMethod: item.paymentMethod,
-    status: item.status,
-    notice: 'Turf Slot Online Booking',
-    paymentDate: item.date,
-    createdAt: item.date,
-    date: item.date
-}));
+const MASTER_REAL_PAYMENT_LOGS = [];
 
 const getPaymentStats = async (req, res) => {
     try {
         const [paymentRows] = await db.query(`SELECT amount, status, created_at FROM payments`);
-        const [ownerRows] = await db.query(`SELECT id, full_name, created_at FROM owners`);
         const [bookingRows] = await db.query(`SELECT id, amount, status, created_at FROM bookings`);
 
-        let totalTransactions = paymentRows.length + ownerRows.length + bookingRows.length;
-        let completedCount = paymentRows.filter(p => p.status === 'COMPLETED').length + ownerRows.length + bookingRows.filter(b => ['CONFIRMED', 'Confirmed', 'COMPLETED'].includes(b.status)).length;
-        let pendingCount = paymentRows.filter(p => p.status === 'PENDING').length + bookingRows.filter(b => ['PENDING', 'Pending'].includes(b.status)).length;
-        let refundedCount = paymentRows.filter(p => p.status === 'REFUNDED').length;
+        let subRev = 0;
+        let subCount = 0;
+        try {
+            const [ownerSubs] = await db.query(`SELECT amount FROM owner_subscriptions WHERE payment_status = 'COMPLETED'`);
+            const ownerSubTotal = ownerSubs.reduce((sum, s) => sum + Number(s.amount || 0), 0);
+
+            const [branchSubs] = await db.query(`
+                SELECT sp.monthly_price 
+                FROM branches b
+                JOIN subscription_plans sp ON (b.subscription_plan_id = sp.id OR LOWER(b.subscription_plan_id) = LOWER(sp.plan_name))
+                WHERE b.status = 'ACTIVE'
+            `);
+            const branchSubTotal = branchSubs.reduce((sum, b) => sum + Number(b.monthly_price || 0), 0);
+
+            subRev = Math.max(ownerSubTotal, branchSubTotal);
+            subCount = Math.max(ownerSubs.length, branchSubs.length);
+        } catch (e) {
+            console.warn('Subscription stats calculation error:', e.message);
+        }
 
         let paymentsRev = paymentRows.reduce((sum, p) => sum + Number(p.amount || 0), 0);
         let bookingsRev = bookingRows.reduce((sum, b) => sum + Number(b.amount || 0), 0);
-        let subscriptionRev = ownerRows.length * 2499;
-        let totalRevenue = paymentsRev + subscriptionRev + bookingsRev;
+        let totalRevenue = paymentsRev + subRev + bookingsRev;
 
-        if (totalRevenue === 0 || totalTransactions === 0) {
-            totalTransactions = 22;
-            totalRevenue = 20000;
-            completedCount = 15;
-        }
+        let totalTransactions = paymentRows.length + subCount + bookingRows.length;
+        let completedCount = paymentRows.filter(p => p.status === 'COMPLETED').length + subCount + bookingRows.filter(b => ['CONFIRMED', 'Confirmed', 'COMPLETED'].includes(b.status)).length;
+        let pendingCount = paymentRows.filter(p => p.status === 'PENDING').length + bookingRows.filter(b => ['PENDING', 'Pending'].includes(b.status)).length;
+        let refundedCount = paymentRows.filter(p => p.status === 'REFUNDED').length;
 
         const totalCommission = Math.round(totalRevenue * 0.1);
         const pendingPayments = paymentRows.filter(p => p.status === 'PENDING').reduce((sum, p) => sum + Number(p.amount || 0), 0);
@@ -138,20 +108,9 @@ const getPaymentStats = async (req, res) => {
         });
     } catch (error) {
         console.error('Fetch payment stats error:', error);
-        return res.status(200).json({
-            success: true,
-            data: {
-                summary: {
-                    totalTransactions: 22,
-                    totalRevenue: 20000,
-                    totalCommission: 2000,
-                    pendingPayments: 0,
-                    pendingCount: 0,
-                    completedCount: 15,
-                    refundedAmount: 0,
-                    refundedCount: 0
-                }
-            }
+        return res.status(500).json({
+            success: false,
+            message: 'Internal Server Error compiling payment stats: ' + error.message
         });
     }
 };
@@ -165,42 +124,89 @@ const getBillHistory = async (req, res) => {
 
         const allLogs = [];
 
-        // 1. Owner Subscription Plan Buy Payments
+        // 1. Subscription Plan Buy & Recurring Payments (Real DB)
         try {
-            const [owners] = await db.query(`SELECT id, full_name, email, mobile, business_name, created_at FROM owners ORDER BY created_at DESC`);
-            owners.forEach((o, index) => {
-                const numId = String(o.id).replace(/[^0-9]/g, '') || String(index + 1);
-                const padId = numId.padStart(6, '0');
-                const paymentId = `SUB-${padId}`;
+            const [ownerSubs] = await db.query(`
+                SELECT os.id, os.plan_name, os.amount, os.billing_cycle, os.payment_status, os.payment_method, os.transaction_id, os.created_at,
+                       o.full_name as owner_name, o.email as owner_email, o.mobile as owner_mobile, o.business_name
+                FROM owner_subscriptions os
+                LEFT JOIN owners o ON os.owner_id = o.id
+                ORDER BY os.created_at DESC
+            `);
 
+            ownerSubs.forEach(os => {
+                const amt = Number(os.amount || 0);
                 allLogs.push({
-                    _id: `sub_${o.id}`,
-                    id: `sub_${o.id}`,
-                    paymentId: paymentId,
-                    transactionId: `TXN-SUB-${padId}`,
-                    invoiceNumber: `INV-SUB-${padId}`,
+                    _id: `sub_${os.id}`,
+                    id: `sub_${os.id}`,
+                    paymentId: os.transaction_id || `SUB-${os.id}`,
+                    transactionId: os.transaction_id || `TXN-SUB-${os.id}`,
+                    invoiceNumber: `INV-SUB-${os.id}`,
                     userId: {
-                        _id: o.id,
-                        fullName: o.full_name || 'Venue Owner',
-                        email: o.email || '',
-                        mobile: o.mobile || ''
+                        _id: os.id,
+                        fullName: os.owner_name || os.business_name || 'Venue Owner',
+                        email: os.owner_email || '',
+                        mobile: os.owner_mobile || ''
                     },
-                    user: o.full_name || 'Venue Owner',
-                    customer: o.full_name || 'Venue Owner',
+                    user: os.owner_name || os.business_name || 'Venue Owner',
+                    customer: os.owner_name || os.business_name || 'Venue Owner',
                     type: 'SUBSCRIPTION',
-                    amount: 2499,
-                    commissionAmount: 250,
+                    amount: amt,
+                    commissionAmount: Math.round(amt * 0.1),
                     commissionRate: 10,
-                    paymentMethod: 'ONLINE',
-                    status: 'COMPLETED',
-                    notice: 'Professional Subscription Plan Authorized',
-                    paymentDate: o.created_at || new Date().toISOString(),
-                    createdAt: o.created_at || new Date().toISOString(),
-                    date: o.created_at || new Date().toISOString()
+                    paymentMethod: (os.payment_method || 'ONLINE').toUpperCase(),
+                    status: (os.payment_status || 'COMPLETED').toUpperCase(),
+                    notice: `${os.plan_name || 'Subscription Plan'} Authorized (${os.billing_cycle || 'MONTHLY'})`,
+                    paymentDate: os.created_at || new Date().toISOString(),
+                    createdAt: os.created_at || new Date().toISOString(),
+                    date: os.created_at || new Date().toISOString()
                 });
             });
+
+            // Query active branch subscription plans
+            const [branchSubs] = await db.query(`
+                SELECT b.id as branch_id, b.branch_name, b.created_at,
+                       sp.plan_name, sp.monthly_price,
+                       o.full_name as owner_name, o.email as owner_email, o.mobile as owner_mobile
+                FROM branches b
+                JOIN subscription_plans sp ON b.subscription_plan_id = sp.id
+                LEFT JOIN owners o ON b.owner_id = o.id
+                ORDER BY b.created_at DESC
+            `);
+
+            branchSubs.forEach(bs => {
+                const amt = Number(bs.monthly_price || 0);
+                const logId = `branch_sub_${bs.branch_id}`;
+                if (!allLogs.some(l => l.id === logId || l._id === logId)) {
+                    allLogs.push({
+                        _id: logId,
+                        id: logId,
+                        paymentId: `SUB-${bs.branch_id}`,
+                        transactionId: `TXN-SUB-${bs.branch_id}`,
+                        invoiceNumber: `INV-SUB-${bs.branch_id}`,
+                        userId: {
+                            _id: bs.branch_id,
+                            fullName: bs.owner_name || bs.branch_name || 'Venue Owner',
+                            email: bs.owner_email || '',
+                            mobile: bs.owner_mobile || ''
+                        },
+                        user: bs.owner_name || bs.branch_name || 'Venue Owner',
+                        customer: bs.owner_name || bs.branch_name || 'Venue Owner',
+                        type: 'SUBSCRIPTION',
+                        amount: amt,
+                        commissionAmount: Math.round(amt * 0.1),
+                        commissionRate: 10,
+                        paymentMethod: 'ONLINE',
+                        status: 'COMPLETED',
+                        notice: `${bs.plan_name || 'Subscription Plan'} (${bs.branch_name})`,
+                        paymentDate: bs.created_at || new Date().toISOString(),
+                        createdAt: bs.created_at || new Date().toISOString(),
+                        date: bs.created_at || new Date().toISOString()
+                    });
+                }
+            });
         } catch (e) {
-            console.warn('Query owners subscription logs error:', e.message);
+            console.warn('Query subscription logs error:', e.message);
         }
 
         // 2. Booking & POS Payments
@@ -380,32 +386,119 @@ const getPaymentLogById = async (req, res) => {
             });
         }
 
-        const [ownerRows] = await db.query('SELECT * FROM owners WHERE id = ?', [id]);
-        if (ownerRows.length > 0) {
-            const o = ownerRows[0];
+        // Query owner_subscriptions
+        const cleanSubId = id.replace('sub_', '');
+        const [subRows] = await db.query(`
+            SELECT os.*, o.full_name as owner_name, o.email as owner_email, o.mobile as owner_mobile
+            FROM owner_subscriptions os
+            LEFT JOIN owners o ON os.owner_id = o.id
+            WHERE os.id = ? OR os.id = ? OR os.transaction_id = ?
+        `, [id, cleanSubId, id]);
+        if (subRows.length > 0) {
+            const s = subRows[0];
+            const amt = Number(s.amount || 0);
             return res.status(200).json({
                 success: true,
                 data: {
-                    _id: `sub_${o.id}`,
-                    id: `sub_${o.id}`,
-                    paymentId: `SUB-${String(o.id).slice(-6)}`,
-                    transactionId: `TXN-SUB-${o.id}`,
-                    invoiceNumber: `INV-SUB-${o.id}`,
-                    userId: { fullName: o.full_name, email: o.email, mobile: o.mobile },
+                    _id: `sub_${s.id}`,
+                    id: `sub_${s.id}`,
+                    paymentId: s.transaction_id || `SUB-${s.id}`,
+                    transactionId: s.transaction_id || `TXN-SUB-${s.id}`,
+                    invoiceNumber: `INV-SUB-${s.id}`,
+                    userId: { fullName: s.owner_name || 'Venue Owner', email: s.owner_email || '', mobile: s.owner_mobile || '' },
                     type: 'SUBSCRIPTION',
-                    amount: 2499,
-                    commissionAmount: 250,
+                    amount: amt,
+                    commissionAmount: Math.round(amt * 0.1),
                     commissionRate: 10,
-                    paymentMethod: 'ONLINE',
-                    status: 'COMPLETED',
-                    createdAt: o.created_at || new Date().toISOString()
+                    paymentMethod: (s.payment_method || 'ONLINE').toUpperCase(),
+                    status: (s.payment_status || 'COMPLETED').toUpperCase(),
+                    notice: `${s.plan_name || 'Subscription Plan'} Authorized (${s.billing_cycle || 'MONTHLY'})`,
+                    createdAt: s.created_at || new Date().toISOString()
                 }
             });
         }
 
+        // Query active branch subscription plan
+        const cleanBranchId = id.replace('branch_sub_', '');
+        const [branchPlanRows] = await db.query(`
+            SELECT b.id, b.branch_name, b.created_at, sp.plan_name, sp.monthly_price,
+                   o.full_name as owner_name, o.email as owner_email, o.mobile as owner_mobile
+            FROM branches b
+            JOIN subscription_plans sp ON b.subscription_plan_id = sp.id
+            LEFT JOIN owners o ON b.owner_id = o.id
+            WHERE b.id = ? OR b.id = ?
+        `, [id, cleanBranchId]);
+        if (branchPlanRows.length > 0) {
+            const bp = branchPlanRows[0];
+            const amt = Number(bp.monthly_price || 0);
+            return res.status(200).json({
+                success: true,
+                data: {
+                    _id: `branch_sub_${bp.id}`,
+                    id: `branch_sub_${bp.id}`,
+                    paymentId: `SUB-${bp.id}`,
+                    transactionId: `TXN-SUB-${bp.id}`,
+                    invoiceNumber: `INV-SUB-${bp.id}`,
+                    userId: { fullName: bp.owner_name || bp.branch_name || 'Venue Owner', email: bp.owner_email || '', mobile: bp.owner_mobile || '' },
+                    type: 'SUBSCRIPTION',
+                    amount: amt,
+                    commissionAmount: Math.round(amt * 0.1),
+                    commissionRate: 10,
+                    paymentMethod: 'ONLINE',
+                    status: 'COMPLETED',
+                    notice: `${bp.plan_name || 'Subscription Plan'} (${bp.branch_name})`,
+                    createdAt: bp.created_at || new Date().toISOString()
+                }
+            });
+        }
         return res.status(404).json({ success: false, message: 'Payment log record not found' });
     } catch (error) {
         return res.status(500).json({ success: false, message: error.message });
+    }
+};
+
+const createPaymentLog = async (req, res) => {
+    const { userName, customerName, type, amount, paymentMethod, status, notice } = req.body;
+    try {
+        const rand = Math.floor(100000 + Math.random() * 900000);
+        const invoiceNumber = `INV-SA-${rand}`;
+        const name = (userName || customerName || 'Turf Customer').trim();
+        const amt = Number(amount || 0);
+        const pMethod = (paymentMethod || 'ONLINE').toUpperCase();
+        const pStatus = (status || 'COMPLETED').toUpperCase();
+
+        if (type === 'SUBSCRIPTION') {
+            await db.query(`
+                INSERT INTO owner_subscriptions (id, owner_id, plan_id, plan_name, amount, billing_cycle, payment_status, payment_method, transaction_id, created_at)
+                VALUES (?, 'own_admin_manual', 'plan_pro', ?, ?, 'MONTHLY', ?, ?, ?, NOW())
+            `, [
+                `sub_${rand}`,
+                notice || 'Subscription Plan Purchase',
+                amt,
+                pStatus,
+                pMethod,
+                `TXN-SUB-${rand}`
+            ]);
+        } else {
+            await db.query(`
+                INSERT INTO payments (invoice_number, customer_name, amount, payment_method, status, created_at)
+                VALUES (?, ?, ?, ?, ?, NOW())
+            `, [
+                invoiceNumber,
+                name,
+                amt,
+                pMethod,
+                pStatus
+            ]);
+        }
+
+        return res.status(201).json({
+            success: true,
+            message: 'Payment transaction record created successfully.'
+        });
+    } catch (e) {
+        console.error('Create payment log error:', e);
+        return res.status(500).json({ success: false, message: e.message });
     }
 };
 
@@ -413,5 +506,6 @@ module.exports = {
     processPayment,
     getBillHistory,
     getPaymentStats,
-    getPaymentLogById
+    getPaymentLogById,
+    createPaymentLog
 };

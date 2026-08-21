@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import {
     ResponsiveContainer, AreaChart, Area, BarChart, Bar, LineChart, Line, XAxis, YAxis, Tooltip, CartesianGrid, Legend
@@ -17,40 +17,10 @@ import {
     FiCheck
 } from 'react-icons/fi'
 
-const MONTHLY_REVENUE_DATA = [
-    { month: 'Jan', revenue: 45000, commission: 5400 },
-    { month: 'Feb', revenue: 52000, commission: 6240 },
-    { month: 'Mar', revenue: 61000, commission: 7320 },
-    { month: 'Apr', revenue: 58000, commission: 6960 },
-    { month: 'May', revenue: 74000, commission: 8880 },
-    { month: 'Jun', revenue: 89000, commission: 10680 },
-    { month: 'Jul', revenue: 95000, commission: 11400 },
-    { month: 'Aug', revenue: 108000, commission: 12960 }
-]
-
-const AD_PERFORMANCE_DATA = [
-    { type: 'Guaranteed Booking', bookings: 420, revenue: 168000 },
-    { type: 'Discount Offer', bookings: 680, revenue: 204000 },
-    { type: 'Impression Ad', bookings: 290, revenue: 116000 }
-]
-
-const BOOKING_TREND_DATA = [
-    { week: 'Wk 1', bookings: 85 },
-    { week: 'Wk 2', bookings: 110 },
-    { week: 'Wk 3', bookings: 145 },
-    { week: 'Wk 4', bookings: 190 },
-    { week: 'Wk 5', bookings: 215 }
-]
-
-const CLICK_VS_BOOKING_DATA = [
-    { day: 'Mon', clicks: 1200, bookings: 140 },
-    { day: 'Tue', clicks: 1450, bookings: 165 },
-    { day: 'Wed', clicks: 1300, bookings: 150 },
-    { day: 'Thu', clicks: 1600, bookings: 190 },
-    { day: 'Fri', clicks: 2100, bookings: 280 },
-    { day: 'Sat', clicks: 3200, bookings: 450 },
-    { day: 'Sun', clicks: 2900, bookings: 390 }
-]
+const MONTHLY_REVENUE_DATA = []
+const AD_PERFORMANCE_DATA = []
+const BOOKING_TREND_DATA = []
+const CLICK_VS_BOOKING_DATA = []
 
 const TIMEFRAME_OPTIONS = [
     { value: '7d', label: 'Last 7 Days' },
@@ -65,6 +35,59 @@ export default function AdAnalyticsDashboard() {
     const basePath = location.pathname.startsWith('/super-admin') ? '/super-admin' : location.pathname.startsWith('/staff') ? '/staff' : '/admin'
     const [timeframe, setTimeframe] = useState('30d')
     const [isTimeframeOpen, setIsTimeframeOpen] = useState(false)
+
+    const [stats, setStats] = useState({
+        totalAds: 0,
+        activeAds: 0,
+        totalRevenue: 0,
+        commission: 0,
+        adBookings: 0,
+        conversionRate: '0.0%'
+    })
+
+    useEffect(() => {
+        const fetchAnalyticsData = async () => {
+            try {
+                const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5005/api/v1';
+                const adsRes = await fetch(`${API_URL}/ads`).then(r => r.json()).catch(() => ({ success: false }));
+
+                let totalAds = 0;
+                let activeAds = 0;
+                let totalRevenue = 0;
+                let adBookings = 0;
+
+                if (adsRes.success && Array.isArray(adsRes.data)) {
+                    const demoAdIds = ['ad_101', 'ad_102', 'ad_103'];
+                    const filteredAds = adsRes.data.filter(a => !demoAdIds.includes(a.id) && !demoAdIds.includes(a._id));
+                    totalAds = filteredAds.length;
+                    activeAds = filteredAds.filter(a => (a.status || '').toLowerCase() === 'active').length;
+
+                    totalRevenue = filteredAds.reduce((sum, a) => {
+                        const rev = parseFloat(String(a.revenue || '0').replace(/[^0-9.]/g, '')) || 0;
+                        return sum + rev;
+                    }, 0);
+
+                    adBookings = filteredAds.reduce((sum, a) => sum + (Number(a.bookings) || 0), 0);
+                }
+
+                const comm = Math.round(totalRevenue * 0.12);
+                const conv = totalAds > 0 ? ((adBookings / (totalAds * 10)) * 100).toFixed(1) + '%' : '0.0%';
+
+                setStats({
+                    totalAds,
+                    activeAds,
+                    totalRevenue,
+                    commission: comm,
+                    adBookings,
+                    conversionRate: conv
+                });
+            } catch (e) {
+                console.warn('Error syncing ad analytics:', e);
+            }
+        };
+
+        fetchAnalyticsData();
+    }, []);
 
     return (
         <div className="space-y-6 animate-in fade-in duration-300">
@@ -170,9 +193,9 @@ export default function AdAnalyticsDashboard() {
                         <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest flex items-center gap-1.5 truncate">
                             <FiTag className="text-[#10B981] shrink-0" /> Total Ads
                         </p>
-                        <p className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight leading-none">128</p>
+                        <p className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight leading-none">{stats.totalAds}</p>
                         <p className="text-[11px] font-extrabold text-emerald-600 bg-emerald-50 border border-emerald-200/60 px-2 py-0.5 rounded-md inline-block">
-                            ↑ +14% this month
+                            Real DB Count
                         </p>
                     </div>
                 </div>
@@ -184,8 +207,8 @@ export default function AdAnalyticsDashboard() {
                         <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest flex items-center gap-1.5 truncate">
                             <FiCheckCircle className="text-[#10B981] shrink-0" /> Active Ads
                         </p>
-                        <p className="text-2xl sm:text-3xl font-black text-emerald-600 tracking-tight leading-none">42</p>
-                        <p className="text-[11px] font-medium text-slate-500 truncate">Across 18 turfs</p>
+                        <p className="text-2xl sm:text-3xl font-black text-emerald-600 tracking-tight leading-none">{stats.activeAds}</p>
+                        <p className="text-[11px] font-medium text-slate-500 truncate">Across registered turfs</p>
                     </div>
                 </div>
 
@@ -196,9 +219,9 @@ export default function AdAnalyticsDashboard() {
                         <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest flex items-center gap-1.5 truncate">
                             <FiDollarSign className="text-teal-600 shrink-0" /> Total Revenue
                         </p>
-                        <p className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight leading-none">₹5.82L</p>
+                        <p className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight leading-none">₹{stats.totalRevenue.toLocaleString('en-IN')}</p>
                         <p className="text-[11px] font-extrabold text-emerald-600 bg-emerald-50 border border-emerald-200/60 px-2 py-0.5 rounded-md inline-block">
-                            ↑ +22% vs last mth
+                            Live Ledger
                         </p>
                     </div>
                 </div>
@@ -210,8 +233,8 @@ export default function AdAnalyticsDashboard() {
                         <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest flex items-center gap-1.5 truncate">
                             <FiTrendingUp className="text-amber-500 shrink-0" /> Commission
                         </p>
-                        <p className="text-2xl sm:text-3xl font-black text-amber-600 tracking-tight leading-none">₹69,840</p>
-                        <p className="text-[11px] font-medium text-slate-500 truncate">Avg 12.0% rate</p>
+                        <p className="text-2xl sm:text-3xl font-black text-amber-600 tracking-tight leading-none">₹{stats.commission.toLocaleString('en-IN')}</p>
+                        <p className="text-[11px] font-medium text-slate-500 truncate">12.0% platform fee</p>
                     </div>
                 </div>
 
@@ -222,7 +245,7 @@ export default function AdAnalyticsDashboard() {
                         <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest flex items-center gap-1.5 truncate">
                             <FiShoppingBag className="text-purple-500 shrink-0" /> Ad Bookings
                         </p>
-                        <p className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight leading-none">1,390</p>
+                        <p className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight leading-none">{stats.adBookings}</p>
                         <p className="text-[11px] font-extrabold text-purple-600 bg-purple-50 border border-purple-200/60 px-2 py-0.5 rounded-md inline-block">
                             Slots generated
                         </p>

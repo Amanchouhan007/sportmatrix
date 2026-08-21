@@ -1,77 +1,7 @@
 import api from './api';
 
 // Fallback Seed Plans if backend is offline
-export const defaultFallbackPlans = [
-    {
-        _id: 'plan_starter',
-        id: 'plan_starter',
-        planName: 'Starter Plan',
-        description: 'Ideal for single turf owners getting started.',
-        isPopular: false,
-        status: 'active',
-        monthlyPricing: {
-            price: 999,
-            branchLimit: 1,
-            sportsLimit: 2,
-            bookingLimit: 200,
-            activeUsersLimit: 5
-        },
-        yearlyPricing: {
-            price: 9999,
-            branchLimit: 1,
-            sportsLimit: 2,
-            bookingLimit: 2500,
-            activeUsersLimit: 5
-        },
-        features: ['Online Slot Booking', 'Basic Analytics', 'Email Notifications', 'Standard Support']
-    },
-    {
-        _id: 'plan_pro',
-        id: 'plan_pro',
-        planName: 'Professional Plan',
-        description: 'Perfect for growing multi-turf sports complexes.',
-        isPopular: true,
-        status: 'active',
-        monthlyPricing: {
-            price: 2499,
-            branchLimit: 5,
-            sportsLimit: 6,
-            bookingLimit: 1000,
-            activeUsersLimit: 20
-        },
-        yearlyPricing: {
-            price: 24999,
-            branchLimit: 5,
-            sportsLimit: 6,
-            bookingLimit: 15000,
-            activeUsersLimit: 20
-        },
-        features: ['All Starter Features', 'Multi-Branch Management', 'Advanced Analytics & Exports', 'POS Integration', 'Priority 24/7 Support']
-    },
-    {
-        _id: 'plan_enterprise',
-        id: 'plan_enterprise',
-        planName: 'Enterprise Arena',
-        description: 'Custom tailored plan for large stadium & turf networks.',
-        isPopular: false,
-        status: 'active',
-        monthlyPricing: {
-            price: 4999,
-            branchLimit: 20,
-            sportsLimit: 15,
-            bookingLimit: 10000,
-            activeUsersLimit: 100
-        },
-        yearlyPricing: {
-            price: 49999,
-            branchLimit: 20,
-            sportsLimit: 15,
-            bookingLimit: 120000,
-            activeUsersLimit: 100
-        },
-        features: ['Unlimited Branches', 'Dedicated Account Manager', 'Custom Billing Integrations', 'White Label Branding', 'SLA Guarantee']
-    }
-];
+export const defaultFallbackPlans = [];
 
 const loadStoredPlans = () => {
     try {

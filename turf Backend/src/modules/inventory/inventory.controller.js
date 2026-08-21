@@ -6,15 +6,10 @@ const db = require('../../config/db');
 const getInventory = async (req, res) => {
     const { branchId } = req.query;
 
-    if (!branchId) {
-        return res.status(400).json({
-            success: false,
-            message: 'branchId query parameter is required.'
-        });
-    }
-
     try {
-        const [rows] = await db.query('SELECT * FROM inventory WHERE branch_id = ? ORDER BY item_name ASC', [branchId]);
+        const query = branchId ? 'SELECT * FROM inventory WHERE branch_id = ? ORDER BY item_name ASC' : 'SELECT * FROM inventory ORDER BY item_name ASC';
+        const params = branchId ? [branchId] : [];
+        const [rows] = await db.query(query, params);
 
         const formatted = rows.map(r => {
             const stock = r.stock_quantity;

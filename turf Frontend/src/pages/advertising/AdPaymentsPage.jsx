@@ -10,63 +10,7 @@ import Pagination from '../../components/ui/Pagination'
 import { useToast } from '../../components/ui/Toast'
 import { FiSearch, FiFileText, FiDownload, FiEye, FiCreditCard } from 'react-icons/fi'
 
-const INITIAL_PAYMENTS = [
-    {
-        invoiceId: 'INV-2026-801',
-        adName: 'Champions Guaranteed Booking',
-        adId: 'AD-1001',
-        ownerName: 'Rahul Sharma',
-        turfName: 'Champions Turf Arena',
-        amount: '₹15,000',
-        status: 'Paid',
-        date: '2026-08-01',
-        paymentMethod: 'Bank Transfer (NEFT)'
-    },
-    {
-        invoiceId: 'INV-2026-802',
-        adName: 'Monsoon 25% Off',
-        adId: 'AD-1002',
-        ownerName: 'Anita Desai',
-        turfName: 'SkyLine Football Turf',
-        amount: '₹8,000',
-        status: 'Pending',
-        date: '2026-08-01',
-        paymentMethod: 'UPI Settlement'
-    },
-    {
-        invoiceId: 'INV-2026-803',
-        adName: 'Top Impression Push',
-        adId: 'AD-1003',
-        ownerName: 'Vikram Singh',
-        turfName: 'Velocity Sports Hub',
-        amount: '₹25,000',
-        status: 'Paid',
-        date: '2026-07-28',
-        paymentMethod: 'Razorpay Payout'
-    },
-    {
-        invoiceId: 'INV-2026-804',
-        adName: 'Weekday Discount Campaign',
-        adId: 'AD-1004',
-        ownerName: 'Sanjay Patel',
-        turfName: 'GreenField Box Cricket',
-        amount: '₹5,000',
-        status: 'Paid',
-        date: '2026-07-25',
-        paymentMethod: 'Bank Transfer (IMPS)'
-    },
-    {
-        invoiceId: 'INV-2026-805',
-        adName: 'Weekend Floodlight Push',
-        adId: 'AD-1005',
-        ownerName: 'Meera Nair',
-        turfName: 'Apex Turf & Arena',
-        amount: '₹20,000',
-        status: 'Pending',
-        date: '2026-07-20',
-        paymentMethod: 'UPI Settlement'
-    }
-]
+const INITIAL_PAYMENTS = []
 
 export default function AdPaymentsPage() {
     const navigate = useNavigate()

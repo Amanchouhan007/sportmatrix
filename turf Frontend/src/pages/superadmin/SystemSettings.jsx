@@ -49,6 +49,12 @@ export default function SystemSettings() {
     const { user, updateUser } = useAuth()
     const [activeTab, setActiveTab] = useState('profile') // 'profile' or 'commission'
 
+    const isSuperAdmin = user?.role === 'SUPER_ADMIN' || user?.role === 'superadmin'
+    const userRoleName = isSuperAdmin ? 'SUPER ADMIN' : 'TURF ADMIN'
+    const userBadgeSub = isSuperAdmin ? 'Platform Owner' : 'Turf Manager'
+    const defaultName = isSuperAdmin ? 'Super Admin' : (user?.fullName || user?.name || 'Turf Admin')
+    const defaultEmail = user?.email || (isSuperAdmin ? 'superadmin@gmail.com' : 'owner@gmail.com')
+
     // ─── Commission Settings States ─────────────────────────────────────────────
     const [commissionSettings, setCommissionSettings] = useState(null)
     const [isLoadingCommission, setIsLoadingCommission] = useState(false)
@@ -58,12 +64,25 @@ export default function SystemSettings() {
 
     // ─── Profile Settings States ────────────────────────────────────────────────
     const [profileData, setProfileData] = useState({
-        fullName: '',
-        email: '',
-        mobile: '',
-        alternateMobile: '',
-        profileImage: ''
+        fullName: user?.fullName || user?.name || (isSuperAdmin ? 'Super Admin' : 'Turf Admin'),
+        email: user?.email || defaultEmail,
+        mobile: user?.mobile || user?.phone || '9876543210',
+        alternateMobile: user?.alternateMobile || '',
+        profileImage: user?.profileImage || user?.avatar || ''
     })
+
+    useEffect(() => {
+        if (user) {
+            setProfileData(prev => ({
+                fullName: prev.fullName || user.fullName || user.name || (isSuperAdmin ? 'Super Admin' : 'Turf Admin'),
+                email: prev.email || user.email || defaultEmail,
+                mobile: prev.mobile || user.mobile || user.phone || '9876543210',
+                alternateMobile: prev.alternateMobile || user.alternateMobile || '',
+                profileImage: prev.profileImage || user.profileImage || user.avatar || ''
+            }))
+        }
+    }, [user, isSuperAdmin, defaultEmail])
+
     const [passwords, setPasswords] = useState({ current: '', new: '', confirm: '' })
     const [isSavingProfile, setIsSavingProfile] = useState(false)
     const [isSavingPassword, setIsSavingPassword] = useState(false)
@@ -107,9 +126,9 @@ export default function SystemSettings() {
             if (res && res.success) {
                 const data = res.data
                 setProfileData({
-                    fullName: data.fullName || data.name || '',
-                    email: data.email || '',
-                    mobile: data.mobile || '',
+                    fullName: data.fullName || data.name || user?.fullName || defaultName,
+                    email: data.email || user?.email || defaultEmail,
+                    mobile: data.mobile || user?.mobile || '9876543210',
                     alternateMobile: data.alternateMobile || '',
                     profileImage: data.profileImage || data.avatar || ''
                 })
@@ -218,7 +237,7 @@ export default function SystemSettings() {
     // ─── Update Profile ─────────────────────────────────────────────────────────
     const handleUpdateProfile = async () => {
         if (!profileData.fullName.trim() || !profileData.email.trim()) {
-            addToast({ title: 'Validation Error', message: 'Please fill in all required fields', type: 'error' })
+            addToast({ title: 'Validation Error', message: 'Full name and email are required.', type: 'error' })
             return
         }
 
@@ -227,46 +246,38 @@ export default function SystemSettings() {
             const res = await apiUpdateProfile(profileData)
             if (res && res.success) {
                 updateUser(res.data)
-                setProfileData({
-                    fullName: res.data.fullName || res.data.name || '',
-                    email: res.data.email || '',
-                    mobile: res.data.mobile || '',
-                    alternateMobile: res.data.alternateMobile || '',
-                    profileImage: res.data.profileImage || res.data.avatar || ''
-                })
-                addToast({ title: 'Profile Updated', message: 'Your profile has been saved successfully.', type: 'success' })
+                addToast({ title: 'Profile Updated', message: 'Your profile settings have been saved successfully.', type: 'success' })
             }
         } catch (err) {
-            addToast({ title: 'Update Failed', message: err.response?.data?.message || err.message || 'Failed to update profile details', type: 'error' })
+            console.error('Update profile error:', err)
+            addToast({ title: 'Update Failed', message: err.response?.data?.message || err.message || 'Failed to update profile', type: 'error' })
         } finally {
             setIsSavingProfile(false)
         }
     }
 
     // ─── Change Password ────────────────────────────────────────────────────────
-    const handleUpdatePassword = async () => {
-        if (!passwords.new || !passwords.confirm) {
-            addToast({ title: 'Missing Fields', message: 'Please fill in the new password fields.', type: 'error' })
-            return
-        }
-        if (passwords.new.length < 6) {
-            addToast({ title: 'Validation Error', message: 'Password must be at least 6 characters long', type: 'error' })
+    const handleChangePassword = async (e) => {
+        e.preventDefault()
+        if (!passwords.current || !passwords.new || !passwords.confirm) {
+            addToast({ title: 'Validation Error', message: 'Please fill in all password fields', type: 'error' })
             return
         }
         if (passwords.new !== passwords.confirm) {
-            addToast({ title: 'Mismatch', message: 'New password and confirm password do not match.', type: 'error' })
+            addToast({ title: 'Validation Error', message: 'New password and confirm password do not match', type: 'error' })
+            return
+        }
+        if (passwords.new.length < 6) {
+            addToast({ title: 'Validation Error', message: 'New password must be at least 6 characters long', type: 'error' })
             return
         }
 
         setIsSavingPassword(true)
         try {
-            const res = await apiChangePassword({
-                currentPassword: passwords.current,
-                newPassword: passwords.new
-            })
+            const res = await apiChangePassword({ currentPassword: passwords.current, newPassword: passwords.new })
             if (res && res.success) {
                 setPasswords({ current: '', new: '', confirm: '' })
-                addToast({ title: 'Password Updated', message: 'Your password has been changed successfully.', type: 'success' })
+                addToast({ title: 'Password Changed', message: 'Your password has been updated successfully', type: 'success' })
             }
         } catch (err) {
             addToast({ title: 'Update Failed', message: err.response?.data?.message || err.message || 'Failed to update password', type: 'error' })
@@ -305,8 +316,12 @@ export default function SystemSettings() {
                         <FiSliders className="w-5 h-5" />
                     </div>
                     <div>
-                        <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight leading-none">System Settings</h1>
-                        <p className="text-xs sm:text-sm text-slate-500 font-medium mt-1.5">Platform configurations, admin profile, and commissions</p>
+                        <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight leading-none">
+                            {isSuperAdmin ? 'System Settings' : 'Admin Profile Settings'}
+                        </h1>
+                        <p className="text-xs sm:text-sm text-slate-500 font-medium mt-1.5">
+                            {isSuperAdmin ? 'Platform configurations, admin profile, and commissions' : 'Manage your turf admin account profile and security settings'}
+                        </p>
                     </div>
                 </div>
             </div>
@@ -324,17 +339,19 @@ export default function SystemSettings() {
                     <FiUser className={`w-4 h-4 ${activeTab === 'profile' ? 'text-[#16A34A]' : 'text-slate-400'}`} />
                     <span>Profile Settings</span>
                 </button>
-                <button
-                    onClick={() => setActiveTab('commission')}
-                    className={`px-5 py-2.5 rounded-xl text-xs font-extrabold tracking-wider uppercase transition-all duration-200 flex items-center gap-2 cursor-pointer ${
-                        activeTab === 'commission'
-                            ? 'bg-white text-[#16A34A] shadow-xs border border-slate-200/80 scale-[1.01]'
-                            : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/50'
-                    }`}
-                >
-                    <FiPercent className={`w-4 h-4 ${activeTab === 'commission' ? 'text-[#16A34A]' : 'text-slate-400'}`} />
-                    <span>Commission Rates</span>
-                </button>
+                {isSuperAdmin && (
+                    <button
+                        onClick={() => setActiveTab('commission')}
+                        className={`px-5 py-2.5 rounded-xl text-xs font-extrabold tracking-wider uppercase transition-all duration-200 flex items-center gap-2 cursor-pointer ${
+                            activeTab === 'commission'
+                                ? 'bg-white text-[#16A34A] shadow-xs border border-slate-200/80 scale-[1.01]'
+                                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/50'
+                        }`}
+                    >
+                        <FiPercent className={`w-4 h-4 ${activeTab === 'commission' ? 'text-[#16A34A]' : 'text-slate-400'}`} />
+                        <span>Commission Rates</span>
+                    </button>
+                )}
             </div>
 
             {/* ── 3. Tab 1: Profile Settings ── */}
@@ -354,7 +371,7 @@ export default function SystemSettings() {
                                 />
                             ) : (
                                 <div className="w-28 h-28 rounded-2xl bg-gradient-to-br from-emerald-500 to-green-600 flex items-center justify-center text-white text-3xl font-black shadow-lg shadow-emerald-600/20 border-2 border-emerald-400/30">
-                                    {((profileData.fullName || user?.fullName || '').split(' ').map(n => n[0]).join('') || '?').substring(0, 2).toUpperCase()}
+                                    {((profileData.fullName || user?.fullName || defaultName).split(' ').map(n => n[0]).join('') || 'A').substring(0, 2).toUpperCase()}
                                 </div>
                             )}
                             {/* Upload Overlay */}
@@ -376,10 +393,10 @@ export default function SystemSettings() {
                         {/* Name & Email */}
                         <div>
                             <h3 className="text-lg font-black text-slate-900 tracking-tight leading-snug">
-                                {profileData.fullName || user?.fullName || 'Super Admin'}
+                                {profileData.fullName || user?.fullName || defaultName}
                             </h3>
                             <p className="text-xs text-slate-500 font-medium mt-1">
-                                {profileData.email || user?.email || 'superadmin@gmail.com'}
+                                {profileData.email || user?.email || defaultEmail}
                             </p>
                         </div>
 
@@ -387,10 +404,10 @@ export default function SystemSettings() {
                         <div className="flex flex-wrap gap-2 justify-center pt-2">
                             <span className="bg-emerald-50 text-[#16A34A] border border-emerald-200/80 px-3 py-1 text-[10px] font-black rounded-lg uppercase tracking-wider flex items-center gap-1.5">
                                 <span className="w-1.5 h-1.5 rounded-full bg-[#16A34A] animate-pulse" />
-                                SUPER ADMIN
+                                {userRoleName}
                             </span>
                             <span className="bg-slate-100 text-slate-700 border border-slate-200 px-3 py-1 text-[10px] font-bold rounded-lg uppercase tracking-wider">
-                                Platform Owner
+                                {userBadgeSub}
                             </span>
                         </div>
                     </div>
@@ -412,7 +429,7 @@ export default function SystemSettings() {
                                 <div className="grid sm:grid-cols-2 gap-4">
                                     <FormInput
                                         label="Full Name"
-                                        placeholder="e.g. Super Admin"
+                                        placeholder={isSuperAdmin ? "e.g. Super Admin" : "e.g. Turf Admin Owner"}
                                         value={profileData.fullName}
                                         onChange={e => setProfileData({ ...profileData, fullName: e.target.value })}
                                         disabled={isSavingProfile}
@@ -421,7 +438,7 @@ export default function SystemSettings() {
                                     <FormInput
                                         label="Email Address"
                                         type="email"
-                                        placeholder="superadmin@gmail.com"
+                                        placeholder={defaultEmail}
                                         value={profileData.email}
                                         onChange={e => setProfileData({ ...profileData, email: e.target.value })}
                                         disabled={isSavingProfile}
@@ -509,7 +526,7 @@ export default function SystemSettings() {
 
                                 <div className="pt-3 flex justify-end">
                                     <button
-                                        onClick={handleUpdatePassword}
+                                        onClick={handleChangePassword}
                                         disabled={isSavingPassword}
                                         className="h-11 px-6 rounded-xl bg-[#16A34A] hover:bg-emerald-700 text-white font-extrabold text-xs shadow-md shadow-emerald-600/20 hover:-translate-y-0.5 active:translate-y-0 transition-all cursor-pointer flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed min-w-[160px]"
                                     >

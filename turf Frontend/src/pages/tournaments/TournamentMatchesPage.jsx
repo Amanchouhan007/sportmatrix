@@ -88,7 +88,8 @@ export default function TournamentMatchesPage() {
     useEffect(() => {
         const fetchMatches = async () => {
             try {
-                const res = await fetch('http://localhost:5000/api/v1/tournaments/matches/all')
+                const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5005/api/v1';
+                const res = await fetch(`${API_URL}/tournaments/matches/all`)
                 const data = await res.json()
                 if (data.success && Array.isArray(data.data) && data.data.length > 0) {
                     const mapped = data.data.map(m => ({

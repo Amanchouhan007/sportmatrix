@@ -1,14 +1,8 @@
+import { useState, useEffect } from 'react'
 import DataTable from '../../components/ui/DataTable'
 import Badge from '../../components/ui/Badge'
 import Card from '../../components/ui/Card'
-
-const billingHistory = [
-    { id: 'INV-1001', customer: 'Amit Sharma', type: 'Turf Booking', amount: '₹1,200', method: 'UPI', status: 'Completed', date: 'May 22, 2026' },
-    { id: 'INV-1002', customer: 'Neha Patel', type: 'Equipment Rental', amount: '₹420', method: 'Cash', status: 'Completed', date: 'May 23, 2026' },
-    { id: 'INV-1003', customer: 'Karan Singh', type: 'Gaming Session', amount: '₹650', method: 'Card', status: 'Completed', date: 'May 24, 2026' },
-    { id: 'INV-1004', customer: 'Pooja Verma', type: 'Turf Booking', amount: '₹980', method: 'UPI', status: 'Pending', date: 'May 25, 2026' },
-    { id: 'INV-1005', customer: 'Ravi Kumar', type: 'Merchandise', amount: '₹320', method: 'Cash', status: 'Completed', date: 'May 26, 2026' },
-]
+import api from '../../services/api'
 
 const columns = [
     { key: 'id', label: 'Invoice' },
@@ -21,6 +15,32 @@ const columns = [
 ]
 
 export default function BillingHistory() {
+    const [billingHistory, setBillingHistory] = useState([])
+
+    useEffect(() => {
+        api.get('/billing/history')
+            .then(res => {
+                if (res.data && res.data.success && Array.isArray(res.data.data)) {
+                    const mapped = res.data.data.map(b => ({
+                        id: b.id || b.paymentId || `INV-${b.id}`,
+                        customer: b.user || b.customerName || b.customer || 'Customer',
+                        type: b.type || 'Turf Booking',
+                        amount: b.amount ? `₹${Number(b.amount).toLocaleString('en-IN')}` : '₹0',
+                        method: b.method || b.payment_mode || 'UPI',
+                        status: b.status === 'CONFIRMED' || b.status === 'COMPLETED' ? 'Completed' : 'Pending',
+                        date: b.date ? b.date.split('T')[0] : (b.created_at ? b.created_at.split('T')[0] : 'Today')
+                    }))
+                    setBillingHistory(mapped)
+                } else {
+                    setBillingHistory([])
+                }
+            })
+            .catch(e => {
+                console.warn('Fetch billing history note:', e.message)
+                setBillingHistory([])
+            })
+    }, [])
+
     return (
         <div className="space-y-4">
             <div className="p-2 text-slate-900">

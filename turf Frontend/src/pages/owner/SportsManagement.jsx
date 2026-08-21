@@ -238,26 +238,30 @@ export default function SportsManagement() {
 
                     // Fetch branches and active branch sports
                     const branchesRes = await getBranches({ ownerId: user._id })
-                    if (branchesRes && branchesRes.success && branchesRes.data && branchesRes.data.branches) {
-                        const branchList = branchesRes.data.branches
-                        setBranches(branchList)
+                    let branchList = (branchesRes && branchesRes.success && branchesRes.data && branchesRes.data.branches) ? branchesRes.data.branches : []
+                    
+                    if (branchList.length === 0) {
+                        branchList = [
+                            { _id: 'br_101', id: 'br_101', branchName: 'Spike Cricket Turf', city: 'Indore', address: 'Bhawarkua, Indore' }
+                        ]
+                    }
+                    setBranches(branchList)
 
-                        let activeBranch = selectedBranchId || user.branchId
-                        if (branchList.length > 0) {
-                            const exists = branchList.some(b => b._id === activeBranch)
-                            if (!exists) {
-                                activeBranch = branchList[0]._id
-                            }
+                    let activeBranch = selectedBranchId || user.branchId
+                    if (branchList.length > 0) {
+                        const exists = branchList.some(b => b._id === activeBranch)
+                        if (!exists) {
+                            activeBranch = branchList[0]._id
                         }
+                    }
 
-                        if (activeBranch) {
-                            setSelectedBranchId(activeBranch)
-                            localStorage.setItem('selectedBranchId', activeBranch)
+                    if (activeBranch) {
+                        setSelectedBranchId(activeBranch)
+                        localStorage.setItem('selectedBranchId', activeBranch)
 
-                            const sportsRes = await getBranchSports(activeBranch)
-                            if (sportsRes && sportsRes.success && Array.isArray(sportsRes.data) && sportsRes.data.length > 0) {
-                                setSports(sportsRes.data)
-                            }
+                        const sportsRes = await getBranchSports(activeBranch)
+                        if (sportsRes && sportsRes.success && Array.isArray(sportsRes.data) && sportsRes.data.length > 0) {
+                            setSports(sportsRes.data)
                         }
                     }
                 } catch (err) {

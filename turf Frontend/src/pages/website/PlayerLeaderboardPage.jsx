@@ -10,194 +10,9 @@ import Badge from '../../components/ui/Badge'
 import CustomSelect from '../../components/ui/CustomSelect'
 import { useToast } from '../../components/ui/Toast'
 import MatchScoreVerificationModal from '../../components/booking/MatchScoreVerificationModal'
-import { getLeaderboardPlayers, addOrUpdateLeaderboardPlayer, calculatePPS } from '../../services/leaderboardService'
+import { getLeaderboardPlayers, addOrUpdateLeaderboardPlayer, calculatePPS, fetchGlobalLeaderboard } from '../../services/leaderboardService'
 
-const mockLeaderboardPlayers = [
-    {
-        id: 'ply_indore_1',
-        name: 'Karan Malhotra',
-        avatar: '🔥',
-        team: 'Vijay Nagar Blasters',
-        city: 'Indore',
-        sport: 'Cricket',
-        role: 'Top-Order Batsman',
-        matches: 34,
-        runs: 1540,
-        battingAvg: 55.0,
-        strikeRate: 186.5,
-        wickets: 14,
-        economy: 7.80,
-        winRate: '82.4%',
-        mvps: 12,
-        highestScore: '124*',
-        bestBowling: '2/18',
-        verificationTier: 'Tier 3', // Tournament Verified
-        tierMultiplier: 2.0,
-        trustScore: 99,
-        badges: ['🏆 Indore Cup Champion', '⭐ 12x MVP', '🔥 Century Master']
-    },
-    {
-        id: 'ply_indore_2',
-        name: 'Vikramaditya Roy',
-        avatar: '🎯',
-        team: 'Palasia Super Strikers',
-        city: 'Indore',
-        sport: 'Cricket',
-        role: 'Fast Bowler & All-Rounder',
-        matches: 29,
-        runs: 560,
-        battingAvg: 28.0,
-        strikeRate: 148.0,
-        wickets: 48,
-        economy: 5.60,
-        winRate: '75.8%',
-        mvps: 8,
-        highestScore: '54*',
-        bestBowling: '5/10',
-        verificationTier: 'Tier 2', // Umpire Verified
-        tierMultiplier: 1.5,
-        trustScore: 97,
-        badges: ['⚖️ Paid Umpire Verified', '🎯 5-Wicket Haul', '⚡ Pace King']
-    },
-    {
-        id: 'ply_indore_3',
-        name: 'Rohit Soni',
-        avatar: '🏏',
-        team: 'Bhawarkua Royal Kings',
-        city: 'Indore',
-        sport: 'Cricket',
-        role: 'All-Rounder',
-        matches: 27,
-        runs: 1120,
-        battingAvg: 46.6,
-        strikeRate: 169.2,
-        wickets: 31,
-        economy: 6.90,
-        winRate: '70.3%',
-        mvps: 7,
-        highestScore: '92',
-        bestBowling: '4/22',
-        verificationTier: 'Tier 2',
-        tierMultiplier: 1.5,
-        trustScore: 96,
-        badges: ['⚖️ Paid Umpire Verified', '⭐ 7x MVP']
-    },
-    {
-        id: 'ply_indore_4',
-        name: 'Devendra Rathore',
-        avatar: '🛡️',
-        team: 'Annapurna Titans',
-        city: 'Indore',
-        sport: 'Cricket',
-        role: 'Opening Batsman',
-        matches: 24,
-        runs: 980,
-        battingAvg: 44.5,
-        strikeRate: 162.0,
-        wickets: 6,
-        economy: 8.20,
-        winRate: '66.7%',
-        mvps: 5,
-        highestScore: '86*',
-        bestBowling: '2/14',
-        verificationTier: 'Tier 3',
-        tierMultiplier: 2.0,
-        trustScore: 95,
-        badges: ['🏆 Tournament Elite', '⭐ 5x MVP']
-    },
-    {
-        id: 'ply_indore_5',
-        name: 'Shubham Joshi',
-        avatar: '🌪️',
-        team: 'Super Corridor Smashers',
-        city: 'Indore',
-        sport: 'Cricket',
-        role: 'Spin Bowler',
-        matches: 22,
-        runs: 240,
-        battingAvg: 20.0,
-        strikeRate: 130.0,
-        wickets: 38,
-        economy: 5.90,
-        winRate: '68.2%',
-        mvps: 6,
-        highestScore: '38',
-        bestBowling: '4/11',
-        verificationTier: 'Tier 2',
-        tierMultiplier: 1.5,
-        trustScore: 96,
-        badges: ['⚖️ Paid Umpire Verified', '🌪️ Spin Wizard']
-    },
-    {
-        id: 'ply_indore_6',
-        name: 'Yashwant Rao',
-        avatar: '⚡',
-        team: 'Rau Cricket Club',
-        city: 'Indore',
-        sport: 'Cricket',
-        role: 'Wicketkeeper Batsman',
-        matches: 26,
-        runs: 890,
-        battingAvg: 42.3,
-        strikeRate: 174.0,
-        wickets: 0,
-        economy: 0,
-        winRate: '65.4%',
-        mvps: 5,
-        highestScore: '88',
-        bestBowling: '—',
-        verificationTier: 'Tier 1',
-        tierMultiplier: 1.0,
-        trustScore: 93,
-        badges: ['✓ Captain Handshake', '🧤 26 Dismissals']
-    },
-    {
-        id: 'ply_indore_7',
-        name: 'Deepak Patel',
-        avatar: '🌟',
-        team: 'Scheme 54 Blasters',
-        city: 'Indore',
-        sport: 'Cricket',
-        role: 'All-Rounder',
-        matches: 20,
-        runs: 710,
-        battingAvg: 39.4,
-        strikeRate: 158.0,
-        wickets: 24,
-        economy: 7.10,
-        winRate: '65.0%',
-        mvps: 4,
-        highestScore: '74',
-        bestBowling: '3/16',
-        verificationTier: 'Tier 1',
-        tierMultiplier: 1.0,
-        trustScore: 92,
-        badges: ['✓ Captain Handshake']
-    },
-    {
-        id: 'ply_indore_8',
-        name: 'Aman Varma',
-        avatar: '🚀',
-        team: 'Mahalaxmi Nagar Kings',
-        city: 'Indore',
-        sport: 'Cricket',
-        role: 'Pinch Hitter',
-        matches: 19,
-        runs: 680,
-        battingAvg: 40.0,
-        strikeRate: 192.5,
-        wickets: 11,
-        economy: 8.40,
-        winRate: '63.1%',
-        mvps: 4,
-        highestScore: '79*',
-        bestBowling: '2/20',
-        verificationTier: 'Tier 2',
-        tierMultiplier: 1.5,
-        trustScore: 94,
-        badges: ['⚖️ Paid Umpire Verified', '🚀 Highest SR']
-    }
-]
+const mockLeaderboardPlayers = []
 
 export default function PlayerLeaderboardPage() {
     const navigate = useNavigate()
@@ -213,11 +28,18 @@ export default function PlayerLeaderboardPage() {
     // Direct Score Submission Modal State
     const [isSubmitModalOpen, setIsSubmitModalOpen] = useState(false)
     const [handshakeMatch, setHandshakeMatch] = useState(null)
-    const [playerList, setPlayerList] = useState(getLeaderboardPlayers)
+    const [playerList, setPlayerList] = useState([])
 
     useEffect(() => {
-        const handleRefresh = () => {
-            setPlayerList(getLeaderboardPlayers())
+        const loadData = async () => {
+            const data = await fetchGlobalLeaderboard()
+            setPlayerList(Array.isArray(data) ? data : [])
+        }
+        loadData()
+
+        const handleRefresh = async () => {
+            const data = await fetchGlobalLeaderboard()
+            setPlayerList(Array.isArray(data) ? data : [])
         }
         window.addEventListener('leaderboardUpdated', handleRefresh)
         window.addEventListener('storage', handleRefresh)

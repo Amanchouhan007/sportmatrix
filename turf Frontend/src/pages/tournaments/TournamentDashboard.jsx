@@ -155,34 +155,50 @@ const LEADERBOARD = [
 import { getMasterTournamentMetrics } from '../../services/tournamentStore'
 
 export default function TournamentDashboard({ role = 'owner' }) {
-    const [stats, setStats] = useState(getMasterTournamentMetrics())
+    const [stats, setStats] = useState({
+        totalTournaments: 0,
+        pendingApprovals: 0,
+        approvedActive: 0,
+        totalTeams: 0,
+        totalRevenue: 0,
+        platformCommission: 0
+    })
 
     const [isLoading, setIsLoading] = useState(false)
     const [lastUpdated, setLastUpdated] = useState('Just now')
 
     const basePath = role === 'staff' ? '/staff/tournaments' : '/admin/tournaments'
 
+    const [liveTournamentsList, setLiveTournamentsList] = useState([])
+
     const fetchLiveStats = async () => {
         try {
-            const res = await fetch('http://localhost:5000/api/v1/tournaments')
+            const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5005/api/v1';
+            const res = await fetch(`${API_URL}/tournaments`)
             const data = await res.json()
-            if (data.success && Array.isArray(data.data) && data.data.length > 0) {
+            if (data.success && Array.isArray(data.data)) {
                 const list = data.data
+                setLiveTournamentsList(list)
+
                 const totalT = list.length
                 const pendingA = list.filter(t => (t.status || '').toLowerCase().includes('pending')).length
                 const activeA = list.filter(t => (t.status || '').toLowerCase().includes('approved') || (t.status || '').toLowerCase().includes('active')).length
-                const teamsCount = list.reduce((sum, t) => sum + (t.registrations || parseInt(t.teams) || 8), 0)
+                const teamsCount = list.reduce((sum, t) => sum + (Number(t.maximum_teams || t.registrations) || 0), 0)
+                const revenueSum = list.reduce((sum, t) => sum + (Number(t.entry_fee_per_team || t.entryFee) * (Number(t.maximum_teams || t.registrations) || 0)), 0)
 
-                setStats(prev => ({
-                    ...prev,
+                setStats({
                     totalTournaments: totalT,
                     pendingApprovals: pendingA,
                     approvedActive: activeA,
-                    totalTeams: teamsCount
-                }))
+                    totalTeams: teamsCount,
+                    totalRevenue: revenueSum
+                })
+            } else {
+                setLiveTournamentsList([])
             }
         } catch (err) {
             console.warn('Sync live tournament stats note:', err)
+            setLiveTournamentsList([])
         }
     }
 
@@ -382,9 +398,9 @@ export default function TournamentDashboard({ role = 'owner' }) {
                         </div>
                     </div>
                     <div className="flex items-baseline justify-between">
-                        <div className="text-2xl font-black text-slate-900 tracking-tight">₹{stats.totalRevenue.toLocaleString()}</div>
+                        <div className="text-2xl font-black text-slate-900 tracking-tight">₹{(stats.totalRevenue || 0).toLocaleString()}</div>
                         <span className="inline-flex items-center gap-1 text-[11px] font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-md border border-indigo-100">
-                            Comm: ₹{stats.platformCommission.toLocaleString()}
+                            Comm: ₹{(stats.platformCommission || Math.round((stats.totalRevenue || 0) * 0.1)).toLocaleString()}
                         </span>
                     </div>
                     <div className="h-9">
@@ -559,8 +575,8 @@ export default function TournamentDashboard({ role = 'owner' }) {
                                     <div className="text-[11px] text-slate-500 font-medium">{grd.occupiedBy}</div>
                                 </div>
                                 <span className={`px-2.5 py-1 rounded-lg text-[10px] font-bold border ${grd.type === 'Occupied' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
-                                        grd.type === 'Available' ? 'bg-blue-50 text-blue-700 border-blue-200' :
-                                            'bg-amber-50 text-amber-700 border-amber-200'
+                                    grd.type === 'Available' ? 'bg-blue-50 text-blue-700 border-blue-200' :
+                                        'bg-amber-50 text-amber-700 border-amber-200'
                                     }`}>
                                     {grd.type}
                                 </span>
@@ -603,24 +619,32 @@ export default function TournamentDashboard({ role = 'owner' }) {
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-200/70 font-medium">
-                            {UPCOMING_TOURNAMENTS.map((trn) => (
-                                <tr key={trn.id} className="hover:bg-slate-50/80 transition-colors">
-                                    <td className="p-3.5 font-extrabold text-slate-900">{trn.name}</td>
-                                    <td className="p-3.5 text-slate-600">{trn.category}</td>
-                                    <td className="p-3.5 text-slate-600">{trn.dates}</td>
-                                    <td className="p-3.5 font-bold text-slate-800">{trn.teams}</td>
-                                    <td className="p-3.5 font-bold text-slate-900">{trn.entryFee}</td>
-                                    <td className="p-3.5 font-extrabold text-emerald-600">{trn.prizePool}</td>
-                                    <td className="p-3.5">
-                                        <Badge variant={trn.statusVariant}>{trn.status}</Badge>
-                                    </td>
-                                    <td className="p-3.5 text-right">
-                                        <Link to={`${basePath}/all`} className="text-xs font-bold text-indigo-600 hover:text-indigo-800">
-                                            Manage
-                                        </Link>
+                            {liveTournamentsList.length > 0 ? (
+                                liveTournamentsList.map((trn) => (
+                                    <tr key={trn.id} className="hover:bg-slate-50/80 transition-colors">
+                                        <td className="p-3.5 font-extrabold text-slate-900">{trn.title || trn.name}</td>
+                                        <td className="p-3.5 text-slate-600">{trn.sport_name || trn.category || 'Cricket • T20'}</td>
+                                        <td className="p-3.5 text-slate-600">{trn.start_date ? `${trn.start_date} - ${trn.end_date}` : 'Upcoming'}</td>
+                                        <td className="p-3.5 font-bold text-slate-800">{trn.maximum_teams ? `${trn.maximum_teams} Teams` : '16 Teams'}</td>
+                                        <td className="p-3.5 font-bold text-slate-900">₹{(trn.entry_fee_per_team || trn.entryFee || 1000).toLocaleString('en-IN')}</td>
+                                        <td className="p-3.5 font-extrabold text-emerald-600">{trn.prize_pool_total || trn.prizePool || '₹50,000'}</td>
+                                        <td className="p-3.5">
+                                            <Badge variant={trn.status === 'APPROVED' ? 'success' : 'warning'}>{trn.status || 'Active'}</Badge>
+                                        </td>
+                                        <td className="p-3.5 text-right">
+                                            <Link to={`${basePath}/all`} className="text-xs font-bold text-indigo-600 hover:text-indigo-800">
+                                                Manage
+                                            </Link>
+                                        </td>
+                                    </tr>
+                                ))
+                            ) : (
+                                <tr>
+                                    <td colSpan="8" className="p-6 text-center text-slate-400 font-bold">
+                                        No managed tournaments currently in database.
                                     </td>
                                 </tr>
-                            ))}
+                            )}
                         </tbody>
                     </table>
                 </div>
@@ -723,8 +747,8 @@ export default function TournamentDashboard({ role = 'owner' }) {
                     <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 pt-2">
                         {TIMELINE_STEPS.map((step, idx) => (
                             <div key={idx} className={`p-4 rounded-xl border text-xs space-y-1 relative ${step.completed ? 'bg-emerald-50/60 border-emerald-200 text-emerald-950' :
-                                    step.current ? 'bg-indigo-50/80 border-indigo-300 text-indigo-950 shadow-soft ring-2 ring-indigo-500/20' :
-                                        'bg-slate-50/70 border-slate-200 text-slate-600'
+                                step.current ? 'bg-indigo-50/80 border-indigo-300 text-indigo-950 shadow-soft ring-2 ring-indigo-500/20' :
+                                    'bg-slate-50/70 border-slate-200 text-slate-600'
                                 }`}>
                                 <div className="font-black text-[10px] uppercase tracking-wider text-slate-500">{step.step}</div>
                                 <div className="font-bold text-sm text-slate-900">{step.title}</div>

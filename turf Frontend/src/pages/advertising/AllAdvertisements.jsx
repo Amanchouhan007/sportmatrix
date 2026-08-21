@@ -38,7 +38,8 @@ export default function AllAdvertisements() {
     useEffect(() => {
         const fetchLiveAds = async () => {
             try {
-                const res = await fetch('http://localhost:5000/api/v1/ads');
+                const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5005/api/v1';
+                const res = await fetch(`${API_URL}/ads`);
                 if (!res.ok) throw new Error('Network error');
                 const data = await res.json();
                 if (data.success && Array.isArray(data.data) && data.data.length > 0) {
@@ -68,7 +69,8 @@ export default function AllAdvertisements() {
         }
     }
 
-    const activeAdsList = (ads && ads.length > 0) ? ads : INITIAL_ADS;
+    const demoAdIds = ['ad_101', 'ad_102', 'ad_103']
+    const activeAdsList = (ads && ads.length > 0) ? ads.filter(a => !demoAdIds.includes(a.id) && !demoAdIds.includes(a._id)) : []
 
     const filteredAds = activeAdsList.filter(ad => {
         if (!ad) return false;

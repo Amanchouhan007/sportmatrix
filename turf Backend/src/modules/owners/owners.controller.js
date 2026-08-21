@@ -2,6 +2,7 @@ const db = require('../../config/db');
 const bcrypt = require('bcryptjs');
 const fs = require('fs');
 const path = require('path');
+const { sendTurfAdminCredentialsEmail } = require('../../services/email.service');
 
 /**
  * Save base64 image string to disk in public/uploads directory
@@ -174,12 +175,49 @@ const createOwner = async (req, res) => {
             createdBy || req.user?.id || 'SYSTEM'
         ]);
 
+        // Auto-create corresponding Turf Branch for SuperAdmin / Website visibility
+        const branchId = `br_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
+        const branchCode = `BR-${Math.floor(1000 + Math.random() * 9000)}`;
+        const turfBranchName = (businessName && businessName.trim()) ? businessName.trim() : `${fullName.trim()}'s Turf Arena`;
+
+        try {
+            await conn.query(`
+                INSERT INTO branches (
+                    id, branch_name, branch_code, owner_id, subscription_plan_id,
+                    city, zip_code, full_address, email, mobile, status
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            `, [
+                branchId,
+                turfBranchName,
+                branchCode,
+                ownerId,
+                req.body.planId || 'plan_starter',
+                city ? city.trim() : 'Indore',
+                zipCode ? zipCode.trim() : '452001',
+                fullAddress ? fullAddress.trim() : 'Indore, MP',
+                normalizedEmail,
+                normalizedMobile,
+                'ACTIVE'
+            ]);
+        } catch (bErr) {
+            console.warn('Branch auto-creation note:', bErr.message);
+        }
+
         await conn.commit();
         conn.release();
 
         // 7. Fetch newly inserted owner
         const [rows] = await db.query('SELECT * FROM owners WHERE id = ?', [ownerId]);
         const createdOwner = formatOwner(rows[0]);
+
+        // 8. Trigger Brevo Email Dispatcher (Asynchronous plugin)
+        sendTurfAdminCredentialsEmail({
+            recipientEmail: normalizedEmail,
+            recipientName: fullName,
+            password: rawPassword,
+            businessName: businessName || '',
+            planName: req.body.planName || 'Standard Plan'
+        }).catch(err => console.error('[EMAIL DISPATCH ERROR]', err));
 
         return res.status(201).json({
             success: true,
@@ -207,31 +245,60 @@ const getOwners = async (req, res) => {
     try {
         const { status, search, page = 1, limit = 10 } = req.query;
 
-        let sql = 'SELECT * FROM owners WHERE 1=1';
+        let baseSql = `
+            FROM users u
+            LEFT JOIN owners o ON (o.user_id = u.id OR o.email = u.email)
+            WHERE (u.role IN ('OWNER', 'ADMIN') OR o.id IS NOT NULL)
+        `;
         const params = [];
 
         if (status && status !== 'ALL') {
-            sql += ' AND status = ?';
-            params.push(status);
+            baseSql += ' AND (o.status = ? OR u.status = ?)';
+            params.push(status, status);
         }
 
         if (search) {
-            sql += ' AND (full_name LIKE ? OR email LIKE ? OR mobile LIKE ? OR business_name LIKE ? OR city LIKE ?)';
+            baseSql += ' AND (o.full_name LIKE ? OR u.name LIKE ? OR o.email LIKE ? OR u.email LIKE ? OR o.mobile LIKE ? OR u.mobile LIKE ? OR o.business_name LIKE ? OR o.city LIKE ?)';
             const q = `%${search}%`;
-            params.push(q, q, q, q, q);
+            params.push(q, q, q, q, q, q, q, q);
         }
 
-        const [countRows] = await db.query('SELECT COUNT(*) as count FROM owners');
+        const [countRows] = await db.query(`SELECT COUNT(DISTINCT u.id) as count ${baseSql}`, params);
         const count = countRows[0]?.count || 0;
 
         const pageNum = Number(page) || 1;
         const limitNum = Number(limit) || 10;
         const offset = (pageNum - 1) * limitNum;
 
-        sql += ' ORDER BY created_at DESC LIMIT ? OFFSET ?';
+        const selectSql = `
+            SELECT 
+                COALESCE(o.id, u.id) as id,
+                COALESCE(o.full_name, u.name, 'Turf Owner') as full_name,
+                COALESCE(o.email, u.email) as email,
+                COALESCE(o.mobile, u.mobile, '') as mobile,
+                COALESCE(o.alternate_mobile, u.alternate_mobile, '') as alternate_mobile,
+                COALESCE(o.status, u.status, 'ACTIVE') as status,
+                COALESCE(o.business_name, CONCAT(u.name, ' Arena Network')) as business_name,
+                COALESCE(o.business_type, 'Sports & Recreation') as business_type,
+                o.gst_number,
+                o.pan_number,
+                COALESCE(o.country, 'India') as country,
+                o.state,
+                COALESCE(o.city, 'Indore') as city,
+                o.zip_code,
+                o.full_address,
+                COALESCE(o.profile_image, u.avatar, '') as profile_image,
+                o.created_by,
+                o.updated_by,
+                COALESCE(o.created_at, u.created_at) as created_at,
+                COALESCE(o.updated_at, u.updated_at) as updated_at
+            ${baseSql}
+            ORDER BY created_at DESC 
+            LIMIT ? OFFSET ?
+        `;
         params.push(limitNum, offset);
 
-        const [rows] = await db.query(sql, params);
+        const [rows] = await db.query(selectSql, params);
         const owners = rows.map(formatOwner);
 
         return res.status(200).json({
@@ -240,9 +307,9 @@ const getOwners = async (req, res) => {
                 owners,
                 pagination: {
                     total: count,
-                    page: Number(page),
-                    limit: Number(limit),
-                    totalPages: Math.ceil(count / Number(limit))
+                    page: pageNum,
+                    limit: limitNum,
+                    totalPages: Math.ceil(count / limitNum) || 1
                 }
             }
         });

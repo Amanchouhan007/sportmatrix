@@ -23,179 +23,13 @@ import { HiTrophy } from 'react-icons/hi2'
 import { useToast } from '../../components/ui/Toast'
 import { useAuth } from '../../context/AuthContext'
 import { addOrUpdateLeaderboardPlayer } from '../../services/leaderboardService'
+import { getUmpireProfile, updateUmpireProfile, getUmpireMatches, recordToss, updateMatchScore, completeMatch, updatePaymentStatus, registerGroundMatch } from '../../services/umpireService'
 
 // Initial Assigned Umpire Matches Data for Indore Turfs
-const INITIAL_MATCHES = [
-    {
-        id: 'MTC-IND-901',
-        title: 'Vijay Nagar Blasters vs Indore Super Kings',
-        turf: 'Spike Cricket Turf',
-        turfLocation: 'Bhawarkua, Indore',
-        date: 'Today, 13 Aug',
-        time: '6:00 PM – 7:00 PM',
-        slotId: '18:00',
-        matchType: 'Dare Match™ (Loser Pays All)',
-        modeBadge: '🔥 DARE MATCH',
-        hasUmpireRequested: true,
-        status: 'Live Now',
-        statusColor: 'emerald',
-        umpireFee: 300,
-        umpireName: 'Rajesh Sisodiya (LIC: UMP-IND-409)',
-        paymentStatus: 'Direct QR Pending',
-        teamA: {
-            name: 'Vijay Nagar Blasters',
-            captain: 'Rahul Sharma',
-            phone: '+91 98765 43210',
-            score: 74,
-            wickets: 3,
-            overs: '5.2'
-        },
-        teamB: {
-            name: 'Indore Super Kings',
-            captain: 'Aman Verma',
-            phone: '+91 98765 43211',
-            score: 0,
-            wickets: 0,
-            overs: '0.0'
-        },
-        target: 75,
-        currentOverBalls: ['1', '4', '0', '6', 'W', '1'],
-        striker: 'Rahul Sharma (42 off 19)',
-        nonStriker: 'Vikram Singh (18 off 12)',
-        bowler: 'Aman Verma (1/12 in 1.2 ov)',
-        multiplier: '1.5x Umpire Verified'
-    },
-    {
-        id: 'MTC-IND-902',
-        title: 'Palasia Panthers vs Annapurna Strikers',
-        turf: 'Royal Cricket Ground',
-        turfLocation: 'Vijay Nagar, Indore',
-        date: 'Today, 13 Aug',
-        time: '7:30 PM – 8:30 PM',
-        slotId: '19:30',
-        matchType: '50:50 Split Match',
-        modeBadge: '🤝 50:50 SPLIT',
-        hasUmpireRequested: true,
-        status: 'Upcoming',
-        statusColor: 'blue',
-        umpireFee: 300,
-        umpireName: 'Rajesh Sisodiya (LIC: UMP-IND-409)',
-        paymentStatus: 'QR Paid on Ground',
-        teamA: {
-            name: 'Palasia Panthers',
-            captain: 'Karan Singhal',
-            phone: '+91 98765 43212',
-            score: 0,
-            wickets: 0,
-            overs: '0.0'
-        },
-        teamB: {
-            name: 'Annapurna Strikers',
-            captain: 'Yash Rathore',
-            phone: '+91 98765 43213',
-            score: 0,
-            wickets: 0,
-            overs: '0.0'
-        },
-        target: 0,
-        currentOverBalls: [],
-        striker: 'Toss Pending',
-        nonStriker: '',
-        bowler: '',
-        multiplier: '1.5x Umpire Verified'
-    },
-    {
-        id: 'MTC-IND-903',
-        title: 'Super Corridor Titans vs Rau Royals',
-        turf: 'Indore Sports Complex',
-        turfLocation: 'LIG Colony, Indore',
-        date: 'Today, 13 Aug',
-        time: '9:00 PM – 10:00 PM',
-        slotId: '21:00',
-        matchType: 'Official Tournament Semi-Final',
-        modeBadge: '🏆 TOURNAMENT',
-        hasUmpireRequested: true,
-        status: 'Upcoming',
-        statusColor: 'purple',
-        umpireFee: 300,
-        umpireName: 'Rajesh Sisodiya (LIC: UMP-IND-409)',
-        paymentStatus: 'QR Paid on Ground',
-        teamA: {
-            name: 'Super Corridor Titans',
-            captain: 'Devendra Patel',
-            phone: '+91 98765 43214',
-            score: 0,
-            wickets: 0,
-            overs: '0.0'
-        },
-        teamB: {
-            name: 'Rau Royals',
-            captain: 'Sachin Narang',
-            phone: '+91 98765 43215',
-            score: 0,
-            wickets: 0,
-            overs: '0.0'
-        },
-        target: 0,
-        currentOverBalls: [],
-        striker: 'Awaiting Match Start',
-        nonStriker: '',
-        bowler: '',
-        multiplier: '2.0x Tournament Double'
-    }
-]
+const INITIAL_MATCHES = []
 
 // Past Match Record History (Konsa Match Kis Umpire Ne Conduct Kiya)
-const INITIAL_OFFICIATED_HISTORY = [
-    {
-        id: 'LOG-IND-441',
-        matchTitle: 'Vijay Nagar Blasters vs Palasia Panthers',
-        turf: 'Spike Cricket Turf (Indore)',
-        date: 'Yesterday, 12 Aug 2026',
-        time: '8:00 PM – 9:00 PM',
-        officiatedBy: 'Rajesh Sisodiya (LIC: UMP-IND-409)',
-        result: 'Vijay Nagar Blasters won by 3 runs (82/4 vs 79/6)',
-        mvp: 'Karan Malhotra (52* off 22 & 2 wkts)',
-        payment: '✓ ₹300 Direct QR Paid by Captain (PhonePe)',
-        verifiedTier: '⚖️ 1.5x Umpire Certified'
-    },
-    {
-        id: 'LOG-IND-438',
-        matchTitle: 'Indore Tigers vs Bhawarkua Super Kings',
-        turf: 'Royal Cricket Ground (Indore)',
-        date: '11 Aug 2026',
-        time: '6:00 PM – 7:00 PM',
-        officiatedBy: 'Rajesh Sisodiya (LIC: UMP-IND-409)',
-        result: 'Indore Tigers won by 18 runs (112/2 vs 94/8)',
-        mvp: 'Aman Verma (64 off 26)',
-        payment: '✓ ₹300 Direct QR Paid by Captain (GPay)',
-        verifiedTier: '⚖️ 1.5x Umpire Certified'
-    },
-    {
-        id: 'LOG-IND-432',
-        matchTitle: 'Dare Match™: Super Corridor vs Rau Royals',
-        turf: 'Indore Sports Complex',
-        date: '10 Aug 2026',
-        time: '9:00 PM – 10:00 PM',
-        officiatedBy: 'Rajesh Sisodiya (LIC: UMP-IND-409)',
-        result: 'Super Corridor won (65/5 vs 62/7) • Loser Paid Full Turf',
-        mvp: 'Rahul Sharma (3 wkts in final over)',
-        payment: '✓ ₹300 Cash Received on Ground',
-        verifiedTier: '⚖️ 1.5x Umpire Certified'
-    },
-    {
-        id: 'LOG-IND-429',
-        matchTitle: 'Champion Turf Box Cup - Match 4',
-        turf: 'Champion Turf Ground (Indore)',
-        date: '08 Aug 2026',
-        time: '7:00 PM – 8:00 PM',
-        officiatedBy: 'Vikram Gaud (LIC: UMP-IND-208)',
-        result: 'Annapurna Strikers won by 6 wickets (78/2 in 4.5 ov)',
-        mvp: 'Sachin Narang (38* off 14)',
-        payment: '✓ ₹300 QR Paid (Paytm)',
-        verifiedTier: '🏆 2.0x Tournament Double'
-    }
-]
+const INITIAL_OFFICIATED_HISTORY = []
 
 export default function UmpireDashboard() {
     const navigate = useNavigate()
@@ -280,16 +114,68 @@ export default function UmpireDashboard() {
     const [receiptModalMatch, setReceiptModalMatch] = useState(null)
 
     useEffect(() => {
-        try {
-            localStorage.setItem('umpire_matches_data', JSON.stringify(matches))
-            localStorage.setItem('umpire_match_history', JSON.stringify(matchHistory))
-            localStorage.setItem('umpire_upi_id', myUpiId)
-            localStorage.setItem('umpire_qr_mode', qrMode)
-            if (customQrImage) {
-                localStorage.setItem('umpire_custom_qr_img', customQrImage)
+        getUmpireProfile().then(prof => {
+            if (prof) {
+                if (prof.full_name) setMyUmpireName(prof.full_name);
+                if (prof.upi_id) setMyUpiId(prof.upi_id);
+                if (prof.on_duty_status !== undefined) setIsOnDuty(Boolean(prof.on_duty_status));
             }
-        } catch (e) {}
-    }, [matches, matchHistory, myUpiId, qrMode, customQrImage])
+        });
+
+        getUmpireMatches().then(list => {
+            if (Array.isArray(list)) {
+                const upcoming = list.filter(m => m.match_status !== 'COMPLETED').map(m => ({
+                    id: m.id || m.match_code,
+                    matchCode: m.match_code,
+                    title: m.match_title || `${m.team1_name} vs ${m.team2_name}`,
+                    turf: m.venue || 'Spike Cricket Turf',
+                    turfLocation: m.venue || 'Indore Turf',
+                    date: m.scheduled_time || 'Today',
+                    time: m.scheduled_time || 'Today',
+                    matchType: m.match_type || 'DARE MATCH',
+                    modeBadge: m.match_type ? `🔥 ${m.match_type.toUpperCase()}` : '🔥 DARE MATCH',
+                    hasUmpireRequested: true,
+                    status: m.match_status || 'Live Now',
+                    statusColor: m.match_status === 'COMPLETED' ? 'gray' : 'emerald',
+                    umpireFee: m.duty_fee || 300,
+                    paymentStatus: m.payment_status || 'Direct QR Pending',
+                    teamA: {
+                        name: m.team1_name || 'Team A',
+                        captain: m.team1_captain || 'Captain 1',
+                        phone: m.team1_phone || '',
+                        score: m.team1_score || 0,
+                        wickets: m.team1_wickets || 0,
+                        overs: m.team1_overs || '0.0'
+                    },
+                    teamB: {
+                        name: m.team2_name || 'Team B',
+                        captain: m.team2_captain || 'Captain 2',
+                        phone: m.team2_phone || '',
+                        score: m.team2_score || 0,
+                        wickets: m.team2_wickets || 0,
+                        overs: m.team2_overs || '0.0'
+                    },
+                    target: m.target || 0
+                }));
+
+                const completed = list.filter(m => m.match_status === 'COMPLETED').map(m => ({
+                    id: m.id || m.match_code,
+                    matchTitle: m.match_title || `${m.team1_name} vs ${m.team2_name}`,
+                    turf: m.venue || 'Indore Turf',
+                    date: m.scheduled_time || 'Recently',
+                    time: m.scheduled_time || 'Recently',
+                    officiatedBy: `${myUmpireName}`,
+                    result: `${m.winner_name || 'Winner Declared'} won`,
+                    mvp: 'Player Performance Score (1.5x)',
+                    payment: `✓ ₹${m.duty_fee || 300} Received`,
+                    verifiedTier: '⚖️ 1.5x Umpire Certified'
+                }));
+
+                setMatches(upcoming);
+                setMatchHistory(completed);
+            }
+        });
+    }, []);
 
     // Save Live Ball
     const handleAddBall = (eventStr) => {

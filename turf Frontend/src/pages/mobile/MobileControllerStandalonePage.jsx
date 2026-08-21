@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { Peer } from 'peerjs'
-import { 
-    FiRotateCcw, FiSmartphone, FiShield, FiAlertTriangle, FiCheckCircle, 
+import {
+    FiRotateCcw, FiSmartphone, FiShield, FiAlertTriangle, FiCheckCircle,
     FiWifi, FiXCircle, FiRefreshCw, FiZap, FiRadio
 } from 'react-icons/fi'
 
@@ -190,13 +190,13 @@ export default function MobileControllerStandalonePage() {
 
     const pushSyncEvent = async (type, actionType = null, payload = {}, deviceInfo = null) => {
         try {
-            const apiBase = window.location.hostname === 'localhost' ? 'http://localhost:5000' : window.location.origin
+            const apiBase = import.meta.env.VITE_SERVER_URL || (window.location.hostname === 'localhost' ? 'http://localhost:5005' : window.location.origin)
             await fetch(`${apiBase}/api/v1/mobile-sync/push`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ sessionId, type, actionType, payload, deviceInfo })
             })
-        } catch (e) {}
+        } catch (e) { }
     }
 
     const notifyDesktopConnection = (deviceInfo) => {
@@ -208,7 +208,7 @@ export default function MobileControllerStandalonePage() {
             const bc = new BroadcastChannel('mobile_ctrl_channel_' + sessionId)
             bc.postMessage({ type: 'MOBILE_CONNECTED', deviceInfo })
             bc.close()
-        } catch (e) {}
+        } catch (e) { }
     }
 
     const sendScoreAction = (actionType, payload = {}) => {
@@ -249,7 +249,7 @@ export default function MobileControllerStandalonePage() {
             const bc = new BroadcastChannel('mobile_ctrl_channel_' + sessionId)
             bc.postMessage({ type: 'MOBILE_SCORE_ACTION', actionType, payload })
             bc.close()
-        } catch (e) {}
+        } catch (e) { }
     }
 
     const crr = ((matchState.totalRuns / (matchState.overs + matchState.balls / 6 || 1))).toFixed(2)
@@ -320,7 +320,7 @@ export default function MobileControllerStandalonePage() {
     // ====================================================
     return (
         <div className="min-h-screen bg-[#0B0F17] text-white font-sans text-xs select-none relative overflow-x-hidden p-2">
-            
+
             {/* PORTRAIT OVERLAY PROMPT (STEP 17) */}
             {orientation === 'portrait' && portraitWarning && (
                 <div className="fixed inset-0 z-[99999] bg-slate-950/95 backdrop-blur-xl flex flex-col items-center justify-center p-6 text-center space-y-5 animate-in fade-in duration-300">
@@ -337,7 +337,7 @@ export default function MobileControllerStandalonePage() {
                         <button
                             onClick={() => {
                                 if (window.screen?.orientation?.lock) {
-                                    window.screen.orientation.lock('landscape').catch(() => {})
+                                    window.screen.orientation.lock('landscape').catch(() => { })
                                 }
                                 setPortraitWarning(false)
                             }}
@@ -368,11 +368,10 @@ export default function MobileControllerStandalonePage() {
                     </span>
                     <button
                         onClick={() => setOrientation(prev => prev === 'portrait' ? 'landscape' : 'portrait')}
-                        className={`px-2.5 py-1 rounded-lg text-[10px] font-black border transition-all cursor-pointer flex items-center gap-1 shadow-sm ${
-                            orientation === 'landscape'
+                        className={`px-2.5 py-1 rounded-lg text-[10px] font-black border transition-all cursor-pointer flex items-center gap-1 shadow-sm ${orientation === 'landscape'
                                 ? 'bg-indigo-600 hover:bg-indigo-500 text-white border-indigo-400'
                                 : 'bg-emerald-600 hover:bg-emerald-500 text-white border-emerald-400'
-                        }`}
+                            }`}
                     >
                         {orientation === 'landscape' ? '📱 Switch to Portrait' : '🔄 Switch to Landscape'}
                     </button>
@@ -382,7 +381,7 @@ export default function MobileControllerStandalonePage() {
                                 const bc = new BroadcastChannel('mobile_ctrl_channel_' + sessionId)
                                 bc.postMessage({ type: 'MOBILE_DISCONNECT' })
                                 bc.close()
-                            } catch (e) {}
+                            } catch (e) { }
                             setSessionState({ status: 'disconnected', deviceInfo: null })
                         }}
                         className="px-2.5 py-1 rounded-lg bg-rose-600 hover:bg-rose-500 text-white font-extrabold text-[10px] transition-all cursor-pointer shadow-md flex items-center gap-1"
@@ -433,13 +432,12 @@ export default function MobileControllerStandalonePage() {
                                 <button
                                     key={runs}
                                     onClick={() => sendScoreAction('RUN', { runs })}
-                                    className={`h-12 rounded-xl font-black text-xl transition-all active:scale-95 cursor-pointer flex items-center justify-center shadow-md ${
-                                        runs === 6
+                                    className={`h-12 rounded-xl font-black text-xl transition-all active:scale-95 cursor-pointer flex items-center justify-center shadow-md ${runs === 6
                                             ? 'bg-gradient-to-tr from-emerald-600 to-teal-500 text-slate-950 shadow-emerald-600/30'
                                             : runs === 4
-                                            ? 'bg-gradient-to-tr from-indigo-600 to-blue-500 text-white shadow-indigo-600/30'
-                                            : 'bg-slate-800 hover:bg-slate-700 text-white border border-slate-700'
-                                    }`}
+                                                ? 'bg-gradient-to-tr from-indigo-600 to-blue-500 text-white shadow-indigo-600/30'
+                                                : 'bg-slate-800 hover:bg-slate-700 text-white border border-slate-700'
+                                        }`}
                                 >
                                     {runs}
                                 </button>
@@ -492,7 +490,7 @@ export default function MobileControllerStandalonePage() {
                 /* 🔄 MAIN 3-COLUMN LANDSCAPE LAYOUT */
                 /* ==================================================== */
                 <div className="grid grid-cols-12 gap-2 items-start animate-in fade-in duration-200">
-                    
+
                     {/* LEFT PANEL (~28% / col-span-3) */}
                     <div className="col-span-12 md:col-span-3 space-y-2">
                         {/* HERO SCORE CARD */}
@@ -546,9 +544,8 @@ export default function MobileControllerStandalonePage() {
                                 {matchState.currentOverBalls.map((b, idx) => (
                                     <span
                                         key={idx}
-                                        className={`w-6 h-6 rounded-md flex items-center justify-center font-black text-xs ${
-                                            b.label === 'W' ? 'bg-rose-600 text-white' : b.label === '6' || b.label === '4' ? 'bg-emerald-500 text-slate-950' : 'bg-slate-800 text-slate-200'
-                                        }`}
+                                        className={`w-6 h-6 rounded-md flex items-center justify-center font-black text-xs ${b.label === 'W' ? 'bg-rose-600 text-white' : b.label === '6' || b.label === '4' ? 'bg-emerald-500 text-slate-950' : 'bg-slate-800 text-slate-200'
+                                            }`}
                                     >
                                         {b.label}
                                     </span>
@@ -559,7 +556,7 @@ export default function MobileControllerStandalonePage() {
 
                     {/* CENTER PANEL (~44% / col-span-5) */}
                     <div className="col-span-12 md:col-span-6 space-y-2">
-                        
+
                         {/* RUN CONTROLS GRID (0, 1, 2 / 3, 4, 6) */}
                         <div className="bg-[#121824] rounded-xl border border-slate-800 p-2 space-y-1 shadow-md">
                             <div className="text-[9px] font-black text-slate-400 uppercase">RUN SCORING CONTROLS</div>
@@ -568,13 +565,12 @@ export default function MobileControllerStandalonePage() {
                                     <button
                                         key={runs}
                                         onClick={() => sendScoreAction('RUN', { runs })}
-                                        className={`h-12 rounded-xl font-black text-xl transition-all active:scale-95 cursor-pointer flex items-center justify-center shadow-md ${
-                                            runs === 6
+                                        className={`h-12 rounded-xl font-black text-xl transition-all active:scale-95 cursor-pointer flex items-center justify-center shadow-md ${runs === 6
                                                 ? 'bg-gradient-to-tr from-emerald-600 to-teal-500 text-slate-950 shadow-emerald-600/30'
                                                 : runs === 4
-                                                ? 'bg-gradient-to-tr from-indigo-600 to-blue-500 text-white shadow-indigo-600/30'
-                                                : 'bg-slate-800 hover:bg-slate-700 text-white border border-slate-700'
-                                        }`}
+                                                    ? 'bg-gradient-to-tr from-indigo-600 to-blue-500 text-white shadow-indigo-600/30'
+                                                    : 'bg-slate-800 hover:bg-slate-700 text-white border border-slate-700'
+                                            }`}
                                     >
                                         {runs}
                                     </button>

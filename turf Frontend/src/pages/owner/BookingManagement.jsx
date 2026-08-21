@@ -7,8 +7,8 @@ import Card from '../../components/ui/Card'
 import { useToast } from '../../components/ui/Toast'
 import { useAuth } from '../../context/AuthContext'
 import CustomDatePicker from '../../components/ui/CustomDatePicker'
-import { 
-    HiTicket, HiCalendar, HiCurrencyRupee, HiSearch, HiCheckCircle, 
+import {
+    HiTicket, HiCalendar, HiCurrencyRupee, HiSearch, HiCheckCircle,
     HiBan, HiUser, HiChevronLeft, HiChevronRight, HiClock, HiLocationMarker,
     HiDocumentText, HiTrendingUp, HiX
 } from 'react-icons/hi'
@@ -41,7 +41,8 @@ export default function BookingManagement() {
 
     const fetchLiveBookings = async () => {
         try {
-            const summaryRes = await fetch('http://localhost:5000/api/v1/bookings/summary');
+            const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5005/api/v1';
+            const summaryRes = await fetch(`${API_URL}/bookings/summary`);
             const summaryData = await summaryRes.json();
             if (summaryData.success && summaryData.data) {
                 setSummary(summaryData.data);
@@ -52,7 +53,7 @@ export default function BookingManagement() {
             if (user?.email) queryParams.append('userEmail', user.email)
             if (user?.role) queryParams.append('role', user.role || 'OWNER')
 
-            const res = await fetch(`http://localhost:5000/api/v1/bookings/history?${queryParams.toString()}`);
+            const res = await fetch(`${API_URL}/bookings/history?${queryParams.toString()}`);
             const data = await res.json();
             let formatted = []
             if (data.success && Array.isArray(data.data) && data.data.length > 0) {
@@ -95,7 +96,7 @@ export default function BookingManagement() {
             // Merge with locally booked entries, scoped strictly to this turf / owner
             const localSaved = JSON.parse(localStorage.getItem('customer_bookings') || '[]');
             const isSuperAdmin = user?.role === 'SUPER_ADMIN';
-            
+
             // Filter local entries to this owner's turf
             const filteredLocal = localSaved.filter(l => {
                 if (isSuperAdmin) return true;
@@ -130,7 +131,7 @@ export default function BookingManagement() {
                 status: l.status || 'Confirmed',
                 notes: 'Advance paid online'
             }));
-            
+
             const combined = [...mappedLocal];
             formatted.forEach(f => {
                 if (!combined.some(c => c.id === f.id)) {
@@ -165,7 +166,8 @@ export default function BookingManagement() {
         }
         addToast({ title: 'Status Updated', message: `Booking status changed to ${newStatus}`, type: 'success' })
         try {
-            await fetch(`http://localhost:5000/api/v1/bookings/${id}/status`, {
+            const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5005/api/v1';
+            await fetch(`${API_URL}/bookings/${id}/status`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ status: newStatus })
@@ -234,7 +236,7 @@ export default function BookingManagement() {
     ]
 
     const timeSlots = [
-        '06:00 AM', '08:00 AM', '10:00 AM', '12:00 PM', 
+        '06:00 AM', '08:00 AM', '10:00 AM', '12:00 PM',
         '02:00 PM', '04:00 PM', '06:00 PM', '08:00 PM'
     ]
 
@@ -380,7 +382,7 @@ export default function BookingManagement() {
                                 </span>
                                 <h3 className="text-lg font-black text-surface-900 mt-1">{selectedBooking.id}</h3>
                             </div>
-                            <button 
+                            <button
                                 onClick={() => setSlideOverOpen(false)}
                                 className="p-2 rounded-xl hover:bg-surface-100 text-surface-500 cursor-pointer"
                             >
@@ -447,7 +449,7 @@ export default function BookingManagement() {
                         {/* Action Buttons */}
                         <div className="pt-4 border-t border-surface-150 space-y-2.5 mt-auto">
                             {selectedBooking.status === 'Pending' && (
-                                <Button 
+                                <Button
                                     onClick={() => handleUpdateStatus(selectedBooking.id, 'Confirmed')}
                                     className="w-full bg-emerald-600 hover:bg-emerald-700 cursor-pointer justify-center"
                                 >
@@ -455,7 +457,7 @@ export default function BookingManagement() {
                                 </Button>
                             )}
 
-                            <Button 
+                            <Button
                                 variant="secondary"
                                 onClick={() => handleReschedule(selectedBooking.id)}
                                 className="w-full cursor-pointer justify-center"
@@ -463,7 +465,7 @@ export default function BookingManagement() {
                                 Reschedule Slot
                             </Button>
 
-                            <Button 
+                            <Button
                                 variant="outline"
                                 onClick={() => handleViewInvoice(selectedBooking.id)}
                                 className="w-full cursor-pointer justify-center text-surface-700"
@@ -472,7 +474,7 @@ export default function BookingManagement() {
                             </Button>
 
                             {selectedBooking.status !== 'Cancelled' && (
-                                <Button 
+                                <Button
                                     variant="outline"
                                     onClick={() => handleUpdateStatus(selectedBooking.id, 'Cancelled')}
                                     className="w-full text-red-600 border-red-200 hover:bg-red-50 cursor-pointer justify-center"

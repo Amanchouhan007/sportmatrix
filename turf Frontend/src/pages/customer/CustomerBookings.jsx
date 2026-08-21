@@ -128,7 +128,7 @@ export default function CustomerBookings() {
                 if (user?.email) queryParams.append('userEmail', user.email)
                 if (user?.role) queryParams.append('role', user.role)
 
-                const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000/api/v1'
+                const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:5005/api/v1'
                 const res = await fetch(`${baseUrl}/bookings/history?${queryParams.toString()}`, {
                     headers: token ? { 'Authorization': `Bearer ${token}` } : {}
                 })

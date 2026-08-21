@@ -27,7 +27,8 @@ export default function CommissionManagement() {
 
     const fetchLiveCommissions = async () => {
         try {
-            const res = await fetch('http://localhost:5000/api/v1/ads/commissions');
+            const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5005/api/v1';
+            const res = await fetch(`${API_URL}/ads/commissions`);
             const data = await res.json();
             if (data.success) {
                 setCommissions(Array.isArray(data.data) ? data.data : []);
@@ -63,7 +64,8 @@ export default function CommissionManagement() {
         setCommissions(prev => prev.map(item => item.bookingId === id ? { ...item, paymentStatus: 'Paid' } : item))
         addToast({ message: `Commission for Booking ${id} marked as Paid!`, type: 'success' })
         try {
-            await fetch(`http://localhost:5000/api/v1/ads/commissions/${id}/pay`, { method: 'PATCH' });
+            const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5005/api/v1';
+            await fetch(`${API_URL}/ads/commissions/${id}/pay`, { method: 'PATCH' });
             fetchLiveCommissions();
         } catch (err) {
             console.error('Error marking commission paid:', err);
@@ -279,7 +281,7 @@ export default function CommissionManagement() {
                         <div className="grid grid-cols-2 gap-3 text-xs bg-surface-50/50 p-4 rounded-2xl border border-surface-100">
                             <div><span className="text-surface-500">Invoice No:</span> <span className="font-bold text-surface-900 block">{selectedInvoice.invoiceNo}</span></div>
                             <div>
-                                <span className="text-surface-500">Date & Time:</span> 
+                                <span className="text-surface-500">Date & Time:</span>
                                 <span className="font-bold text-surface-900 block flex items-center gap-1.5 mt-0.5">
                                     <span>📅 {selectedInvoice.date}</span>
                                     <span className="text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-lg border border-emerald-200 font-mono font-extrabold text-[11px]">⏰ {selectedInvoice.time || '10:45 AM'}</span>

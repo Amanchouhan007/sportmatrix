@@ -10,7 +10,9 @@ const getBranches = async (req, res) => {
         let sql = `
             SELECT b.*, 
                    COALESCE(o.full_name, u.name, 'Turf Owner') as owner_full_name,
-                   COALESCE(p.plan_name, 'Starter Plan') as plan_name
+                   COALESCE(p.plan_name, 'Starter Plan') as plan_name,
+                   COALESCE(p.monthly_price, 0) as plan_price,
+                   (SELECT COALESCE(SUM(amount), 0) FROM bookings WHERE branch_id = b.id AND status IN ('CONFIRMED', 'COMPLETED')) as booking_revenue
             FROM branches b
             LEFT JOIN owners o ON (b.owner_id = o.id OR b.owner_id = o.user_id)
             LEFT JOIN users u ON (b.owner_id = u.id)
@@ -42,44 +44,58 @@ const getBranches = async (req, res) => {
 
         const [rows] = await db.query(sql, params);
 
-        const formatted = rows.map(r => ({
-            id: r.id,
-            _id: r.id,
-            branchName: r.branch_name,
-            branchCode: r.branch_code,
-            description: r.description,
-            ownerId: {
-                _id: r.owner_id || 'own_001',
-                id: r.owner_id || 'own_001',
-                fullName: r.owner_full_name || 'Turf Owner'
-            },
-            subscriptionPlanId: {
-                _id: r.subscription_plan_id || 'plan_starter',
-                id: r.subscription_plan_id || 'plan_starter',
-                planName: r.plan_name || 'Starter Plan'
-            },
-            city: r.city || 'Indore',
-            zipCode: r.zip_code || '',
-            fullAddress: r.full_address || '',
-            email: r.email,
-            mobile: r.mobile,
-            pricePerHour: r.price_per_hour || 1000,
-            price: r.price_per_hour || 1000,
-            openingTime: r.opening_time || '06:00 AM',
-            closingTime: r.closing_time || '11:00 PM',
-            turfSize: r.turf_size || '5,000 Sq.Ft',
-            dimensions: r.turf_size || '5,000 Sq.Ft',
-            surfaceType: r.surface_type || 'TurfPro Synthetic Arena',
-            sports: r.sports ? (typeof r.sports === 'string' && r.sports.startsWith('[') ? JSON.parse(r.sports) : r.sports.split(',')) : ['Cricket', 'Football'],
-            amenities: r.amenities ? (typeof r.amenities === 'string' && r.amenities.startsWith('[') ? JSON.parse(r.amenities) : r.amenities.split(',')) : ['Floodlights', 'Parking', 'Washroom'],
-            discountOffer: r.discount_offer || '20% OFF FIRST MATCH',
-            couponCode: r.coupon_code || 'CRICKET20',
-            logo: r.logo || '',
-            images: r.images ? (typeof r.images === 'string' && r.images.startsWith('[') ? JSON.parse(r.images) : [r.images]) : [],
-            status: r.status || 'ACTIVE',
-            totalRevenue: r.total_revenue || 0,
-            createdAt: r.created_at
-        }));
+        const formatted = rows.map(r => {
+            const bookingRev = Number(r.booking_revenue || 0);
+            // Branch revenue = subscription plan monthly_price + actual customer booking revenue
+            // plan_price comes directly from subscription_plans table via JOIN (no hardcoded fallback needed)
+            const planPrice = Number(r.plan_price || 0);
+            const computedRevenue = planPrice + bookingRev;
+
+            return {
+                id: r.id,
+                _id: r.id,
+                branchName: r.branch_name,
+                branchCode: r.branch_code,
+                description: r.description,
+                ownerId: {
+                    _id: r.owner_id || 'own_001',
+                    id: r.owner_id || 'own_001',
+                    fullName: r.owner_full_name || 'Turf Owner'
+                },
+                subscriptionPlanId: {
+                    _id: r.subscription_plan_id || 'plan_starter',
+                    id: r.subscription_plan_id || 'plan_starter',
+                    planName: r.plan_name || 'Starter Plan',
+                    monthlyPrice: planPrice,
+                    monthly_price: planPrice
+                },
+                planPrice: planPrice,
+                plan_price: planPrice,
+                bookingRevenue: bookingRev,
+                booking_revenue: bookingRev,
+                city: r.city || 'Indore',
+                zipCode: r.zip_code || '',
+                fullAddress: r.full_address || '',
+                email: r.email,
+                mobile: r.mobile,
+                pricePerHour: r.price_per_hour || 1000,
+                price: r.price_per_hour || 1000,
+                openingTime: r.opening_time || '06:00 AM',
+                closingTime: r.closing_time || '11:00 PM',
+                turfSize: r.turf_size || '5,000 Sq.Ft',
+                dimensions: r.turf_size || '5,000 Sq.Ft',
+                surfaceType: r.surface_type || 'TurfPro Synthetic Arena',
+                sports: r.sports ? (typeof r.sports === 'string' && r.sports.startsWith('[') ? JSON.parse(r.sports) : r.sports.split(',')) : ['Cricket', 'Football'],
+                amenities: r.amenities ? (typeof r.amenities === 'string' && r.amenities.startsWith('[') ? JSON.parse(r.amenities) : r.amenities.split(',')) : ['Floodlights', 'Parking', 'Washroom'],
+                discountOffer: r.discount_offer || '20% OFF FIRST MATCH',
+                couponCode: r.coupon_code || 'CRICKET20',
+                logo: r.logo || '',
+                images: r.images ? (typeof r.images === 'string' && r.images.startsWith('[') ? JSON.parse(r.images) : [r.images]) : [],
+                status: r.status || 'ACTIVE',
+                totalRevenue: computedRevenue,
+                createdAt: r.created_at
+            };
+        });
 
         return res.status(200).json({
             success: true,
@@ -90,6 +106,19 @@ const getBranches = async (req, res) => {
                     page: Number(page),
                     limit: Number(limit),
                     pages: Math.ceil(count / Number(limit)) || 1
+                }
+            }
+        });
+
+        return res.status(200).json({
+            success: true,
+            data: {
+                branches: finalBranches,
+                pagination: {
+                    total: finalBranches.length,
+                    page: Number(page),
+                    limit: Number(limit),
+                    pages: 1
                 }
             }
         });
@@ -321,6 +350,20 @@ const createBranch = async (req, res) => {
             discountOffer || '20% OFF FIRST MATCH',
             couponCode || 'CRICKET20'
         ]);
+
+        // Auto-record subscription purchase entry for owner when branch is created
+        try {
+            const subId = `sub_${Date.now()}`;
+            const planPrice = planRows[0]?.monthly_price || 999;
+            await db.query(`
+                INSERT INTO owner_subscriptions (
+                    id, owner_id, plan_id, plan_name, amount, billing_cycle,
+                    status, payment_status, payment_method, transaction_id, start_date, end_date
+                ) VALUES (?, ?, ?, ?, ?, 'MONTHLY', 'ACTIVE', 'COMPLETED', 'ONLINE', ?, NOW(), DATE_ADD(NOW(), INTERVAL 1 MONTH))
+            `, [subId, validOwnerId, planId, planName, planPrice, `TXN_${Date.now()}`]);
+        } catch (subErr) {
+            console.warn('Branch subscription auto-creation note:', subErr.message);
+        }
 
         const newBranchObject = {
             id: branchId,

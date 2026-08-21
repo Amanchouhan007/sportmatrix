@@ -92,7 +92,15 @@ async function initializeDatabase() {
                 gst_number VARCHAR(50),
                 timezone VARCHAR(50) DEFAULT 'Asia/Kolkata',
                 currency VARCHAR(10) DEFAULT 'INR',
-                logo VARCHAR(255),
+                logo LONGTEXT,
+                images LONGTEXT,
+                price_per_hour INT DEFAULT 1000,
+                turf_size VARCHAR(100) DEFAULT '5,000 Sq.Ft',
+                surface_type VARCHAR(100) DEFAULT 'TurfPro Synthetic Arena',
+                sports TEXT,
+                amenities TEXT,
+                discount_offer VARCHAR(100) DEFAULT '20% OFF FIRST MATCH',
+                coupon_code VARCHAR(50) DEFAULT 'CRICKET20',
                 status ENUM('ACTIVE', 'INACTIVE', 'SUSPENDED') DEFAULT 'ACTIVE',
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 FOREIGN KEY (owner_id) REFERENCES users(id) ON DELETE SET NULL
@@ -197,6 +205,25 @@ async function initializeDatabase() {
             );
         `);
 
+        // Owner Subscriptions (Purchased Plans by Owners)
+        await connection.query(`
+            CREATE TABLE IF NOT EXISTS owner_subscriptions (
+                id VARCHAR(50) PRIMARY KEY,
+                owner_id VARCHAR(50) NOT NULL,
+                plan_id VARCHAR(50) NOT NULL,
+                plan_name VARCHAR(100) NOT NULL,
+                amount DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+                billing_cycle ENUM('MONTHLY', 'YEARLY') DEFAULT 'MONTHLY',
+                status ENUM('ACTIVE', 'EXPIRED', 'CANCELLED') DEFAULT 'ACTIVE',
+                payment_status ENUM('PENDING', 'COMPLETED', 'FAILED') DEFAULT 'COMPLETED',
+                payment_method VARCHAR(50) DEFAULT 'ONLINE',
+                transaction_id VARCHAR(100),
+                start_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                end_date TIMESTAMP NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+        `);
+
         // Payments (Billing & Invoices)
         await connection.query(`
             CREATE TABLE IF NOT EXISTS payments (
@@ -210,33 +237,6 @@ async function initializeDatabase() {
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 FOREIGN KEY (booking_id) REFERENCES bookings(id) ON DELETE SET NULL
             );
-        `);
-
-        await connection.query(`
-            INSERT IGNORE INTO payments (id, invoice_number, customer_name, amount, payment_method, status, created_at)
-            VALUES 
-            (101, 'BMT-9AUG-17105', 'Valued Player', 1500, 'UPI', 'COMPLETED', '2026-08-20 17:25:00'),
-            (102, 'BMT-9AUG-88286', 'Valued Player', 1500, 'UPI', 'COMPLETED', '2026-08-20 17:25:00'),
-            (103, 'BMT-9AUG-31297', 'Valued Player', 1500, 'UPI', 'COMPLETED', '2026-08-20 17:25:00'),
-            (104, 'BMT-9AUG-59025', 'Valued Player', 1100, 'UPI', 'COMPLETED', '2026-08-20 17:25:00'),
-            (105, 'BMT-9AUG-22777', 'Valued Player', 1500, 'UPI', 'COMPLETED', '2026-08-20 17:25:00'),
-            (106, 'BMT-9AUG-28067', 'Valued Player', 1500, 'UPI', 'COMPLETED', '2026-08-20 17:25:00'),
-            (107, 'BMT-9AUG-45967', 'Valued Player', 1500, 'UPI', 'COMPLETED', '2026-08-20 17:25:00'),
-            (108, 'BMT-9AUG-81215', 'Valued Player', 1500, 'UPI', 'COMPLETED', '2026-08-20 17:25:00'),
-            (109, 'BMT-9AUG-41312', 'Valued Player', 750, 'UPI', 'COMPLETED', '2026-08-20 17:25:00'),
-            (110, 'BMT-9AUG-32974', 'Valued Player', 750, 'UPI', 'COMPLETED', '2026-08-20 17:25:00'),
-            (111, 'BMT-9AUG-77857', 'Valued Player', 750, 'UPI', 'COMPLETED', '2026-08-20 17:25:00'),
-            (112, 'BMT-9AUG-97526', 'Valued Player', 250, 'UPI', 'COMPLETED', '2026-08-20 17:25:00'),
-            (113, 'BMT-12AUG-17358', 'Valued Player', 1500, 'UPI', 'COMPLETED', '2026-08-20 17:25:00'),
-            (114, 'BMT-9AUG-86604', 'Valued Player', 900, 'UPI', 'COMPLETED', '2026-08-20 17:25:00'),
-            (115, 'BMT-9AUG-97978', 'Valued Player', 750, 'UPI', 'FAILED', '2026-08-20 17:25:00'),
-            (116, 'BMT-9AUG-34713', 'Valued Player', 250, 'UPI', 'FAILED', '2026-08-20 17:25:00'),
-            (117, 'BMT-9AUG-90546', 'Valued Player', 250, 'UPI', 'FAILED', '2026-08-20 17:25:00'),
-            (118, 'BMT-9AUG-45078', 'Valued Player', 750, 'UPI', 'FAILED', '2026-08-20 17:25:00'),
-            (119, 'BK-001', 'Valued Player', 800, 'UPI', 'FAILED', '2026-08-20 17:25:00'),
-            (120, 'BK-002', 'Valued Player', 900, 'UPI', 'FAILED', '2026-08-20 17:25:00'),
-            (121, 'BK-003', 'Valued Player', 400, 'UPI', 'COMPLETED', '2026-08-20 17:25:00'),
-            (122, 'BK-004', 'Valued Player', 1200, 'UPI', 'FAILED', '2026-08-20 17:25:00');
         `);
 
         // Tournament Categories
@@ -581,6 +581,92 @@ async function initializeDatabase() {
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
         `);
 
+        // Player Leaderboard Table
+        await connection.query(`
+            CREATE TABLE IF NOT EXISTS player_leaderboard (
+                id VARCHAR(50) PRIMARY KEY,
+                name VARCHAR(100) NOT NULL,
+                avatar VARCHAR(50) DEFAULT '🏏',
+                team VARCHAR(100) DEFAULT 'Indore Team',
+                city VARCHAR(50) DEFAULT 'Indore',
+                sport VARCHAR(50) DEFAULT 'Cricket',
+                role VARCHAR(50) DEFAULT 'All-Rounder',
+                matches INT DEFAULT 0,
+                runs INT DEFAULT 0,
+                batting_avg FLOAT DEFAULT 0.0,
+                strike_rate FLOAT DEFAULT 0.0,
+                wickets INT DEFAULT 0,
+                economy FLOAT DEFAULT 0.0,
+                win_rate VARCHAR(20) DEFAULT '0%',
+                mvps INT DEFAULT 0,
+                highest_score VARCHAR(20) DEFAULT '0',
+                best_bowling VARCHAR(20) DEFAULT '0/0',
+                verification_tier VARCHAR(20) DEFAULT 'Tier 1',
+                tier_multiplier FLOAT DEFAULT 1.0,
+                trust_score INT DEFAULT 90,
+                badges JSON,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+        `);
+
+        // Umpire Profiles Table
+        await connection.query(`
+            CREATE TABLE IF NOT EXISTS umpire_profiles (
+                id VARCHAR(50) PRIMARY KEY,
+                user_id VARCHAR(50) UNIQUE,
+                full_name VARCHAR(100) NOT NULL,
+                license_no VARCHAR(50) DEFAULT 'UMP-IND-409',
+                certification_level VARCHAR(100) DEFAULT 'Level-2 Turf Certified',
+                officiating_grounds VARCHAR(255) DEFAULT 'Spike Turf & Royal Ground (Indore)',
+                upi_id VARCHAR(100) DEFAULT 'rajesh.umpire@okhdfcbank',
+                qr_mode VARCHAR(20) DEFAULT 'upi',
+                custom_qr_image LONGTEXT,
+                on_duty_status BOOLEAN DEFAULT TRUE,
+                match_fee INT DEFAULT 300,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+        `);
+
+        // Umpire Assigned Matches Table
+        await connection.query(`
+            CREATE TABLE IF NOT EXISTS umpire_matches (
+                id VARCHAR(50) PRIMARY KEY,
+                match_code VARCHAR(50) UNIQUE NOT NULL,
+                umpire_id VARCHAR(50),
+                tournament_id VARCHAR(50),
+                match_title VARCHAR(150) DEFAULT 'Live Duty Match',
+                match_type VARCHAR(50) DEFAULT 'DARE MATCH',
+                venue VARCHAR(150) NOT NULL,
+                scheduled_time VARCHAR(100) NOT NULL,
+                duty_fee INT DEFAULT 300,
+                payment_status ENUM('PENDING', 'RECEIVED', 'SPLIT_50_50') DEFAULT 'PENDING',
+                payment_mode VARCHAR(100) DEFAULT 'Direct UPI QR',
+                receipt_no VARCHAR(50),
+                team1_name VARCHAR(100) NOT NULL,
+                team1_captain VARCHAR(100),
+                team1_phone VARCHAR(20),
+                team1_score INT DEFAULT 0,
+                team1_wickets INT DEFAULT 0,
+                team1_overs VARCHAR(20) DEFAULT '0.0',
+                team2_name VARCHAR(100) NOT NULL,
+                team2_captain VARCHAR(100),
+                team2_phone VARCHAR(20),
+                team2_score INT DEFAULT 0,
+                team2_wickets INT DEFAULT 0,
+                team2_overs VARCHAR(20) DEFAULT '0.0',
+                target INT DEFAULT 0,
+                winner_name VARCHAR(100),
+                toss_winner VARCHAR(100),
+                toss_decision VARCHAR(50),
+                match_status ENUM('UPCOMING', 'LIVE', 'COMPLETED', 'CANCELLED') DEFAULT 'UPCOMING',
+                current_innings INT DEFAULT 1,
+                leaderboard_multiplier VARCHAR(20) DEFAULT '1.5x',
+                officiated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+        `);
+
         // Tournament Sponsors
         await connection.query(`
             CREATE TABLE IF NOT EXISTS tournament_sponsors (
@@ -746,6 +832,10 @@ async function initializeDatabase() {
                 INDEX idx_expires_at (expires_at)
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
         `);
+
+        try {
+            await connection.query(`ALTER TABLE slot_holds ADD COLUMN status ENUM('ACTIVE', 'CONVERTED', 'EXPIRED', 'RELEASED') DEFAULT 'ACTIVE'`);
+        } catch (mErr) { }
 
         await connection.query(`
             CREATE TABLE IF NOT EXISTS matches (
@@ -964,18 +1054,13 @@ async function initializeDatabase() {
             const hash123456 = await bcrypt.hash('123456', salt);
             const hash123 = await bcrypt.hash('123', salt);
 
-            // Users Seed
+            // Users Seed — Only Super Admin for clean dynamic production DB
             await connection.query(`
                 INSERT INTO users (id, name, email, password_hash, role, mobile, avatar, status) VALUES
-                ('usr_superadmin_01', 'Super Administrator', 'superadmin@gmail.com', '${hash123456}', 'SUPER_ADMIN', '+91 98765 43210', 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=200', 'ACTIVE'),
-                ('own_001', 'Rajesh Sharma (Turf Owner)', 'owner@gmail.com', '${hash123456}', 'OWNER', '+91 98765 12345', 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=200', 'ACTIVE'),
-                ('usr_staff_01', 'Amit Kumar (Arena Staff)', 'staff@gmail.com', '${hash123}', 'STAFF', '+91 98765 67890', 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&q=80&w=200', 'ACTIVE'),
-                ('usr_customer_01', 'Rohan Verma', 'customer@gmail.com', '${hash123}', 'CUSTOMER', '+91 98765 99999', 'https://images.unsplash.com/photo-1492562080023-ab3db95bfbce?auto=format&fit=crop&q=80&w=200', 'ACTIVE');
+                ('usr_superadmin_01', 'Super Administrator', 'superadmin@gmail.com', '${hash123456}', 'SUPER_ADMIN', '+91 98765 43210', 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=200', 'ACTIVE');
             `);
 
-            console.log('Mock branches seed skipped to keep database strictly clean for dynamic user data.');
-
-            console.log('Seeding mock sports...');
+            console.log('Seeding master sports...');
             await connection.query(`
                 INSERT INTO sports (id, name, icon, category, default_slot_duration) VALUES
                 ('sp_master_01', 'Football', '⚽', 'Team Sport', 60),
@@ -985,23 +1070,7 @@ async function initializeDatabase() {
                 ('sp_master_05', 'Tennis', '🎾', 'Racquet', 60);
             `);
 
-            console.log('Seeding mock branch sports...');
-            await connection.query(`
-                INSERT INTO branch_sports (id, branch_id, sport_id, regular_price, peak_price, total_courts, opening_time, closing_time, slot_duration, status) VALUES
-                ('bs_001', 'br_001', 'sp_master_01', 1200, 1600, 2, '06:00:00', '23:00:00', 60, 'ACTIVE'),
-                ('bs_002', 'br_001', 'sp_master_02', 1000, 1400, 1, '07:00:00', '22:00:00', 60, 'ACTIVE'),
-                ('bs_003', 'br_001', 'sp_master_03', 600, 900, 2, '06:00:00', '22:00:00', 60, 'ACTIVE'),
-                ('bs_004', 'br_001', 'sp_master_04', 1000, 1400, 1, '07:00:00', '21:00:00', 60, 'ACTIVE');
-            `);
-
-            console.log('Seeding mock holidays...');
-            await connection.query(`
-                INSERT INTO holidays (id, branch_id, title, holiday_date, reason, is_full_day) VALUES
-                ('hol_001', 'br_001', 'Holi National Holiday', '2026-03-25', 'Public Holiday', 1),
-                ('hol_002', 'br_001', 'Turf Turf Maintenance', '2026-04-10', 'Pitch Relaying', 1);
-            `);
-
-            console.log('Database initialization completed cleanly for real production data.');
+            console.log('Database initialization completed cleanly for real dynamic data.');
         } else {
             console.log('Database already initialized. Skipping setup.');
         }

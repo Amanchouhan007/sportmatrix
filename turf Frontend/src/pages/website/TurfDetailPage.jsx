@@ -273,7 +273,8 @@ export default function TurfDetailPage() {
             const controller = new AbortController();
             const timeoutId = setTimeout(() => controller.abort(), 800);
             try {
-                const res = await fetch(`http://localhost:5000/api/v1/turfs/${activeTurf.id}`, { signal: controller.signal });
+                const apiBase = import.meta.env.VITE_API_URL || 'http://localhost:5005/api/v1';
+                const res = await fetch(`${apiBase}/turfs/${activeTurf.id}`, { signal: controller.signal });
                 clearTimeout(timeoutId);
                 const data = await res.json();
                 if (data.success && data.data && data.data.media) {
@@ -316,7 +317,8 @@ export default function TurfDetailPage() {
             localStorage.setItem(`turf_media_${activeTurf.id}`, JSON.stringify(updatedMedia));
         } catch (e) { }
         try {
-            await fetch(`http://localhost:5000/api/v1/turfs/${activeTurf.id}/media`, {
+            const apiBase = import.meta.env.VITE_API_URL || 'http://localhost:5005/api/v1';
+            await fetch(`${apiBase}/turfs/${activeTurf.id}/media`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ media: updatedMedia })
@@ -345,7 +347,8 @@ export default function TurfDetailPage() {
             if (itemToDelete?.url && itemToDelete.url.includes('/uploads/')) {
                 const filename = itemToDelete.url.split('/uploads/').pop();
                 try {
-                    await fetch(`http://localhost:5000/api/v1/upload/${filename}`, {
+                    const apiBase = import.meta.env.VITE_API_URL || 'http://localhost:5005/api/v1';
+                    await fetch(`${apiBase}/upload/${filename}`, {
                         method: 'DELETE'
                     });
                 } catch (e) {
@@ -603,7 +606,8 @@ export default function TurfDetailPage() {
 
         try {
             // 1. Create Match & 5-minute Slot Hold in MySQL
-            const createRes = await fetch('http://localhost:5000/api/v1/match-payments/create', {
+            const apiBase = import.meta.env.VITE_API_URL || 'http://localhost:5005/api/v1';
+            const createRes = await fetch(`${apiBase}/match-payments/create`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -627,7 +631,7 @@ export default function TurfDetailPage() {
 
             if (createData.success && createData.data?.matchId) {
                 // 2. Verify Payment & Generate Token
-                const verifyRes = await fetch('http://localhost:5000/api/v1/match-payments/verify', {
+                const verifyRes = await fetch(`${apiBase}/match-payments/verify`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({

@@ -39,7 +39,8 @@ export default function LoginPage() {
             setForm(prev => ({
                 ...prev,
                 email: location.state.email || '',
-                role: location.state.role || 'customer'
+                password: location.state.password || prev.password,
+                role: location.state.role || 'owner'
             }));
         }
     }, [location.state]);

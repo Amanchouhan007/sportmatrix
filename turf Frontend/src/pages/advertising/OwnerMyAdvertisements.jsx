@@ -14,84 +14,7 @@ import {
 } from 'react-icons/fi'
 import { HiMegaphone } from 'react-icons/hi2'
 
-const INITIAL_OWNER_ADS = [
-    {
-        id: 'AD-1001',
-        name: 'Champions Night Drive Promo',
-        type: 'Guaranteed Booking',
-        status: 'Active',
-        icon: '🏏',
-        views: 14200,
-        clicks: 3600,
-        bookings: 64,
-        revenue: '₹1,28,000',
-        commissionPaid: '₹15,360',
-        ctr: '11.3%',
-        roi: '240%',
-        cpa: '₹82',
-        budgetSpent: 4000,
-        budgetTotal: 5000,
-        startDate: '01 Aug 2026',
-        endDate: '31 Aug 2026'
-    },
-    {
-        id: 'AD-1002',
-        name: 'Weekend Monsoon 25% Off',
-        type: 'Discount Offer',
-        status: 'Active',
-        icon: '🌧️',
-        views: 8900,
-        clicks: 1850,
-        bookings: 42,
-        revenue: '₹75,600',
-        commissionPaid: '₹7,560',
-        ctr: '9.8%',
-        roi: '210%',
-        cpa: '₹95',
-        budgetSpent: 3200,
-        budgetTotal: 4000,
-        startDate: '05 Aug 2026',
-        endDate: '20 Aug 2026'
-    },
-    {
-        id: 'AD-1003',
-        name: 'Homepage Banner Exposure',
-        type: 'Impression Ad',
-        status: 'Pending',
-        icon: '⚽',
-        views: 3400,
-        clicks: 410,
-        bookings: 18,
-        revenue: '₹32,400',
-        commissionPaid: '₹4,860',
-        ctr: '8.4%',
-        roi: '180%',
-        cpa: '₹110',
-        budgetSpent: 1500,
-        budgetTotal: 3000,
-        startDate: '10 Aug 2026',
-        endDate: '25 Aug 2026'
-    },
-    {
-        id: 'AD-1004',
-        name: 'Early Morning Slot Boost',
-        type: 'Discount Offer',
-        status: 'Expired',
-        icon: '🌅',
-        views: 12100,
-        clicks: 980,
-        bookings: 35,
-        revenue: '₹49,000',
-        commissionPaid: '₹3,920',
-        ctr: '7.2%',
-        roi: '165%',
-        cpa: '₹125',
-        budgetSpent: 2500,
-        budgetTotal: 2500,
-        startDate: '01 Jul 2026',
-        endDate: '31 Jul 2026'
-    }
-]
+const INITIAL_OWNER_ADS = []
 
 export default function OwnerMyAdvertisements() {
     const navigate = useNavigate()
@@ -99,7 +22,7 @@ export default function OwnerMyAdvertisements() {
     // Derive base path dynamically so SuperAdmin (/super-admin/ads), Staff (/staff/ads) & Owner (/admin/ads) work correctly
     const basePath = location.pathname.startsWith('/super-admin') ? '/super-admin' : location.pathname.startsWith('/staff') ? '/staff' : '/admin'
     const { addToast } = useToast()
-    const [ads, setAds] = useState(INITIAL_OWNER_ADS)
+    const [ads, setAds] = useState([])
     const [viewMode, setViewMode] = useState('card') // 'card' | 'table'
     const [search, setSearch] = useState('')
     const [statusFilter, setStatusFilter] = useState('ALL')
@@ -109,20 +32,22 @@ export default function OwnerMyAdvertisements() {
     useEffect(() => {
         const fetchLiveAds = async () => {
             try {
-                const res = await fetch('http://localhost:5000/api/v1/ads');
+                const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5005/api/v1';
+                const res = await fetch(`${API_URL}/ads`);
                 if (!res.ok) throw new Error('Network response was not ok');
                 const data = await res.json();
-                if (data.success && Array.isArray(data.data) && data.data.length > 0) {
-                    setAds(data.data);
+                if (data.success && Array.isArray(data.data)) {
+                    const demoAdIds = ['ad_101', 'ad_102', 'ad_103'];
+                    setAds(data.data.filter(a => !demoAdIds.includes(a.id) && !demoAdIds.includes(a._id)));
                 } else {
-                    console.warn('Backend returned empty or invalid data, using mock ads');
-                    setAds(INITIAL_OWNER_ADS);
+                    setAds([]);
                 }
             } catch (err) {
-                console.error('Error fetching live ad campaigns, falling back to mock data:', err);
-                setAds(INITIAL_OWNER_ADS);
+                console.warn('Backend GET /ads failed:', err.message);
+                setAds([]);
             }
         };
+
         fetchLiveAds();
     }, []);
 
@@ -264,17 +189,15 @@ export default function OwnerMyAdvertisements() {
                         <div className="flex items-center gap-0.5 bg-surface-100 p-0.5 rounded-xl border border-surface-200/80 shrink-0">
                             <button
                                 onClick={() => setViewMode('card')}
-                                className={`flex items-center gap-1 px-2 py-1 rounded-lg text-[11px] font-bold transition-all cursor-pointer ${
-                                    viewMode === 'card' ? 'bg-emerald-600 text-white shadow-xs' : 'text-surface-600 hover:text-surface-900'
-                                }`}
+                                className={`flex items-center gap-1 px-2 py-1 rounded-lg text-[11px] font-bold transition-all cursor-pointer ${viewMode === 'card' ? 'bg-emerald-600 text-white shadow-xs' : 'text-surface-600 hover:text-surface-900'
+                                    }`}
                             >
                                 <FiGrid className="w-3 h-3" /> Cards
                             </button>
                             <button
                                 onClick={() => setViewMode('table')}
-                                className={`flex items-center gap-1 px-2 py-1 rounded-lg text-[11px] font-bold transition-all cursor-pointer ${
-                                    viewMode === 'table' ? 'bg-emerald-600 text-white shadow-xs' : 'text-surface-600 hover:text-surface-900'
-                                }`}
+                                className={`flex items-center gap-1 px-2 py-1 rounded-lg text-[11px] font-bold transition-all cursor-pointer ${viewMode === 'table' ? 'bg-emerald-600 text-white shadow-xs' : 'text-surface-600 hover:text-surface-900'
+                                    }`}
                             >
                                 <FiList className="w-3 h-3" /> Table
                             </button>
@@ -310,15 +233,15 @@ export default function OwnerMyAdvertisements() {
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                     {filteredAds.map((ad) => {
                         // Top Color Accent Strip based on Ad Type
-                        const topAccentColor = 
+                        const topAccentColor =
                             ad.type === 'Guaranteed Booking' ? 'bg-emerald-500' :
-                            ad.type === 'Discount Offer' ? 'bg-purple-500' : 'bg-amber-500'
+                                ad.type === 'Discount Offer' ? 'bg-purple-500' : 'bg-amber-500'
 
                         // Type Badge Gradient Styling
-                        const typeBadgeStyle = 
+                        const typeBadgeStyle =
                             ad.type === 'Guaranteed Booking' ? 'bg-emerald-50 text-emerald-700 border-emerald-200/80' :
-                            ad.type === 'Discount Offer' ? 'bg-purple-50 text-purple-700 border-purple-200/80' :
-                            'bg-amber-50 text-amber-700 border-amber-200/80'
+                                ad.type === 'Discount Offer' ? 'bg-purple-50 text-purple-700 border-purple-200/80' :
+                                    'bg-amber-50 text-amber-700 border-amber-200/80'
 
                         const budgetPercent = Math.min(100, Math.round((ad.budgetSpent / ad.budgetTotal) * 100))
 

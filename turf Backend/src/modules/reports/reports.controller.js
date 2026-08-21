@@ -5,14 +5,26 @@ const db = require('../../config/db');
  */
 const getOverviewReport = async (req, res) => {
     try {
-        // Revenue calculations
+        // Revenue calculations (Booking Payments + Subscription Plan Revenue)
         const [revenueRes] = await db.query(`SELECT COALESCE(SUM(amount), 0) as total FROM payments WHERE status = 'COMPLETED'`);
         const [monthlyRevRes] = await db.query(`SELECT COALESCE(SUM(amount), 0) as total FROM payments WHERE status = 'COMPLETED' AND MONTH(created_at) = MONTH(CURRENT_DATE()) AND YEAR(created_at) = YEAR(CURRENT_DATE())`);
         const [yearlyRevRes] = await db.query(`SELECT COALESCE(SUM(amount), 0) as total FROM payments WHERE status = 'COMPLETED' AND YEAR(created_at) = YEAR(CURRENT_DATE())`);
-        
-        const totalRevenue = Number(revenueRes[0]?.total || 0);
-        const monthlyRevenue = Number(monthlyRevRes[0]?.total || 0);
-        const yearlyRevenue = Number(yearlyRevRes[0]?.total || 0);
+
+        let subPlanRev = 0;
+        try {
+            const [branchPlanRes] = await db.query(`
+                SELECT COALESCE(SUM(sp.monthly_price), 0) as total
+                FROM branches b
+                LEFT JOIN subscription_plans sp ON (b.subscription_plan_id = sp.id OR LOWER(b.subscription_plan_id) = LOWER(sp.plan_name))
+                WHERE b.status = 'ACTIVE'
+            `);
+            const [ownerSubRes] = await db.query(`SELECT COALESCE(SUM(amount), 0) as total FROM owner_subscriptions WHERE payment_status = 'COMPLETED'`);
+            subPlanRev = Math.max(Number(branchPlanRes[0]?.total || 0), Number(ownerSubRes[0]?.total || 0));
+        } catch (e) {}
+
+        const totalRevenue = Number(revenueRes[0]?.total || 0) + subPlanRev;
+        const monthlyRevenue = Number(monthlyRevRes[0]?.total || 0) + subPlanRev;
+        const yearlyRevenue = Number(yearlyRevRes[0]?.total || 0) + subPlanRev;
 
         // Bookings calculations
         const [totalBookingsRes] = await db.query(`SELECT COUNT(*) as total FROM bookings`);

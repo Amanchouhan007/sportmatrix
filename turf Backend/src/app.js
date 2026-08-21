@@ -123,6 +123,10 @@ app.use('/api/v1/staff', staffRouter);
 const teamsRouter = require('./modules/teams/teams.routes');
 app.use('/api/v1/teams', teamsRouter);
 
+// Umpire Routes registration
+const umpireRouter = require('./modules/umpire/umpire.routes');
+app.use('/api/v1/umpire', umpireRouter);
+
 // Start Background Expiry & Reconciliation Worker
 const MatchExpiryService = require('./services/matchExpiry.service');
 const MatchReconciliationService = require('./services/matchReconciliation.service');

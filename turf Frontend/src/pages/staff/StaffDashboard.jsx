@@ -7,16 +7,10 @@ import Modal from '../../components/ui/Modal'
 import CustomDatePicker from '../../components/ui/CustomDatePicker'
 import api from '../../services/api'
 
-// Initial data for today's bookings fallback
-const initialBookings = [
-    { id: 'BK-001', customer: 'Rahul K.', sport: 'Cricket', time: '10:00 AM', court: 'Turf A', amount: 800, status: 'Confirmed', date: '2026-08-14' },
-    { id: 'BK-002', customer: 'Priya S.', sport: 'Football', time: '11:30 AM', court: 'Turf B', amount: 900, status: 'Pending', date: '2026-08-14' },
-    { id: 'BK-003', customer: 'Arjun M.', sport: 'Football', time: '02:00 PM', court: 'Court 1', amount: 400, status: 'Confirmed', date: '2026-08-14' },
-    { id: 'BK-004', customer: 'Walk-in', sport: 'Cricket', time: '04:30 PM', court: 'Turf A', amount: 1200, status: 'Pending', date: '2026-08-14' },
-]
+const initialBookings = []
 
 export default function StaffDashboard() {
-    const [bookings, setBookings] = useState(initialBookings)
+    const [bookings, setBookings] = useState([])
     const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0])
     const [selectedBooking, setSelectedBooking] = useState(null)
     const [isViewOpen, setIsViewOpen] = useState(false)
@@ -30,16 +24,21 @@ export default function StaffDashboard() {
                         id: b.paymentId || b.id,
                         customer: b.user || b.customer || 'Valued Player',
                         sport: b.type === 'BOOKING' ? 'Cricket' : 'Sports',
-                        time: '05:25 PM',
-                        court: 'Court A',
-                        amount: b.amount || 1200,
+                        time: b.time || '05:25 PM',
+                        court: b.court || 'Main Court',
+                        amount: b.amount || 0,
                         status: b.status === 'CONFIRMED' || b.status === 'COMPLETED' ? 'Confirmed' : 'Pending',
-                        date: b.date ? b.date.split('T')[0] : '2026-08-20'
+                        date: b.date ? b.date.split('T')[0] : 'Today'
                     }))
                     setBookings(mapped)
+                } else {
+                    setBookings([])
                 }
             })
-            .catch(e => console.warn('StaffDashboard API fetch note:', e.message))
+            .catch(e => {
+                console.warn('StaffDashboard API fetch note:', e.message);
+                setBookings([]);
+            })
     }, [])
 
     // Calculate dynamic stats

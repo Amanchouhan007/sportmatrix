@@ -6,7 +6,9 @@ const {
     updatePlan,
     deletePlan,
     toggleStatus,
-    togglePopular
+    togglePopular,
+    purchaseSubscription,
+    getSubscriptionPurchases
 } = require('./subscriptions.controller');
 
 const {
@@ -18,6 +20,12 @@ const router = express.Router();
 
 // List all plans
 router.get('/', getAllPlans);
+
+// Purchase a subscription plan (Creates owner_subscription purchase record)
+router.post('/buy', purchaseSubscription);
+
+// Get all subscription purchases
+router.get('/purchases', getSubscriptionPurchases);
 
 // Get single plan by ID
 router.get('/:id', getPlanById);

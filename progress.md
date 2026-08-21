@@ -44,7 +44,7 @@ SportMatrix is a comprehensive turf arena booking, facility management, and team
 ---
 
 ### 4. 🗄️ Backend Database Integration & State Sync
-- **Transactional MySQL Booking API:** Connects with `POST http://localhost:5000/api/v1/bookings` to persist reservations in the `bookings` table.
+- **Transactional MySQL Booking API:** Connects with `POST http://localhost:5005/api/v1/bookings` to persist reservations in the `bookings` table.
 - **Client Persistence:** Synchronizes booking records in local storage (`customer_bookings`), ensuring confirmed matches instantly appear on the **Customer Dashboard** (`/customer/bookings`).
 - **Confirmation Screen (Step 4):** Displays match confirmation badge, venue summary, breakdown of captain vs opponent shares, Booking ID, and matchup cards (`[A] Ready` vs `[B] Pending`).
 

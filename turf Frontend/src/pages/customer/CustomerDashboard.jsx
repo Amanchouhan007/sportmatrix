@@ -12,7 +12,7 @@ export default function CustomerDashboard() {
     const navigate = useNavigate()
     const DEFAULT_DEMO = []
 
-    const [stats, setStats] = useState({ activeTournaments: 4, activeTeams: 2, matchesPlayed: 14 })
+    const [stats, setStats] = useState({ activeTournaments: 0, activeTeams: 0, matchesPlayed: 0 })
     const [myBookings, setMyBookings] = useState([])
 
     useEffect(() => {
@@ -21,17 +21,17 @@ export default function CustomerDashboard() {
                 const tRes = await getPublicTournaments()
                 const teamRes = await getTeams()
 
-                let activeTournaments = 4
-                if (tRes?.success && Array.isArray(tRes.data) && tRes.data.length > 0) {
-                    activeTournaments = tRes.data.filter(t => ['Approved', 'Active'].includes(t.status)).length || 4
+                let activeTournaments = 0
+                if (tRes?.success && Array.isArray(tRes.data)) {
+                    activeTournaments = tRes.data.filter(t => ['Approved', 'Active'].includes(t.status)).length
                 }
 
-                let activeTeams = 2
-                if (teamRes?.success && Array.isArray(teamRes.data) && teamRes.data.length > 0) {
+                let activeTeams = 0
+                if (teamRes?.success && Array.isArray(teamRes.data)) {
                     activeTeams = teamRes.data.length
                 }
 
-                setStats({ activeTournaments, activeTeams, matchesPlayed: 14 })
+                setStats({ activeTournaments, activeTeams, matchesPlayed: 0 })
             } catch (err) {
                 console.error("Failed to load tournament dashboard stats", err)
             }

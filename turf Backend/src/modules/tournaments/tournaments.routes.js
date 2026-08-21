@@ -19,6 +19,7 @@ const {
     getFixtures,
     updateMatchScore,
     getLeaderboard,
+    getGlobalLeaderboard,
     getSponsors,
     createSponsor,
     updateSponsor,
@@ -38,6 +39,7 @@ const router = express.Router();
 // Publicly readable endpoints (Customers, Public visitors)
 router.get('/matches/all', getAllTournamentMatches);
 router.post('/matches/save-score', saveLiveMatchScore);
+router.get('/leaderboard/global', getGlobalLeaderboard);
 router.get('/', getTournaments);
 router.get('/categories', getCategories);
 router.get('/sponsors', getSponsors);

@@ -7,17 +7,13 @@ import Input from '../../components/ui/Input'
 import ConfirmDialog from '../../components/ui/ConfirmDialog'
 import { useToast } from '../../components/ui/Toast'
 
-const initialDisputes = [
-    { id: 'DSP-001', user: 'Priya Sharma', type: 'Escrow', amount: '2000', reason: 'Player did not show up', status: 'Open', date: 'Mar 1, 2026', notes: '' },
-    { id: 'DSP-002', user: 'Arjun Mehta', type: 'Refund', amount: '800', reason: 'Booking cancelled by venue', status: 'In Review', date: 'Feb 28, 2026', notes: '' },
-    { id: 'DSP-003', user: 'Sneha Reddy', type: 'Escrow', amount: '3000', reason: 'Match not conducted', status: 'Resolved', date: 'Feb 25, 2026', notes: 'Refund processed to wallet' },
-]
+const initialDisputes = []
 
 export default function Disputes() {
     const { addToast } = useToast()
     const [disputes, setDisputes] = useState(() => {
         const saved = localStorage.getItem('sa_disputes')
-        return saved ? JSON.parse(saved) : initialDisputes
+        return saved ? JSON.parse(saved) : []
     })
 
     const [isModalOpen, setIsModalOpen] = useState(false)

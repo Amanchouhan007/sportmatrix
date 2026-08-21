@@ -5,6 +5,7 @@ const { optionalToken } = require('../../middleware/auth.middleware');
 const router = express.Router();
 router.use(optionalToken);
 
+router.get('/', getTickets);
 router.get('/tickets', getTickets);
 router.post('/tickets', createTicket);
 router.put('/tickets/:id', updateTicketStatus);
