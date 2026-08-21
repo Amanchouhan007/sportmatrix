@@ -5,24 +5,6 @@ import TurfSearchBar from '../../components/TurfSearchBar'
 import TurfCard from '../../components/TurfCard'
 import CustomSelect from '../../components/ui/CustomSelect'
 
-const allTurfs = [
-    { id: 1, name: 'SportZone Arena', location: 'Andheri West, Mumbai', city: 'Mumbai', sport: 'Cricket', sports: ['Cricket'], rating: 4.8, reviews: 124, price: 1200, amenities: ['Floodlights', 'Parking', 'Washroom', 'Drinking Water'], image: '/images/turf1.png' },
-    { id: 2, name: 'Champion Cricket Ground', location: 'Koramangala, Bangalore', city: 'Bangalore', sport: 'Cricket', sports: ['Cricket'], rating: 4.9, reviews: 324, price: 1500, amenities: ['Floodlights', 'Seating', 'Drinking Water'], image: '/images/turf2.png' },
-    { id: 3, name: 'GameVault Center', location: 'Koramangala, Bangalore', city: 'Bangalore', sport: 'Cricket', sports: ['Cricket'], rating: 4.9, reviews: 203, price: 1200, amenities: ['Floodlights', 'Parking', 'Washroom', 'Seating', 'Drinking Water'], image: '/images/turf3.png' },
-    { id: 4, name: 'ProKick Stadium', location: 'Indiranagar, Bangalore', city: 'Bangalore', sport: 'Cricket', sports: ['Cricket'], rating: 4.7, reviews: 156, price: 1400, amenities: ['Floodlights', 'Parking', 'Washroom'], image: '/images/turf4.png' },
-    { id: 5, name: 'ProPlay Arena', location: 'Vashi, Navi Mumbai', city: 'Mumbai', sport: 'Cricket', sports: ['Cricket'], rating: 4.5, reviews: 84, price: 1000, amenities: ['Floodlights', 'Parking'], image: '/images/turf4.png' },
-    { id: 6, name: 'Royal Cricket Ground', location: 'Vijay Nagar, Indore', city: 'Indore', sport: 'Cricket', sports: ['Cricket'], rating: 4.7, reviews: 110, price: 1000, amenities: ['Floodlights', 'Parking', 'Drinking Water'], image: '/images/turf5.png' },
-    { id: 7, name: 'DunkZone', location: 'Bandra, Mumbai', city: 'Mumbai', sport: 'Cricket', sports: ['Cricket'], rating: 4.3, reviews: 48, price: 750, amenities: ['Floodlights', 'Parking'], image: '/images/turf2.png' },
-    { id: 8, name: 'PixelArena', location: 'HSR Layout, Bangalore', city: 'Bangalore', sport: 'Cricket', sports: ['Cricket'], rating: 4.8, reviews: 178, price: 1500, amenities: ['Floodlights', 'Parking', 'Washroom', 'Seating', 'Drinking Water', 'AC'], image: '/images/turf6.png' },
-    { id: 9, name: 'Skyline Turf Arena', location: 'Powai, Mumbai', city: 'Mumbai', sport: 'Cricket', sports: ['Cricket'], rating: 4.6, reviews: 92, price: 1400, amenities: ['Floodlights', 'Washroom'], image: '/images/turf6.png' },
-    { id: 10, name: 'StrikeZone Cricket', location: 'Noida, Delhi', city: 'Delhi', sport: 'Cricket', sports: ['Cricket'], rating: 4.6, reviews: 92, price: 850, amenities: ['Floodlights', 'Parking', 'Washroom', 'Drinking Water'], image: '/images/turf7.png' },
-    { id: 11, name: 'Master Blaster Cricket', location: 'Saket, Delhi', city: 'Delhi', sport: 'Cricket', sports: ['Cricket'], rating: 4.8, reviews: 115, price: 1100, amenities: ['Floodlights', 'Equipment'], image: '/images/turf7.png' },
-    { id: 12, name: 'Pune Turf Arena', location: 'Kothrud, Pune', city: 'Pune', sport: 'Cricket', sports: ['Cricket'], rating: 4.5, reviews: 67, price: 1000, amenities: ['Floodlights', 'Parking', 'Washroom', 'Seating'], image: '/images/turf2.png' },
-    { id: 13, name: 'Spike Turf Arena', location: 'Bhawarkua, Indore', city: 'Indore', sport: 'Cricket', sports: ['Cricket'], rating: 4.6, reviews: 52, price: 500, amenities: ['Floodlights', 'Parking', 'Washroom'], image: '/images/turf1.png' },
-    { id: 14, name: 'Indore Sports Complex', location: 'LIG Colony, Indore', city: 'Indore', sport: 'Cricket', sports: ['Cricket'], rating: 4.9, reviews: 120, price: 1200, amenities: ['Floodlights', 'Parking', 'Seating', 'Washroom', 'AC'], image: '/images/turf6.png' },
-    { id: 15, name: 'Rajiv Gandhi Stadium Turf', location: 'Navlakha, Indore', city: 'Indore', sport: 'Cricket', sports: ['Cricket'], rating: 4.5, reviews: 88, price: 700, amenities: ['Floodlights', 'Parking', 'Seating', 'Drinking Water'], image: '/images/turf4.png' },
-]
-
 const sportSlugs = { cricket: 'Cricket' }
 const allAmenities = ['Floodlights', 'Parking', 'Washroom', 'Drinking Water', 'Seating', 'AC']
 
@@ -42,6 +24,36 @@ export default function AllTurfsPage() {
     const [availableToday, setAvailableToday] = useState(searchParams.get('available') === 'true')
     const [sortBy, setSortBy] = useState('rating')
     const [drawerOpen, setDrawerOpen] = useState(false)
+    const [turfList, setTurfList] = useState([])
+
+    // Load real-time database branches from REST API & purge demo hardcoded data
+    useEffect(() => {
+        const fetchRealBranches = async () => {
+            try {
+                const res = await fetch('http://localhost:5000/api/v1/branches')
+                const data = await res.json()
+                if (data.success && data.data && Array.isArray(data.data.branches)) {
+                    const mapped = data.data.branches.map((b, idx) => ({
+                        id: b.id || b._id || `br_${idx + 1}`,
+                        name: b.branchName || 'Sports Arena',
+                        location: b.fullAddress || `${(b.city || 'Indore').toUpperCase()} Turf Complex`,
+                        city: (b.city || 'Indore').charAt(0).toUpperCase() + (b.city || 'Indore').slice(1),
+                        sport: (Array.isArray(b.sports) && b.sports[0]) ? b.sports[0] : 'Cricket',
+                        sports: Array.isArray(b.sports) ? b.sports : ['Cricket', 'Football'],
+                        rating: 4.9,
+                        reviews: 120,
+                        price: Number(b.pricePerHour || b.price || 1200),
+                        amenities: Array.isArray(b.amenities) ? b.amenities : ['Floodlights', 'Parking', 'Washroom'],
+                        image: `/images/turf${(idx % 6) + 1}.png`
+                    }))
+                    setTurfList(mapped)
+                }
+            } catch (err) {
+                console.warn('Real branch fetch note:', err.message)
+            }
+        }
+        fetchRealBranches()
+    }, [])
 
     /* detect mobile/tablet (≤ 767px) — overlay mode */
     const [isMobile, setIsMobile] = useState(window.innerWidth < 768)
@@ -75,7 +87,7 @@ export default function AllTurfsPage() {
         if (avail === 'true') setAvailableToday(true)
     }, [searchParams])
 
-    const filtered = allTurfs
+    const filtered = turfList
         .filter(t => {
             if (city && !t.city.toLowerCase().includes(city.toLowerCase())) return false
             if (sport && !t.sports.some(s => s.toLowerCase().includes(sport.toLowerCase())) && !t.sport.toLowerCase().includes(sport.toLowerCase())) return false
