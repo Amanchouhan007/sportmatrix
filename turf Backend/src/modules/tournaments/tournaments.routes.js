@@ -26,7 +26,9 @@ const {
     getTournamentPayments,
     getTournamentReports,
     getSettings,
-    updateSettings
+    updateSettings,
+    getAllTournamentMatches,
+    saveLiveMatchScore
 } = require('./tournaments.controller');
 
 const { verifyToken, optionalToken, authorizeRoles } = require('../../middleware/auth.middleware');
@@ -34,6 +36,8 @@ const { verifyToken, optionalToken, authorizeRoles } = require('../../middleware
 const router = express.Router();
 
 // Publicly readable endpoints (Customers, Public visitors)
+router.get('/matches/all', getAllTournamentMatches);
+router.post('/matches/save-score', saveLiveMatchScore);
 router.get('/', getTournaments);
 router.get('/categories', getCategories);
 router.get('/sponsors', getSponsors);

@@ -18,19 +18,19 @@ export default function Card({
   ...props
 }) {
   const variantClasses = {
-    glass: 'glass-card',
-    solid: 'bg-white border border-surface-200',
-    dark: 'glass-dark',
-    gradient: 'bg-gradient-to-br from-primary-500 to-accent-500 text-white',
-  }[variant];
+    glass: 'bg-white rounded-2xl border-2 border-slate-200/90 shadow-sm transition-all duration-200',
+    solid: 'bg-white rounded-2xl border-2 border-slate-200/90 shadow-sm transition-all duration-200',
+    dark: 'bg-slate-950 text-white rounded-2xl border border-slate-800 shadow-md',
+    gradient: 'bg-gradient-to-br from-emerald-600 to-green-700 text-white rounded-2xl border border-emerald-500 shadow-md',
+  }[variant] || 'bg-white rounded-2xl border-2 border-slate-200/90 shadow-sm transition-all duration-200';
 
-  const hoverClasses = hover ? 'hover-lift hover:shadow-glow-emerald transition-all duration-300' : '';
-  const paddingClass = padding ? 'p-6' : '';
+  const hoverClasses = hover ? 'hover:border-emerald-400 hover:shadow-md hover:-translate-y-0.5' : '';
+  const paddingClass = padding ? 'p-5 sm:p-6' : '';
 
   return (
     <div
+      className={`${variantClasses} ${hoverClasses} ${paddingClass} ${className}`}
       {...props}
-      className={`rounded-2xl ${variantClasses} ${hoverClasses} ${paddingClass} ${className}`}
     >
       {children}
     </div>

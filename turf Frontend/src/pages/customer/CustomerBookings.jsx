@@ -8,86 +8,66 @@ import Input from '../../components/ui/Input'
 import ConfirmDialog from '../../components/ui/ConfirmDialog'
 import { useAuth } from '../../context/AuthContext'
 
-const DEFAULT_DEMO_BOOKINGS = [
-    {
-        id: 'BK-701',
-        venue: 'Champions Turf Arena (Vijay Nagar)',
-        court: 'Turf Pitch A',
-        sport: 'Cricket 🏏',
-        date: '2026-08-15',
-        time: '06:00 PM - 07:00 PM',
-        amount: '₹1,200',
-        status: 'Confirmed',
-        paymentMethod: 'UPI (Paid)',
-        createdOn: '2026-08-10'
-    },
-    {
-        id: 'BK-702',
-        venue: 'SkyLine Sports Arena (Palasia)',
-        court: 'Main Arena',
-        sport: 'Football ⚽',
-        date: '2026-08-18',
-        time: '07:00 PM - 08:00 PM',
-        amount: '₹1,400',
-        status: 'Confirmed',
-        paymentMethod: 'Card (Paid)',
-        createdOn: '2026-08-11'
-    },
-    {
-        id: 'BK-703',
-        venue: 'Velocity Sports Hub (Rau)',
-        court: 'Box Cricket Ground 1',
-        sport: 'Box Cricket 🏏',
-        date: '2026-08-22',
-        time: '08:00 PM - 09:00 PM',
-        amount: '₹1,000',
-        status: 'Pending',
-        paymentMethod: 'Cash at Venue',
-        createdOn: '2026-08-12'
-    }
-]
+const DEFAULT_DEMO_BOOKINGS = []
 
 export default function CustomerBookings() {
     const { user } = useAuth()
     const navigate = useNavigate()
 
-    // Helper: Filter bookings strictly belonging to the currently logged in customer
+    // Helper: Load bookings for currently logged-in user or active guest session
     const getMyBookingsFromStorage = () => {
         try {
-            const raw = localStorage.getItem('customer_bookings')
-            if (!raw) return DEFAULT_DEMO_BOOKINGS
-            const parsed = JSON.parse(raw)
-            if (!Array.isArray(parsed) || parsed.length === 0) return DEFAULT_DEMO_BOOKINGS
+            const rawCustomer = localStorage.getItem('customer_bookings')
+            const rawGuest = localStorage.getItem('guest_bookings')
+            
+            const customerList = rawCustomer ? JSON.parse(rawCustomer) : []
+            const guestList = rawGuest ? JSON.parse(rawGuest) : []
+
+            const allBookings = [...(Array.isArray(customerList) ? customerList : []), ...(Array.isArray(guestList) ? guestList : [])]
+
+            if (allBookings.length === 0) return []
             
             const currentEmail = (user?.email || '').toLowerCase()
             const currentUserId = user?.id || ''
             const currentPhone = user?.phone || user?.mobile || ''
             const cleanCurrentPhone = currentPhone.replace(/\D/g, '').slice(-10)
 
-            const matched = parsed.filter(b => {
-                // Strictly exclude unauthenticated guest bookings from logged-in customer account
-                if (b.isGuest || b.userEmail === 'guest@sportmatrix.com') return false;
+            // If user is logged in, filter their specific bookings
+            if (user && (currentEmail || currentUserId || cleanCurrentPhone)) {
+                const matched = allBookings.filter(b => {
+                    const bEmail = (b.userEmail || b.email || '').toLowerCase()
+                    const bUserId = b.userId || b.id || ''
+                    const bPhone = b.customerPhone || b.phone || ''
+                    const cleanBPhone = bPhone.replace(/\D/g, '').slice(-10)
 
-                const bEmail = (b.userEmail || '').toLowerCase()
-                const bUserId = b.userId || ''
-                const bPhone = b.customerPhone || b.phone || ''
-                const cleanBPhone = bPhone.replace(/\D/g, '').slice(-10)
+                    if (currentEmail && bEmail && bEmail === currentEmail) return true
+                    if (currentUserId && bUserId && bUserId === currentUserId) return true
+                    if (cleanCurrentPhone && cleanBPhone && cleanBPhone === cleanCurrentPhone) return true
+                    return false
+                })
 
-                // Check exact email match
-                if (currentEmail && bEmail && bEmail === currentEmail) return true
-                // Check exact user ID match
-                if (currentUserId && bUserId && bUserId === currentUserId) return true
-                // Check sanitized phone match (e.g. "+91 98765 43210" matches "9876543210")
-                if (cleanCurrentPhone && cleanBPhone && cleanBPhone === cleanCurrentPhone) return true
-                // Check guest email match derived from phone (e.g. "9876543210@guest.com")
-                if (cleanCurrentPhone && bEmail && bEmail.includes(cleanCurrentPhone)) return true
+                // If user matched items, return them. If user just made a booking, return recent items
+                if (matched.length > 0) return matched
+            }
 
-                return false
-            })
+            // For Guest users or newly created bookings, return all recent bookings from this session
+            const formattedList = allBookings.map(b => ({
+                id: b.id || b.bookingId || `BK-${Math.floor(1000 + Math.random() * 9000)}`,
+                venue: b.venue || b.turfName || 'SportMatrix Turf Arena',
+                court: b.court || b.pitch || 'Main Court',
+                sport: b.sport || 'Cricket 🏏',
+                date: b.date || b.slotDate || new Date().toISOString().split('T')[0],
+                time: b.time || b.slotTime || '06:00 PM - 07:00 PM',
+                amount: `₹${Number(b.amount || b.rent || 1000).toLocaleString('en-IN')}`,
+                status: b.status || 'Confirmed',
+                paymentMethod: b.paymentMode || b.paymentMethod || 'UPI (Paid)',
+                createdOn: b.createdAt ? b.createdAt.split('T')[0] : new Date().toISOString().split('T')[0]
+            }))
 
-            return matched.length > 0 ? matched : DEFAULT_DEMO_BOOKINGS
+            return formattedList
         } catch (e) {
-            return DEFAULT_DEMO_BOOKINGS
+            console.error('Error fetching bookings from storage:', e)
+            return []
         }
     }
 
@@ -262,9 +242,26 @@ export default function CustomerBookings() {
     }, [bookingsList, filterStatus, searchQuery])
 
     const columns = useMemo(() => [
-        { key: 'id', label: 'ID' }, 
-        { key: 'sport', label: 'Sport' }, 
-        { key: 'venue', label: 'Venue' },
+        { 
+            key: 'id', 
+            label: 'Booking ID',
+            render: v => <span className="font-mono font-black text-slate-900 bg-slate-100 border border-slate-250 px-2 py-0.5 rounded-md text-xs">{v}</span>
+        }, 
+        { 
+            key: 'sport', 
+            label: 'Sport',
+            render: v => <span className="font-extrabold text-slate-900 flex items-center gap-1">{v}</span>
+        }, 
+        { 
+            key: 'venue', 
+            label: 'Venue & Pitch',
+            render: (v, row) => (
+                <div>
+                    <span className="font-extrabold text-slate-900 block text-xs">{v}</span>
+                    <span className="text-[10px] text-slate-400 font-semibold">{row.court || 'Main Arena'}</span>
+                </div>
+            )
+        },
         { 
             key: 'paymentMode', 
             label: 'Payment Mode',
@@ -277,9 +274,21 @@ export default function CustomerBookings() {
                 return <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black bg-emerald-100 text-emerald-900 border border-emerald-300">💳 FULL PAID</span>
             }
         },
-        { key: 'date', label: 'Date' }, 
-        { key: 'time', label: 'Time' }, 
-        { key: 'amount', label: 'Amount' },
+        { 
+            key: 'date', 
+            label: 'Slot Date',
+            render: v => <span className="font-mono font-semibold text-slate-700 text-xs">📅 {v}</span>
+        }, 
+        { 
+            key: 'time', 
+            label: 'Time Slot',
+            render: v => <span className="font-mono text-[11px] font-bold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded-lg border border-emerald-200">⏰ {v}</span>
+        }, 
+        { 
+            key: 'amount', 
+            label: 'Total Amount',
+            render: v => <span className="font-mono font-black text-emerald-700 text-sm">{v}</span>
+        },
         { 
             key: 'status', 
             label: 'Status', 
@@ -293,7 +302,7 @@ export default function CustomerBookings() {
             key: 'actions',
             label: 'Actions',
             render: (_, row) => (
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1.5">
                     {(row.status === 'Confirmed' || row.status === 'Pending') && (
                         <>
                             <Button size="sm" variant="secondary" onClick={() => handleRescheduleClick(row)}>

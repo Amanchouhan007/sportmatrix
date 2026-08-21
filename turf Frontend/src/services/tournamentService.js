@@ -4,89 +4,8 @@ import api from './api';
  * Tournament Service — API Layer for Customer-Facing Tournament Features
  */
 
-// Fallback Public Tournaments list
-export const fallbackPublicTournaments = [
-    {
-        id: 't_001',
-        title: 'Premier Cricket Championship 2026',
-        name: 'Premier Cricket Championship 2026',
-        banner: '/images/turf2.png',
-        description: 'Indore annual cricket master tournament under floodlights.',
-        sport: 'Cricket',
-        category: 'Open Category',
-        location: 'Vijay Nagar, Indore',
-        date: '15 Aug - 20 Aug 2026',
-        maxTeams: 16,
-        max_teams: 16,
-        registrations: 12,
-        prize: '50,000',
-        prizePool: '50,000',
-        prize_pool: '50,000',
-        entryFee: '500',
-        entry_fee: '500',
-        status: 'Approved'
-    },
-    {
-        id: 't_002',
-        title: 'Super 5 Football Cup',
-        name: 'Super 5 Football Cup',
-        banner: '/images/turf1.png',
-        description: '5-a-side football tournament with exciting prize pool.',
-        sport: 'Football',
-        category: 'Pro Division',
-        location: 'Bhawarkua, Indore',
-        date: '22 Aug - 25 Aug 2026',
-        maxTeams: 8,
-        max_teams: 8,
-        registrations: 5,
-        prize: '30,000',
-        prizePool: '30,000',
-        prize_pool: '30,000',
-        entryFee: '800',
-        entry_fee: '800',
-        status: 'Approved'
-    },
-    {
-        id: 't_003',
-        title: 'Mumbai Turf Football League',
-        name: 'Mumbai Turf Football League',
-        banner: '/images/turf3.png',
-        description: 'High stakes 7-a-side football championship in Mumbai.',
-        sport: 'Football',
-        category: 'Open Division',
-        location: 'Andheri West, Mumbai',
-        date: '01 Sep - 05 Sep 2026',
-        maxTeams: 12,
-        max_teams: 12,
-        registrations: 9,
-        prize: '75,000',
-        prizePool: '75,000',
-        prize_pool: '75,000',
-        entryFee: '1000',
-        entry_fee: '1000',
-        status: 'Approved'
-    },
-    {
-        id: 't_004',
-        title: 'Bangalore T20 Cricket Open',
-        name: 'Bangalore T20 Cricket Open',
-        banner: '/images/turf4.png',
-        description: 'Pro floodlight T20 cricket tournament in Bangalore.',
-        sport: 'Cricket',
-        category: 'Open Division',
-        location: 'Koramangala, Bangalore',
-        date: '10 Sep - 12 Sep 2026',
-        maxTeams: 16,
-        max_teams: 16,
-        registrations: 12,
-        prize: '40,000',
-        prizePool: '40,000',
-        prize_pool: '40,000',
-        entryFee: '600',
-        entry_fee: '600',
-        status: 'Approved'
-    }
-];
+// Public Tournaments list
+export const fallbackPublicTournaments = [];
 
 /**
  * Fetch public tournaments list (only Approved/Active/Completed)
@@ -95,16 +14,16 @@ export const getPublicTournaments = async (filters = {}, config = {}) => {
     try {
         const params = { role: 'CUSTOMER', ...filters };
         const response = await api.get('/tournaments', { params, ...config });
-        if (response.data && response.data.success && Array.isArray(response.data.data) && response.data.data.length > 0) {
+        if (response.data && response.data.success) {
             return response.data;
         }
     } catch (error) {
-        console.warn('Backend GET /tournaments unavailable, using fallback list:', error.message);
+        console.warn('Backend GET /tournaments unavailable or empty:', error.message);
     }
 
     return {
         success: true,
-        data: fallbackPublicTournaments
+        data: []
     };
 };
 
@@ -118,13 +37,13 @@ export const getTournamentById = async (id) => {
             return response.data;
         }
     } catch (error) {
-        console.warn(`Backend GET /tournaments/${id} failed, using fallback:`, error.message);
+        console.warn(`Backend GET /tournaments/${id} failed:`, error.message);
     }
 
-    const found = fallbackPublicTournaments.find(t => t.id === id) || fallbackPublicTournaments[0];
     return {
-        success: true,
-        data: found
+        success: false,
+        data: null,
+        message: 'Tournament not found.'
     };
 };
 

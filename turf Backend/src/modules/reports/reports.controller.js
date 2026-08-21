@@ -255,15 +255,28 @@ const getTopOwnersReport = async (req, res) => {
  */
 const getTopBranchesReport = async (req, res) => {
     try {
-        const topBranches = [
-            { _id: 'br_001', id: 'br_001', branchName: 'Green Arena Football Turf', city: 'Mumbai', ownerName: 'Rajesh Sharma', bookingsCount: 1450, bookings: 1450, revenue: 1740000 },
-            { _id: 'br_002', id: 'br_002', branchName: 'Champion Cricket Academy', city: 'Bangalore', ownerName: 'Suresh Patil', bookingsCount: 1280, bookings: 1280, revenue: 1920000 },
-            { _id: 'br_003', id: 'br_003', branchName: 'Royal Cricket Ground', city: 'Indore', ownerName: 'Vikramaditya Roy', bookingsCount: 950, bookings: 950, revenue: 570000 }
-        ];
+        const [rows] = await db.query(`
+            SELECT 
+                br.id as _id,
+                br.id as id,
+                br.branch_name as branchName,
+                br.city as city,
+                COALESCE(o.full_name, 'Turf Owner') as ownerName,
+                COUNT(b.id) as bookingsCount,
+                COUNT(b.id) as bookings,
+                COALESCE(SUM(b.amount), 0) as revenue
+            FROM branches br
+            LEFT JOIN owners o ON br.owner_id = o.id
+            LEFT JOIN slots s ON s.branch_id = br.id
+            LEFT JOIN bookings b ON b.slot_id = s.id
+            GROUP BY br.id, br.branch_name, br.city, o.full_name
+            ORDER BY revenue DESC
+            LIMIT 5
+        `);
 
         return res.status(200).json({
             success: true,
-            data: topBranches
+            data: rows || []
         });
     } catch (error) {
         console.error('Top branches error:', error);

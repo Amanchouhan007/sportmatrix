@@ -2,6 +2,7 @@ import { useNavigate } from 'react-router-dom'
 import { useEffect, useRef, useState, useCallback } from 'react'
 import { getPublicTournaments } from '../../services/tournamentService'
 import { getAllPlans } from '../../services/subscriptionPlanService'
+import { getBranches } from '../../services/branchService'
 import { HiLocationMarker, HiStar, HiArrowRight, HiShieldCheck, HiOutlineDesktopComputer, HiOutlineCalendar, HiOutlineShieldCheck } from 'react-icons/hi'
 import { IoFootball, IoGameController, IoTrophyOutline, IoPeopleOutline, IoLocationOutline } from 'react-icons/io5'
 import { GiCricketBat, GiAxeInLog } from 'react-icons/gi'
@@ -33,27 +34,11 @@ const sports = [
 ]
 
 const allTurfs = [
-    // 🌟 INDORE PRIMARY VENUES FIRST
-    { id: 13, name: 'Spike Cricket Turf', location: 'Bhawarkua, Indore', city: 'Indore', rating: 4.6, price: 500, dimensions: '90 × 45 ft', image: '/images/turf1.png', sports: ['Cricket'], amenities: ['Floodlights', 'Parking', 'Washroom'], lat: 22.6953, lng: 75.8690 },
-    { id: 6, name: 'Royal Cricket Ground', location: 'Vijay Nagar, Indore', city: 'Indore', rating: 4.7, price: 1000, dimensions: '110 × 55 ft', image: '/images/turf5.png', sports: ['Cricket'], amenities: ['Floodlights', 'Parking', 'Drinking Water'], lat: 22.7533, lng: 75.8937 },
-    { id: 14, name: 'Indore Sports Complex', location: 'LIG Colony, Indore', city: 'Indore', rating: 4.9, price: 1200, dimensions: '120 × 60 ft', image: '/images/turf3.png', sports: ['Cricket'], amenities: ['Floodlights', 'Parking', 'Seating', 'Washroom', 'AC'], lat: 22.7380, lng: 75.8916 },
-    { id: 15, name: 'Rajiv Gandhi Stadium Turf', location: 'Navlakha, Indore', city: 'Indore', rating: 4.5, price: 700, dimensions: '95 × 50 ft', image: '/images/turf4.png', sports: ['Cricket'], amenities: ['Floodlights', 'Parking', 'Seating', 'Drinking Water'], lat: 22.7000, lng: 75.8752 },
-    { id: 16, name: 'Champion Turf Ground', location: 'Palasia, Indore', city: 'Indore', rating: 4.8, price: 900, dimensions: '100 × 50 ft', image: '/images/turf2.png', sports: ['Cricket'], amenities: ['Floodlights', 'Parking', 'Seating', 'Drinking Water'], lat: 22.7244, lng: 75.8839 },
-    { id: 17, name: 'Skyline Sports Hub', location: 'Super Corridor, Indore', city: 'Indore', rating: 4.7, price: 1100, dimensions: '110 × 50 ft', image: '/images/turf6.png', sports: ['Cricket'], amenities: ['Floodlights', 'Parking', 'Washroom', 'Cafeteria'], lat: 22.7650, lng: 75.8300 },
-    { id: 18, name: 'GreenField Arena', location: 'Rau, Indore', city: 'Indore', rating: 4.6, price: 800, dimensions: '100 × 48 ft', image: '/images/turf7.png', sports: ['Cricket'], amenities: ['Floodlights', 'Parking', 'Seating'], lat: 22.6300, lng: 75.8050 },
-    { id: 19, name: 'Annapurna Sports Arena', location: 'Annapurna, Indore', city: 'Indore', rating: 4.5, price: 650, dimensions: '90 × 45 ft', image: '/images/turf1.png', sports: ['Cricket'], amenities: ['Floodlights', 'Parking', 'Washroom'], lat: 22.7010, lng: 75.8320 },
-    // Other cities
-    { id: 1, name: 'SportZone Arena', location: 'Andheri West, Mumbai', city: 'Mumbai', rating: 4.8, price: 1200, dimensions: '100 × 50 ft', image: '/images/turf1.png', sports: ['Cricket'], amenities: ['Floodlights', 'Parking', 'Washroom'], lat: 19.1136, lng: 72.8697 },
-    { id: 2, name: 'Champion Cricket Ground', location: 'Koramangala, Bangalore', city: 'Bangalore', rating: 4.9, price: 1500, dimensions: '120 × 60 ft', image: '/images/turf2.png', sports: ['Cricket'], amenities: ['Floodlights', 'Seating', 'Drinking Water'], lat: 12.9352, lng: 77.6245 },
-    { id: 3, name: 'GameVault Cricket Center', location: 'Koramangala, Bangalore', city: 'Bangalore', rating: 4.9, price: 1200, dimensions: '110 × 55 ft', image: '/images/turf3.png', sports: ['Cricket'], amenities: ['Floodlights', 'Parking', 'Seating', 'Washroom'], lat: 12.9698, lng: 77.7500 },
-    { id: 4, name: 'ProKick Cricket Turf', location: 'Indiranagar, Bangalore', city: 'Bangalore', rating: 4.7, price: 1400, dimensions: '105 × 50 ft', image: '/images/turf4.png', sports: ['Cricket'], amenities: ['Floodlights', 'Parking', 'Washroom'], lat: 12.9784, lng: 77.6408 },
-    { id: 5, name: 'ProPlay Cricket Arena', location: 'Vashi, Navi Mumbai', city: 'Mumbai', rating: 4.5, price: 1000, dimensions: '95 × 48 ft', image: '/images/turf4.png', sports: ['Cricket'], amenities: ['Floodlights', 'Parking'], lat: 19.0330, lng: 73.0297 },
-    { id: 7, name: 'DunkZone Cricket Turf', location: 'Bandra, Mumbai', city: 'Mumbai', rating: 4.3, price: 750, dimensions: '85 × 45 ft', image: '/images/turf2.png', sports: ['Cricket'], amenities: ['Floodlights', 'Parking'], lat: 19.0596, lng: 72.8295 },
-    { id: 8, name: 'PixelArena Cricket', location: 'HSR Layout, Bangalore', city: 'Bangalore', rating: 4.8, price: 1500, dimensions: '125 × 65 ft', image: '/images/turf6.png', sports: ['Cricket'], amenities: ['Floodlights', 'Parking', 'Washroom', 'Seating', 'Drinking Water', 'AC'], lat: 12.9121, lng: 77.6446 },
-    { id: 9, name: 'Skyline Cricket Turf', location: 'Powai, Mumbai', city: 'Mumbai', rating: 4.6, price: 1400, dimensions: '100 × 50 ft', image: '/images/turf6.png', sports: ['Cricket'], amenities: ['Floodlights', 'Washroom'], lat: 19.1176, lng: 72.9060 },
-    { id: 10, name: 'StrikeZone Cricket', location: 'Noida, Delhi', city: 'Delhi', rating: 4.6, price: 850, dimensions: '90 × 45 ft', image: '/images/turf7.png', sports: ['Cricket'], amenities: ['Floodlights', 'Parking', 'Washroom', 'Drinking Water'], lat: 28.5355, lng: 77.3910 },
-    { id: 11, name: 'Master Blaster Cricket', location: 'Saket, Delhi', city: 'Delhi', rating: 4.8, price: 1100, dimensions: '105 × 52 ft', image: '/images/turf7.png', sports: ['Cricket'], amenities: ['Floodlights', 'Equipment'], lat: 28.5244, lng: 77.2167 },
-    { id: 12, name: 'Pune Cricket Arena', location: 'Kothrud, Pune', city: 'Pune', rating: 4.5, price: 1000, dimensions: '100 × 50 ft', image: '/images/turf2.png', sports: ['Cricket'], amenities: ['Floodlights', 'Parking', 'Washroom', 'Seating'], lat: 18.5074, lng: 73.8077 },
+    { id: 1, name: 'Green Arena Football Turf', location: 'Andheri West, Mumbai', city: 'Mumbai', rating: 4.8, price: 1200, dimensions: '100 × 50 ft', image: '/images/turf1.png', sports: ['Football', 'Cricket'], amenities: ['Floodlights', 'Parking', 'Washroom'], lat: 19.1136, lng: 72.8697 },
+    { id: 2, name: 'Champion Turf Ground', location: 'Vijay Nagar, Indore', city: 'Indore', rating: 4.8, price: 900, dimensions: '100 × 50 ft', image: '/images/turf2.png', sports: ['Cricket', 'Football'], amenities: ['Floodlights', 'Parking', 'Seating', 'Drinking Water'], lat: 22.7244, lng: 75.8839 },
+    { id: 3, name: 'Royal Cricket Ground', location: 'Palasia, Indore', city: 'Indore', rating: 4.7, price: 1000, dimensions: '110 × 55 ft', image: '/images/turf5.png', sports: ['Cricket'], amenities: ['Floodlights', 'Parking', 'Drinking Water'], lat: 22.7533, lng: 75.8937 },
+    { id: 4, name: 'ProPlay Cricket Arena', location: 'Vashi, Navi Mumbai', city: 'Mumbai', rating: 4.5, price: 1000, dimensions: '95 × 48 ft', image: '/images/turf4.png', sports: ['Cricket'], amenities: ['Floodlights', 'Parking'], lat: 19.0330, lng: 73.0297 },
+    { id: 5, name: 'GameVault Cricket Center', location: 'Koramangala, Bangalore', city: 'Bangalore', rating: 4.9, price: 1200, dimensions: '110 × 55 ft', image: '/images/turf3.png', sports: ['Cricket'], amenities: ['Floodlights', 'Parking', 'Seating', 'Washroom'], lat: 12.9698, lng: 77.7500 },
 ]
 
 export default function HomePage() {
@@ -63,6 +48,9 @@ export default function HomePage() {
     const tourneyReveal = useReveal()
     const ecosystemReveal = useReveal()
     const searchReveal = useReveal()
+
+    /* ── Dynamic Turfs State Sync ── */
+    const [dynamicTurfs, setDynamicTurfs] = useState(allTurfs)
 
     /* ── Search State ── */
     const [searchValues, setSearchValues] = useState({
@@ -101,8 +89,30 @@ export default function HomePage() {
         setIsCheckoutModalOpen(true)
     }
 
-    /* ── Fetch Upcoming Tournaments & Subscription Plans ── */
+    /* ── Fetch Live Branches, Upcoming Tournaments & Subscription Plans ── */
     useEffect(() => {
+        getBranches().then(res => {
+            const rawBranches = res?.data?.branches || res?.branches || []
+            if (Array.isArray(rawBranches) && rawBranches.length > 0) {
+                const mapped = rawBranches.map((b, idx) => ({
+                    id: b.id || b._id || (idx + 1),
+                    _id: b.id || b._id,
+                    name: b.branchName || b.name,
+                    location: b.fullAddress || `${b.city || 'Indore'}, India`,
+                    city: b.city || 'Indore',
+                    rating: 4.8,
+                    price: 1000,
+                    dimensions: '100 × 50 ft',
+                    image: b.logo || `/images/turf${(idx % 5) + 1}.png`,
+                    sports: ['Cricket', 'Football'],
+                    amenities: ['Floodlights', 'Parking', 'Washroom'],
+                    lat: 22.7244 + (idx * 0.01),
+                    lng: 75.8839 + (idx * 0.01)
+                }))
+                setDynamicTurfs(mapped)
+            }
+        }).catch(() => { })
+
         getPublicTournaments().then(res => {
             if (res?.success && Array.isArray(res?.data)) {
                 setUpcomingTournaments(res.data.slice(0, 4))
@@ -111,7 +121,7 @@ export default function HomePage() {
 
         getAllPlans().then(res => {
             if (res?.success && Array.isArray(res?.data)) {
-                setHomePlans(res.data.filter(p => p && p.status === 'active'))
+                setHomePlans(res.data.filter(p => p && (p.status || '').toLowerCase() === 'active'))
             }
         }).catch(() => { })
     }, [])
@@ -190,7 +200,7 @@ const resolveOriginCoordinates = (locString, userGPS, explicitCoords) => {
     const originCoords = resolveOriginCoordinates(activeLoc, userLocation, appliedFilters.coords || searchValues.coords)
 
     /* ── Filtered & Nearby-Ranked Turfs (Google Maps / Nearby First Style) ── */
-    const filteredTurfs = allTurfs.map(t => {
+    const filteredTurfs = dynamicTurfs.map(t => {
         const d = getDistance(originCoords.lat, originCoords.lng, t.lat, t.lng)
         return {
             ...t,
@@ -247,7 +257,7 @@ const resolveOriginCoordinates = (locString, userGPS, explicitCoords) => {
 
     // Dynamic Multi-Match Dare Challenge Pool based on selected location & top turfs
     const activeCityName = appliedFilters.location || searchValues.location || 'Indore'
-    const topTurfsList = (filteredTurfs.length > 0 ? filteredTurfs : allTurfs).slice(0, 4)
+    const topTurfsList = (filteredTurfs.length > 0 ? filteredTurfs : dynamicTurfs).slice(0, 4)
 
     const challengerTeamNames = [
         'Indore Strikers XI',

@@ -767,17 +767,7 @@ const getLeaderboard = async (req, res) => {
 // ==========================================
 const getSponsors = async (req, res) => {
     try {
-        let [rows] = await db.query('SELECT * FROM tournament_sponsors ORDER BY package_amount DESC');
-        if (rows.length === 0) {
-            // Seed mock sponsors
-            await db.query(`
-                INSERT INTO tournament_sponsors (id, company_name, tier, logo, website, package_amount, status) VALUES
-                ('spn_01', 'RedBull Energy', 'Platinum', 'https://images.unsplash.com/photo-1543163521-1bf539c55dd2?w=100', 'https://redbull.com', 50000, 'ACTIVE'),
-                ('spn_02', 'Nike Sports India', 'Gold', 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=100', 'https://nike.com', 30000, 'ACTIVE'),
-                ('spn_03', 'Decathlon Arena', 'Silver', 'https://images.unsplash.com/photo-1517649763962-0c623266010b?w=100', 'https://decathlon.in', 15000, 'ACTIVE')
-            `);
-            [rows] = await db.query('SELECT * FROM tournament_sponsors ORDER BY package_amount DESC');
-        }
+        const [rows] = await db.query('SELECT * FROM tournament_sponsors ORDER BY package_amount DESC');
         return res.status(200).json({ success: true, data: rows });
     } catch (error) {
         return res.status(500).json({ success: false, message: 'Internal Server Error.' });
@@ -789,13 +779,13 @@ const createSponsor = async (req, res) => {
     if (!companyName) return res.status(400).json({ success: false, message: 'Company Name is required.' });
 
     try {
-        const id = 'spn_' + Date.now();
-        await db.query(`
-            INSERT INTO tournament_sponsors (id, company_name, tier, logo, website, package_amount, status)
-            VALUES (?, ?, ?, ?, ?, ?, 'ACTIVE')
-        `, [id, companyName, tier, logo || null, website || '', packageAmount]);
-
-        return res.status(201).json({ success: true, message: 'Sponsor added successfully.', data: { id, companyName, tier } });
+        const id = `spn_${Date.now()}`;
+        await db.query(
+            `INSERT INTO tournament_sponsors (id, company_name, tier, logo, website, package_amount, status) 
+             VALUES (?, ?, ?, ?, ?, ?, 'ACTIVE')`,
+            [id, companyName, tier, logo || null, website || null, packageAmount]
+        );
+        return res.status(201).json({ success: true, message: 'Sponsor added successfully.' });
     } catch (error) {
         return res.status(500).json({ success: false, message: 'Internal Server Error.' });
     }
@@ -831,21 +821,12 @@ const deleteSponsor = async (req, res) => {
 // ==========================================
 const getTournamentPayments = async (req, res) => {
     try {
-        let [rows] = await db.query(`
+        const [rows] = await db.query(`
             SELECT tp.*, t.title as tournament_title 
             FROM tournament_payments tp
             LEFT JOIN tournaments t ON tp.tournament_id = t.id
             ORDER BY tp.created_at DESC
         `);
-
-        if (rows.length === 0) {
-            // Return mock entries if database has not recorded payments yet
-            rows = [
-                { id: 1, tournament_title: 'Premier Cricket Cup', transaction_type: 'Entry Fee', invoice_number: 'INV-TRN-101', payer_name: 'Indore Thunders', amount: 500, commission_amount: 50, payment_method: 'UPI', status: 'COMPLETED', created_at: new Date() },
-                { id: 2, tournament_title: 'Premier Cricket Cup', transaction_type: 'Sponsor Payment', invoice_number: 'INV-SPN-201', payer_name: 'RedBull Energy', amount: 50000, commission_amount: 5000, payment_method: 'CARD', status: 'COMPLETED', created_at: new Date() },
-                { id: 3, tournament_title: 'Indore Football Cup', transaction_type: 'Entry Fee', invoice_number: 'INV-TRN-102', payer_name: 'Red Devils', amount: 800, commission_amount: 80, payment_method: 'WALLET', status: 'COMPLETED', created_at: new Date() }
-            ];
-        }
 
         const totalRevenue = rows.reduce((sum, r) => sum + Number(r.amount || 0), 0);
         const totalCommission = rows.reduce((sum, r) => sum + Number(r.commission_amount || 0), 0);
@@ -926,6 +907,43 @@ const updateSettings = async (req, res) => {
     }
 };
 
+// Live Operator Match Score Persistence Controllers
+const getAllTournamentMatches = async (req, res) => {
+    try {
+        const [rows] = await db.query('SELECT * FROM tournament_matches ORDER BY match_number ASC');
+        return res.status(200).json({ success: true, data: rows });
+    } catch (error) {
+        return res.status(500).json({ success: false, message: error.message });
+    }
+};
+
+const saveLiveMatchScore = async (req, res) => {
+    const { matchId, team1Score, team2Score, winnerName, status, liveState } = req.body;
+    try {
+        const targetId = matchId || 'fix_103';
+        const jsonStr = liveState ? JSON.stringify(liveState) : null;
+
+        await db.query(`
+            UPDATE tournament_matches 
+            SET team1_score = COALESCE(?, team1_score),
+                team2_score = COALESCE(?, team2_score),
+                winner_name = COALESCE(?, winner_name),
+                status = COALESCE(?, status),
+                live_state_json = COALESCE(?, live_state_json)
+            WHERE id = ?
+        `, [team1Score, team2Score, winnerName, status, jsonStr, targetId]);
+
+        return res.status(200).json({
+            success: true,
+            message: `Match state saved to database successfully for ${targetId}.`,
+            data: { id: targetId, team1Score, team2Score, winnerName, status }
+        });
+    } catch (error) {
+        console.error('Save live match score error:', error);
+        return res.status(500).json({ success: false, message: error.message });
+    }
+};
+
 module.exports = {
     getTournaments,
     getTournamentById,
@@ -953,5 +971,7 @@ module.exports = {
     getTournamentPayments,
     getTournamentReports,
     getSettings,
-    updateSettings
+    updateSettings,
+    getAllTournamentMatches,
+    saveLiveMatchScore
 };

@@ -152,23 +152,47 @@ const LEADERBOARD = [
     { rank: 3, name: 'Box Cricket Night League', teams: 16, revenue: '₹40,000', rating: '4.7 ★', badge: '🥉 Houseful' }
 ]
 
+import { getMasterTournamentMetrics } from '../../services/tournamentStore'
+
 export default function TournamentDashboard({ role = 'owner' }) {
-    const [stats, setStats] = useState({
-        totalTournaments: 8,
-        pendingApprovals: 2,
-        approvedActive: 4,
-        totalTeams: 36,
-        totalRevenue: 64500,
-        platformCommission: 6450
-    })
+    const [stats, setStats] = useState(getMasterTournamentMetrics())
 
     const [isLoading, setIsLoading] = useState(false)
     const [lastUpdated, setLastUpdated] = useState('Just now')
 
     const basePath = role === 'staff' ? '/staff/tournaments' : '/admin/tournaments'
 
+    const fetchLiveStats = async () => {
+        try {
+            const res = await fetch('http://localhost:5000/api/v1/tournaments')
+            const data = await res.json()
+            if (data.success && Array.isArray(data.data) && data.data.length > 0) {
+                const list = data.data
+                const totalT = list.length
+                const pendingA = list.filter(t => (t.status || '').toLowerCase().includes('pending')).length
+                const activeA = list.filter(t => (t.status || '').toLowerCase().includes('approved') || (t.status || '').toLowerCase().includes('active')).length
+                const teamsCount = list.reduce((sum, t) => sum + (t.registrations || parseInt(t.teams) || 8), 0)
+
+                setStats(prev => ({
+                    ...prev,
+                    totalTournaments: totalT,
+                    pendingApprovals: pendingA,
+                    approvedActive: activeA,
+                    totalTeams: teamsCount
+                }))
+            }
+        } catch (err) {
+            console.warn('Sync live tournament stats note:', err)
+        }
+    }
+
+    useEffect(() => {
+        fetchLiveStats()
+    }, [])
+
     const handleRefresh = () => {
         setIsLoading(true)
+        fetchLiveStats()
         setTimeout(() => {
             setIsLoading(false)
             setLastUpdated(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }))

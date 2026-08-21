@@ -109,9 +109,10 @@ export default function MembershipPage() {
     const [gatewayStatus, setGatewayStatus] = useState('Establishing 256-Bit SSL Handshake...')
     const [isVerifyingOtp, setIsVerifyingOtp] = useState(false)
 
-    // Step 4: Success Details
+    // Step 4: Success Details & Receipt Modal
     const [subDetails, setSubDetails] = useState(null)
     const [registeredOwnerUser, setRegisteredOwnerUser] = useState(null)
+    const [isReceiptModalOpen, setIsReceiptModalOpen] = useState(false)
 
     const otpInputRefs = useRef([])
 
@@ -123,6 +124,10 @@ export default function MembershipPage() {
     useEffect(() => {
         window.scrollTo(0, 0)
         fetchSubscriptionPlans()
+
+        const handlePlansUpdated = () => fetchSubscriptionPlans()
+        window.addEventListener('subscription_plans_updated', handlePlansUpdated)
+        return () => window.removeEventListener('subscription_plans_updated', handlePlansUpdated)
     }, [])
 
     // QR Code Live Timer Countdown
@@ -152,8 +157,15 @@ export default function MembershipPage() {
             setIsLoadingPlans(true)
             const res = await getAllPlans()
             if (res && res.success && Array.isArray(res.data) && res.data.length > 0) {
-                const active = res.data.filter(p => p.status === 'active')
-                setDbPlans(active)
+                const active = res.data.filter(p => (p.status || 'active').toLowerCase() === 'active')
+                if (active.length > 0) {
+                    const sorted = [...active].sort((a, b) => {
+                        const priceA = a.monthlyPricing?.price ?? (a.monthly_price !== undefined ? Number(a.monthly_price) : (a.price !== undefined ? Number(a.price) : 0))
+                        const priceB = b.monthlyPricing?.price ?? (b.monthly_price !== undefined ? Number(b.monthly_price) : (b.price !== undefined ? Number(b.price) : 0))
+                        return priceA - priceB
+                    })
+                    setDbPlans(sorted)
+                }
             }
         } catch (err) {
             console.error('Failed to load subscription plans:', err)
@@ -164,26 +176,30 @@ export default function MembershipPage() {
 
     const formatPlanForUI = (p, index) => {
         const isYearly = billingCycle === 'yearly'
-        const monthlyPrice = p.monthlyPricing?.price ?? (index === 0 ? 999 : index === 1 ? 2499 : 4999)
-        const annualPriceWithDiscount = Math.round(monthlyPrice * 12 * 0.8)
-        const priceVal = isYearly ? annualPriceWithDiscount : monthlyPrice
+        const rawMonthly = p.monthlyPricing?.price ?? p.monthly_price ?? p.price ?? (index === 0 ? 999 : index === 1 ? 2499 : 4999)
+        const monthlyPrice = Number(rawMonthly) || 0
 
-        const branchLim = isYearly ? p.yearlyPricing?.branchLimit : p.monthlyPricing?.branchLimit
-        const sportsLim = isYearly ? p.yearlyPricing?.sportsLimit : p.monthlyPricing?.sportsLimit
-        const bookingLim = isYearly ? p.yearlyPricing?.bookingLimit : p.monthlyPricing?.bookingLimit
-        const usersLim = isYearly ? p.yearlyPricing?.activeUsersLimit : p.monthlyPricing?.activeUsersLimit
+        const rawYearly = p.yearlyPricing?.price ?? p.yearly_price ?? Math.round(monthlyPrice * 12 * 0.8)
+        const yearlyPrice = Number(rawYearly) || Math.round(monthlyPrice * 12 * 0.8)
+
+        const priceVal = isYearly ? yearlyPrice : monthlyPrice
+
+        const branchLim = isYearly ? (p.yearlyPricing?.branchLimit ?? p.yearly_branch_limit ?? p.monthly_branch_limit) : (p.monthlyPricing?.branchLimit ?? p.monthly_branch_limit)
+        const sportsLim = isYearly ? (p.yearlyPricing?.sportsLimit ?? p.yearly_sports_limit ?? p.monthly_sports_limit) : (p.monthlyPricing?.sportsLimit ?? p.monthly_sports_limit)
+        const bookingLim = isYearly ? (p.yearlyPricing?.bookingLimit ?? p.yearly_booking_limit ?? p.monthly_booking_limit) : (p.monthlyPricing?.bookingLimit ?? p.monthly_booking_limit)
+        const usersLim = isYearly ? (p.yearlyPricing?.activeUsersLimit ?? p.yearly_active_users_limit ?? p.monthly_active_users_limit) : (p.monthlyPricing?.activeUsersLimit ?? p.monthly_active_users_limit)
 
         const priceStr = priceVal.toLocaleString('en-IN')
         const periodStr = monthlyPrice === 0 ? '/TRIAL' : (isYearly ? '/YEAR' : '/MO')
         const perMonthNote = isYearly && monthlyPrice > 0 
-            ? `₹${Math.round(monthlyPrice * 0.8).toLocaleString('en-IN')}/mo · Save ₹${Math.round(monthlyPrice * 12 * 0.2).toLocaleString('en-IN')}/yr (20% OFF)` 
+            ? `₹${Math.round(yearlyPrice / 12).toLocaleString('en-IN')}/mo · Save ₹${Math.round((monthlyPrice * 12) - yearlyPrice).toLocaleString('en-IN')}/yr` 
             : null
 
         const descStr = p.description || (monthlyPrice === 0 ? 'NO CREDIT CARD REQUIRED' : (p.isPopular ? 'RECOMMENDED FOR PROS' : 'STANDARD OPERATIONAL ACCESS'))
 
         let color = 'from-emerald-500 to-teal-600'
         let accent = 'emerald'
-        const pNameLower = (p.planName || '').toLowerCase()
+        const pNameLower = (p.planName || p.name || '').toLowerCase()
 
         if (p.isPopular || pNameLower.includes('enterprise') || pNameLower.includes('premium')) {
             color = 'from-[#16a34a] to-emerald-600'
@@ -254,11 +270,11 @@ export default function MembershipPage() {
             ]
         }
 
-        let features = p.features && p.features.length > 0 ? p.features : baseFeatures
+        let features = Array.isArray(p.features) && p.features.length > 0 ? p.features : baseFeatures
 
         return {
             rawId: p._id || p.id,
-            name: p.planName || 'Access Plan',
+            name: p.planName || p.name || 'Access Plan',
             price: priceStr,
             numericPrice: priceVal,
             period: periodStr,
@@ -503,7 +519,7 @@ export default function MembershipPage() {
                     numericPrice: selectedPlanForRegistration?.numericPrice,
                     paymentMethod: payModeLabel,
                     billingCycle: billingCycle,
-                    paidAt: new Date().toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' }),
+                    paidAt: new Date().toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'medium' }),
                     nextBillingDate: new Date(Date.now() + (billingCycle === 'yearly' ? 365 : 30) * 24 * 60 * 60 * 1000).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }),
                     color: selectedPlanForRegistration?.color || 'from-[#16a34a] to-emerald-600'
                 })
@@ -534,7 +550,202 @@ export default function MembershipPage() {
     }
 
     const handlePrintReceipt = () => {
-        window.print()
+        setIsReceiptModalOpen(true)
+        triggerInstantIframePrint()
+    }
+
+    const triggerInstantIframePrint = () => {
+        const invNo = `INV-2026-${Math.floor(100000 + Math.random() * 900000)}`
+        const ownerName = registeredOwnerUser?.name || ownerFormData.fullName || 'Valued Turf Owner'
+        const bizName = ownerFormData.businessName || 'SportMatrix Sports Arena'
+        const ownerEmail = registeredOwnerUser?.email || ownerFormData.email || 'info@kiaantechnology.com'
+        const ownerPhone = ownerFormData.mobile || '+91 98765 43210'
+        const planTitle = subDetails?.planName || selectedPlanForRegistration?.name || 'Professional Plan'
+        const totalAmount = subDetails?.numericPrice || selectedPlanForRegistration?.numericPrice || 2499
+        const payMode = subDetails?.paymentMethod || 'UPI'
+        const txnId = subDetails?.txnId || 'TXN-IGC2DQO6'
+        const subId = subDetails?.subId || 'SUB-20491221'
+        const paidTime = subDetails?.paidAt || new Date().toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'medium' })
+
+        const iframeHTML = `
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <title>Receipt ${invNo}</title>
+                <style>
+                    @page { size: A4 portrait; margin: 8mm; }
+                    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; color: #111827; margin: 0; padding: 15px; background: #fff; }
+                    .card { max-width: 650px; margin: 0 auto; border: 2px solid #111827; border-radius: 12px; padding: 24px; }
+                    .header { border-bottom: 2px solid #16a34a; padding-bottom: 12px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: flex-start; }
+                    .brand { font-size: 22px; font-weight: 900; }
+                    .brand span { color: #16a34a; }
+                    .badge { background: #ecfdf5; color: #065f46; font-size: 10px; font-weight: 800; padding: 3px 8px; border-radius: 12px; border: 1px solid #a7f3d0; }
+                    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px; }
+                    .box { background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; padding: 12px; font-size: 11px; }
+                    .box h4 { margin: 0 0 6px 0; font-size: 10px; text-transform: uppercase; color: #6b7280; }
+                    .box p { margin: 2px 0; font-weight: 600; }
+                    table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+                    th { background: #111827; color: #fff; font-size: 10px; padding: 8px 12px; text-align: left; text-transform: uppercase; }
+                    td { border-bottom: 1px solid #e5e7eb; padding: 10px 12px; font-size: 12px; font-weight: 500; }
+                    .text-right { text-align: right; }
+                    .total { background: #111827; color: #fff; padding: 14px 18px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; }
+                    .total-val { font-size: 20px; font-weight: 900; color: #c8ff2e; font-family: monospace; }
+                    .footer { text-align: center; margin-top: 20px; font-size: 10px; color: #6b7280; }
+                </style>
+            </head>
+            <body>
+                <div class="card">
+                    <div class="header">
+                        <div>
+                            <div class="brand">SPORTMATRIX<span>.</span></div>
+                            <div style="font-size: 11px; color: #4b5563; font-weight: bold; margin-top: 2px;">SportMatrix Arena Technologies Pvt Ltd</div>
+                        </div>
+                        <div style="text-align: right;">
+                            <span class="badge">MEMBERSHIP PAYMENT RECEIPT</span>
+                            <div style="font-size: 12px; font-weight: 800; margin-top: 4px;">${invNo}</div>
+                        </div>
+                    </div>
+
+                    <div class="grid">
+                        <div class="box">
+                            <h4>Billed To Customer</h4>
+                            <p style="font-size: 12px; color: #111827; font-weight: 800;">${ownerName}</p>
+                            <p>${bizName}</p>
+                            <p>${ownerEmail}</p>
+                            <p>${ownerPhone}</p>
+                        </div>
+                        <div class="box">
+                            <h4>Payment Summary</h4>
+                            <p>Plan: <strong>${planTitle}</strong></p>
+                            <p>Sub Ref: <strong>${subId}</strong></p>
+                            <p>Txn ID: <strong>${txnId}</strong></p>
+                            <p>Mode: <strong>${payMode}</strong></p>
+                            <p>Time: <strong>${paidTime}</strong></p>
+                        </div>
+                    </div>
+
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Item Description</th>
+                                <th class="text-right">Billing Cycle</th>
+                                <th class="text-right">Tax (GST)</th>
+                                <th class="text-right">Amount Paid</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>
+                                    <strong>${planTitle}</strong><br>
+                                    <span style="font-size: 10px; color: #6b7280;">Multi-Turf OS Subscription Pass</span>
+                                </td>
+                                <td class="text-right">${subDetails?.billingCycle === 'yearly' ? 'Annual Pass' : 'Monthly Pass'}</td>
+                                <td class="text-right">₹0.00</td>
+                                <td class="text-right" style="font-weight: 800;">₹${totalAmount.toLocaleString('en-IN')}</td>
+                            </tr>
+                        </tbody>
+                    </table>
+
+                    <div class="total">
+                        <div>
+                            <div style="font-size: 9px; text-transform: uppercase; color: #9ca3af;">Total Amount Paid (Zero GST Tax)</div>
+                            <div style="font-size: 11px; color: #10b981; font-weight: bold;">Verified Electronic Payment</div>
+                        </div>
+                        <div class="total-val">₹${totalAmount.toLocaleString('en-IN')}</div>
+                    </div>
+
+                    <div class="footer">
+                        <p style="margin: 0;">Verified Official Receipt · Support: support@sportmatrix.com</p>
+                    </div>
+                </div>
+            </body>
+            </html>
+        `
+
+        let iframe = document.getElementById('fast-receipt-print-frame')
+        if (!iframe) {
+            iframe = document.createElement('iframe')
+            iframe.id = 'fast-receipt-print-frame'
+            iframe.style.position = 'fixed'
+            iframe.style.right = '0'
+            iframe.style.bottom = '0'
+            iframe.style.width = '0'
+            iframe.style.height = '0'
+            iframe.style.border = '0'
+            iframe.style.visibility = 'hidden'
+            document.body.appendChild(iframe)
+        }
+
+        const doc = iframe.contentWindow.document
+        doc.open()
+        doc.write(iframeHTML)
+        doc.close()
+
+        setTimeout(() => {
+            iframe.contentWindow.focus()
+            iframe.contentWindow.print()
+        }, 50)
+    }
+
+    const downloadReceiptTxt = () => {
+        const invNo = `INV-2026-${Math.floor(100000 + Math.random() * 900000)}`
+        const ownerName = registeredOwnerUser?.name || ownerFormData.fullName || 'Valued Turf Owner'
+        const bizName = ownerFormData.businessName || 'SportMatrix Sports Arena'
+        const ownerEmail = registeredOwnerUser?.email || ownerFormData.email || 'info@kiaantechnology.com'
+        const planTitle = subDetails?.planName || selectedPlanForRegistration?.name || 'Professional Plan'
+        const totalAmount = subDetails?.numericPrice || selectedPlanForRegistration?.numericPrice || 2499
+        const baseAmount = (totalAmount / 1.18).toFixed(2)
+        const gstTax = (totalAmount - baseAmount).toFixed(2)
+        const payMode = subDetails?.paymentMethod || 'UPI'
+        const txnId = subDetails?.txnId || 'TXN-IGC2DQO6'
+        const subId = subDetails?.subId || 'SUB-20491221'
+
+        const txtData = `
+===========================================================
+SPORTMATRIX ARENA TECHNOLOGIES — MEMBERSHIP PAYMENT RECEIPT
+===========================================================
+Receipt Number : ${invNo}
+Generated Date : ${new Date().toLocaleString()}
+
+BILLED TO (TURF OWNER):
+-----------------------------------------------------------
+Owner Name    : ${ownerName}
+Business Name : ${bizName}
+Email Address : ${ownerEmail}
+Mobile Number : ${ownerFormData.mobile || '+91 98765 43210'}
+
+SUBSCRIPTION PAYMENT SUMMARY:
+-----------------------------------------------------------
+Plan Name     : ${planTitle} (${subDetails?.billingCycle === 'yearly' ? 'Annual Pass' : 'Monthly Pass'})
+Subscription  : ${subId}
+Gateway Txn ID: ${txnId}
+Payment Mode  : ${payMode}
+Payment Time  : ${subDetails?.paidAt || new Date().toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'medium' })}
+Status        : PAID & AUTHORIZED (COMPLETED)
+
+FINANCIAL SUMMARY (INR):
+-----------------------------------------------------------
+Membership Fee: ₹${totalAmount.toLocaleString('en-IN')}
+Tax Amount    : ₹0.00 (Zero GST Tax / All-Inclusive)
+-----------------------------------------------------------
+TOTAL PAID    : ₹${totalAmount.toLocaleString('en-IN')}
+===========================================================
+Verified Membership Payment Receipt by SportMatrix OS
+Support: support@sportmatrix.com | Helpline: +91 1800-419-TURF
+`
+        const blob = new Blob([txtData], { type: 'text/plain' })
+        const url = URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        a.href = url
+        a.download = `Official_Tax_Invoice_${invNo}.txt`
+        document.body.appendChild(a)
+        a.click()
+        document.body.removeChild(a)
+        URL.revokeObjectURL(url)
+
+        if (addToast) {
+            addToast('📁 Official Tax Invoice Downloaded to your Computer!', 'success')
+        }
     }
 
     return (
@@ -609,9 +820,9 @@ export default function MembershipPage() {
                         {displayPlans.map(p => (
                             <div
                                 key={p.rawId}
-                                className={`relative group flex flex-col bg-white border transition-all duration-300 hover:-translate-y-1 rounded-2xl h-full shadow-[0_10px_30px_rgba(0,0,0,0.03)] ${p.popular
-                                    ? 'border-[#C8FF2E] ring-2 ring-[#C8FF2E] shadow-[0_15px_35px_rgba(200,255,46,0.25)] z-20'
-                                    : 'border-[#E5E7EB] hover:border-[#C8FF2E]'
+                                className={`relative group flex flex-col bg-white border-2 transition-all duration-300 hover:-translate-y-1 rounded-2xl h-full shadow-md hover:shadow-xl ${p.popular
+                                    ? 'border-[#16A34A] ring-4 ring-emerald-400/20 shadow-emerald-100 z-20'
+                                    : 'border-slate-300 hover:border-[#16A34A]'
                                     }`}
                             >
                                 {p.popular && (
@@ -1694,6 +1905,125 @@ export default function MembershipPage() {
                                 </div>
                             </div>
                         )}
+                    </div>
+                </div>
+            )}
+            {/* Official GST Tax Invoice Receipt Modal */}
+            {isReceiptModalOpen && (
+                <div id="printable-tax-receipt-modal-overlay" className="fixed inset-0 z-[99999] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-in fade-in duration-300">
+                    <div id="printable-tax-receipt-card" className="bg-white rounded-3xl max-w-2xl w-full border-2 border-slate-200 overflow-hidden shadow-2xl space-y-0">
+                        {/* Header */}
+                        <div className="bg-gradient-to-r from-slate-900 via-slate-850 to-slate-900 p-6 text-white flex justify-between items-center border-b border-slate-800">
+                            <div>
+                                <span className="text-[10px] font-black uppercase tracking-widest bg-emerald-500/20 text-emerald-400 px-3 py-1 rounded-full border border-emerald-400/30">
+                                    MEMBERSHIP PAYMENT RECEIPT
+                                </span>
+                                <h3 className="text-xl font-black text-white tracking-tight mt-2 flex items-center gap-2">
+                                    <span>🧾</span> Payment Receipt & Plan Details
+                                </h3>
+                                <p className="text-xs text-slate-400 font-mono mt-0.5">INV-2026-849201 · ZERO GST TAX / ALL-INCLUSIVE</p>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={() => setIsReceiptModalOpen(false)}
+                                className="no-print w-9 h-9 rounded-full bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white flex items-center justify-center transition-colors cursor-pointer"
+                            >
+                                <HiX className="w-5 h-5" />
+                            </button>
+                        </div>
+
+                        {/* Invoice Body */}
+                        <div className="p-6 space-y-5 max-h-[70vh] overflow-y-auto">
+                            {/* Grid 1: Customer & Business Info */}
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200 space-y-1">
+                                    <span className="text-[10px] font-black uppercase text-slate-400 tracking-wider block">Billed To Customer</span>
+                                    <p className="font-extrabold text-slate-900 text-sm">{registeredOwnerUser?.name || ownerFormData.fullName || 'Valued Turf Owner'}</p>
+                                    <p className="text-xs font-bold text-slate-700">{ownerFormData.businessName || 'SportMatrix Sports Arena'}</p>
+                                    <p className="text-xs font-mono text-slate-500">{registeredOwnerUser?.email || ownerFormData.email || 'info@kiaantechnology.com'}</p>
+                                </div>
+
+                                <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200 space-y-1">
+                                    <span className="text-[10px] font-black uppercase text-slate-400 tracking-wider block">Subscription Payment Summary</span>
+                                    <p className="font-extrabold text-slate-900 text-sm">{subDetails?.planName || selectedPlanForRegistration?.name || 'Professional Plan'}</p>
+                                    <p className="text-xs font-mono text-slate-600">Sub Ref: <span className="font-bold text-slate-900">{subDetails?.subId || 'SUB-20491221'}</span></p>
+                                    <p className="text-xs font-mono text-slate-600">Txn ID: <span className="font-bold text-slate-900">{subDetails?.txnId || 'TXN-IGC2DQO6'}</span></p>
+                                    <p className="text-xs font-mono text-emerald-700 font-bold">Mode: {subDetails?.paymentMethod || 'UPI'} · PAID 🟢</p>
+                                    <div className="pt-1.5 border-t border-slate-200 mt-1 flex items-center justify-between text-xs font-mono">
+                                        <span className="text-slate-500 font-bold flex items-center gap-1">⏰ Payment Time:</span>
+                                        <span className="text-slate-900 font-black bg-emerald-100/80 border border-emerald-300 text-emerald-950 px-2 py-0.5 rounded-md shadow-2xs">
+                                            {subDetails?.paidAt || new Date().toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'medium' })}
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Itemized Financial Table */}
+                            <div className="border border-slate-200 rounded-2xl overflow-hidden shadow-2xs">
+                                <table className="w-full text-left text-xs">
+                                    <thead className="bg-slate-900 text-white font-black uppercase text-[10px] tracking-wider">
+                                        <tr>
+                                            <th className="py-3 px-4">Item Description</th>
+                                            <th className="py-3 px-4 text-center">Billing Cycle</th>
+                                            <th className="py-3 px-4 text-right">Tax (GST)</th>
+                                            <th className="py-3 px-4 text-right">Net Amount Paid</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-slate-150 font-medium">
+                                        <tr>
+                                            <td className="py-3.5 px-4">
+                                                <div className="font-extrabold text-slate-900">{subDetails?.planName || selectedPlanForRegistration?.name || 'Professional Plan'}</div>
+                                                <div className="text-[11px] text-slate-500">Multi-Turf Management Operating System Subscription Pass</div>
+                                            </td>
+                                            <td className="py-3.5 px-4 text-center font-bold text-slate-700">
+                                                {subDetails?.billingCycle === 'yearly' ? 'Annual Pass' : 'Monthly Pass'}
+                                            </td>
+                                            <td className="py-3.5 px-4 text-right font-mono text-emerald-600 font-bold">₹0.00 (Zero GST)</td>
+                                            <td className="py-3.5 px-4 text-right font-mono font-black text-slate-900 text-sm">₹{(subDetails?.numericPrice || selectedPlanForRegistration?.numericPrice || 2499).toLocaleString('en-IN')}</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            {/* Total Paid Banner */}
+                            <div className="bg-slate-900 p-4 rounded-2xl text-white flex items-center justify-between shadow-md">
+                                <div>
+                                    <span className="text-[10px] font-black uppercase text-slate-400 tracking-widest block">Total Net Amount Paid (Zero GST Tax)</span>
+                                    <span className="text-xs text-emerald-400 font-bold">All-Inclusive Subscription Payment Completed</span>
+                                </div>
+                                <span className="text-3xl font-mono font-black text-[#C8FF2E]">
+                                    ₹{(subDetails?.numericPrice || selectedPlanForRegistration?.numericPrice || 2499).toLocaleString('en-IN')}
+                                </span>
+                            </div>
+                        </div>
+
+                        {/* Modal Footer Actions */}
+                        <div className="no-print p-4 bg-slate-50 border-t border-slate-200 flex flex-wrap items-center justify-between gap-3">
+                            <button
+                                type="button"
+                                onClick={downloadReceiptTxt}
+                                className="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs rounded-xl transition-all cursor-pointer border border-slate-300 flex items-center gap-1.5"
+                            >
+                                <span>📥 Download Invoice File (.txt)</span>
+                            </button>
+                            <div className="flex items-center gap-2">
+                                <button
+                                    type="button"
+                                    onClick={triggerInstantIframePrint}
+                                    className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs rounded-xl transition-all cursor-pointer shadow-md flex items-center gap-1.5"
+                                >
+                                    <HiPrinter className="w-4 h-4" />
+                                    <span>Print Now</span>
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => setIsReceiptModalOpen(false)}
+                                    className="px-4 py-2.5 bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs rounded-xl transition-all cursor-pointer"
+                                >
+                                    Close
+                                </button>
+                            </div>
+                        </div>
                     </div>
                 </div>
             )}

@@ -6,9 +6,9 @@ import api from './api';
 export const createBranch = async (branchData) => {
     try {
         const response = await api.post('/branches', branchData);
-        return response.data;
+        return response.data || response;
     } catch (error) {
-        throw new Error(error.response?.data?.message || 'Failed to create branch.');
+        throw new Error(error.response?.data?.message || error.message || 'Failed to create branch.');
     }
 };
 
@@ -18,9 +18,9 @@ export const createBranch = async (branchData) => {
 export const getBranches = async (filters = {}) => {
     try {
         const response = await api.get('/branches', { params: filters });
-        return response.data;
+        return response.data || response;
     } catch (error) {
-        throw new Error(error.response?.data?.message || 'Failed to list branches.');
+        throw new Error(error.response?.data?.message || error.message || 'Failed to list branches.');
     }
 };
 
@@ -30,9 +30,9 @@ export const getBranches = async (filters = {}) => {
 export const getBranchById = async (id) => {
     try {
         const response = await api.get(`/branches/${id}`);
-        return response.data;
+        return response.data || response;
     } catch (error) {
-        throw new Error(error.response?.data?.message || 'Failed to fetch branch details.');
+        throw new Error(error.response?.data?.message || error.message || 'Failed to fetch branch details.');
     }
 };
 
@@ -42,9 +42,9 @@ export const getBranchById = async (id) => {
 export const updateBranch = async (id, branchData) => {
     try {
         const response = await api.put(`/branches/${id}`, branchData);
-        return response.data;
+        return response.data || response;
     } catch (error) {
-        throw new Error(error.response?.data?.message || 'Failed to update branch.');
+        throw new Error(error.response?.data?.message || error.message || 'Failed to update branch.');
     }
 };
 
@@ -54,9 +54,9 @@ export const updateBranch = async (id, branchData) => {
 export const changeBranchStatus = async (id, status) => {
     try {
         const response = await api.patch(`/branches/${id}/status`, { status });
-        return response.data;
+        return response.data || response;
     } catch (error) {
-        throw new Error(error.response?.data?.message || 'Failed to update branch status.');
+        throw new Error(error.response?.data?.message || error.message || 'Failed to update branch status.');
     }
 };
 
@@ -66,9 +66,9 @@ export const changeBranchStatus = async (id, status) => {
 export const deleteBranch = async (id) => {
     try {
         const response = await api.delete(`/branches/${id}`);
-        return response.data;
+        return response.data || response;
     } catch (error) {
-        throw new Error(error.response?.data?.message || 'Failed to delete branch.');
+        throw new Error(error.response?.data?.message || error.message || 'Failed to delete branch.');
     }
 };
 
@@ -78,8 +78,8 @@ export const deleteBranch = async (id) => {
 export const getDashboardStats = async () => {
     try {
         const response = await api.get('/branches/stats');
-        return response.data;
+        return response.data || response;
     } catch (error) {
-        throw new Error(error.response?.data?.message || 'Failed to fetch dashboard stats.');
+        throw new Error(error.response?.data?.message || error.message || 'Failed to fetch dashboard stats.');
     }
 };

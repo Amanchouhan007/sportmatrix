@@ -75,10 +75,74 @@ export default function AdPaymentsPage() {
     const { addToast } = useToast()
     const [payments, setPayments] = useState(INITIAL_PAYMENTS)
     const [search, setSearch] = useState('')
+    const [viewInvoiceModal, setViewInvoiceModal] = useState(null)
     const [statusFilter, setStatusFilter] = useState('ALL')
     const [currentPage, setCurrentPage] = useState(1)
-    const [viewInvoiceModal, setViewInvoiceModal] = useState(null)
     const itemsPerPage = 5
+
+    const triggerFastAdInvoicePrint = (inv) => {
+        if (!inv) return;
+        const iframeHTML = `
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <title>Invoice ${inv.invoiceId}</title>
+                <style>
+                    @page { size: A4 portrait; margin: 8mm; }
+                    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; padding: 20px; color: #111827; }
+                    .card { max-width: 650px; margin: 0 auto; border: 2px solid #111827; padding: 24px; border-radius: 14px; background: #fff; }
+                    .header { border-bottom: 2px solid #16A34A; padding-bottom: 12px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: flex-start; }
+                    .header h2 { margin: 0; font-size: 20px; font-weight: 900; }
+                    .meta-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px border-slate-100; font-size: 13px; }
+                    .total { background: #0F172A; color: #fff; padding: 14px 18px; border-radius: 10px; font-size: 16px; font-weight: bold; margin-top: 20px; display: flex; justify-content: space-between; }
+                </style>
+            </head>
+            <body>
+                <div class="card">
+                    <div class="header">
+                        <div>
+                            <h2>SPORTMATRIX ADVERTISING</h2>
+                            <p style="margin: 4px 0 0 0; color: #64748B; font-size: 12px;">Invoice Ref: <strong>${inv.invoiceId}</strong></p>
+                        </div>
+                        <div style="text-align:right;">
+                            <strong style="color: #16A34A; font-size: 14px;">OFFICIAL TAX INVOICE</strong>
+                            <p style="margin: 4px 0 0 0; font-size: 12px; font-weight: bold;">Status: ${inv.status?.toUpperCase() || 'PAID'} 🟢</p>
+                        </div>
+                    </div>
+                    <div class="meta-row"><span>Advertiser / Owner:</span><strong>${inv.ownerName || inv.advertiser || 'Valued Owner'}</strong></div>
+                    <div class="meta-row"><span>Turf Venue:</span><strong>${inv.turfName || 'SportMatrix Arena'}</strong></div>
+                    <div class="meta-row"><span>Campaign Name:</span><strong>${inv.adName || 'Ad Campaign'}</strong></div>
+                    <div class="meta-row"><span>Ad Campaign ID:</span><strong style="font-family: monospace;">${inv.adId || 'AD-1001'}</strong></div>
+                    <div class="meta-row"><span>Payment Method:</span><strong>${inv.paymentMethod || inv.method || 'UPI Settlement'}</strong></div>
+                    <div class="meta-row"><span>Billed Date:</span><strong>${inv.date || '2026-08-01'}</strong></div>
+                    <div class="total">
+                        <span>Total Amount Paid (Zero GST Tax)</span>
+                        <span style="color:#C8FF2E;">${inv.amount}</span>
+                    </div>
+                </div>
+            </body>
+            </html>
+        `;
+        let iframe = document.getElementById('fast-ad-print-frame');
+        if (!iframe) {
+            iframe = document.createElement('iframe');
+            iframe.id = 'fast-ad-print-frame';
+            iframe.style.position = 'fixed';
+            iframe.style.right = '0';
+            iframe.style.bottom = '0';
+            iframe.style.width = '0';
+            iframe.style.height = '0';
+            iframe.style.border = '0';
+            iframe.style.visibility = 'hidden';
+            document.body.appendChild(iframe);
+        }
+        const doc = iframe.contentWindow.document;
+        doc.open();
+        doc.write(iframeHTML);
+        doc.close();
+        setTimeout(() => { iframe.contentWindow.focus(); iframe.contentWindow.print(); }, 50);
+        if (addToast) addToast({ message: `Generating PDF Invoice ${inv.invoiceId}...`, type: 'info' });
+    };
 
     const activePaymentsList = (payments && payments.length > 0) ? payments : INITIAL_PAYMENTS;
 
@@ -215,10 +279,10 @@ export default function AdPaymentsPage() {
                                                     <FiEye /> View
                                                 </button>
                                                 <button
-                                                    onClick={() => addToast({ message: `Downloading invoice ${item.invoiceId}...`, type: 'info' })}
-                                                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-xs font-bold text-emerald-600 cursor-pointer transition-colors"
+                                                    onClick={() => triggerFastAdInvoicePrint(item)}
+                                                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-xs font-bold text-emerald-600 cursor-pointer transition-colors shadow-2xs"
                                                 >
-                                                    <FiDownload /> Download
+                                                    <FiDownload /> Download PDF
                                                 </button>
                                             </div>
                                         </td>
@@ -275,8 +339,61 @@ export default function AdPaymentsPage() {
 
                         <div className="flex justify-end gap-2 pt-2">
                             <Button variant="secondary" onClick={() => setViewInvoiceModal(null)}>Close</Button>
-                            <Button variant="primary" onClick={() => { addToast({ message: `Invoice ${viewInvoiceModal.invoiceId} downloaded.`, type: 'info' }); setViewInvoiceModal(null); }}>
-                                <FiDownload className="mr-1 inline" /> Download PDF
+                            <Button variant="primary" onClick={() => {
+                                const inv = viewInvoiceModal;
+                                const iframeHTML = `
+                                    <!DOCTYPE html>
+                                    <html>
+                                    <head>
+                                        <title>Invoice ${inv.invoiceId}</title>
+                                        <style>
+                                            @page { size: A4 portrait; margin: 8mm; }
+                                            body { font-family: sans-serif; padding: 20px; color: #111827; }
+                                            .card { max-width: 600px; margin: 0 auto; border: 2px solid #111827; padding: 20px; border-radius: 12px; }
+                                            .header { border-bottom: 2px solid #10b981; padding-bottom: 10px; margin-bottom: 15px; display: flex; justify-content: space-between; }
+                                            .total { background: #111827; color: #fff; padding: 12px; border-radius: 8px; font-size: 18px; font-weight: bold; margin-top: 15px; display: flex; justify-content: space-between; }
+                                        </style>
+                                    </head>
+                                    <body>
+                                        <div class="card">
+                                            <div class="header">
+                                                <div><h2>SPORTMATRIX ADVERTISING</h2><p>Ref: ${inv.invoiceId}</p></div>
+                                                <div style="text-align:right;"><strong>OFFICIAL TAX INVOICE</strong><p>Status: PAID 🟢</p></div>
+                                            </div>
+                                            <p><strong>Advertiser:</strong> ${inv.advertiser}</p>
+                                            <p><strong>Campaign Name:</strong> ${inv.adName}</p>
+                                            <p><strong>Payment Method:</strong> ${inv.method}</p>
+                                            <p><strong>Date:</strong> ${inv.date}</p>
+                                            <div class="total">
+                                                <span>Total Amount Paid (Zero GST Tax)</span>
+                                                <span style="color:#c8ff2e;">${inv.amount}</span>
+                                            </div>
+                                        </div>
+                                    </body>
+                                    </html>
+                                `;
+                                let iframe = document.getElementById('fast-ad-print-frame');
+                                if (!iframe) {
+                                    iframe = document.createElement('iframe');
+                                    iframe.id = 'fast-ad-print-frame';
+                                    iframe.style.position = 'fixed';
+                                    iframe.style.right = '0';
+                                    iframe.style.bottom = '0';
+                                    iframe.style.width = '0';
+                                    iframe.style.height = '0';
+                                    iframe.style.border = '0';
+                                    iframe.style.visibility = 'hidden';
+                                    document.body.appendChild(iframe);
+                                }
+                                const doc = iframe.contentWindow.document;
+                                doc.open();
+                                doc.write(iframeHTML);
+                                doc.close();
+                                setTimeout(() => { iframe.contentWindow.focus(); iframe.contentWindow.print(); }, 50);
+                                if (addToast) addToast({ message: `Invoice ${viewInvoiceModal.invoiceId} generating...`, type: 'info' });
+                                setViewInvoiceModal(null);
+                            }}>
+                                <FiDownload className="mr-1 inline" /> Download PDF / Print
                             </Button>
                         </div>
                     </div>

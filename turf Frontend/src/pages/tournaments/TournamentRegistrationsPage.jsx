@@ -6,72 +6,11 @@ import Card from '../../components/ui/Card'
 import Modal from '../../components/ui/Modal'
 import { useToast } from '../../components/ui/Toast'
 import { HiUserGroup, HiPhone, HiMail, HiCheckCircle, HiXCircle, HiEye, HiCurrencyRupee } from 'react-icons/hi'
-
-const mockTeams = [
-    {
-        id: 'tm_101',
-        tournamentTitle: 'Premier Cricket Cup',
-        teamName: 'Indore Thunders',
-        logo: '⚡',
-        captainName: 'Rajesh Patel',
-        captainEmail: 'rajesh@gmail.com',
-        captainMobile: '+91 98765 43201',
-        jerseyColor: 'Yellow & Black',
-        paymentStatus: 'PAID',
-        paymentMethod: 'UPI',
-        amount: 500,
-        status: 'Approved',
-        registeredAt: '2026-03-01',
-        players: [
-            { id: 1, name: 'Rajesh Patel (C)', jerseyNumber: 7, role: 'All-Rounder' },
-            { id: 2, name: 'Kunal Verma', jerseyNumber: 18, role: 'Batsman' },
-            { id: 3, name: 'Devendra Singh', jerseyNumber: 99, role: 'Bowler' },
-            { id: 4, name: 'Aman Sharma', jerseyNumber: 10, role: 'Wicket Keeper' }
-        ]
-    },
-    {
-        id: 'tm_102',
-        tournamentTitle: 'Premier Cricket Cup',
-        teamName: 'Royal Challengers',
-        logo: '🦁',
-        captainName: 'Kunal Shah',
-        captainEmail: 'kunal@gmail.com',
-        captainMobile: '+91 98765 43202',
-        jerseyColor: 'Red & Gold',
-        paymentStatus: 'PAID',
-        paymentMethod: 'WALLET',
-        amount: 500,
-        status: 'Approved',
-        registeredAt: '2026-03-02',
-        players: [
-            { id: 1, name: 'Kunal Shah (C)', jerseyNumber: 18, role: 'Batsman' },
-            { id: 2, name: 'Rohan Gupta', jerseyNumber: 45, role: 'Bowler' }
-        ]
-    },
-    {
-        id: 'tm_201',
-        tournamentTitle: 'Indore Football Cup',
-        teamName: 'Red Devils Futsal',
-        logo: '😈',
-        captainName: 'Suraj Sharma',
-        captainEmail: 'suraj.sharma@gmail.com',
-        captainMobile: '+91 98765 43220',
-        jerseyColor: 'Crimson Red',
-        paymentStatus: 'PAID',
-        paymentMethod: 'ONLINE',
-        amount: 800,
-        status: 'Pending',
-        registeredAt: '2026-03-05',
-        players: [
-            { id: 1, name: 'Suraj Sharma (C)', jerseyNumber: 10, role: 'Forward' },
-            { id: 2, name: 'Varun Dhawan', jerseyNumber: 7, role: 'Midfielder' }
-        ]
-    }
-]
+import { MASTER_TEAMS } from '../../services/tournamentStore'
 
 export default function TournamentRegistrationsPage() {
     const { addToast } = useToast()
-    const [teams, setTeams] = useState(mockTeams)
+    const [teams, setTeams] = useState(MASTER_TEAMS)
     const [viewRosterModal, setViewRosterModal] = useState({ open: false, team: null })
 
     const handleUpdateStatus = (teamId, newStatus) => {

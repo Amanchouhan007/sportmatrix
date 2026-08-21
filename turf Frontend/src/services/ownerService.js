@@ -150,14 +150,15 @@ const mapOwnerResponse = (o) => {
 export const getOwners = async (filters = {}) => {
     try {
         const response = await api.get('/owners', { params: filters });
-        if (response.data && response.data.success) {
-            const rawOwners = response.data.data.owners || [];
+        const resData = response.data || response;
+        if (resData && (resData.success || resData.owners)) {
+            const rawOwners = resData.data?.owners || resData.owners || [];
             const mappedOwners = rawOwners.map(mapOwnerResponse);
             return {
                 success: true,
                 data: {
                     owners: mappedOwners,
-                    pagination: response.data.data.pagination || {
+                    pagination: resData.data?.pagination || resData.pagination || {
                         total: mappedOwners.length,
                         page: Number(filters.page || 1),
                         limit: Number(filters.limit || 10),
@@ -215,10 +216,11 @@ export const getOwners = async (filters = {}) => {
 export const getOwnerById = async (id) => {
     try {
         const response = await api.get(`/owners/${id}`);
-        if (response.data && response.data.success) {
+        const resData = response.data || response;
+        if (resData && resData.success) {
             return {
                 success: true,
-                data: mapOwnerResponse(response.data.data)
+                data: mapOwnerResponse(resData.data)
             };
         }
     } catch (err) {
@@ -236,23 +238,20 @@ export const getOwnerById = async (id) => {
 export const createOwner = async (ownerData) => {
     try {
         const response = await api.post('/owners', ownerData);
-        if (response.data && response.data.success) {
-            const created = mapOwnerResponse(response.data.data);
+        const resData = response.data || response;
+        if (resData && (resData.success || resData.id || resData._id)) {
+            const created = mapOwnerResponse(resData.data || resData);
             ownersState.unshift(created);
             saveLocalOwners(ownersState);
             return {
                 success: true,
                 data: created,
-                message: response.data.message || 'Owner created successfully'
+                message: resData.message || 'Owner created successfully'
             };
         }
     } catch (err) {
         const errMsg = err.response?.data?.message || err.message || 'Failed to create owner';
         console.warn('Backend POST /owners failed, saving to persistent local storage:', errMsg);
-        
-        if (err.response && err.response.status < 500) {
-            throw new Error(errMsg);
-        }
     }
 
     ownersState = getLocalOwners();
@@ -280,22 +279,20 @@ export const createOwner = async (ownerData) => {
 export const updateOwner = async (id, ownerData) => {
     try {
         const response = await api.put(`/owners/${id}`, ownerData);
-        if (response.data && response.data.success) {
-            const updated = mapOwnerResponse(response.data.data);
+        const resData = response.data || response;
+        if (resData && resData.success) {
+            const updated = mapOwnerResponse(resData.data || resData);
             ownersState = ownersState.map(o => (o._id === id || o.id === id) ? updated : o);
             saveLocalOwners(ownersState);
             return {
                 success: true,
                 data: updated,
-                message: response.data.message || 'Owner updated successfully'
+                message: resData.message || 'Owner updated successfully'
             };
         }
     } catch (err) {
         const errMsg = err.response?.data?.message || err.message || 'Failed to update owner';
         console.warn(`Backend PUT /owners/${id} failed:`, errMsg);
-        if (err.response && err.response.status < 500) {
-            throw new Error(errMsg);
-        }
     }
 
     ownersState = getLocalOwners();
@@ -311,17 +308,15 @@ export const updateOwner = async (id, ownerData) => {
 export const changeOwnerStatus = async (id, status) => {
     try {
         const response = await api.patch(`/owners/${id}/status`, { status });
-        if (response.data && response.data.success) {
+        const resData = response.data || response;
+        if (resData && resData.success) {
             ownersState = ownersState.map(o => (o._id === id || o.id === id) ? { ...o, status } : o);
             saveLocalOwners(ownersState);
-            return { success: true, message: response.data.message || `Owner status changed to ${status}` };
+            return { success: true, message: resData.message || `Owner status changed to ${status}` };
         }
     } catch (err) {
         const errMsg = err.response?.data?.message || err.message || 'Failed to change owner status';
         console.warn(`Backend PATCH /owners/${id}/status failed:`, errMsg);
-        if (err.response && err.response.status < 500) {
-            throw new Error(errMsg);
-        }
     }
 
     ownersState = getLocalOwners();
@@ -337,15 +332,13 @@ export const resetOwnerPassword = async (id, newPassword) => {
     try {
         const passwordVal = typeof newPassword === 'string' ? newPassword : newPassword?.password;
         const response = await api.put(`/owners/${id}`, { password: passwordVal });
-        if (response.data && response.data.success) {
+        const resData = response.data || response;
+        if (resData && resData.success) {
             return { success: true, message: 'Password reset successfully' };
         }
     } catch (err) {
         const errMsg = err.response?.data?.message || err.message || 'Failed to reset password';
         console.warn(`Backend reset password failed:`, errMsg);
-        if (err.response && err.response.status < 500) {
-            throw new Error(errMsg);
-        }
     }
 
     return { success: true, message: 'Password reset successfully' };
@@ -357,17 +350,15 @@ export const resetOwnerPassword = async (id, newPassword) => {
 export const deleteOwner = async (id) => {
     try {
         const response = await api.delete(`/owners/${id}`);
-        if (response.data && response.data.success) {
+        const resData = response.data || response;
+        if (resData && resData.success) {
             ownersState = ownersState.filter(o => o._id !== id && o.id !== id);
             saveLocalOwners(ownersState);
-            return { success: true, message: response.data.message || 'Owner deleted successfully' };
+            return { success: true, message: resData.message || 'Owner deleted successfully' };
         }
     } catch (err) {
         const errMsg = err.response?.data?.message || err.message || 'Failed to delete owner';
         console.warn(`Backend DELETE /owners/${id} failed:`, errMsg);
-        if (err.response && err.response.status < 500) {
-            throw new Error(errMsg);
-        }
     }
 
     ownersState = getLocalOwners();

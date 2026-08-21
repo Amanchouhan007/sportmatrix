@@ -15,11 +15,23 @@ const initialTransactions = [
 ]
 
 const columns = [
-    { key: 'id', label: 'ID' },
+    { 
+        key: 'id', 
+        label: 'Transaction ID',
+        render: v => <span className="font-mono font-black text-slate-900 bg-slate-100 border border-slate-200 px-2 py-0.5 rounded-md text-xs">{v}</span>
+    },
     { key: 'type', label: 'Type', render: v => <Badge variant={v === 'Booking' ? 'primary' : v === 'Refund' || v === 'Prize' ? 'success' : v === 'Tournament' ? 'warning' : 'default'}>{v}</Badge> },
-    { key: 'desc', label: 'Description' },
-    { key: 'amount', label: 'Amount', render: v => <span className={v.startsWith('+') ? 'text-accent-600 font-semibold' : 'text-surface-900 font-semibold'}>{v}</span> },
-    { key: 'date', label: 'Date' },
+    { key: 'desc', label: 'Description', render: v => <span className="font-bold text-slate-900">{v}</span> },
+    { 
+        key: 'amount', 
+        label: 'Amount', 
+        render: v => (
+            <span className={v.startsWith('+') ? 'text-emerald-700 font-black font-mono text-sm bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200 inline-block' : 'text-slate-900 font-extrabold font-mono text-sm'}>
+                {v}
+            </span>
+        ) 
+    },
+    { key: 'date', label: 'Date', render: v => <span className="font-mono font-semibold text-slate-600 text-xs">📅 {v}</span> },
     { key: 'status', label: 'Status', render: v => <Badge variant="success" dot>{v}</Badge> },
 ]
 

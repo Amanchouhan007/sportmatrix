@@ -1,8 +1,10 @@
+import { useState, useEffect } from 'react'
 import DataTable from '../../components/ui/DataTable'
 import Badge from '../../components/ui/Badge'
 import Button from '../../components/ui/Button'
 import Card from '../../components/ui/Card'
-import { HiUserGroup, HiUser, HiStar } from 'react-icons/hi'
+import api from '../../services/api'
+import { HiUserGroup, HiUser, HiStar, HiPlus } from 'react-icons/hi'
 
 const teams = [
     { name: 'Thunder XI', sport: 'Cricket', players: 11, ranking: 1, wins: 8, losses: 2, logo: '🏏' },
@@ -71,6 +73,72 @@ const playerCols = [
 ]
 
 export default function TeamsPlayers() {
+    const [teamList, setTeamList] = useState(teams)
+    const [isAddModalOpen, setIsAddModalOpen] = useState(false)
+    const [teamName, setTeamName] = useState('')
+    const [captainName, setCaptainName] = useState('')
+    const [captainPhone, setCaptainPhone] = useState('')
+    const [sport, setSport] = useState('Cricket')
+    const [membersCount, setMembersCount] = useState(11)
+
+    // Load live teams from backend REST API
+    useEffect(() => {
+        api.get('/teams')
+            .then(res => {
+                if (res.data && res.data.success && Array.isArray(res.data.data) && res.data.data.length > 0) {
+                    const mapped = res.data.data.map(t => ({
+                        id: t.id,
+                        name: t.name,
+                        sport: t.sport || 'Cricket',
+                        players: t.members_count || 11,
+                        ranking: 1,
+                        wins: 0,
+                        losses: 0,
+                        logo: t.sport === 'Football' ? '⚽' : '🏏'
+                    }))
+                    setTeamList(prev => [...mapped, ...prev])
+                }
+            })
+            .catch(e => console.warn('Fetch teams note:', e.message))
+    }, [])
+
+    const handleCreateTeam = async (e) => {
+        e.preventDefault()
+        if (!teamName || !captainName) return
+
+        const newTeam = {
+            id: `tm_${Date.now()}`,
+            name: teamName,
+            sport: sport,
+            players: Number(membersCount || 11),
+            ranking: teamList.length + 1,
+            wins: 0,
+            losses: 0,
+            logo: sport === 'Football' ? '⚽' : '🏏'
+        }
+
+        setTeamList([newTeam, ...teamList])
+        setIsAddModalOpen(false)
+
+        // API post
+        try {
+            await api.post('/teams', {
+                name: teamName,
+                captainName,
+                captainPhone: captainPhone || '+91 98765 43210',
+                sport,
+                membersCount: Number(membersCount)
+            })
+        } catch (err) {
+            console.warn('API post team note:', err.message)
+        }
+
+        // Reset form
+        setTeamName('')
+        setCaptainName('')
+        setCaptainPhone('')
+    }
+
     return (
         <div className="space-y-8 animate-in fade-in duration-500">
             {/* Header */}
@@ -81,16 +149,22 @@ export default function TeamsPlayers() {
                     </h1>
                     <p className="text-surface-500 text-sm mt-0.5 font-medium">Browse active athletic teams, check participant statistics, and inspect performance skills</p>
                 </div>
+                <button
+                    onClick={() => setIsAddModalOpen(true)}
+                    className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-black rounded-2xl shadow-md flex items-center gap-2 self-start md:self-auto transition-all"
+                >
+                    <HiPlus className="w-5 h-5" /> Add New Team
+                </button>
             </div>
 
             {/* Teams Ledger */}
             <div className="bg-white rounded-3xl border border-surface-200/60 p-6 shadow-soft space-y-4">
                 <div className="flex items-center justify-between border-b border-surface-100 pb-3">
                     <h2 className="text-base font-black text-surface-900 tracking-tight flex items-center gap-1.5">
-                        <HiUserGroup className="text-emerald-500" /> Active Club Teams
+                        <HiUserGroup className="text-emerald-500" /> Active Club Teams ({teamList.length})
                     </h2>
                 </div>
-                <DataTable columns={teamCols} data={teams} />
+                <DataTable columns={teamCols} data={teamList} />
             </div>
 
             {/* Players Ledger */}
@@ -102,6 +176,112 @@ export default function TeamsPlayers() {
                 </div>
                 <DataTable columns={playerCols} data={players} />
             </div>
+
+            {/* ADD TEAM MODAL */}
+            {isAddModalOpen && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/80 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+                    <div className="bg-white border border-slate-200 rounded-3xl p-6 max-w-md w-full shadow-2xl space-y-4">
+                        <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                            <h3 className="text-xl font-black text-slate-900 tracking-tight flex items-center gap-2">
+                                🏏 Register New Team
+                            </h3>
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    setTeamName('Indore Strikers XI')
+                                    setCaptainName('Vikram Malhotra')
+                                    setCaptainPhone('+91 98765 43210')
+                                    setSport('Cricket')
+                                    setMembersCount(11)
+                                }}
+                                className="px-3 py-1 text-[11px] font-black bg-emerald-100 hover:bg-emerald-200 text-emerald-700 rounded-lg transition-all"
+                            >
+                                ⚡ Quick Autofill
+                            </button>
+                        </div>
+
+                        <form onSubmit={handleCreateTeam} className="space-y-3.5 text-xs">
+                            <div>
+                                <label className="text-[10px] font-black uppercase text-emerald-700 mb-1 block">Team Name</label>
+                                <input
+                                    type="text"
+                                    value={teamName}
+                                    onChange={(e) => setTeamName(e.target.value)}
+                                    required
+                                    placeholder="e.g. Thunder XI / Indore Strikers"
+                                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 font-bold text-slate-900 outline-none focus:border-emerald-600"
+                                />
+                            </div>
+
+                            <div>
+                                <label className="text-[10px] font-black uppercase text-slate-500 mb-1 block">Captain Full Name</label>
+                                <input
+                                    type="text"
+                                    value={captainName}
+                                    onChange={(e) => setCaptainName(e.target.value)}
+                                    required
+                                    placeholder="e.g. Vikram Malhotra (Captain)"
+                                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 font-bold text-slate-900 outline-none focus:border-emerald-600"
+                                />
+                            </div>
+
+                            <div>
+                                <label className="text-[10px] font-black uppercase text-slate-500 mb-1 block">Captain WhatsApp Mobile</label>
+                                <input
+                                    type="text"
+                                    value={captainPhone}
+                                    onChange={(e) => setCaptainPhone(e.target.value)}
+                                    placeholder="+91 98765 43210"
+                                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 font-bold text-slate-900 outline-none focus:border-emerald-600"
+                                />
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label className="text-[10px] font-black uppercase text-slate-500 mb-1 block">Sport Type</label>
+                                    <select
+                                        value={sport}
+                                        onChange={(e) => setSport(e.target.value)}
+                                        className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 font-bold text-slate-900 outline-none focus:border-emerald-600"
+                                    >
+                                        <option value="Cricket">Box Cricket 🏏</option>
+                                        <option value="Football">Football ⚽</option>
+                                        <option value="Badminton">Badminton 🏸</option>
+                                    </select>
+                                </div>
+
+                                <div>
+                                    <label className="text-[10px] font-black uppercase text-slate-500 mb-1 block">Roster Count</label>
+                                    <input
+                                        type="number"
+                                        value={membersCount}
+                                        onChange={(e) => setMembersCount(e.target.value)}
+                                        min="1"
+                                        max="30"
+                                        className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 font-bold text-slate-900 outline-none focus:border-emerald-600"
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100">
+                                <button
+                                    type="button"
+                                    onClick={() => setIsAddModalOpen(false)}
+                                    className="px-4 py-2 rounded-xl border border-slate-200 text-slate-600 font-bold"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    type="submit"
+                                    className="px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-black shadow-md transition-all"
+                                >
+                                    Save Team
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
         </div>
     )
 }

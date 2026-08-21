@@ -56,16 +56,16 @@ const getDiscountOffers = async (req, res) => {
         const { search, turfId, status, discountType, page = 1, limit = 10 } = req.query;
 
         let query = `
-            SELECT d.*, b.name as turf_name, o.full_name as owner_name
+            SELECT d.*, b.branch_name as turf_name, o.full_name as owner_name
             FROM discount_offers d
-            LEFT JOIN branches b ON d.turf_id = b.id
+            LEFT JOIN branches b ON d.branch_id = b.id
             LEFT JOIN owners o ON d.owner_id = o.id
             WHERE d.deleted_at IS NULL
         `;
         const params = [];
 
         if (turfId && turfId !== 'ALL') {
-            query += ` AND d.turf_id = ?`;
+            query += ` AND d.branch_id = ?`;
             params.push(turfId);
         }
 
@@ -80,7 +80,7 @@ const getDiscountOffers = async (req, res) => {
         }
 
         if (search) {
-            query += ` AND (LOWER(d.title) LIKE ? OR LOWER(d.promo_code) LIKE ? OR LOWER(b.name) LIKE ?)`;
+            query += ` AND (LOWER(d.title) LIKE ? OR LOWER(d.promo_code) LIKE ? OR LOWER(b.branch_name) LIKE ?)`;
             const q = `%${search.toLowerCase().trim()}%`;
             params.push(q, q, q);
         }
@@ -125,9 +125,9 @@ const getDiscountOfferById = async (req, res) => {
     try {
         const { id } = req.params;
         const [rows] = await db.query(`
-            SELECT d.*, b.name as turf_name, o.full_name as owner_name
+            SELECT d.*, b.branch_name as turf_name, o.full_name as owner_name
             FROM discount_offers d
-            LEFT JOIN branches b ON d.turf_id = b.id
+            LEFT JOIN branches b ON d.branch_id = b.id
             LEFT JOIN owners o ON d.owner_id = o.id
             WHERE d.id = ? AND d.deleted_at IS NULL
         `, [id]);
@@ -271,9 +271,9 @@ const createDiscountOffer = async (req, res) => {
         ]);
 
         const [created] = await db.query(`
-            SELECT d.*, b.name as turf_name, o.full_name as owner_name
+            SELECT d.*, b.branch_name as turf_name, o.full_name as owner_name
             FROM discount_offers d
-            LEFT JOIN branches b ON d.turf_id = b.id
+            LEFT JOIN branches b ON d.branch_id = b.id
             LEFT JOIN owners o ON d.owner_id = o.id
             WHERE d.id = ?
         `, [discountId]);
@@ -327,9 +327,9 @@ const updateDiscountOffer = async (req, res) => {
         }
 
         const [updated] = await db.query(`
-            SELECT d.*, b.name as turf_name, o.full_name as owner_name
+            SELECT d.*, b.branch_name as turf_name, o.full_name as owner_name
             FROM discount_offers d
-            LEFT JOIN branches b ON d.turf_id = b.id
+            LEFT JOIN branches b ON d.branch_id = b.id
             LEFT JOIN owners o ON d.owner_id = o.id
             WHERE d.id = ?
         `, [id]);
@@ -436,9 +436,9 @@ const duplicateDiscountOffer = async (req, res) => {
         ]);
 
         const [duplicated] = await db.query(`
-            SELECT d.*, b.name as turf_name, o.full_name as owner_name
+            SELECT d.*, b.branch_name as turf_name, o.full_name as owner_name
             FROM discount_offers d
-            LEFT JOIN branches b ON d.turf_id = b.id
+            LEFT JOIN branches b ON d.branch_id = b.id
             LEFT JOIN owners o ON d.owner_id = o.id
             WHERE d.id = ?
         `, [newId]);

@@ -671,7 +671,7 @@ export default function UmpireDashboard() {
                             type="button"
                             onClick={() => {
                                 if (logout) logout()
-                                navigate('/login')
+                                navigate('/')
                                 if (addToast) addToast('Logged out of Umpire Portal', 'info')
                             }}
                             className="px-3.5 py-2.5 rounded-xl bg-red-600/20 hover:bg-red-600 text-red-300 hover:text-white font-black text-xs border border-red-500/40 transition-all cursor-pointer flex items-center gap-1.5"

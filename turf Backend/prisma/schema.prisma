@@ -373,10 +373,10 @@ model SubscriptionPlan {
 
 model OwnerSubscription {
   id            String             @id @default(cuid()) @map("id") @db.VarChar(50)
-  ownerId       String             @map("owner_id") @db.VarChar(50)
-  owner         Owner              @relation(fields: [ownerId], references: [id], onDelete: Cascade)
-  planId        String             @map("plan_id") @db.VarChar(50)
-  plan          SubscriptionPlan   @relation(fields: [planId], references: [id], onDelete: Restrict)
+  ownerId       String?            @map("owner_id") @db.VarChar(50)
+  owner         Owner?             @relation(fields: [ownerId], references: [id], onDelete: SetNull)
+  planId        String?            @map("plan_id") @db.VarChar(50)
+  plan          SubscriptionPlan?  @relation(fields: [planId], references: [id], onDelete: SetNull)
 
   billingCycle  BillingCycle       @default(MONTHLY) @map("billing_cycle")
   status        SubscriptionStatus @default(ACTIVE) @map("status")
@@ -574,8 +574,8 @@ model SlotHold {
   id              String   @id @default(cuid()) @map("id") @db.VarChar(50)
   slotId          String?  @map("slot_id") @db.VarChar(50)
   slot            Slot?    @relation(fields: [slotId], references: [id], onDelete: Cascade)
-  branchId        String   @map("branch_id") @db.VarChar(50)
-  branch          Branch   @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  branchId        String?  @map("branch_id") @db.VarChar(50)
+  branch          Branch?  @relation(fields: [branchId], references: [id], onDelete: SetNull)
   matchId         String?  @map("match_id") @db.VarChar(50)
   match           Match?   @relation(fields: [matchId], references: [id], onDelete: SetNull)
 
@@ -599,8 +599,8 @@ model Match {
   id                       String           @id @map("id") @db.VarChar(50) // e.g. MATCH-178700-482
   slotId                   String?          @map("slot_id") @db.VarChar(50)
   slot                     Slot?            @relation(fields: [slotId], references: [id], onDelete: SetNull)
-  branchId                 String           @map("branch_id") @db.VarChar(50)
-  branch                   Branch           @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  branchId                 String?          @map("branch_id") @db.VarChar(50)
+  branch                   Branch?          @relation(fields: [branchId], references: [id], onDelete: SetNull)
   sportId                  String?          @map("sport_id") @db.VarChar(50)
   sport                    Sport?           @relation(fields: [sportId], references: [id], onDelete: SetNull)
 
@@ -657,8 +657,8 @@ model MatchTeam {
   match            Match        @relation(fields: [matchId], references: [id], onDelete: Cascade)
   teamSide         String       @map("team_side") @db.VarChar(10) // "TEAM_A" or "TEAM_B"
   teamName         String       @map("team_name") @db.VarChar(100)
-  captainName      String       @map("captain_name") @db.VarChar(100)
-  captainPhone     String       @map("captain_phone") @db.VarChar(20)
+  captainName      String?      @map("captain_name") @db.VarChar(100)
+  captainPhone     String?      @map("captain_phone") @db.VarChar(20)
   paidPlayerCount  Int          @default(0) @map("paid_player_count")
   createdAt        DateTime     @default(now()) @map("created_at")
 
@@ -672,11 +672,11 @@ model MatchPayment {
   userId           String?       @map("user_id") @db.VarChar(50)
   user             User?         @relation(fields: [userId], references: [id], onDelete: SetNull)
 
-  teamSide         String        @map("team_side") @db.VarChar(10) // "TEAM_A" or "TEAM_B"
-  playerName       String        @map("player_name") @db.VarChar(100)
-  playerPhone      String        @map("player_phone") @db.VarChar(20)
+  teamSide         String?       @default("TEAM_A") @map("team_side") @db.VarChar(10) // "TEAM_A" or "TEAM_B"
+  playerName       String?       @default("Player") @map("player_name") @db.VarChar(100)
+  playerPhone      String?       @default("") @map("player_phone") @db.VarChar(20)
   amount           Decimal       @map("amount") @db.Decimal(10, 2)
-  paymentMode      String        @map("payment_mode") @db.VarChar(50) // FULL_PAY, DARE_DEPOSIT, 50_50_SHARE, SQUAD_SPLIT
+  paymentMode      String?       @default("FULL_PAY") @map("payment_mode") @db.VarChar(50) // FULL_PAY, DARE_DEPOSIT, 50_50_SHARE, SQUAD_SPLIT
   paymentStatus    PaymentStatus @default(PENDING) @map("payment_status")
   gatewayRef       String?       @map("gateway_ref") @db.VarChar(100)
   upiTransactionId String?       @map("upi_transaction_id") @db.VarChar(100)

@@ -7,29 +7,38 @@ const getBranches = async (req, res) => {
     const { status, ownerId, search, page = 1, limit = 10 } = req.query;
 
     try {
-        let sql = 'SELECT * FROM branches WHERE 1=1';
+        let sql = `
+            SELECT b.*, 
+                   COALESCE(o.full_name, u.name, 'Turf Owner') as owner_full_name,
+                   COALESCE(p.plan_name, 'Starter Plan') as plan_name
+            FROM branches b
+            LEFT JOIN owners o ON (b.owner_id = o.id OR b.owner_id = o.user_id)
+            LEFT JOIN users u ON (b.owner_id = u.id)
+            LEFT JOIN subscription_plans p ON b.subscription_plan_id = p.id
+            WHERE 1=1
+        `;
         const params = [];
 
         if (status && status !== 'ALL') {
-            sql += ' AND status = ?';
+            sql += ' AND b.status = ?';
             params.push(status);
         }
         if (ownerId && ownerId !== 'ALL') {
-            sql += ' AND owner_id = ?';
+            sql += ' AND b.owner_id = ?';
             params.push(ownerId);
         }
         if (search) {
-            sql += ' AND (branch_name LIKE ? OR city LIKE ? OR branch_code LIKE ?)';
+            sql += ' AND (b.branch_name LIKE ? OR b.city LIKE ? OR b.branch_code LIKE ?)';
             const q = `%${search}%`;
             params.push(q, q, q);
         }
 
-        const offset = (Number(page) - 1) * Number(limit);
-        const countSql = sql.replace('SELECT *', 'SELECT COUNT(*) as count');
-        const [[{ count }]] = await db.query(countSql, params);
+        const [countRows] = await db.query('SELECT COUNT(*) as count FROM branches');
+        const count = countRows[0]?.count || 0;
 
-        sql += ' LIMIT ? OFFSET ?';
-        params.push(Number(limit), offset);
+        const offset = (Number(page) - 1) * Number(limit);
+        sql += ' ORDER BY b.created_at DESC LIMIT ? OFFSET ?';
+        params.push(Number(limit), Number(offset));
 
         const [rows] = await db.query(sql, params);
 
@@ -39,14 +48,36 @@ const getBranches = async (req, res) => {
             branchName: r.branch_name,
             branchCode: r.branch_code,
             description: r.description,
-            ownerId: r.owner_id,
-            subscriptionPlanId: r.subscription_plan_id,
-            city: r.city,
-            zipCode: r.zip_code,
-            fullAddress: r.full_address,
+            ownerId: {
+                _id: r.owner_id || 'own_001',
+                id: r.owner_id || 'own_001',
+                fullName: r.owner_full_name || 'Turf Owner'
+            },
+            subscriptionPlanId: {
+                _id: r.subscription_plan_id || 'plan_starter',
+                id: r.subscription_plan_id || 'plan_starter',
+                planName: r.plan_name || 'Starter Plan'
+            },
+            city: r.city || 'Indore',
+            zipCode: r.zip_code || '',
+            fullAddress: r.full_address || '',
             email: r.email,
             mobile: r.mobile,
-            status: r.status,
+            pricePerHour: r.price_per_hour || 1000,
+            price: r.price_per_hour || 1000,
+            openingTime: r.opening_time || '06:00 AM',
+            closingTime: r.closing_time || '11:00 PM',
+            turfSize: r.turf_size || '5,000 Sq.Ft',
+            dimensions: r.turf_size || '5,000 Sq.Ft',
+            surfaceType: r.surface_type || 'TurfPro Synthetic Arena',
+            sports: r.sports ? (typeof r.sports === 'string' && r.sports.startsWith('[') ? JSON.parse(r.sports) : r.sports.split(',')) : ['Cricket', 'Football'],
+            amenities: r.amenities ? (typeof r.amenities === 'string' && r.amenities.startsWith('[') ? JSON.parse(r.amenities) : r.amenities.split(',')) : ['Floodlights', 'Parking', 'Washroom'],
+            discountOffer: r.discount_offer || '20% OFF FIRST MATCH',
+            couponCode: r.coupon_code || 'CRICKET20',
+            logo: r.logo || '',
+            images: r.images ? (typeof r.images === 'string' && r.images.startsWith('[') ? JSON.parse(r.images) : [r.images]) : [],
+            status: r.status || 'ACTIVE',
+            totalRevenue: r.total_revenue || 0,
             createdAt: r.created_at
         }));
 
@@ -66,7 +97,7 @@ const getBranches = async (req, res) => {
         console.error('Fetch branches error:', error);
         return res.status(500).json({
             success: false,
-            message: 'Internal Server Error fetching branches.'
+            message: 'Internal Server Error fetching branches: ' + error.message
         });
     }
 };
@@ -100,6 +131,17 @@ const getBranchById = async (req, res) => {
             fullAddress: r.full_address,
             email: r.email,
             mobile: r.mobile,
+            pricePerHour: r.price_per_hour || 1000,
+            openingTime: r.opening_time || '06:00 AM',
+            closingTime: r.closing_time || '11:00 PM',
+            turfSize: r.turf_size || '5,000 Sq.Ft',
+            surfaceType: r.surface_type || 'TurfPro Synthetic Arena',
+            sports: r.sports ? (typeof r.sports === 'string' && r.sports.startsWith('[') ? JSON.parse(r.sports) : r.sports.split(',')) : ['Cricket', 'Football'],
+            amenities: r.amenities ? (typeof r.amenities === 'string' && r.amenities.startsWith('[') ? JSON.parse(r.amenities) : r.amenities.split(',')) : ['Floodlights', 'Parking', 'Washroom'],
+            discountOffer: r.discount_offer || '20% OFF FIRST MATCH',
+            couponCode: r.coupon_code || 'CRICKET20',
+            logo: r.logo || '',
+            images: r.images ? (typeof r.images === 'string' && r.images.startsWith('[') ? JSON.parse(r.images) : [r.images]) : [],
             status: r.status,
             createdAt: r.created_at
         };
@@ -122,10 +164,12 @@ const getBranchById = async (req, res) => {
  */
 const createBranch = async (req, res) => {
     const { 
-        branchName, description, ownerId, subscriptionPlanId, 
+        branchName, description, ownerId, newOwnerName, newOwnerBusinessName, subscriptionPlanId, 
         country, state, city, zipCode, fullAddress, 
         email, mobile, alternateMobile, gstNumber, 
-        timezone, currency, logo 
+        timezone, currency, logo, images,
+        pricePerHour, openingTime, closingTime, turfSize, surfaceType,
+        sports, amenities, discountOffer, couponCode
     } = req.body;
 
     if (!branchName || !email) {
@@ -140,33 +184,120 @@ const createBranch = async (req, res) => {
         const branchCode = 'BR-' + Math.floor(1000 + Math.random() * 9000);
 
         let validOwnerId = null;
-        if (ownerId) {
-            const [userCheck] = await db.query('SELECT id FROM users WHERE id = ?', [ownerId]);
-            if (userCheck.length > 0) {
-                validOwnerId = ownerId;
-            } else {
-                const [firstOwner] = await db.query("SELECT id FROM users WHERE role IN ('OWNER', 'SUPER_ADMIN') LIMIT 1");
-                validOwnerId = firstOwner.length > 0 ? firstOwner[0].id : null;
+        let ownerName = 'Turf Owner';
+        
+        // Handle dynamic real-time new owner registration
+        if (newOwnerName && newOwnerName.trim()) {
+            const createdOwnerId = 'own_' + Date.now();
+            const bName = (newOwnerBusinessName && newOwnerBusinessName.trim()) 
+                ? newOwnerBusinessName.trim() 
+                : (newOwnerName.trim() + ' Network');
+            
+            const uniqueSuffix = Date.now().toString().slice(-6);
+            const ownerEmail = (email && email.trim()) ? email.trim() : `owner_${uniqueSuffix}@turf.com`;
+            const ownerMobile = (mobile && mobile.trim()) ? mobile.trim() : `98${Math.floor(10000000 + Math.random() * 89999999)}`;
+            const defaultPasswordHash = '$2b$10$w8T0.g2K3mY7wYxGvD8H4uO3J5aK1L2M3N4O5P6Q7R8S9T0U1V2W3';
+
+            try {
+                const userId = 'usr_' + Date.now();
+                try {
+                    await db.query(`
+                        INSERT INTO users (id, name, email, password_hash, role, mobile, status)
+                        VALUES (?, ?, ?, ?, 'OWNER', ?, 'ACTIVE')
+                        ON DUPLICATE KEY UPDATE name = VALUES(name)
+                    `, [userId, newOwnerName.trim(), ownerEmail, defaultPasswordHash, ownerMobile]);
+                } catch (uErr) {}
+
+                await db.query(`
+                    INSERT INTO owners (id, user_id, full_name, business_name, email, mobile, password_hash, status)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, 'ACTIVE')
+                `, [
+                    createdOwnerId,
+                    userId,
+                    newOwnerName.trim(),
+                    bName,
+                    ownerEmail,
+                    ownerMobile,
+                    defaultPasswordHash
+                ]);
+
+                validOwnerId = createdOwnerId;
+                ownerName = newOwnerName.trim();
+            } catch (oErr) {
+                console.warn('New owner query fallback note:', oErr.message);
+                const [existing] = await db.query('SELECT id, full_name FROM owners WHERE email = ? OR mobile = ? LIMIT 1', [ownerEmail, ownerMobile]);
+                if (existing.length > 0) {
+                    validOwnerId = existing[0].id;
+                    ownerName = existing[0].full_name;
+                } else {
+                    validOwnerId = createdOwnerId;
+                    ownerName = newOwnerName.trim();
+                }
             }
-        } else {
-            const [firstOwner] = await db.query("SELECT id FROM users WHERE role IN ('OWNER', 'SUPER_ADMIN') LIMIT 1");
-            validOwnerId = firstOwner.length > 0 ? firstOwner[0].id : null;
+        } else if (ownerId) {
+            const [ownerRows] = await db.query('SELECT id, full_name FROM owners WHERE id = ?', [ownerId]);
+            if (ownerRows.length > 0) {
+                validOwnerId = ownerRows[0].id;
+                ownerName = ownerRows[0].full_name || ownerName;
+            } else {
+                const [userRows] = await db.query('SELECT id, name FROM users WHERE id = ?', [ownerId]);
+                if (userRows.length > 0) {
+                    validOwnerId = userRows[0].id;
+                    ownerName = userRows[0].name || ownerName;
+                }
+            }
         }
+        
+        if (!validOwnerId) {
+            if (ownerId) {
+                validOwnerId = ownerId;
+                ownerName = req.body.ownerName || 'Turf Owner';
+            } else {
+                const [firstOwner] = await db.query('SELECT id, full_name FROM owners LIMIT 1');
+                if (firstOwner.length > 0) {
+                    validOwnerId = firstOwner[0].id;
+                    ownerName = firstOwner[0].full_name || ownerName;
+                } else {
+                    const [firstUser] = await db.query("SELECT id, name FROM users WHERE role IN ('OWNER', 'SUPER_ADMIN') LIMIT 1");
+                    if (firstUser.length > 0) {
+                        validOwnerId = firstUser[0].id;
+                        ownerName = firstUser[0].name || ownerName;
+                    } else {
+                        validOwnerId = 'own_001';
+                        ownerName = 'Turf Owner';
+                    }
+                }
+            }
+        }
+
+        // Fetch plan name
+        let planName = 'Starter Plan';
+        const planId = subscriptionPlanId || 'plan_starter';
+        const [planRows] = await db.query('SELECT id, plan_name FROM subscription_plans WHERE id = ?', [planId]);
+        if (planRows.length > 0) {
+            planName = planRows[0].plan_name;
+        }
+
+        const sportsJson = Array.isArray(sports) ? JSON.stringify(sports) : (sports || '["Cricket", "Football"]');
+        const amenitiesJson = Array.isArray(amenities) ? JSON.stringify(amenities) : (amenities || '["Floodlights", "Parking", "Washroom"]');
+        const imagesJson = Array.isArray(images) ? JSON.stringify(images) : (typeof images === 'string' && images ? images : '[]');
 
         await db.query(`
             INSERT INTO branches (
                 id, branch_name, branch_code, description, owner_id, subscription_plan_id,
                 country, state, city, zip_code, full_address, email, mobile, alternate_mobile,
-                gst_number, timezone, currency, logo, status
+                gst_number, timezone, currency, logo, images, status,
+                price_per_hour, opening_time, closing_time, turf_size, surface_type,
+                sports, amenities, discount_offer, coupon_code
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'ACTIVE')
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'ACTIVE', ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `, [
             branchId,
             branchName,
             branchCode,
             description || '',
             validOwnerId,
-            subscriptionPlanId || 'plan_starter',
+            planId,
             country || 'India',
             state || '',
             city || '',
@@ -178,13 +309,54 @@ const createBranch = async (req, res) => {
             gstNumber || '',
             timezone || 'Asia/Kolkata',
             currency || 'INR',
-            logo || ''
+            logo || '',
+            imagesJson,
+            Number(pricePerHour) || 1000,
+            openingTime || '06:00 AM',
+            closingTime || '11:00 PM',
+            turfSize || '5,000 Sq.Ft',
+            surfaceType || 'TurfPro Synthetic Arena',
+            sportsJson,
+            amenitiesJson,
+            discountOffer || '20% OFF FIRST MATCH',
+            couponCode || 'CRICKET20'
         ]);
+
+        const newBranchObject = {
+            id: branchId,
+            _id: branchId,
+            branchName,
+            branchCode,
+            description: description || '',
+            ownerId: { _id: validOwnerId, id: validOwnerId, fullName: ownerName, email },
+            subscriptionPlanId: { _id: planId, id: planId, planName },
+            city: city || 'Indore',
+            zipCode: zipCode || '',
+            fullAddress: fullAddress || '',
+            email,
+            mobile: mobile || '',
+            pricePerHour: Number(pricePerHour) || 1000,
+            price: Number(pricePerHour) || 1000,
+            openingTime: openingTime || '06:00 AM',
+            closingTime: closingTime || '11:00 PM',
+            turfSize: turfSize || '5,000 Sq.Ft',
+            dimensions: turfSize || '5,000 Sq.Ft',
+            surfaceType: surfaceType || 'TurfPro Synthetic Arena',
+            sports: Array.isArray(sports) ? sports : ['Cricket', 'Football'],
+            amenities: Array.isArray(amenities) ? amenities : ['Floodlights', 'Parking', 'Washroom'],
+            discountOffer: discountOffer || '20% OFF FIRST MATCH',
+            couponCode: couponCode || 'CRICKET20',
+            logo: logo || '',
+            images: Array.isArray(images) ? images : [],
+            status: 'ACTIVE',
+            totalRevenue: 0,
+            createdAt: new Date().toISOString()
+        };
 
         return res.status(201).json({
             success: true,
             message: 'Branch created successfully.',
-            data: { id: branchId, branchName }
+            data: newBranchObject
         });
     } catch (error) {
         console.error('Create branch error:', error);
@@ -200,7 +372,10 @@ const createBranch = async (req, res) => {
  */
 const updateBranch = async (req, res) => {
     const { id } = req.params;
-    const { branchName, description, city, zipCode, fullAddress, email, mobile } = req.body;
+    const { 
+        branchName, description, city, zipCode, fullAddress, email, mobile, logo, images,
+        pricePerHour, price, openingTime, closingTime, turfSize, surfaceType, discountOffer, couponCode, status
+    } = req.body;
 
     try {
         const [existing] = await db.query('SELECT id FROM branches WHERE id = ?', [id]);
@@ -211,6 +386,9 @@ const updateBranch = async (req, res) => {
             });
         }
 
+        const imagesJson = images ? (Array.isArray(images) ? JSON.stringify(images) : images) : null;
+        const targetPrice = pricePerHour !== undefined ? pricePerHour : (price !== undefined ? price : null);
+
         await db.query(`
             UPDATE branches 
             SET 
@@ -220,19 +398,48 @@ const updateBranch = async (req, res) => {
                 zip_code = COALESCE(?, zip_code),
                 full_address = COALESCE(?, full_address),
                 email = COALESCE(?, email),
-                mobile = COALESCE(?, mobile)
+                mobile = COALESCE(?, mobile),
+                logo = COALESCE(?, logo),
+                images = COALESCE(?, images),
+                price_per_hour = COALESCE(?, price_per_hour),
+                opening_time = COALESCE(?, opening_time),
+                closing_time = COALESCE(?, closing_time),
+                turf_size = COALESCE(?, turf_size),
+                surface_type = COALESCE(?, surface_type),
+                discount_offer = COALESCE(?, discount_offer),
+                coupon_code = COALESCE(?, coupon_code),
+                status = COALESCE(?, status)
             WHERE id = ?
-        `, [branchName, description, city, zipCode, fullAddress, email, mobile, id]);
+        `, [
+            branchName || null, 
+            description || null, 
+            city || null, 
+            zipCode || null, 
+            fullAddress || null, 
+            email || null, 
+            mobile || null, 
+            logo || null, 
+            imagesJson, 
+            targetPrice ? Number(targetPrice) : null,
+            openingTime || null,
+            closingTime || null,
+            turfSize || null,
+            surfaceType || null,
+            discountOffer || null,
+            couponCode || null,
+            status || null,
+            id
+        ]);
 
         return res.status(200).json({
             success: true,
-            message: 'Branch details updated successfully.'
+            message: 'Branch details and hourly price updated successfully.'
         });
     } catch (error) {
         console.error('Update branch error:', error);
         return res.status(500).json({
             success: false,
-            message: 'Internal Server Error updating branch details.'
+            message: 'Internal Server Error updating branch: ' + error.message
         });
     }
 };

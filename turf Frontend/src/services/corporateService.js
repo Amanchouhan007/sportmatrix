@@ -21,19 +21,26 @@ export const submitCorporateProposal = async (proposalData) => {
 
         const res = await api.post('/corporate/proposals', payload);
 
-        // Client-side backup cache in localStorage
+        // Client-side backup cache in localStorage & live window event broadcast
+        const record = res.data || { ...payload, id: `CORP-${Date.now()}`, createdAt: new Date().toISOString() };
         try {
             const existing = JSON.parse(localStorage.getItem('corporate_leads') || '[]');
-            const record = res.data || { ...payload, id: `CORP-${Date.now()}`, createdAt: new Date().toISOString() };
             existing.unshift(record);
             localStorage.setItem('corporate_leads', JSON.stringify(existing.slice(0, 50)));
         } catch (e) {
             console.warn('LocalStorage backup write failed:', e);
         }
 
+        // Broadcast real-time event for active SuperAdmin & Turf Owner sessions
+        try {
+            if (typeof window !== 'undefined') {
+                window.dispatchEvent(new CustomEvent('corporate_proposal_created', { detail: record }));
+            }
+        } catch (evErr) {}
+
         return {
             success: true,
-            data: res.data || res,
+            data: record,
             message: res.message || 'Corporate proposal request submitted successfully!'
         };
     } catch (error) {
@@ -55,6 +62,12 @@ export const submitCorporateProposal = async (proposalData) => {
         } catch (e) {
             console.error(e);
         }
+
+        try {
+            if (typeof window !== 'undefined') {
+                window.dispatchEvent(new CustomEvent('corporate_proposal_created', { detail: fallbackRecord }));
+            }
+        } catch (evErr) {}
 
         return {
             success: true,
