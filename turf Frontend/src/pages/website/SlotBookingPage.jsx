@@ -172,13 +172,29 @@ export default function SlotBookingPage() {
     const [galleryPhotoIndex, setGalleryPhotoIndex] = useState(0)
 
     useEffect(() => {
-        if (id) {
-            const found = allAvailableTurfs.find(t => t.id === Number(id))
-            if (found) {
-                setSelectedVenue(found)
-                setActivePhotoUrl(found.image || '/images/turf1.png')
-            }
-        }
+        fetch('http://localhost:5000/api/v1/branches')
+            .then(res => res.json())
+            .then(data => {
+                if (data.success && data.data && Array.isArray(data.data.branches) && data.data.branches.length > 0) {
+                    const realBranches = data.data.branches.map((b, idx) => ({
+                        id: b.id || b._id || idx + 1,
+                        name: b.branchName || b.name || 'Indore Turf Complex',
+                        location: b.fullAddress || (b.city ? `${b.city} Turf Complex` : 'Indore Turf Complex'),
+                        city: b.city || 'Indore',
+                        price: b.pricePerHour || b.price || 1000,
+                        rating: b.rating || 4.9,
+                        sports: Array.isArray(b.sports) && b.sports.length > 0 ? b.sports : ['Cricket'],
+                        dimensions: b.dimensions || '100 × 50 ft',
+                        squareFeet: b.turfSize || '5,000 sq ft',
+                        image: (b.images && b.images[0]) || `/images/turf${(idx % 6) + 1}.png`,
+                        gallery: [`/images/turf${(idx % 6) + 1}.png`, '/images/turf2.png', '/images/turf3.png']
+                    }))
+                    const matched = realBranches.find(b => String(b.id) === String(id)) || realBranches[0]
+                    setSelectedVenue(matched)
+                    setActivePhotoUrl(matched.image)
+                }
+            })
+            .catch(e => console.warn('Fetch real branches note in SlotBookingPage:', e.message))
     }, [id])
 
     // Modals
