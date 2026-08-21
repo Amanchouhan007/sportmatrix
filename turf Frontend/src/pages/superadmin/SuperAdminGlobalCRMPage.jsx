@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react'
 import { HiShieldCheck, HiSearch, HiPaperAirplane, HiDownload, HiFilter, HiPhone, HiGlobeAlt, HiOfficeBuilding, HiCurrencyRupee } from 'react-icons/hi'
-import { getCrmLeads, isDemoLead, purgeDemoLeadsFromLocalStorage } from '../../services/crmService'
+import { fetchCrmLeadsAsync, getCrmLeads, isDemoLead, purgeDemoLeadsFromLocalStorage } from '../../services/crmService'
 import { getCorporateProposals } from '../../services/corporateService'
+import { getBranches } from '../../services/branchService'
 import OfferBroadcastModal from '../../components/crm/OfferBroadcastModal'
 import CorporateQuoteModal from '../../components/superadmin/CorporateQuoteModal'
 import { useToast } from '../../components/ui/Toast'
@@ -10,6 +11,8 @@ import CustomDatePicker from '../../components/ui/CustomDatePicker'
 
 export default function SuperAdminGlobalCRMPage() {
     const [leads, setLeads] = useState([])
+    const [summaryStats, setSummaryStats] = useState(null)
+    const [realBranches, setRealBranches] = useState([])
     const [selectedBranch, setSelectedBranch] = useState('all')
     const [selectedRole, setSelectedRole] = useState('all')
     const [selectedDate, setSelectedDate] = useState('')
@@ -70,51 +73,31 @@ export default function SuperAdminGlobalCRMPage() {
 
     const loadAllLeads = async () => {
         purgeDemoLeadsFromLocalStorage()
-        const crmData = getCrmLeads().filter(item => !isDemoLead(item))
-        try {
-            const corpData = await getCorporateProposals()
-            if (Array.isArray(corpData) && corpData.length > 0) {
-                const mappedCorp = corpData
-                    .map(c => ({
-                        id: c.id ? String(c.id) : `corp_${Date.now()}`,
-                        proposalId: c.id,
-                        name: c.company_name || c.companyName || c.contact_person || c.contactPerson || 'Corporate Contact',
-                        contactPerson: c.contact_person || c.contactPerson,
-                        companyName: c.company_name || c.companyName,
-                        phone: c.phone || '',
-                        email: c.email || '',
-                        role: 'corporate',
-                        teamName: `${c.estimated_players || c.estimatedPlayers || 'Bulk Event'} • ${c.event_type || c.eventType || 'Tournament'}`,
-                        preferredSport: c.event_type || c.eventType || 'Corporate Tournament',
-                        preferredSlot: c.time_slot || c.timeSlot || (c.event_date ? `${c.event_date} (Full Day)` : 'Full Day Arena Booking'),
-                        turfBranch: c.preferred_turf || c.preferredTurf || (c.city ? `${c.city} Turf Complex` : 'N/A'),
-                        budget: c.budget || 'Custom',
-                        status: c.status || 'NEW',
-                        quotedPrice: c.quotedPrice || c.quoted_price || null,
-                        quoteData: c.quoteData || null,
-                        totalBookings: 1,
-                        notes: `Corporate request for ${c.company_name || c.companyName || 'Client'} (${c.estimated_players || c.estimatedPlayers || 'N/A Players'}, Budget: ${c.budget || 'Custom'})`,
-                        createdAt: c.created_at ? c.created_at.split('T')[0] : (c.createdAt ? c.createdAt.split('T')[0] : new Date().toISOString().split('T')[0])
-                    }))
-                    .filter(item => !isDemoLead(item))
 
-                // Merge and deduplicate by unique lead ID
-                const combined = [...mappedCorp, ...crmData].filter(item => !isDemoLead(item))
-                const seen = new Set()
-                const deduplicated = []
-                for (const item of combined) {
-                    const key = item.id || item.proposalId || (item.name + '_' + item.phone)
-                    if (!seen.has(key)) {
-                        seen.add(key)
-                        deduplicated.push(item)
-                    }
-                }
-                setLeads(deduplicated)
+        // Fetch real branches from database
+        try {
+            const bRes = await getBranches()
+            const bList = (bRes && bRes.data?.branches) || (Array.isArray(bRes?.branches) ? bRes.branches : (Array.isArray(bRes) ? bRes : []))
+            if (bList && bList.length > 0) {
+                const names = bList.map(b => b.branchName || b.branch_name).filter(Boolean)
+                setRealBranches(names)
+            }
+        } catch (e) {
+            console.warn('Real branches fetch note:', e)
+        }
+
+        try {
+            const asyncRes = await fetchCrmLeadsAsync()
+            if (asyncRes && asyncRes.data && Array.isArray(asyncRes.data) && asyncRes.data.length > 0) {
+                setLeads(asyncRes.data)
+                if (asyncRes.summary) setSummaryStats(asyncRes.summary)
                 return
             }
         } catch (e) {
-            console.warn('Corp proposals sync note:', e)
+            console.warn('Async CRM fetch note:', e)
         }
+
+        const crmData = getCrmLeads().filter(item => !isDemoLead(item))
         setLeads(crmData)
     }
 
@@ -169,7 +152,7 @@ export default function SuperAdminGlobalCRMPage() {
         if (addToast) addToast(`Master Platform CRM exported ${targetLeads.length} contacts to CSV!`, 'success')
     }
 
-    const branches = ['all', ...new Set(leads.map(l => l.turfBranch).filter(Boolean))]
+    const branches = ['all', ...new Set([...realBranches, ...leads.map(l => l.turfBranch).filter(Boolean)])]
 
     const filteredLeads = leads.filter(lead => {
         const matchesBranch = selectedBranch === 'all' || lead.turfBranch === selectedBranch
@@ -233,19 +216,19 @@ export default function SuperAdminGlobalCRMPage() {
                 </div>
                 <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm">
                     <div className="text-[10px] font-black uppercase text-slate-400">Total Teams & Captains</div>
-                    <div className="text-2xl font-black text-emerald-600 mt-1">{filteredLeads.filter(l => l.role === 'team').length}</div>
+                    <div className="text-2xl font-black text-emerald-600 mt-1">{filteredLeads.filter(l => l.role === 'team' || l.role === 'captain' || l.category === 'CAPTAIN').length}</div>
                 </div>
                 <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm">
                     <div className="text-[10px] font-black uppercase text-slate-400">Corporate Proposals</div>
-                    <div className="text-2xl font-black text-indigo-600 mt-1">{filteredLeads.filter(l => l.role === 'corporate').length}</div>
+                    <div className="text-2xl font-black text-indigo-600 mt-1">{filteredLeads.filter(l => l.role === 'corporate' || l.category === 'CORPORATE').length}</div>
                 </div>
                 <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm">
                     <div className="text-[10px] font-black uppercase text-slate-400">Active Umpires</div>
-                    <div className="text-2xl font-black text-amber-600 mt-1">{filteredLeads.filter(l => l.role === 'umpire').length}</div>
+                    <div className="text-2xl font-black text-amber-600 mt-1">{filteredLeads.filter(l => l.role === 'umpire' || l.category === 'UMPIRE').length}</div>
                 </div>
                 <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm">
                     <div className="text-[10px] font-black uppercase text-slate-400">Active Venues</div>
-                    <div className="text-2xl font-black text-purple-600 mt-1">{branches.length - 1 || 1}</div>
+                    <div className="text-2xl font-black text-purple-600 mt-1">{summaryStats?.activeVenues || (branches.length > 1 ? branches.length - 1 : 4)}</div>
                 </div>
             </div>
 

@@ -69,8 +69,7 @@ export default function AllAdvertisements() {
         }
     }
 
-    const demoAdIds = ['ad_101', 'ad_102', 'ad_103']
-    const activeAdsList = (ads && ads.length > 0) ? ads.filter(a => !demoAdIds.includes(a.id) && !demoAdIds.includes(a._id)) : []
+    const activeAdsList = (ads && Array.isArray(ads)) ? ads : []
 
     const filteredAds = activeAdsList.filter(ad => {
         if (!ad) return false;

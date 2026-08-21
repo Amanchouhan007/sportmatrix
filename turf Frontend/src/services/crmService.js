@@ -1,3 +1,5 @@
+import api from './api';
+
 export const AVAILABLE_TURF_BRANCHES = [
     'SportZone Arena',
     'Champion Cricket Ground',
@@ -64,6 +66,25 @@ export const purgeDemoLeadsFromLocalStorage = () => {
 };
 
 const INITIAL_CRM_LEADS = []
+
+export const fetchCrmLeadsAsync = async () => {
+    try {
+        const res = await api.get('/crm/leads');
+        const resData = res?.data !== undefined ? res.data : res;
+        const list = (resData && Array.isArray(resData.data)) ? resData.data : (Array.isArray(resData) ? resData : []);
+        const summary = resData?.summary || res?.summary || null;
+        if (resData && resData.success !== false) {
+            return {
+                success: true,
+                data: list,
+                summary
+            };
+        }
+    } catch (e) {
+        console.warn('Backend GET /crm/leads note:', e.message);
+    }
+    return { success: true, data: [], summary: null };
+};
 
 export const getCrmLeads = () => {
     try {

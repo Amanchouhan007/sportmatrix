@@ -98,8 +98,9 @@ export const changePassword = async (passwords) => {
 export const getAllUsers = async (params = {}) => {
     try {
         const response = await api.get('/auth/users', { params });
-        if (response.data && response.data.success) {
-            return response.data.data || [];
+        const resData = response?.data !== undefined ? response.data : response;
+        if (resData && resData.success !== false) {
+            return resData.data || (Array.isArray(resData) ? resData : []);
         }
     } catch (error) {
         console.warn('Users API fallback to localStorage store:', error);

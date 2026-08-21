@@ -49,38 +49,23 @@ export default function AdAnalyticsDashboard() {
         const fetchAnalyticsData = async () => {
             try {
                 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5005/api/v1';
-                const adsRes = await fetch(`${API_URL}/ads`).then(r => r.json()).catch(() => ({ success: false }));
+                const res = await fetch(`${API_URL}/ads/analytics`);
+                const data = await res.json();
 
-                let totalAds = 0;
-                let activeAds = 0;
-                let totalRevenue = 0;
-                let adBookings = 0;
+                if (data.success && data.data) {
+                    const { totalAds, activeAds, totalRevenue, adBookings } = data.data;
+                    const comm = Math.round((totalRevenue || 0) * 0.12);
+                    const conv = totalAds > 0 ? ((adBookings / (totalAds * 10)) * 100).toFixed(1) + '%' : '0.0%';
 
-                if (adsRes.success && Array.isArray(adsRes.data)) {
-                    const demoAdIds = ['ad_101', 'ad_102', 'ad_103'];
-                    const filteredAds = adsRes.data.filter(a => !demoAdIds.includes(a.id) && !demoAdIds.includes(a._id));
-                    totalAds = filteredAds.length;
-                    activeAds = filteredAds.filter(a => (a.status || '').toLowerCase() === 'active').length;
-
-                    totalRevenue = filteredAds.reduce((sum, a) => {
-                        const rev = parseFloat(String(a.revenue || '0').replace(/[^0-9.]/g, '')) || 0;
-                        return sum + rev;
-                    }, 0);
-
-                    adBookings = filteredAds.reduce((sum, a) => sum + (Number(a.bookings) || 0), 0);
+                    setStats({
+                        totalAds: Number(totalAds || 0),
+                        activeAds: Number(activeAds || 0),
+                        totalRevenue: Number(totalRevenue || 0),
+                        commission: comm,
+                        adBookings: Number(adBookings || 0),
+                        conversionRate: conv
+                    });
                 }
-
-                const comm = Math.round(totalRevenue * 0.12);
-                const conv = totalAds > 0 ? ((adBookings / (totalAds * 10)) * 100).toFixed(1) + '%' : '0.0%';
-
-                setStats({
-                    totalAds,
-                    activeAds,
-                    totalRevenue,
-                    commission: comm,
-                    adBookings,
-                    conversionRate: conv
-                });
             } catch (e) {
                 console.warn('Error syncing ad analytics:', e);
             }

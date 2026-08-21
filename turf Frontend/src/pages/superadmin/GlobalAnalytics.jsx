@@ -143,12 +143,13 @@ export default function GlobalAnalytics() {
                 getTopSports(filters)
             ])
 
-            if (overviewRes && overviewRes.success && overviewRes.data) {
-                setOverview(overviewRes.data)
+            const ovData = overviewRes?.data || (overviewRes?.totalRevenue !== undefined ? overviewRes : null);
+            if (ovData) {
+                setOverview(ovData);
             }
 
-            if (revenueRes && revenueRes.success) {
-                const rawRev = revenueRes.data || [];
+            const rawRev = revenueRes?.data || (Array.isArray(revenueRes) ? revenueRes : []);
+            if (Array.isArray(rawRev)) {
                 const mappedRev = rawRev.map(item => {
                     const label = item.Month || item.month || item.label || 'Jan';
                     const revenue = Number(item.Revenue ?? item.revenue ?? item.total ?? 0);
@@ -160,8 +161,8 @@ export default function GlobalAnalytics() {
                 setRevenueData(mappedRev);
             }
 
-            if (sportsRes && sportsRes.success) {
-                const rawSports = sportsRes.data || [];
+            const rawSports = sportsRes?.data || (Array.isArray(sportsRes) ? sportsRes : []);
+            if (Array.isArray(rawSports)) {
                 const mappedSports = rawSports
                     .filter(item => (item.sport || item.name || '').toLowerCase() === 'cricket')
                     .map(item => ({
@@ -172,8 +173,8 @@ export default function GlobalAnalytics() {
                 setSportsData(mappedSports);
             }
 
-            if (usersRes && usersRes.success) {
-                const rawUsers = usersRes.data || [];
+            const rawUsers = usersRes?.data || (Array.isArray(usersRes) ? usersRes : []);
+            if (Array.isArray(rawUsers)) {
                 const mappedUsers = rawUsers.map(item => ({
                     m: item.label || item.month || 'Month',
                     Owners: Number(item.OWNER || item.owners || 0),
@@ -184,12 +185,11 @@ export default function GlobalAnalytics() {
                 setUserGrowthData(mappedUsers);
             }
 
-            if (subscriptionsRes && subscriptionsRes.success) {
-                setSubscriptionData(subscriptionsRes.data || []);
-            }
+            const rawSubs = subscriptionsRes?.data || (Array.isArray(subscriptionsRes) ? subscriptionsRes : []);
+            setSubscriptionData(rawSubs);
 
-            if (topOwnersRes && topOwnersRes.success) {
-                const rawOwners = topOwnersRes.data || [];
+            const rawOwners = topOwnersRes?.data || (Array.isArray(topOwnersRes) ? topOwnersRes : []);
+            if (Array.isArray(rawOwners)) {
                 const mappedOwners = rawOwners.map(o => ({
                     _id: o._id || o.id || Math.random().toString(),
                     fullName: o.fullName || o.ownerName || o.businessName || 'Owner',
@@ -199,8 +199,8 @@ export default function GlobalAnalytics() {
                 setTopOwners(mappedOwners);
             }
 
-            if (topBranchesRes && topBranchesRes.success) {
-                const rawBranches = topBranchesRes.data || [];
+            const rawBranches = topBranchesRes?.data || (Array.isArray(topBranchesRes) ? topBranchesRes : []);
+            if (Array.isArray(rawBranches)) {
                 const mappedBranches = rawBranches.map(b => ({
                     _id: b._id || b.id || Math.random().toString(),
                     branchName: b.branchName || b['Branch Name'] || 'Branch',
@@ -212,8 +212,8 @@ export default function GlobalAnalytics() {
                 setTopBranches(mappedBranches);
             }
 
-            if (topSportsRes && topSportsRes.success) {
-                const rawTopSports = topSportsRes.data || [];
+            const rawTopSports = topSportsRes?.data || (Array.isArray(topSportsRes) ? topSportsRes : []);
+            if (Array.isArray(rawTopSports)) {
                 const mappedTopSports = rawTopSports
                     .filter(s => (s.sport || s.name || '').toLowerCase() === 'cricket')
                     .map(s => ({
@@ -655,18 +655,20 @@ export default function GlobalAnalytics() {
                                     Subscription Plans Analytics
                                 </h3>
                                 <div className="space-y-3.5 flex-1 flex flex-col justify-center">
-                                    {subscriptionData.length === 0 ? (
+                                    {subscriptionData.filter(plan => Number(plan.totalUsers || plan.count) > 0).length === 0 ? (
                                         <RenderEmptyState 
                                             icon="💼" 
-                                            title="No Subscription Plans" 
-                                            message="No active subscription plan records." 
+                                            title="No Active Subscriptions" 
+                                            message="No active subscription plan records found." 
                                         />
                                     ) : (
-                                        subscriptionData.map(plan => (
+                                        subscriptionData.filter(plan => Number(plan.totalUsers || plan.count) > 0).map(plan => (
                                             <div key={plan.planName} className="p-4 rounded-2xl border border-slate-150 bg-white/90 hover:border-emerald-200 transition-all duration-200">
                                                 <div className="flex items-center justify-between mb-1">
-                                                    <span className="text-xs font-bold text-slate-900">{plan.planName} Plan</span>
-                                                    <span className="text-xs font-black text-[#16A34A]">₹{Number(plan.revenue).toLocaleString()}/mo</span>
+                                                    <span className="text-xs font-bold text-slate-900">{plan.planName.endsWith('Plan') ? plan.planName : `${plan.planName} Plan`}</span>
+                                                    <span className="text-xs font-black text-[#16A34A]">
+                                                        ₹{Number(plan.revenue || plan.price || 0).toLocaleString()}/mo
+                                                    </span>
                                                 </div>
                                                 <div className="flex items-center justify-between text-[11px] text-slate-400 font-semibold">
                                                     <span>Active Subscriptions</span>

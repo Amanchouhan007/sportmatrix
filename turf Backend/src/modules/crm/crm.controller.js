@@ -5,10 +5,129 @@ const db = require('../../config/db');
  */
 const getLeads = async (req, res) => {
     try {
-        const [rows] = await db.query('SELECT * FROM crm_leads ORDER BY created_at DESC');
+        const [crmRows] = await db.query('SELECT * FROM crm_leads ORDER BY created_at DESC');
+
+        // 1. Fetch real slot bookings as Customer / Player leads
+        let bookingLeads = [];
+        try {
+            const [bRows] = await db.query(`
+                SELECT b.id, b.customer_name, b.mobile_number, b.sport_name, b.duty_date, b.time_slot, b.amount, b.status, b.created_at,
+                       br.branch_name, br.city
+                FROM bookings b
+                LEFT JOIN branches br ON b.branch_id = br.id
+                ORDER BY b.created_at DESC
+            `);
+            bookingLeads = bRows.map(b => ({
+                id: `bmt_lead_${b.id}`,
+                name: b.customer_name || 'Player Contact',
+                phone: b.mobile_number || '',
+                email: '',
+                role: 'player',
+                category: 'PLAYER',
+                teamName: `${b.sport_name || 'Sports'} Player`,
+                preferredSport: b.sport_name || 'Cricket',
+                preferredSlot: `${b.time_slot || ''} (${b.duty_date || ''})`,
+                turfBranch: b.branch_name || (b.city ? `${b.city} Turf` : 'Indore Strikers Arena'),
+                status: b.status === 'CANCELLED' ? 'Cancelled' : 'Confirmed',
+                totalBookings: 1,
+                amount: b.amount ? `₹${Number(b.amount).toLocaleString('en-IN')}` : 'N/A',
+                notes: `Real Slot Booking ${b.id}`,
+                createdAt: b.created_at ? new Date(b.created_at).toISOString().split('T')[0] : new Date().toISOString().split('T')[0]
+            }));
+        } catch (e) { console.warn('Booking leads error:', e.message); }
+
+        // 2. Fetch registered Users & Owners as contacts
+        let userLeads = [];
+        try {
+            const [uRows] = await db.query(`SELECT id, name, email, mobile, role, created_at FROM users WHERE role != 'SUPER_ADMIN'`);
+            userLeads = uRows.map(u => ({
+                id: `user_lead_${u.id}`,
+                name: u.name || 'Registered User',
+                phone: u.mobile || '',
+                email: u.email || '',
+                role: u.role ? u.role.toLowerCase() : 'player',
+                category: u.role || 'PLAYER',
+                teamName: u.role === 'OWNER' ? 'Venue Manager' : 'Registered Member',
+                preferredSport: 'Cricket',
+                preferredSlot: 'Flexible',
+                turfBranch: 'All Turf Branches',
+                status: 'Confirmed',
+                totalBookings: 1,
+                notes: `Platform Registered User (${u.role})`,
+                createdAt: u.created_at ? new Date(u.created_at).toISOString().split('T')[0] : new Date().toISOString().split('T')[0]
+            }));
+        } catch (e) { console.warn('User leads error:', e.message); }
+
+        // 3. Fetch Teams as Captain / Team leads
+        let teamLeads = [];
+        try {
+            const [tRows] = await db.query(`SELECT id, team_name, captain_name, captain_email, captain_mobile, status, created_at FROM teams`);
+            teamLeads = tRows.map(t => ({
+                id: `team_lead_${t.id}`,
+                name: t.captain_name || 'Team Captain',
+                phone: t.captain_mobile || '',
+                email: t.captain_email || '',
+                role: 'captain',
+                category: 'CAPTAIN',
+                teamName: t.team_name || 'Tournament Team',
+                preferredSport: 'Cricket',
+                preferredSlot: 'Tournament Fixtures',
+                turfBranch: 'All Turf Branches',
+                status: t.status || 'Confirmed',
+                totalBookings: 1,
+                notes: `Tournament Team Captain (${t.team_name})`,
+                createdAt: t.created_at ? new Date(t.created_at).toISOString().split('T')[0] : new Date().toISOString().split('T')[0]
+            }));
+        } catch (e) { console.warn('Team leads error:', e.message); }
+
+        // Map CRM leads table
+        const mappedCrm = crmRows.map(c => ({
+            id: c.id,
+            name: c.contact_name,
+            phone: c.phone,
+            email: c.email,
+            role: (c.category || 'player').toLowerCase(),
+            category: c.category || 'PLAYER',
+            teamName: c.team_name || 'Individual',
+            preferredSport: c.preferred_sport || 'Cricket',
+            preferredSlot: c.slot_preference || 'Flexible',
+            turfBranch: 'Indore Strikers Arena',
+            status: c.status || 'NEW',
+            totalBookings: 1,
+            notes: c.notes,
+            createdAt: c.created_at ? new Date(c.created_at).toISOString().split('T')[0] : new Date().toISOString().split('T')[0]
+        }));
+
+        // Deduplicate leads by phone or name
+        const combined = [...mappedCrm, ...bookingLeads, ...userLeads, ...teamLeads];
+        const seen = new Set();
+        const deduplicated = [];
+        for (const item of combined) {
+            const key = (item.phone && item.phone !== 'N/A') ? item.phone : item.name;
+            if (!seen.has(key)) {
+                seen.add(key);
+                deduplicated.push(item);
+            }
+        }
+
+        // Count active venues
+        const [bRes] = await db.query(`SELECT COUNT(*) as count FROM branches WHERE status = 'ACTIVE'`);
+        const activeVenues = Number(bRes[0]?.count || 4);
+
+        const corporateCount = deduplicated.filter(l => l.role === 'corporate' || l.category === 'CORPORATE').length;
+        const umpireCount = deduplicated.filter(l => l.role === 'umpire' || l.category === 'UMPIRE').length;
+        const teamCount = deduplicated.filter(l => l.role === 'captain' || l.category === 'CAPTAIN').length;
+
         return res.status(200).json({
             success: true,
-            data: rows
+            data: deduplicated,
+            summary: {
+                totalContacts: deduplicated.length,
+                totalTeams: teamCount,
+                corporateProposals: corporateCount,
+                activeUmpires: umpireCount,
+                activeVenues
+            }
         });
     } catch (error) {
         console.error('Fetch CRM leads error:', error);
