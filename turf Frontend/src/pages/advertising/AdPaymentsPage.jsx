@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import Badge from '../../components/ui/Badge'
 import Card from '../../components/ui/Card'
@@ -9,76 +9,34 @@ import Modal from '../../components/ui/Modal'
 import Pagination from '../../components/ui/Pagination'
 import { useToast } from '../../components/ui/Toast'
 import { FiSearch, FiFileText, FiDownload, FiEye, FiCreditCard } from 'react-icons/fi'
+import { getAdPayments } from '../../services/adsService'
 
-const INITIAL_PAYMENTS = [
-    {
-        invoiceId: 'INV-2026-801',
-        adName: 'Champions Guaranteed Booking',
-        adId: 'AD-1001',
-        ownerName: 'Rahul Sharma',
-        turfName: 'Champions Turf Arena',
-        amount: '₹15,000',
-        status: 'Paid',
-        date: '2026-08-01',
-        paymentMethod: 'Bank Transfer (NEFT)'
-    },
-    {
-        invoiceId: 'INV-2026-802',
-        adName: 'Monsoon 25% Off',
-        adId: 'AD-1002',
-        ownerName: 'Anita Desai',
-        turfName: 'SkyLine Football Turf',
-        amount: '₹8,000',
-        status: 'Pending',
-        date: '2026-08-01',
-        paymentMethod: 'UPI Settlement'
-    },
-    {
-        invoiceId: 'INV-2026-803',
-        adName: 'Top Impression Push',
-        adId: 'AD-1003',
-        ownerName: 'Vikram Singh',
-        turfName: 'Velocity Sports Hub',
-        amount: '₹25,000',
-        status: 'Paid',
-        date: '2026-07-28',
-        paymentMethod: 'Razorpay Payout'
-    },
-    {
-        invoiceId: 'INV-2026-804',
-        adName: 'Weekday Discount Campaign',
-        adId: 'AD-1004',
-        ownerName: 'Sanjay Patel',
-        turfName: 'GreenField Box Cricket',
-        amount: '₹5,000',
-        status: 'Paid',
-        date: '2026-07-25',
-        paymentMethod: 'Bank Transfer (IMPS)'
-    },
-    {
-        invoiceId: 'INV-2026-805',
-        adName: 'Weekend Floodlight Push',
-        adId: 'AD-1005',
-        ownerName: 'Meera Nair',
-        turfName: 'Apex Turf & Arena',
-        amount: '₹20,000',
-        status: 'Pending',
-        date: '2026-07-20',
-        paymentMethod: 'UPI Settlement'
-    }
-]
-
+const INITIAL_PAYMENTS = []
 export default function AdPaymentsPage() {
     const navigate = useNavigate()
     const location = useLocation()
     const basePath = location.pathname.startsWith('/super-admin') ? '/super-admin' : location.pathname.startsWith('/staff') ? '/staff' : '/admin'
     const { addToast } = useToast()
-    const [payments, setPayments] = useState(INITIAL_PAYMENTS)
+    const [payments, setPayments] = useState([])
     const [search, setSearch] = useState('')
     const [viewInvoiceModal, setViewInvoiceModal] = useState(null)
     const [statusFilter, setStatusFilter] = useState('ALL')
     const [currentPage, setCurrentPage] = useState(1)
     const itemsPerPage = 5
+
+    useEffect(() => {
+        const fetchPayments = async () => {
+            try {
+                const result = await getAdPayments();
+                if (result && result.success !== false && Array.isArray(result.data)) {
+                    setPayments(result.data);
+                }
+            } catch (err) {
+                console.error('Error fetching ad payments:', err);
+            }
+        };
+        fetchPayments();
+    }, []);
 
     const triggerFastAdInvoicePrint = (inv) => {
         if (!inv) return;
@@ -114,19 +72,15 @@ export default function AdPaymentsPage() {
                     <div class="meta-row"><span>Campaign Name:</span><strong>${inv.adName || 'Ad Campaign'}</strong></div>
                     <div class="meta-row"><span>Ad Campaign ID:</span><strong style="font-family: monospace;">${inv.adId || 'AD-1001'}</strong></div>
                     <div class="meta-row"><span>Payment Method:</span><strong>${inv.paymentMethod || inv.method || 'UPI Settlement'}</strong></div>
-                    <div class="meta-row"><span>Billed Date:</span><strong>${inv.date || '2026-08-01'}</strong></div>
-                    <div class="total">
-                        <span>Total Amount Paid (Zero GST Tax)</span>
-                        <span style="color:#C8FF2E;">${inv.amount}</span>
-                    </div>
+                    <div class="total"><span>Grand Total Paid:</span><span>${inv.amount}</span></div>
                 </div>
             </body>
             </html>
         `;
-        let iframe = document.getElementById('fast-ad-print-frame');
+        let iframe = document.getElementById('ad-invoice-print-frame');
         if (!iframe) {
             iframe = document.createElement('iframe');
-            iframe.id = 'fast-ad-print-frame';
+            iframe.id = 'ad-invoice-print-frame';
             iframe.style.position = 'fixed';
             iframe.style.right = '0';
             iframe.style.bottom = '0';
@@ -144,7 +98,7 @@ export default function AdPaymentsPage() {
         if (addToast) addToast({ message: `Generating PDF Invoice ${inv.invoiceId}...`, type: 'info' });
     };
 
-    const activePaymentsList = (payments && payments.length > 0) ? payments : INITIAL_PAYMENTS;
+    const activePaymentsList = Array.isArray(payments) ? payments : [];
 
     const filteredPayments = activePaymentsList.filter(item => {
         if (!item) return false;

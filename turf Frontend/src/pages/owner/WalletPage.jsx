@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import WalletCard from '../../components/ui/WalletCard'
 
 import Badge from '../../components/ui/Badge'
@@ -9,27 +9,7 @@ import Input from '../../components/ui/Input'
 import Select from '../../components/ui/Select'
 import { useToast } from '../../components/ui/Toast'
 import { HiCreditCard, HiCash, HiTrendingUp, HiArrowDown, HiCheckCircle } from 'react-icons/hi'
-
-const transactions = [
-  { id: 'TXN-001', type: 'Booking', amount: '+₹800', commission: '-₹64', net: '₹736', date: 'Mar 1, 2026', status: 'Completed' },
-  { id: 'TXN-002', type: 'Tournament', amount: '+₹8,000', commission: '-₹640', net: '₹7,360', date: 'Mar 1, 2026', status: 'Completed' },
-  { id: 'TXN-003', type: 'Hire Escrow', amount: '+₹2,000', commission: '—', net: '₹2,000', date: 'Feb 28, 2026', status: 'Held' },
-  { id: 'TXN-004', type: 'Refund', amount: '-₹400', commission: '+₹32', net: '-₹368', date: 'Feb 27, 2026', status: 'Refunded' },
-]
-
-const columns = [
-  { key: 'id', label: 'TXN ID' },
-  { key: 'type', label: 'Type', render: v => <Badge variant="primary">{v}</Badge> },
-  { key: 'amount', label: 'Gross Amount', render: v => <span className={v.startsWith('+') ? 'text-emerald-600 font-extrabold' : 'text-red-500 font-extrabold'}>{v}</span> },
-  { key: 'commission', label: 'Platform Comm.' },
-  { key: 'net', label: 'Settled Net', render: v => <span className="font-black text-surface-900">{v}</span> },
-  { key: 'date', label: 'Payout Date' },
-  {
-    key: 'status',
-    label: 'Payout Status',
-    render: v => <Badge variant={v === 'Completed' ? 'success' : v === 'Held' ? 'warning' : 'danger'} dot>{v}</Badge>
-  },
-]
+import api from '../../services/api'
 
 export default function WalletPage() {
   const { addToast } = useToast()
@@ -38,6 +18,51 @@ export default function WalletPage() {
   const [withdrawAmount, setWithdrawAmount] = useState('')
   const [payoutMethod, setPayoutMethod] = useState('UPI')
   const [details, setDetails] = useState({ upi: '', bank: '', ifsc: '' })
+  const [transactionsList, setTransactionsList] = useState([])
+  const [balance, setBalance] = useState(0)
+
+  useEffect(() => {
+    api.get('/wallet/me')
+      .then(res => {
+        if (res.data && res.data.success && res.data.data) {
+          setBalance(res.data.data.balance || 0)
+          if (Array.isArray(res.data.data.transactions)) {
+            const mapped = res.data.data.transactions.map(t => ({
+              id: t.id || `TXN-${t.id}`,
+              type: t.type || 'Booking',
+              amount: `+₹${t.amount || 0}`,
+              commission: `-₹${Math.round((t.amount || 0) * 0.08)}`,
+              net: `₹${Math.round((t.amount || 0) * 0.92)}`,
+              date: t.date ? t.date.split('T')[0] : 'Today',
+              status: t.status || 'Completed'
+            }))
+            setTransactionsList(mapped)
+          }
+        }
+      })
+      .catch(() => {
+        api.get('/billing/history')
+          .then(res => {
+            if (res.data && res.data.success && Array.isArray(res.data.data)) {
+              const total = res.data.data.reduce((s, b) => s + Number(b.amount || 0), 0)
+              setBalance(total)
+              const mapped = res.data.data.map(b => ({
+                id: b.id || b.paymentId || `TXN-${b.id}`,
+                type: b.type || 'Booking',
+                amount: `+₹${b.amount || 0}`,
+                commission: `-₹${Math.round((b.amount || 0) * 0.08)}`,
+                net: `₹${Math.round((b.amount || 0) * 0.92)}`,
+                date: b.date ? b.date.split('T')[0] : 'Today',
+                status: b.status === 'CONFIRMED' || b.status === 'COMPLETED' ? 'Completed' : 'Pending'
+              }))
+              setTransactionsList(mapped)
+            }
+          })
+          .catch(() => {
+            setTransactionsList([])
+          })
+      })
+  }, [])
 
   const handleWithdrawTrigger = () => {
     if (!withdrawAmount || Number(withdrawAmount) <= 0) {
@@ -129,7 +154,9 @@ export default function WalletPage() {
           <p className="text-xs sm:text-sm text-slate-500">Recent wallet transactions and payout activity</p>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-3 sm:gap-4">
-          {transactions.map(tx => (
+          {transactionsList.length === 0 ? (
+            <div className="col-span-full py-8 text-center text-slate-400 text-sm font-semibold">No wallet transactions found in database.</div>
+          ) : transactionsList.map(tx => (
             <div key={tx.id} className="bg-white rounded-[20px] border border-slate-200/80 shadow-[0_4px_16px_rgba(0,0,0,0.03)] hover:shadow-[0_8px_24px_rgba(0,0,0,0.06)] hover:border-emerald-500/30 transition-all p-4 sm:p-5 flex flex-col justify-between">
               <div>
                 <div className="flex justify-between items-center gap-2">

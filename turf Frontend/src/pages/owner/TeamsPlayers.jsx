@@ -5,20 +5,7 @@ import Button from '../../components/ui/Button'
 import Card from '../../components/ui/Card'
 import api from '../../services/api'
 import { HiUserGroup, HiUser, HiStar, HiPlus } from 'react-icons/hi'
-
-const teams = [
-    { name: 'Thunder XI', sport: 'Cricket', players: 11, ranking: 1, wins: 8, losses: 2, logo: '🏏' },
-    { name: 'Royal Challengers', sport: 'Cricket', players: 12, ranking: 2, wins: 7, losses: 3, logo: '⚡' },
-    { name: 'Urban FC', sport: 'Football', players: 15, ranking: 1, wins: 12, losses: 1, logo: '⚽' },
-    { name: 'Smash Masters', sport: 'Football', players: 4, ranking: 3, wins: 5, losses: 4, logo: '⚽' },
-]
-
-const players = [
-    { name: 'Arjun Sharma', sport: 'Cricket', skill: 'Advanced', matches: 45, rating: 4.8, status: 'Active' },
-    { name: 'Priya Patel', sport: 'Football', skill: 'Expert', matches: 62, rating: 4.9, status: 'Active' },
-    { name: 'Rahul Kumar', sport: 'Football', skill: 'Intermediate', matches: 28, rating: 4.5, status: 'Inactive' },
-    { name: 'Vikram Singh', sport: 'Esports', skill: 'Expert', matches: 120, rating: 4.9, status: 'Active' },
-]
+import { getTeams } from '../../services/tournamentService'
 
 const teamCols = [
     { 
@@ -73,13 +60,55 @@ const playerCols = [
 ]
 
 export default function TeamsPlayers() {
-    const [teamList, setTeamList] = useState(teams)
+    const [teamList, setTeamList] = useState([])
+    const [playerList, setPlayerList] = useState([])
+    const [activeTab, setActiveTab] = useState('teams')
     const [isAddModalOpen, setIsAddModalOpen] = useState(false)
     const [teamName, setTeamName] = useState('')
     const [captainName, setCaptainName] = useState('')
     const [captainPhone, setCaptainPhone] = useState('')
     const [sport, setSport] = useState('Cricket')
     const [membersCount, setMembersCount] = useState(11)
+
+    useEffect(() => {
+        getTeams().then(res => {
+            if (res && res.success && Array.isArray(res.data)) {
+                const mapped = res.data.map((t, idx) => ({
+                    id: t.id || idx + 1,
+                    name: t.team_name || t.name || 'Team',
+                    sport: t.sport || 'Cricket',
+                    players: t.players_count || t.players || 11,
+                    ranking: idx + 1,
+                    wins: t.wins || 0,
+                    losses: t.losses || 0,
+                    logo: t.sport === 'Football' ? '⚽' : '🏏'
+                }))
+                setTeamList(mapped)
+            } else {
+                setTeamList([])
+            }
+        }).catch(() => setTeamList([]))
+
+        const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5005/api/v1';
+        fetch(`${API_URL}/tournaments/leaderboard/global`)
+            .then(r => r.json())
+            .then(res => {
+                if (res && res.success && Array.isArray(res.data)) {
+                    const mapped = res.data.map(p => ({
+                        name: p.name || 'Player',
+                        sport: p.sport || 'Cricket',
+                        skill: p.role || 'All-Rounder',
+                        matches: p.matches || 0,
+                        rating: p.trustScore ? (p.trustScore / 20).toFixed(1) : 4.8,
+                        status: 'Active'
+                    }))
+                    setPlayerList(mapped)
+                } else {
+                    setPlayerList([])
+                }
+            })
+            .catch(() => setPlayerList([]))
+    }, [])
 
     // Load live teams from backend REST API
     useEffect(() => {
@@ -174,7 +203,7 @@ export default function TeamsPlayers() {
                         <HiUser className="text-emerald-500" /> Player Performance Roster
                     </h2>
                 </div>
-                <DataTable columns={playerCols} data={players} />
+                <DataTable columns={playerCols} data={playerList} />
             </div>
 
             {/* ADD TEAM MODAL */}

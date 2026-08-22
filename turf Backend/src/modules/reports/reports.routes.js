@@ -9,7 +9,8 @@ const {
     getTopBranchesReport,
     getSportsReport,
     getDailyReport,
-    getMonthlyReport
+    getMonthlyReport,
+    exportReport
 } = require('./reports.controller');
 
 const { optionalToken } = require('../../middleware/auth.middleware');
@@ -28,5 +29,6 @@ router.get('/top-branches', getTopBranchesReport);
 router.get('/sports', getSportsReport);
 router.get('/daily', getDailyReport);
 router.get('/monthly', getMonthlyReport);
+router.get('/export', exportReport);
 
 module.exports = router;

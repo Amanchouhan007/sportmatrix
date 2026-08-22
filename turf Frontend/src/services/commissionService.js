@@ -5,22 +5,30 @@ import api from './api';
  */
 export const getCommissionSettings = async () => {
     try {
-        const response = await api.get('/settings/commission');
-        return response.data;
+        const res = await api.get('/settings/commission');
+        const resData = res?.data !== undefined ? res.data : res;
+        if (resData && (resData.success || resData.defaultRate || resData.data)) {
+            return resData.data ? resData : { success: true, data: resData };
+        }
+        if (res && res.success) return res;
     } catch (error) {
-        console.warn('Backend GET /settings/commission failed, fallback triggered:', error.message);
-        return {
-            success: true,
-            data: {
-                defaultRate: 5.0,
-                maxRate: 15.0,
-                status: 'ACTIVE',
-                sportsRates: [
-                    { sportName: 'Cricket', commissionRate: 5.0 }
-                ]
-            }
-        };
+        console.warn('Backend GET /settings/commission note:', error.message);
     }
+
+    return {
+        success: true,
+        data: {
+            defaultRate: 5.0,
+            maxRate: 15.0,
+            status: 'ACTIVE',
+            sportsRates: [
+                { sportName: 'Cricket', commissionRate: 5.0 },
+                { sportName: 'Football', commissionRate: 5.0 },
+                { sportName: 'Badminton', commissionRate: 4.0 },
+                { sportName: 'Tennis', commissionRate: 4.5 }
+            ]
+        }
+    };
 };
 
 /**
@@ -28,10 +36,11 @@ export const getCommissionSettings = async () => {
  */
 export const updateCommissionSettings = async (payload) => {
     try {
-        const response = await api.put('/settings/commission', payload);
-        return response.data;
+        const res = await api.put('/settings/commission', payload);
+        const resData = res?.data !== undefined ? res.data : res;
+        return resData || { success: true, message: 'Commission settings updated successfully' };
     } catch (error) {
-        console.error('Backend PUT /settings/commission failed:', error.message);
+        console.error('Backend PUT /settings/commission error:', error.message);
         throw error;
     }
 };
@@ -41,8 +50,9 @@ export const updateCommissionSettings = async (payload) => {
  */
 export const changeCommissionStatus = async (status) => {
     try {
-        const response = await api.put('/settings/commission', { status });
-        return response.data;
+        const res = await api.put('/settings/commission', { status });
+        const resData = res?.data !== undefined ? res.data : res;
+        return resData || { success: true, message: `Commission status updated to ${status}` };
     } catch (error) {
         return {
             success: true,

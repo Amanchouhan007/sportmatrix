@@ -33,13 +33,7 @@ const sports = [
     { name: 'Cricket', slug: 'Cricket', icon: '🏏', venues: 150 },
 ]
 
-const allTurfs = [
-    { id: 1, name: 'Green Arena Football Turf', location: 'Andheri West, Mumbai', city: 'Mumbai', rating: 4.8, price: 1200, dimensions: '100 × 50 ft', image: '/images/turf1.png', sports: ['Football', 'Cricket'], amenities: ['Floodlights', 'Parking', 'Washroom'], lat: 19.1136, lng: 72.8697 },
-    { id: 2, name: 'Champion Turf Ground', location: 'Vijay Nagar, Indore', city: 'Indore', rating: 4.8, price: 900, dimensions: '100 × 50 ft', image: '/images/turf2.png', sports: ['Cricket', 'Football'], amenities: ['Floodlights', 'Parking', 'Seating', 'Drinking Water'], lat: 22.7244, lng: 75.8839 },
-    { id: 3, name: 'Royal Cricket Ground', location: 'Palasia, Indore', city: 'Indore', rating: 4.7, price: 1000, dimensions: '110 × 55 ft', image: '/images/turf5.png', sports: ['Cricket'], amenities: ['Floodlights', 'Parking', 'Drinking Water'], lat: 22.7533, lng: 75.8937 },
-    { id: 4, name: 'ProPlay Cricket Arena', location: 'Vashi, Navi Mumbai', city: 'Mumbai', rating: 4.5, price: 1000, dimensions: '95 × 48 ft', image: '/images/turf4.png', sports: ['Cricket'], amenities: ['Floodlights', 'Parking'], lat: 19.0330, lng: 73.0297 },
-    { id: 5, name: 'GameVault Cricket Center', location: 'Koramangala, Bangalore', city: 'Bangalore', rating: 4.9, price: 1200, dimensions: '110 × 55 ft', image: '/images/turf3.png', sports: ['Cricket'], amenities: ['Floodlights', 'Parking', 'Seating', 'Washroom'], lat: 12.9698, lng: 77.7500 },
-]
+const allTurfs = []
 
 export default function HomePage() {
     const navigate = useNavigate()
@@ -50,7 +44,7 @@ export default function HomePage() {
     const searchReveal = useReveal()
 
     /* ── Dynamic Turfs State Sync ── */
-    const [dynamicTurfs, setDynamicTurfs] = useState(allTurfs)
+    const [dynamicTurfs, setDynamicTurfs] = useState([])
 
     /* ── Search State ── */
     const [searchValues, setSearchValues] = useState({

@@ -22,7 +22,9 @@ export default function MediaUploadModal({ isOpen, onClose, currentMedia = [], o
             const formData = new FormData();
             files.forEach(f => formData.append('files', f));
 
-            const response = await fetch('http://localhost:5000/api/v1/upload/multiple', {
+            const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5005/api/v1';
+            const SERVER_URL = import.meta.env.VITE_SERVER_URL || 'http://localhost:5005';
+            const response = await fetch(`${API_URL}/upload/multiple`, {
                 method: 'POST',
                 body: formData
             });
@@ -32,8 +34,8 @@ export default function MediaUploadModal({ isOpen, onClose, currentMedia = [], o
             if (result.success && result.data) {
                 const newItems = result.data.map(item => ({
                     type: item.type, // 'image' or 'video'
-                    url: item.url.startsWith('/') ? `http://localhost:5000${item.url}` : item.url,
-                    thumbnail: item.type === 'video' ? '' : (item.url.startsWith('/') ? `http://localhost:5000${item.url}` : item.url),
+                    url: item.url.startsWith('/') ? `${SERVER_URL}${item.url}` : item.url,
+                    thumbnail: item.type === 'video' ? '' : (item.url.startsWith('/') ? `${SERVER_URL}${item.url}` : item.url),
                     filename: item.originalName || item.filename
                 }));
 
@@ -85,7 +87,8 @@ export default function MediaUploadModal({ isOpen, onClose, currentMedia = [], o
         if (itemToRemove && itemToRemove.url && itemToRemove.url.includes('/uploads/')) {
             const filename = itemToRemove.url.split('/uploads/').pop();
             try {
-                await fetch(`http://localhost:5000/api/v1/upload/${filename}`, {
+                const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5005/api/v1';
+                await fetch(`${API_URL}/upload/${filename}`, {
                     method: 'DELETE'
                 });
             } catch (e) {
@@ -103,7 +106,7 @@ export default function MediaUploadModal({ isOpen, onClose, currentMedia = [], o
     return (
         <div className="fixed inset-0 z-[200] flex items-center justify-center pt-16 pb-4 px-3 sm:p-6 bg-black/65 backdrop-blur-sm animate-fadeIn">
             <div className="relative w-full max-w-3xl bg-white border border-[#E5E7EB] rounded-[24px] shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
-                
+
                 {/* Modal Header */}
                 <div className="px-6 py-4 border-b border-[#E5E7EB] flex items-center justify-between bg-slate-50">
                     <div className="flex items-center gap-3">
@@ -125,7 +128,7 @@ export default function MediaUploadModal({ isOpen, onClose, currentMedia = [], o
 
                 {/* Modal Body */}
                 <div className="p-6 overflow-y-auto space-y-6 flex-1 custom-scrollbar">
-                    
+
                     {/* Upload Drop Zone */}
                     <div className="border-2 border-dashed border-[#16A34A]/40 hover:border-[#16A34A] rounded-2xl p-6 text-center bg-green-50/40 hover:bg-green-50 transition-all cursor-pointer group"
                         onClick={() => fileInputRef.current?.click()}

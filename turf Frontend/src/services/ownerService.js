@@ -1,93 +1,7 @@
 import api from './api';
 
 // Initial Seed Owners Data
-const initialMockOwners = [
-    {
-        _id: 'own_001',
-        id: 'own_001',
-        name: 'Rajesh Sharma',
-        fullName: 'Rajesh Sharma',
-        email: 'rajesh.sharma@example.com',
-        mobile: '+91 98230 11223',
-        status: 'ACTIVE',
-        businessName: 'Green Arena Sports Pvt Ltd',
-        branchesCount: 3,
-        totalBookings: 1240,
-        totalRevenue: 485000,
-        commission: '₹24,250',
-        joinedDate: '2025-01-10',
-        city: 'Mumbai',
-        state: 'Maharashtra'
-    },
-    {
-        _id: 'own_002',
-        id: 'own_002',
-        name: 'Vikramaditya Roy',
-        fullName: 'Vikramaditya Roy',
-        email: 'vikram.roy@example.com',
-        mobile: '+91 97112 33445',
-        status: 'ACTIVE',
-        businessName: 'Champion Sports Hub',
-        branchesCount: 2,
-        totalBookings: 890,
-        totalRevenue: 320000,
-        commission: '₹16,000',
-        joinedDate: '2025-02-01',
-        city: 'Bangalore',
-        state: 'Karnataka'
-    },
-    {
-        _id: 'own_003',
-        id: 'own_003',
-        name: 'Suresh Patil',
-        fullName: 'Suresh Patil',
-        email: 'suresh.patil@example.com',
-        mobile: '+91 99887 66554',
-        status: 'ACTIVE',
-        businessName: 'Royal Cricket Ground & Sports',
-        branchesCount: 4,
-        totalBookings: 2100,
-        totalRevenue: 750000,
-        commission: '₹37,500',
-        joinedDate: '2024-11-15',
-        city: 'Indore',
-        state: 'Madhya Pradesh'
-    },
-    {
-        _id: 'own_004',
-        id: 'own_004',
-        name: 'Anita Deshmukh',
-        fullName: 'Anita Deshmukh',
-        email: 'anita.deshmukh@example.com',
-        mobile: '+91 94220 88990',
-        status: 'SUSPENDED',
-        businessName: 'Metro Sports Club',
-        branchesCount: 1,
-        totalBookings: 150,
-        totalRevenue: 60000,
-        commission: '₹3,000',
-        joinedDate: '2025-03-05',
-        city: 'Pune',
-        state: 'Maharashtra'
-    },
-    {
-        _id: 'own_005',
-        id: 'own_005',
-        name: 'Karan Malhotra',
-        fullName: 'Karan Malhotra',
-        email: 'karan.m@example.com',
-        mobile: '+91 98190 77665',
-        status: 'INACTIVE',
-        businessName: 'Apex Sports Arena',
-        branchesCount: 1,
-        totalBookings: 310,
-        totalRevenue: 110000,
-        commission: '₹5,500',
-        joinedDate: '2025-01-20',
-        city: 'Delhi',
-        state: 'Delhi'
-    }
-];
+const initialMockOwners = [];
 
 // Persistent local storage cache helper
 const getLocalOwners = () => {
@@ -99,7 +13,7 @@ const getLocalOwners = () => {
     } catch (e) {
         console.error('Error reading owners from localStorage:', e);
     }
-    return initialMockOwners;
+    return [];
 };
 
 const saveLocalOwners = (data) => {

@@ -69,6 +69,7 @@ const sidebarConfig = {
                 { label: 'Settings', icon: <HiAdjustments />, path: '/admin/tournaments/settings' },
             ]
         },
+        { isHeader: true, label: 'TURF OPERATIONS' },
         { label: 'Turf & Rates Setup', icon: <HiBolt />, path: '/admin/sports' },
         { label: 'Turf Calendar', icon: <HiCalendar />, path: '/admin/calendar' },
         { label: 'Bookings', icon: <HiTicket />, path: '/admin/bookings' },
@@ -80,6 +81,8 @@ const sidebarConfig = {
         { label: 'Inventory', icon: <HiCube />, path: '/admin/inventory' },
         { label: 'Maintenance', icon: <HiWrench />, path: '/admin/maintenance' },
         { label: 'Staff', icon: <HiUsers />, path: '/admin/staff' },
+        { isHeader: true, label: 'SETTINGS' },
+        { label: 'Settings & Profile', icon: <HiCog />, path: '/admin/settings' },
     ],
     staff: [
         { label: 'Dashboard', icon: <HiHome />, path: '/staff' },

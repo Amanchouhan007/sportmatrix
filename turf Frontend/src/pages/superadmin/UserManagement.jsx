@@ -61,8 +61,8 @@ export default function UserManagement() {
             key: 'name', 
             label: 'User Details',
             render: (_, r) => {
-                const name = r.name || 'Platform User'
-                const initials = name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase()
+                const name = r.name || 'N/A'
+                const initials = name !== 'N/A' ? name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase() : 'U'
                 return (
                     <div className="flex items-center gap-3">
                         <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-slate-900 to-slate-800 text-[#C8FF2E] flex items-center justify-center font-black text-xs shadow-xs border border-slate-700 shrink-0">
@@ -101,7 +101,7 @@ export default function UserManagement() {
                             : 'bg-blue-50 text-blue-700 border-blue-200 font-semibold'
                 return (
                     <span className={`px-3 py-1 rounded-full text-[10.5px] border uppercase tracking-wider inline-flex items-center gap-1 shadow-2xs ${badgeStyle}`}>
-                        {v}
+                        {v || 'N/A'}
                     </span>
                 )
             }
@@ -111,7 +111,7 @@ export default function UserManagement() {
             label: 'Joined Date',
             render: (v) => (
                 <span className="text-xs font-semibold text-slate-600 font-mono">
-                    {v || 'Jan 01, 2026'}
+                    {v || 'N/A'}
                 </span>
             )
         },

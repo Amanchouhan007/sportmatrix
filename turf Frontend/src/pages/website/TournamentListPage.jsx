@@ -8,8 +8,8 @@ import TournamentLowerSections from '../../components/tournaments/TournamentLowe
 
 export default function TournamentListPage() {
     const [filter, setFilter] = useState('All');
-    const [tournaments, setTournaments] = useState(fallbackPublicTournaments);
-    const [loading, setLoading] = useState(false);
+    const [tournaments, setTournaments] = useState([]);
+    const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
 
     useEffect(() => {
@@ -18,13 +18,19 @@ export default function TournamentListPage() {
     }, []);
 
     const fetchTournaments = async () => {
+        setLoading(true);
         try {
-            const res = await getPublicTournaments({}, { timeout: 800 });
-            if (res && res.success && Array.isArray(res.data) && res.data.length > 0) {
+            const res = await getPublicTournaments({});
+            if (res && res.success && Array.isArray(res.data)) {
                 setTournaments(res.data);
+            } else {
+                setTournaments([]);
             }
         } catch (err) {
-            console.error('Error fetching tournaments in background:', err);
+            console.error('Error fetching tournaments:', err);
+            setTournaments([]);
+        } finally {
+            setLoading(false);
         }
     }
 
@@ -33,7 +39,7 @@ export default function TournamentListPage() {
         
         const stat = (t.status || '').toLowerCase();
         if (filter === 'Running') return ['open', 'running', 'approved', 'active'].includes(stat);
-        if (filter === 'Upcoming') return ['upcoming', 'pending'].includes(stat);
+        if (filter === 'Upcoming') return ['upcoming', 'pending', 'approved', 'active'].includes(stat);
         if (filter === 'Closed') return ['completed', 'cancelled', 'closed'].includes(stat);
         
         return false;

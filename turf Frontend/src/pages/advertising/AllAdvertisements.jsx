@@ -14,6 +14,7 @@ import {
     FiXCircle, FiPauseCircle, FiPlayCircle, FiTrash2, FiTag
 } from 'react-icons/fi'
 import { HiSpeakerphone } from 'react-icons/hi'
+import { getAds, updateAdStatus, deleteAd } from '../../services/adsService'
 
 const INITIAL_ADS = []
 
@@ -38,11 +39,9 @@ export default function AllAdvertisements() {
     useEffect(() => {
         const fetchLiveAds = async () => {
             try {
-                const res = await fetch('http://localhost:5000/api/v1/ads');
-                if (!res.ok) throw new Error('Network error');
-                const data = await res.json();
-                if (data.success && Array.isArray(data.data) && data.data.length > 0) {
-                    setAds(data.data);
+                const result = await getAds();
+                if (result && result.success !== false && Array.isArray(result.data) && result.data.length > 0) {
+                    setAds(result.data);
                 } else {
                     setAds(INITIAL_ADS);
                 }
@@ -55,20 +54,38 @@ export default function AllAdvertisements() {
     }, []);
 
     const statusBadgeVariant = (status) => {
-        switch (status) {
-            case 'Pending': return 'warning'
-            case 'Approved': return 'info'
-            case 'Active': return 'success'
-            case 'Booking Generated': return 'primary'
-            case 'Commission Pending': return 'warning'
-            case 'Paid': return 'success'
-            case 'Rejected': return 'danger'
-            case 'Expired': return 'default'
+        const s = (status || '').toUpperCase().replace(/_/g, ' ');
+        switch (s) {
+            case 'PENDING': return 'warning'
+            case 'APPROVED': return 'info'
+            case 'ACTIVE': return 'success'
+            case 'BOOKING GENERATED': return 'primary'
+            case 'COMMISSION PENDING': return 'warning'
+            case 'PAID': return 'success'
+            case 'COMPLETED': return 'success'
+            case 'REJECTED': return 'danger'
+            case 'EXPIRED': return 'default'
             default: return 'default'
         }
     }
 
-    const activeAdsList = (ads && ads.length > 0) ? ads : INITIAL_ADS;
+    const formatStatus = (status) => {
+        const map = {
+            'PENDING': 'Pending',
+            'APPROVED': 'Approved',
+            'ACTIVE': 'Active',
+            'BOOKING_GENERATED': 'Booking Generated',
+            'COMMISSION_PENDING': 'Commission Pending',
+            'PAID': 'Paid',
+            'COMPLETED': 'Completed',
+            'REJECTED': 'Rejected',
+            'EXPIRED': 'Expired'
+        }
+        return map[(status || '').toUpperCase()] || status || 'Unknown'
+    }
+
+
+    const activeAdsList = (ads && Array.isArray(ads)) ? ads : []
 
     const filteredAds = activeAdsList.filter(ad => {
         if (!ad) return false;
@@ -264,7 +281,7 @@ export default function AllAdvertisements() {
                                             {ad.startDate || '2026-08-01'} to {ad.endDate || '2026-08-31'}
                                         </td>
                                         <td className="px-5 py-4 whitespace-nowrap">
-                                            <Badge variant={statusBadgeVariant(ad.status || 'Active')} dot>{ad.status || 'Active'}</Badge>
+                                            <Badge variant={statusBadgeVariant(ad.status)} dot>{formatStatus(ad.status)}</Badge>
                                         </td>
                                         <td className="px-5 py-4 text-right whitespace-nowrap">
                                             <div className="flex items-center justify-end gap-2">
@@ -275,7 +292,7 @@ export default function AllAdvertisements() {
                                                     <FiEdit2 />
                                                 </button>
 
-                                                {ad.status === 'Pending' && (
+                                                {['PENDING', 'Pending'].includes(ad.status) && (
                                                     <>
                                                         <button onClick={() => handleAction('approve', ad)} className="p-2 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-600 transition-colors cursor-pointer" title="Approve">
                                                             <FiCheckCircle />
@@ -286,8 +303,8 @@ export default function AllAdvertisements() {
                                                     </>
                                                 )}
 
-                                                <button onClick={() => handleAction('pause', ad)} className="p-2 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-600 transition-colors cursor-pointer" title={ad.status === 'Active' ? 'Pause' : 'Activate'}>
-                                                    {ad.status === 'Active' ? <FiPauseCircle /> : <FiPlayCircle />}
+                                                <button onClick={() => handleAction('pause', ad)} className="p-2 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-600 transition-colors cursor-pointer" title={['ACTIVE', 'Active'].includes(ad.status) ? 'Pause' : 'Activate'}>
+                                                    {['ACTIVE', 'Active'].includes(ad.status) ? <FiPauseCircle /> : <FiPlayCircle />}
                                                 </button>
 
                                                 <button onClick={() => handleAction('delete', ad)} className="p-2 rounded-xl bg-surface-100 hover:bg-red-50 text-surface-400 hover:text-red-600 transition-colors cursor-pointer" title="Delete">

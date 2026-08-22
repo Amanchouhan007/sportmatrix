@@ -80,7 +80,7 @@ A detailed log of all modifications, integrations, and milestones completed in t
 
 ## 2026-07-31: Frontend & Backend Integration Completed
 * **Action**: Connected frontend React client to live Express API server endpoints:
-  * **HTTP Client**: Updated [api.js](file:///c:/Users/Harshada%20Patil/OneDrive/Desktop/Turf/turf%20Frontend/src/services/api.js) to configure a base Axios client pointing to `http://localhost:5000/api/v1` and intercept requests to insert JWT bearer tokens.
+  * **HTTP Client**: Updated [api.js](file:///c:/Users/Harshada%20Patil/OneDrive/Desktop/Turf/turf%20Frontend/src/services/api.js) to configure a base Axios client pointing to `http://localhost:5005/api/v1` and intercept requests to insert JWT bearer tokens.
   * **Auth Integration**: Updated [authService.js](file:///c:/Users/Harshada%20Patil/OneDrive/Desktop/Turf/turf%20Frontend/src/services/authService.js) to query real user claims dynamically.
   * **Sports Configuration**: Bound [sportsService.js](file:///c:/Users/Harshada%20Patil/OneDrive/Desktop/Turf/turf%20Frontend/src/services/sportsService.js) to manage branch sports parameters from the active database.
   * **Timetable Schedulers**: Bound [slotService.js](file:///c:/Users/Harshada%20Patil/OneDrive/Desktop/Turf/turf%20Frontend/src/services/slotService.js) to query available slots and block slots.

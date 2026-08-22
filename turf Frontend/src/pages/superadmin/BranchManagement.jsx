@@ -286,23 +286,20 @@ export default function BranchManagement() {
                 subscriptionPlanId: selectedPlanId
             }
             const res = await getBranches(filters)
-            const branchList = (res && res.data?.branches) || (res && Array.isArray(res.branches) ? res.branches : (Array.isArray(res) ? res : null))
+            const branchList = (res && res.data?.branches) || (res && Array.isArray(res.branches) ? res.branches : (Array.isArray(res) ? res : []))
             const paginationInfo = (res && res.data?.pagination) || (res && res.pagination ? res.pagination : null)
 
-            if (branchList && branchList.length > 0) {
+            if (branchList && Array.isArray(branchList)) {
                 setBranches(branchList)
                 setPagination(paginationInfo || { total: branchList.length, page: 1, limit: 10, pages: 1 })
-            } else if (branchList && branchList.length === 0) {
+            } else {
                 setBranches([])
                 setPagination({ total: 0, page: 1, limit: 10, pages: 1 })
-            } else {
-                setBranches(fallbackBranches)
-                setPagination({ total: fallbackBranches.length, page: 1, limit: 10, pages: 1 })
             }
         } catch (error) {
             console.error('Error loading branches:', error)
-            setBranches(fallbackBranches)
-            setPagination({ total: fallbackBranches.length, page: 1, limit: 10, pages: 1 })
+            setBranches([])
+            setPagination({ total: 0, page: 1, limit: 10, pages: 1 })
         } finally {
             setIsTableLoading(false)
         }
@@ -759,13 +756,13 @@ export default function BranchManagement() {
                     </div>
                     <div className="my-1.5">
                         <div className="text-2xl lg:text-3xl font-black text-slate-900 tracking-tight leading-none">
-                            ₹{Number(stats.totalRevenue || 0).toLocaleString('en-IN')}
+                            ₹{Number(stats.totalRevenue && Number(stats.totalRevenue) > 0 ? stats.totalRevenue : branches.reduce((sum, b) => sum + Number(b.totalRevenue || b.planPrice || b.plan_price || b.subscriptionPlanId?.monthlyPrice || b.subscriptionPlanId?.monthly_price || 0), 0)).toLocaleString('en-IN')}
                         </div>
                     </div>
                     <div className="flex items-center justify-between gap-2 mt-3 pt-2.5 border-t border-slate-100 text-[11px]">
                         <span className="font-medium text-slate-400 truncate">Combined gross revenue</span>
                         <span className="inline-flex items-center gap-1 text-[11px] font-bold text-amber-700 bg-amber-50 border border-amber-100 px-2 py-0.5 rounded-full shrink-0">
-                            +14.8%
+                            Active Plans
                         </span>
                     </div>
                 </div>
@@ -814,7 +811,17 @@ export default function BranchManagement() {
                             onChange={e => { setSelectedOwnerId(e.target.value); setPage(1); }}
                             options={[
                                 { value: 'ALL', label: 'All Owners' },
-                                ...owners.map(o => ({ value: o._id || o.id, label: o.fullName || o.name || 'Owner' }))
+                                ...Array.from(
+                                    new Map(
+                                        branches.map(b => [
+                                            b.ownerId?._id || b.ownerId?.id || b.ownerId,
+                                            {
+                                                value: b.ownerId?._id || b.ownerId?.id || b.ownerId,
+                                                label: b.ownerId?.fullName || b.ownerId?.name || 'Owner'
+                                            }
+                                        ])
+                                    ).values()
+                                ).filter(o => o.value)
                             ]}
                             className="w-44"
                         />
@@ -942,7 +949,7 @@ export default function BranchManagement() {
                                 {/* Revenue */}
                                 <div className="col-span-1 text-right">
                                     <span className="text-emerald-600 font-bold text-xs tracking-tight whitespace-nowrap">
-                                        ₹{Number(r.totalRevenue || 0).toLocaleString('en-IN')}
+                                        ₹{Number(r.totalRevenue !== undefined && r.totalRevenue !== null ? r.totalRevenue : (Number(r.planPrice || r.plan_price || r.subscriptionPlanId?.monthlyPrice || r.subscriptionPlanId?.monthly_price || 0) + Number(r.booking_revenue || r.bookingRevenue || 0))).toLocaleString('en-IN')}
                                     </span>
                                 </div>
 
@@ -1616,7 +1623,7 @@ export default function BranchManagement() {
                                 </div>
                                 <div className="bg-slate-800/80 p-3 rounded-xl border border-slate-700/80">
                                     <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block mb-0.5">Total Revenue</span>
-                                    <span className="text-lg font-black text-[#C8FF2E]">₹{Number(viewingBranch.totalRevenue || 0).toLocaleString('en-IN')}</span>
+                                    <span className="text-lg font-black text-[#C8FF2E]">₹{Number(viewingBranch.totalRevenue !== undefined && viewingBranch.totalRevenue !== null ? viewingBranch.totalRevenue : (Number(viewingBranch.planPrice || viewingBranch.plan_price || viewingBranch.subscriptionPlanId?.monthlyPrice || viewingBranch.subscriptionPlanId?.monthly_price || 0) + Number(viewingBranch.booking_revenue || viewingBranch.bookingRevenue || 0))).toLocaleString('en-IN')}</span>
                                 </div>
                                 <div className="bg-slate-800/80 p-3 rounded-xl border border-slate-700/80">
                                     <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block mb-0.5">Hourly Rate</span>

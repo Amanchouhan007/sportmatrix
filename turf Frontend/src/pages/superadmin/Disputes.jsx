@@ -6,33 +6,57 @@ import Modal from '../../components/ui/Modal'
 import Input from '../../components/ui/Input'
 import ConfirmDialog from '../../components/ui/ConfirmDialog'
 import { useToast } from '../../components/ui/Toast'
-
-const initialDisputes = [
-    { id: 'DSP-001', user: 'Priya Sharma', type: 'Escrow', amount: '2000', reason: 'Player did not show up', status: 'Open', date: 'Mar 1, 2026', notes: '' },
-    { id: 'DSP-002', user: 'Arjun Mehta', type: 'Refund', amount: '800', reason: 'Booking cancelled by venue', status: 'In Review', date: 'Feb 28, 2026', notes: '' },
-    { id: 'DSP-003', user: 'Sneha Reddy', type: 'Escrow', amount: '3000', reason: 'Match not conducted', status: 'Resolved', date: 'Feb 25, 2026', notes: 'Refund processed to wallet' },
-]
+import { getDisputes, resolveDispute, updateDisputeStatus } from '../../services/disputeService'
 
 export default function Disputes() {
     const { addToast } = useToast()
-    const [disputes, setDisputes] = useState(() => {
-        const saved = localStorage.getItem('sa_disputes')
-        return saved ? JSON.parse(saved) : initialDisputes
-    })
+    const [disputes, setDisputes] = useState([])
+    const [loading, setLoading] = useState(true)
+    const [activeStatus, setActiveStatus] = useState('ALL')
 
     const [isModalOpen, setIsModalOpen] = useState(false)
     const [selectedDispute, setSelectedDispute] = useState(null)
     const [resolutionNotes, setResolutionNotes] = useState('')
     const [isConfirmOpen, setIsConfirmOpen] = useState(false)
+    const [isSaving, setIsSaving] = useState(false)
 
+    // Fetch from real API on mount
     useEffect(() => {
-        localStorage.setItem('sa_disputes', JSON.stringify(disputes))
-    }, [disputes])
+        loadDisputes()
+    }, [activeStatus])
+
+    const loadDisputes = async () => {
+        setLoading(true)
+        try {
+            const params = activeStatus !== 'ALL' ? { status: activeStatus } : {}
+            const result = await getDisputes(params)
+            if (result && result.success !== false) {
+                setDisputes(result.data || [])
+            }
+        } catch (err) {
+            console.error('[Disputes] Load error:', err)
+            addToast({ title: 'Load Error', message: 'Could not fetch disputes from server.', type: 'error' })
+        } finally {
+            setLoading(false)
+        }
+    }
 
     const handleOpenResolve = (dispute) => {
         setSelectedDispute(dispute)
         setResolutionNotes(dispute.notes || '')
         setIsModalOpen(true)
+    }
+
+    const handleMarkInReview = async (dispute) => {
+        try {
+            await updateDisputeStatus(dispute.id, 'IN_REVIEW')
+            setDisputes(prev => prev.map(d =>
+                d.id === dispute.id ? { ...d, status: 'In Review', rawStatus: 'IN_REVIEW' } : d
+            ))
+            addToast({ title: 'Status Updated', message: `Dispute ${dispute.id} marked as In Review`, type: 'info' })
+        } catch (err) {
+            addToast({ title: 'Error', message: 'Failed to update dispute status.', type: 'error' })
+        }
     }
 
     const handleConfirmResolve = () => {
@@ -44,69 +68,134 @@ export default function Disputes() {
         setIsConfirmOpen(true)
     }
 
-    const processResolution = () => {
-        setDisputes(prev => prev.map(d => 
-            d.id === selectedDispute.id 
-                ? { ...d, status: 'Resolved', notes: resolutionNotes } 
-                : d
-        ))
-        setIsConfirmOpen(false)
-        setSelectedDispute(null)
-        setResolutionNotes('')
-        addToast({ title: 'Resolved', message: `Dispute ${selectedDispute.id} has been resolved`, type: 'success' })
+    const processResolution = async () => {
+        setIsSaving(true)
+        try {
+            await resolveDispute(selectedDispute.id, resolutionNotes)
+            setDisputes(prev => prev.map(d =>
+                d.id === selectedDispute.id
+                    ? { ...d, status: 'Resolved', rawStatus: 'RESOLVED', notes: resolutionNotes }
+                    : d
+            ))
+            addToast({ title: 'Resolved', message: `Dispute ${selectedDispute.id} has been resolved`, type: 'success' })
+        } catch (err) {
+            addToast({ title: 'Error', message: 'Failed to resolve dispute on server.', type: 'error' })
+        } finally {
+            setIsSaving(false)
+            setIsConfirmOpen(false)
+            setSelectedDispute(null)
+            setResolutionNotes('')
+        }
     }
 
+    const STATUS_TABS = ['ALL', 'OPEN', 'IN_REVIEW', 'RESOLVED', 'REJECTED']
+
     const columns = [
-        { key: 'id', label: 'ID' }, 
-        { key: 'user', label: 'User' },
-        { 
-            key: 'type', 
-            label: 'Type', 
-            render: v => <Badge variant={v === 'Escrow' ? 'warning' : 'info'}>{v}</Badge> 
+        {
+            key: 'id',
+            label: 'ID',
+            render: (v) => (
+                <span className="font-mono text-[11px] font-bold text-slate-600 bg-slate-100 px-2 py-0.5 rounded-md">
+                    {v}
+                </span>
+            )
         },
-        { 
-            key: 'amount', 
+        { key: 'user', label: 'User' },
+        {
+            key: 'type',
+            label: 'Type',
+            render: v => <Badge variant={v === 'Escrow' ? 'warning' : v === 'Refund' ? 'info' : 'default'}>{v}</Badge>
+        },
+        {
+            key: 'amount',
             label: 'Amount',
-            render: v => `₹${Number(v).toLocaleString()}`
-        }, 
+            render: v => `₹${Number(v || 0).toLocaleString()}`
+        },
         { key: 'reason', label: 'Reason' },
-        { 
-            key: 'status', 
-            label: 'Status', 
+        {
+            key: 'status',
+            label: 'Status',
             render: v => (
-                <Badge variant={v === 'Open' ? 'danger' : v === 'In Review' ? 'warning' : 'success'} dot>
+                <Badge variant={v === 'Open' ? 'danger' : v === 'In Review' ? 'warning' : v === 'Resolved' ? 'success' : 'default'} dot>
                     {v}
                 </Badge>
-            ) 
+            )
         },
-        { 
-            key: 'action', 
-            label: 'Action', 
-            render: (_, r) => r.status !== 'Resolved' ? (
-                <Button size="sm" variant="outline" onClick={() => handleOpenResolve(r)}>
-                    Resolve
-                </Button>
-            ) : (
-                <span className="text-xs text-surface-400 font-medium">Completed</span>
-            ) 
+        {
+            key: 'action',
+            label: 'Actions',
+            render: (_, r) => {
+                if (r.status === 'Resolved' || r.rawStatus === 'RESOLVED') {
+                    return <span className="text-xs text-slate-400 font-medium">Completed</span>
+                }
+                return (
+                    <div className="flex gap-2">
+                        {(r.status === 'Open' || r.rawStatus === 'OPEN') && (
+                            <Button size="sm" variant="outline" onClick={() => handleMarkInReview(r)}>
+                                Review
+                            </Button>
+                        )}
+                        <Button size="sm" variant="outline" onClick={() => handleOpenResolve(r)}>
+                            Resolve
+                        </Button>
+                    </div>
+                )
+            }
         },
     ]
 
     return (
         <div className="space-y-6">
-            <div>
-                <h1 className="text-2xl font-bold text-surface-900">Disputes</h1>
-                <p className="text-surface-500 text-sm mt-1">Escrow and refund dispute management</p>
+            {/* Header */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div>
+                    <h1 className="text-2xl font-bold text-surface-900">Dispute Resolution</h1>
+                    <p className="text-surface-500 text-sm mt-1">Manage escrow, refund and match disputes</p>
+                </div>
+                <button
+                    onClick={loadDisputes}
+                    className="px-4 py-2 rounded-xl bg-white border border-slate-200 text-slate-700 hover:text-emerald-600 hover:border-emerald-300 text-xs font-bold transition-all"
+                >
+                    ↻ Refresh
+                </button>
             </div>
 
-            <DataTable columns={columns} data={disputes} />
+            {/* Status Tabs */}
+            <div className="flex gap-2 flex-wrap">
+                {STATUS_TABS.map(tab => (
+                    <button
+                        key={tab}
+                        onClick={() => setActiveStatus(tab)}
+                        className={`px-4 py-1.5 rounded-full text-xs font-bold border transition-all ${
+                            activeStatus === tab
+                                ? 'bg-emerald-600 text-white border-emerald-600 shadow-md'
+                                : 'bg-white text-slate-600 border-slate-200 hover:border-emerald-300 hover:text-emerald-700'
+                        }`}
+                    >
+                        {tab === 'IN_REVIEW' ? 'In Review' : tab.charAt(0) + tab.slice(1).toLowerCase()}
+                    </button>
+                ))}
+            </div>
+
+            {/* Table */}
+            {loading ? (
+                <div className="space-y-3 animate-pulse">
+                    {[1, 2, 3].map(i => <div key={i} className="h-14 bg-slate-100 rounded-xl" />)}
+                </div>
+            ) : (
+                <DataTable columns={columns} data={disputes} />
+            )}
+
+            {disputes.length === 0 && !loading && (
+                <div className="py-16 text-center border-2 border-dashed border-slate-200 rounded-2xl bg-slate-50/50">
+                    <span className="text-4xl mb-3 block">⚖️</span>
+                    <p className="text-sm font-bold text-slate-700">No Disputes Found</p>
+                    <p className="text-xs text-slate-400 mt-1">Platform disputes raised by users will appear here in real-time.</p>
+                </div>
+            )}
 
             {/* Resolve Modal */}
-            <Modal
-                isOpen={isModalOpen}
-                onClose={() => setIsModalOpen(false)}
-                title="Resolve Dispute"
-            >
+            <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title="Resolve Dispute">
                 <div className="space-y-4 pt-2">
                     <div className="p-4 bg-surface-50 rounded-xl space-y-2">
                         <div className="flex justify-between text-sm">
@@ -115,7 +204,7 @@ export default function Disputes() {
                         </div>
                         <div className="flex justify-between text-sm">
                             <span className="text-surface-500">Amount</span>
-                            <span className="font-bold text-primary-600">₹{Number(selectedDispute?.amount).toLocaleString()}</span>
+                            <span className="font-bold text-primary-600">₹{Number(selectedDispute?.amount || 0).toLocaleString()}</span>
                         </div>
                         <div className="flex flex-col gap-1 pt-2 border-t border-surface-200">
                             <span className="text-xs text-surface-500 font-medium uppercase tracking-wider">Reason</span>
@@ -125,23 +214,23 @@ export default function Disputes() {
 
                     <div className="flex flex-col gap-1.5 pt-2">
                         <label className="text-sm font-medium text-surface-700">Resolution Notes</label>
-                        <textarea 
+                        <textarea
                             className="w-full px-4 py-2.5 rounded-xl border border-surface-200 focus:border-primary-500 bg-white text-surface-900 text-sm outline-none transition-all duration-200 focus:ring-2 focus:ring-primary-500 min-h-[100px]"
                             placeholder="Enter how this dispute was resolved..."
                             value={resolutionNotes}
                             onChange={e => setResolutionNotes(e.target.value)}
                         />
-                        <p className="text-xs text-surface-500 mt-1">* This will be visible to both parties</p>
+                        <p className="text-xs text-surface-500 mt-1">* This will be saved to the database as the official resolution record</p>
                     </div>
 
                     <div className="flex justify-end gap-3 mt-6">
                         <Button variant="secondary" onClick={() => setIsModalOpen(false)}>Cancel</Button>
-                        <Button onClick={handleConfirmResolve}>Resolve Dispute</Button>
+                        <Button onClick={handleConfirmResolve} disabled={isSaving}>Resolve Dispute</Button>
                     </div>
                 </div>
             </Modal>
 
-            <ConfirmDialog 
+            <ConfirmDialog
                 isOpen={isConfirmOpen}
                 onClose={() => setIsConfirmOpen(false)}
                 onConfirm={processResolution}

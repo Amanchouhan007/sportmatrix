@@ -264,23 +264,7 @@ export default function PaymentLogs() {
             trend: 'up', icon: <HiCreditCard />,
             cardBg: 'bg-white/85 backdrop-blur-[18px] border-t-2 border-purple-500',
             iconBg: 'bg-purple-500 text-white'
-        },
-        {
-            label: 'Pending Payments',
-            value: isStatsLoading ? '—' : fmtINR(stats?.summary?.pendingPayments),
-            change: `${stats?.summary?.pendingCount ?? 0} pending`,
-            trend: 'down', icon: <HiClock />,
-            cardBg: 'bg-white/85 backdrop-blur-[18px] border-t-2 border-amber-500',
-            iconBg: 'bg-amber-500 text-white'
-        },
-        {
-            label: 'Refunded Amount',
-            value: isStatsLoading ? '—' : fmtINR(stats?.summary?.refundedAmount),
-            change: `${stats?.summary?.refundedCount ?? 0} refunds`,
-            trend: 'down', icon: <HiReceiptRefund />,
-            cardBg: 'bg-white/85 backdrop-blur-[18px] border-t-2 border-rose-500',
-            iconBg: 'bg-rose-500 text-white'
-        },
+        }
     ]
 
     if (isPageLoading) {
@@ -325,8 +309,8 @@ export default function PaymentLogs() {
                 </button>
             </div>
 
-            {/* 5 KPI Stat Cards (Responsive, Clean Stacked Layout) */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4.5">
+            {/* 3 KPI Stat Cards (Responsive, Clean Stacked Layout) */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4.5">
                 {summaryCards.map((card) => (
                     <div 
                         key={card.label} 

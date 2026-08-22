@@ -172,7 +172,8 @@ export default function SlotBookingPage() {
     const [galleryPhotoIndex, setGalleryPhotoIndex] = useState(0)
 
     useEffect(() => {
-        fetch('http://localhost:5000/api/v1/branches')
+        const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5005/api/v1';
+        fetch(`${API_URL}/branches`)
             .then(res => res.json())
             .then(data => {
                 if (data.success && data.data && Array.isArray(data.data.branches) && data.data.branches.length > 0) {

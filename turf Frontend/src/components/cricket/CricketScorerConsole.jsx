@@ -118,7 +118,7 @@ export default function CricketScorerConsole({ match, onClose }) {
         try {
             const pc = new RTCPeerConnection({ iceServers: [] })
             pc.createDataChannel('')
-            pc.createOffer().then(o => pc.setLocalDescription(o)).catch(() => {})
+            pc.createOffer().then(o => pc.setLocalDescription(o)).catch(() => { })
             pc.onicecandidate = (ice) => {
                 if (!ice || !ice.candidate || !ice.candidate.candidate) return
                 const match = /([0-9]{1,3}(\.[0-9]{1,3}){3})/.exec(ice.candidate.candidate)
@@ -127,13 +127,13 @@ export default function CricketScorerConsole({ match, onClose }) {
                     pc.onicecandidate = null
                 }
             }
-        } catch (e) {}
+        } catch (e) { }
     }, [])
 
     // Function to generate new pairing session
     const startNewControllerSession = () => {
         const sessionId = 'session_' + Math.random().toString(36).substring(2, 9) + '_' + Date.now().toString(36)
-        
+
         let hostOrigin = window.location.origin
         if (window.location.hostname === 'localhost') {
             const targetIp = localIp || window.location.hostname
@@ -183,7 +183,7 @@ export default function CricketScorerConsole({ match, onClose }) {
             const bc = new BroadcastChannel('mobile_ctrl_channel_' + ctrlSession.id)
             bc.postMessage({ type: 'DESKTOP_DISCONNECT' })
             bc.close()
-        } catch (e) {}
+        } catch (e) { }
         setCtrlSession(prev => ({ ...prev, status: 'disconnected' }))
         addToast({ message: 'Mobile controller session disconnected', type: 'info' })
     }
@@ -221,7 +221,7 @@ export default function CricketScorerConsole({ match, onClose }) {
 
     const strikerSR = striker.balls > 0 ? ((striker.runs / striker.balls) * 100).toFixed(1) : '0.0'
     const nonStrikerSR = nonStriker.balls > 0 ? ((nonStriker.runs / nonStriker.balls) * 100).toFixed(1) : '0.0'
-    
+
     const bowlerTotalBalls = (parseInt(bowler.overs) || 0) * 6 + (Math.round((parseFloat(bowler.overs) % 1) * 10) || 0)
     const bowlerEco = bowlerTotalBalls > 0 ? ((bowler.runs / bowlerTotalBalls) * 6).toFixed(2) : '0.00'
 
@@ -391,11 +391,11 @@ export default function CricketScorerConsole({ match, onClose }) {
                 if (data.actionType === 'RUN') {
                     recordBallRef.current?.({ type: 'run', runs: data.payload?.runs || 0, label: String(data.payload?.runs || 0), isLegal: true })
                 } else if (data.actionType === 'EXTRA') {
-                    recordBallRef.current?.({ 
-                        type: data.payload?.extraType || 'extra', 
-                        runs: data.payload?.runs || 1, 
-                        label: data.payload?.label || 'E', 
-                        isLegal: data.payload?.isLegal ?? false 
+                    recordBallRef.current?.({
+                        type: data.payload?.extraType || 'extra',
+                        runs: data.payload?.runs || 1,
+                        label: data.payload?.label || 'E',
+                        isLegal: data.payload?.isLegal ?? false
                     })
                 } else if (data.actionType === 'WICKET') {
                     recordBallRef.current?.({ type: 'wicket', runs: 0, label: 'W', isLegal: true })
@@ -433,7 +433,7 @@ export default function CricketScorerConsole({ match, onClose }) {
         let lastSeenTime = 0
         const pollInterval = setInterval(async () => {
             try {
-                const apiBase = window.location.hostname === 'localhost' ? 'http://localhost:5000' : window.location.origin
+                const apiBase = import.meta.env.VITE_SERVER_URL || (window.location.hostname === 'localhost' ? 'http://localhost:5005' : window.location.origin)
                 const res = await fetch(`${apiBase}/api/v1/mobile-sync/poll/${ctrlSession.id}?since=${lastSeenTime}`)
                 if (res.ok) {
                     const data = await res.json()
@@ -453,7 +453,7 @@ export default function CricketScorerConsole({ match, onClose }) {
                         })
                     }
                 }
-            } catch (err) {}
+            } catch (err) { }
         }, 500)
 
         return () => {
@@ -534,11 +534,10 @@ export default function CricketScorerConsole({ match, onClose }) {
                             setLiveModalTab('scorecard')
                             setLiveScoreModalOpen(true)
                         }}
-                        className={`flex items-center gap-1.5 px-3.5 py-2 rounded-2xl border font-extrabold text-xs transition-all cursor-pointer shadow-sm hover:scale-105 ${
-                            liveScoreModalOpen && liveModalTab === 'scorecard'
+                        className={`flex items-center gap-1.5 px-3.5 py-2 rounded-2xl border font-extrabold text-xs transition-all cursor-pointer shadow-sm hover:scale-105 ${liveScoreModalOpen && liveModalTab === 'scorecard'
                                 ? 'bg-gradient-to-r from-emerald-500 to-teal-500 text-white border-emerald-400 font-black shadow-emerald-500/20'
                                 : 'bg-slate-100 hover:bg-slate-200 text-slate-800 border-slate-200'
-                        }`}
+                            }`}
                     >
                         <span>📱</span> Live Score
                     </button>
@@ -571,11 +570,10 @@ export default function CricketScorerConsole({ match, onClose }) {
 
                     <button
                         onClick={() => setFinalizeModalOpen(true)}
-                        className={`flex items-center gap-1.5 px-3.5 py-2 rounded-2xl font-black text-xs transition-all shadow-md cursor-pointer hover:scale-105 ${
-                            isUmpireCertified
+                        className={`flex items-center gap-1.5 px-3.5 py-2 rounded-2xl font-black text-xs transition-all shadow-md cursor-pointer hover:scale-105 ${isUmpireCertified
                                 ? 'bg-emerald-600 text-white shadow-emerald-600/30'
                                 : 'bg-gradient-to-r from-amber-500 via-emerald-600 to-teal-600 hover:from-amber-400 hover:to-emerald-500 text-white shadow-amber-500/20'
-                        }`}
+                            }`}
                     >
                         <span>⚖️</span>
                         <span>{isUmpireCertified ? '✓ Certified (1.5x)' : 'Finalize & Certify ⚖️'}</span>
@@ -586,11 +584,10 @@ export default function CricketScorerConsole({ match, onClose }) {
                             <button
                                 key={st}
                                 onClick={() => setMatchInfo(prev => ({ ...prev, status: st }))}
-                                className={`px-3 py-1 rounded-xl text-xs font-bold transition-all ${
-                                    matchInfo.status === st
+                                className={`px-3 py-1 rounded-xl text-xs font-bold transition-all ${matchInfo.status === st
                                         ? 'bg-emerald-600 text-white shadow-md font-black'
                                         : 'text-slate-600 hover:text-slate-900'
-                                }`}
+                                    }`}
                             >
                                 {st}
                             </button>
@@ -617,7 +614,7 @@ export default function CricketScorerConsole({ match, onClose }) {
             {/* MAIN 4-PANEL BODY */}
             {/* ---------------------------------------------------- */}
             <div className="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-4 p-4 overflow-hidden min-h-0 z-10">
-                
+
                 {/* ---------------------------------------------------- */}
                 {/* LEFT PANEL: LIVE MATCH INFO & STATS (3 cols) */}
                 {/* ---------------------------------------------------- */}
@@ -691,13 +688,12 @@ export default function CricketScorerConsole({ match, onClose }) {
                                 {matchState.currentOverBalls.map((b, idx) => (
                                     <span
                                         key={idx}
-                                        className={`w-8 h-8 rounded-xl flex items-center justify-center font-black text-xs shadow-sm transition-all ${
-                                            b.label === 'W'
+                                        className={`w-8 h-8 rounded-xl flex items-center justify-center font-black text-xs shadow-sm transition-all ${b.label === 'W'
                                                 ? 'bg-rose-600 text-white shadow-rose-500/20'
                                                 : b.label === '6' || b.label === '4'
-                                                ? 'bg-emerald-500 text-white shadow-emerald-500/20'
-                                                : 'bg-slate-100 text-slate-800 border border-slate-200'
-                                        }`}
+                                                    ? 'bg-emerald-500 text-white shadow-emerald-500/20'
+                                                    : 'bg-slate-100 text-slate-800 border border-slate-200'
+                                            }`}
                                     >
                                         {b.label}
                                     </span>
@@ -743,13 +739,12 @@ export default function CricketScorerConsole({ match, onClose }) {
                                         <button
                                             key={runs}
                                             onClick={() => recordBall({ type: 'run', runs, label: String(runs), isLegal: true })}
-                                            className={`h-16 lg:h-20 rounded-2xl font-black text-2xl lg:text-3xl transition-all hover:scale-105 active:scale-95 shadow-sm hover:shadow-md cursor-pointer flex items-center justify-center border ${
-                                                runs === 6
+                                            className={`h-16 lg:h-20 rounded-2xl font-black text-2xl lg:text-3xl transition-all hover:scale-105 active:scale-95 shadow-sm hover:shadow-md cursor-pointer flex items-center justify-center border ${runs === 6
                                                     ? 'bg-gradient-to-tr from-emerald-500 via-teal-500 to-cyan-500 text-white shadow-emerald-500/30 border-emerald-400/40'
                                                     : runs === 4
-                                                    ? 'bg-gradient-to-tr from-indigo-600 via-blue-600 to-indigo-500 text-white shadow-indigo-600/30 border-indigo-400/40'
-                                                    : 'bg-white hover:bg-emerald-600 hover:text-white text-slate-900 border-slate-200 hover:border-emerald-500'
-                                            }`}
+                                                        ? 'bg-gradient-to-tr from-indigo-600 via-blue-600 to-indigo-500 text-white shadow-indigo-600/30 border-indigo-400/40'
+                                                        : 'bg-white hover:bg-emerald-600 hover:text-white text-slate-900 border-slate-200 hover:border-emerald-500'
+                                                }`}
                                         >
                                             {runs}
                                         </button>
@@ -861,7 +856,7 @@ export default function CricketScorerConsole({ match, onClose }) {
                 {/* RIGHT PANEL: PLAYERS & MOBILE LIVE PREVIEW (3 cols) */}
                 {/* ---------------------------------------------------- */}
                 <div className="lg:col-span-3 overflow-y-auto flex flex-col justify-between space-y-4">
-                    
+
                     {/* CURRENT BATSMEN CARD */}
                     <div className="bg-white/90 backdrop-blur-xl rounded-3xl border border-slate-200/80 p-4 space-y-3 shadow-sm flex-1 flex flex-col justify-between">
                         <div className="flex items-center justify-between border-b border-slate-100 pb-2">
@@ -1210,15 +1205,15 @@ export default function CricketScorerConsole({ match, onClose }) {
             {/* ==================================================== */}
             {liveScoreModalOpen && (
                 <div className="fixed inset-0 z-[9999999] bg-slate-950/92 backdrop-blur-xl flex flex-col items-center justify-center p-2 sm:p-4 animate-in fade-in duration-300 select-none">
-                    
+
                     {/* TOP ACTION BAR & ORIENTATION TOGGLE */}
                     <div className={`w-full flex items-center justify-between gap-2 mb-2 px-1 transition-all ${isLandscapeMode ? 'max-w-[880px]' : 'max-w-[420px]'}`}>
                         {/* PREVIEW LABEL */}
                         <div className="flex items-center gap-2">
                             <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping"></span>
                             <h3 className="font-black text-white text-xs sm:text-sm tracking-wide">
-                                {liveModalTab === 'controller' 
-                                    ? (isLandscapeMode ? '🎮 Mobile Landscape Controller' : '🎮 Mobile Controller Preview') 
+                                {liveModalTab === 'controller'
+                                    ? (isLandscapeMode ? '🎮 Mobile Landscape Controller' : '🎮 Mobile Controller Preview')
                                     : '📱 Mobile Live Score Preview'
                                 }
                             </h3>
@@ -1230,11 +1225,10 @@ export default function CricketScorerConsole({ match, onClose }) {
                             <button
                                 onClick={() => setIsLandscapeMode(!isLandscapeMode)}
                                 title="Toggle Landscape/Portrait Mode"
-                                className={`px-3 py-1.5 rounded-xl text-[10px] font-black border transition-all cursor-pointer flex items-center gap-1 ${
-                                    isLandscapeMode
+                                className={`px-3 py-1.5 rounded-xl text-[10px] font-black border transition-all cursor-pointer flex items-center gap-1 ${isLandscapeMode
                                         ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white border-indigo-400 shadow-md'
                                         : 'bg-slate-900 text-slate-300 border-slate-800 hover:text-white'
-                                }`}
+                                    }`}
                             >
                                 {isLandscapeMode ? '🔄 Landscape ON' : '📱 Portrait'}
                             </button>
@@ -1243,21 +1237,19 @@ export default function CricketScorerConsole({ match, onClose }) {
                             <div className="bg-slate-900 p-0.5 rounded-xl border border-slate-800 flex items-center gap-0.5">
                                 <button
                                     onClick={() => setLiveModalTab('scorecard')}
-                                    className={`px-2.5 py-1 rounded-lg text-[10px] font-black transition-all cursor-pointer ${
-                                        liveModalTab === 'scorecard'
+                                    className={`px-2.5 py-1 rounded-lg text-[10px] font-black transition-all cursor-pointer ${liveModalTab === 'scorecard'
                                             ? 'bg-emerald-500 text-slate-950 shadow-sm'
                                             : 'text-slate-400 hover:text-white'
-                                    }`}
+                                        }`}
                                 >
                                     📱 Score
                                 </button>
                                 <button
                                     onClick={() => setLiveModalTab('controller')}
-                                    className={`px-2.5 py-1 rounded-lg text-[10px] font-black transition-all cursor-pointer ${
-                                        liveModalTab === 'controller'
+                                    className={`px-2.5 py-1 rounded-lg text-[10px] font-black transition-all cursor-pointer ${liveModalTab === 'controller'
                                             ? 'bg-indigo-500 text-white shadow-sm'
                                             : 'text-slate-400 hover:text-white'
-                                    }`}
+                                        }`}
                                 >
                                     🎮 Control
                                 </button>
@@ -1305,10 +1297,9 @@ export default function CricketScorerConsole({ match, onClose }) {
                     {/* ==================================================== */}
                     {/* REALISTIC MOBILE PHONE FRAME CONTAINER */}
                     {/* ==================================================== */}
-                    <div className={`w-full bg-slate-900 rounded-[38px] p-2.5 border-4 border-slate-700/80 shadow-[0_25px_70px_-15px_rgba(0,0,0,0.95)] relative overflow-hidden flex flex-col items-center transition-all ${
-                        isLandscapeMode ? 'max-w-[880px]' : 'max-w-[410px]'
-                    }`}>
-                        
+                    <div className={`w-full bg-slate-900 rounded-[38px] p-2.5 border-4 border-slate-700/80 shadow-[0_25px_70px_-15px_rgba(0,0,0,0.95)] relative overflow-hidden flex flex-col items-center transition-all ${isLandscapeMode ? 'max-w-[880px]' : 'max-w-[410px]'
+                        }`}>
+
                         {/* PHONE TOP NOTCH / DYNAMIC ISLAND */}
                         <div className="w-28 h-4 bg-slate-950 rounded-b-2xl mb-1.5 flex items-center justify-center gap-2 border-x border-b border-slate-800/80 z-20 shrink-0">
                             <span className="w-2 h-2 rounded-full bg-slate-800"></span>
@@ -1317,7 +1308,7 @@ export default function CricketScorerConsole({ match, onClose }) {
 
                         {/* MOBILE VIEWPORT SCREEN CONTAINER */}
                         <div className="w-full bg-slate-950 rounded-[28px] overflow-y-auto max-h-[80vh] p-2.5 space-y-2.5 scrollbar-none border border-slate-800/80 text-white font-sans text-xs">
-                            
+
                             {/* IF LIVE SCORECARD TAB IS SELECTED */}
                             {liveModalTab === 'scorecard' ? (
                                 <>
@@ -1354,7 +1345,7 @@ export default function CricketScorerConsole({ match, onClose }) {
                                                 <span className="text-emerald-400">{((matchState.overs * 6 + matchState.balls) / 120 * 100).toFixed(0)}%</span>
                                             </div>
                                             <div className="w-full h-1.5 rounded-full bg-slate-950 border border-slate-800 overflow-hidden">
-                                                <div 
+                                                <div
                                                     className="h-full bg-gradient-to-r from-emerald-500 to-teal-400 rounded-full"
                                                     style={{ width: `${Math.min(100, ((matchState.overs * 6 + matchState.balls) / 120 * 100))}%` }}
                                                 ></div>
@@ -1437,13 +1428,12 @@ export default function CricketScorerConsole({ match, onClose }) {
                                             {matchState.currentOverBalls.map((b, idx) => (
                                                 <span
                                                     key={idx}
-                                                    className={`w-7 h-7 rounded-lg flex items-center justify-center font-black text-xs shadow-md ${
-                                                        b.label === 'W'
+                                                    className={`w-7 h-7 rounded-lg flex items-center justify-center font-black text-xs shadow-md ${b.label === 'W'
                                                             ? 'bg-rose-600 text-white'
                                                             : b.label === '6' || b.label === '4'
-                                                            ? 'bg-emerald-500 text-slate-950'
-                                                            : 'bg-slate-800 text-slate-200'
-                                                    }`}
+                                                                ? 'bg-emerald-500 text-slate-950'
+                                                                : 'bg-slate-800 text-slate-200'
+                                                        }`}
                                                 >
                                                     {b.label}
                                                 </span>
@@ -1456,7 +1446,7 @@ export default function CricketScorerConsole({ match, onClose }) {
                                 /* 🎮 MOBILE LANDSCAPE CONTROLLER (3-COLUMN OPERATOR LAYOUT) */
                                 /* ==================================================== */
                                 <div className="grid grid-cols-12 gap-2 animate-in fade-in duration-200 items-start">
-                                    
+
                                     {/* LEFT PANEL (~28% / col-span-3) */}
                                     <div className="col-span-3 space-y-1.5">
                                         {/* CURRENT SCORE CARD */}
@@ -1510,9 +1500,8 @@ export default function CricketScorerConsole({ match, onClose }) {
                                                 {matchState.currentOverBalls.map((b, idx) => (
                                                     <span
                                                         key={idx}
-                                                        className={`w-5 h-5 rounded flex items-center justify-center font-black text-[9px] ${
-                                                            b.label === 'W' ? 'bg-rose-600 text-white' : b.label === '6' || b.label === '4' ? 'bg-emerald-500 text-slate-950' : 'bg-slate-800 text-slate-200'
-                                                        }`}
+                                                        className={`w-5 h-5 rounded flex items-center justify-center font-black text-[9px] ${b.label === 'W' ? 'bg-rose-600 text-white' : b.label === '6' || b.label === '4' ? 'bg-emerald-500 text-slate-950' : 'bg-slate-800 text-slate-200'
+                                                            }`}
                                                     >
                                                         {b.label}
                                                     </span>
@@ -1531,13 +1520,12 @@ export default function CricketScorerConsole({ match, onClose }) {
                                                     <button
                                                         key={runs}
                                                         onClick={() => recordBall({ type: 'run', runs, label: String(runs), isLegal: true })}
-                                                        className={`h-11 rounded-lg font-black text-lg transition-all active:scale-95 cursor-pointer flex items-center justify-center ${
-                                                            runs === 6
+                                                        className={`h-11 rounded-lg font-black text-lg transition-all active:scale-95 cursor-pointer flex items-center justify-center ${runs === 6
                                                                 ? 'bg-gradient-to-tr from-emerald-500 to-teal-400 text-slate-950 shadow-sm'
                                                                 : runs === 4
-                                                                ? 'bg-gradient-to-tr from-indigo-600 to-blue-500 text-white shadow-sm'
-                                                                : 'bg-slate-800 hover:bg-slate-700 text-white border border-slate-700'
-                                                        }`}
+                                                                    ? 'bg-gradient-to-tr from-indigo-600 to-blue-500 text-white shadow-sm'
+                                                                    : 'bg-slate-800 hover:bg-slate-700 text-white border border-slate-700'
+                                                            }`}
                                                     >
                                                         {runs}
                                                     </button>
@@ -1639,7 +1627,7 @@ export default function CricketScorerConsole({ match, onClose }) {
                                 /* 🎮 MOBILE PORTRAIT CONTROLLER PREVIEW INTERFACE */
                                 /* ==================================================== */
                                 <div className="space-y-2.5 animate-in fade-in duration-200">
-                                    
+
                                     {/* CONTROLLER HEADER DISPLAY */}
                                     <div className="bg-[#121824] rounded-2xl border border-indigo-500/40 p-2.5 space-y-1 shadow-xl text-center">
                                         <div className="flex items-center justify-between border-b border-slate-800 pb-1 text-[9px]">
@@ -1670,13 +1658,12 @@ export default function CricketScorerConsole({ match, onClose }) {
                                                 <button
                                                     key={runs}
                                                     onClick={() => recordBall({ type: 'run', runs, label: String(runs), isLegal: true })}
-                                                    className={`h-12 rounded-xl font-black text-xl transition-all active:scale-95 cursor-pointer shadow-md flex items-center justify-center ${
-                                                        runs === 6
+                                                    className={`h-12 rounded-xl font-black text-xl transition-all active:scale-95 cursor-pointer shadow-md flex items-center justify-center ${runs === 6
                                                             ? 'bg-gradient-to-tr from-emerald-600 to-teal-500 text-slate-950 shadow-emerald-600/30'
                                                             : runs === 4
-                                                            ? 'bg-gradient-to-tr from-indigo-600 to-blue-500 text-white shadow-indigo-600/30'
-                                                            : 'bg-slate-800 hover:bg-slate-700 text-white border border-slate-700'
-                                                    }`}
+                                                                ? 'bg-gradient-to-tr from-indigo-600 to-blue-500 text-white shadow-indigo-600/30'
+                                                                : 'bg-slate-800 hover:bg-slate-700 text-white border border-slate-700'
+                                                        }`}
                                                 >
                                                     {runs}
                                                 </button>
@@ -1811,7 +1798,7 @@ export default function CricketScorerConsole({ match, onClose }) {
             {connectModalOpen && (
                 <div className="fixed inset-0 z-[99999999] bg-slate-950/92 backdrop-blur-xl flex items-center justify-center p-4 animate-in fade-in duration-300 select-none">
                     <div className="bg-[#0B0F17] border border-slate-800 rounded-3xl p-6 w-full max-w-md shadow-2xl space-y-4 relative text-center">
-                        
+
                         {/* CLOSE BUTTON */}
                         <button
                             onClick={() => setConnectModalOpen(false)}
@@ -1875,7 +1862,7 @@ export default function CricketScorerConsole({ match, onClose }) {
                                         alt="Mobile Controller Pairing QR Code"
                                         className="w-full h-full object-contain"
                                     />
-                                    
+
                                     {ctrlSession.status === 'connected' && (
                                         <div className="absolute inset-0 bg-emerald-950/90 backdrop-blur-xs flex flex-col items-center justify-center text-white p-3 space-y-1">
                                             <FiCheckCircle className="w-10 h-10 text-emerald-400" />
@@ -2058,7 +2045,8 @@ export default function CricketScorerConsole({ match, onClose }) {
 
                                     // Save live score state directly into MySQL DB via REST API
                                     try {
-                                        await fetch('http://localhost:5000/api/v1/tournaments/matches/save-score', {
+                                        const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5005/api/v1';
+                                        await fetch(`${API_URL}/tournaments/matches/save-score`, {
                                             method: 'POST',
                                             headers: { 'Content-Type': 'application/json' },
                                             body: JSON.stringify({

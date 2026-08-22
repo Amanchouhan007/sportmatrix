@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import {
     ResponsiveContainer, AreaChart, Area, BarChart, Bar, LineChart, Line, XAxis, YAxis, Tooltip, CartesianGrid, Legend
@@ -17,40 +17,10 @@ import {
     FiCheck
 } from 'react-icons/fi'
 
-const MONTHLY_REVENUE_DATA = [
-    { month: 'Jan', revenue: 45000, commission: 5400 },
-    { month: 'Feb', revenue: 52000, commission: 6240 },
-    { month: 'Mar', revenue: 61000, commission: 7320 },
-    { month: 'Apr', revenue: 58000, commission: 6960 },
-    { month: 'May', revenue: 74000, commission: 8880 },
-    { month: 'Jun', revenue: 89000, commission: 10680 },
-    { month: 'Jul', revenue: 95000, commission: 11400 },
-    { month: 'Aug', revenue: 108000, commission: 12960 }
-]
-
-const AD_PERFORMANCE_DATA = [
-    { type: 'Guaranteed Booking', bookings: 420, revenue: 168000 },
-    { type: 'Discount Offer', bookings: 680, revenue: 204000 },
-    { type: 'Impression Ad', bookings: 290, revenue: 116000 }
-]
-
-const BOOKING_TREND_DATA = [
-    { week: 'Wk 1', bookings: 85 },
-    { week: 'Wk 2', bookings: 110 },
-    { week: 'Wk 3', bookings: 145 },
-    { week: 'Wk 4', bookings: 190 },
-    { week: 'Wk 5', bookings: 215 }
-]
-
-const CLICK_VS_BOOKING_DATA = [
-    { day: 'Mon', clicks: 1200, bookings: 140 },
-    { day: 'Tue', clicks: 1450, bookings: 165 },
-    { day: 'Wed', clicks: 1300, bookings: 150 },
-    { day: 'Thu', clicks: 1600, bookings: 190 },
-    { day: 'Fri', clicks: 2100, bookings: 280 },
-    { day: 'Sat', clicks: 3200, bookings: 450 },
-    { day: 'Sun', clicks: 2900, bookings: 390 }
-]
+const MONTHLY_REVENUE_DATA = []
+const AD_PERFORMANCE_DATA = []
+const BOOKING_TREND_DATA = []
+const CLICK_VS_BOOKING_DATA = []
 
 const TIMEFRAME_OPTIONS = [
     { value: '7d', label: 'Last 7 Days' },
@@ -65,6 +35,44 @@ export default function AdAnalyticsDashboard() {
     const basePath = location.pathname.startsWith('/super-admin') ? '/super-admin' : location.pathname.startsWith('/staff') ? '/staff' : '/admin'
     const [timeframe, setTimeframe] = useState('30d')
     const [isTimeframeOpen, setIsTimeframeOpen] = useState(false)
+
+    const [stats, setStats] = useState({
+        totalAds: 0,
+        activeAds: 0,
+        totalRevenue: 0,
+        commission: 0,
+        adBookings: 0,
+        conversionRate: '0.0%'
+    })
+
+    useEffect(() => {
+        const fetchAnalyticsData = async () => {
+            try {
+                const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5005/api/v1';
+                const res = await fetch(`${API_URL}/ads/analytics`);
+                const data = await res.json();
+
+                if (data.success && data.data) {
+                    const { totalAds, activeAds, totalRevenue, adBookings } = data.data;
+                    const comm = Math.round((totalRevenue || 0) * 0.12);
+                    const conv = totalAds > 0 ? ((adBookings / (totalAds * 10)) * 100).toFixed(1) + '%' : '0.0%';
+
+                    setStats({
+                        totalAds: Number(totalAds || 0),
+                        activeAds: Number(activeAds || 0),
+                        totalRevenue: Number(totalRevenue || 0),
+                        commission: comm,
+                        adBookings: Number(adBookings || 0),
+                        conversionRate: conv
+                    });
+                }
+            } catch (e) {
+                console.warn('Error syncing ad analytics:', e);
+            }
+        };
+
+        fetchAnalyticsData();
+    }, []);
 
     return (
         <div className="space-y-6 animate-in fade-in duration-300">
@@ -170,9 +178,9 @@ export default function AdAnalyticsDashboard() {
                         <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest flex items-center gap-1.5 truncate">
                             <FiTag className="text-[#10B981] shrink-0" /> Total Ads
                         </p>
-                        <p className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight leading-none">128</p>
+                        <p className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight leading-none">{stats.totalAds}</p>
                         <p className="text-[11px] font-extrabold text-emerald-600 bg-emerald-50 border border-emerald-200/60 px-2 py-0.5 rounded-md inline-block">
-                            ↑ +14% this month
+                            Real DB Count
                         </p>
                     </div>
                 </div>
@@ -184,8 +192,8 @@ export default function AdAnalyticsDashboard() {
                         <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest flex items-center gap-1.5 truncate">
                             <FiCheckCircle className="text-[#10B981] shrink-0" /> Active Ads
                         </p>
-                        <p className="text-2xl sm:text-3xl font-black text-emerald-600 tracking-tight leading-none">42</p>
-                        <p className="text-[11px] font-medium text-slate-500 truncate">Across 18 turfs</p>
+                        <p className="text-2xl sm:text-3xl font-black text-emerald-600 tracking-tight leading-none">{stats.activeAds}</p>
+                        <p className="text-[11px] font-medium text-slate-500 truncate">Across registered turfs</p>
                     </div>
                 </div>
 
@@ -196,9 +204,9 @@ export default function AdAnalyticsDashboard() {
                         <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest flex items-center gap-1.5 truncate">
                             <FiDollarSign className="text-teal-600 shrink-0" /> Total Revenue
                         </p>
-                        <p className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight leading-none">₹5.82L</p>
+                        <p className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight leading-none">₹{stats.totalRevenue.toLocaleString('en-IN')}</p>
                         <p className="text-[11px] font-extrabold text-emerald-600 bg-emerald-50 border border-emerald-200/60 px-2 py-0.5 rounded-md inline-block">
-                            ↑ +22% vs last mth
+                            Live Ledger
                         </p>
                     </div>
                 </div>
@@ -210,8 +218,8 @@ export default function AdAnalyticsDashboard() {
                         <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest flex items-center gap-1.5 truncate">
                             <FiTrendingUp className="text-amber-500 shrink-0" /> Commission
                         </p>
-                        <p className="text-2xl sm:text-3xl font-black text-amber-600 tracking-tight leading-none">₹69,840</p>
-                        <p className="text-[11px] font-medium text-slate-500 truncate">Avg 12.0% rate</p>
+                        <p className="text-2xl sm:text-3xl font-black text-amber-600 tracking-tight leading-none">₹{stats.commission.toLocaleString('en-IN')}</p>
+                        <p className="text-[11px] font-medium text-slate-500 truncate">12.0% platform fee</p>
                     </div>
                 </div>
 
@@ -222,7 +230,7 @@ export default function AdAnalyticsDashboard() {
                         <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest flex items-center gap-1.5 truncate">
                             <FiShoppingBag className="text-purple-500 shrink-0" /> Ad Bookings
                         </p>
-                        <p className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight leading-none">1,390</p>
+                        <p className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight leading-none">{stats.adBookings}</p>
                         <p className="text-[11px] font-extrabold text-purple-600 bg-purple-50 border border-purple-200/60 px-2 py-0.5 rounded-md inline-block">
                             Slots generated
                         </p>
@@ -259,7 +267,7 @@ export default function AdAnalyticsDashboard() {
                         </div>
                     </div>
                     <div className="h-64 pt-2">
-                        <ResponsiveContainer width="100%" height="100%">
+                        <ResponsiveContainer width="100%" height={240} minWidth={0}>
                             <AreaChart data={MONTHLY_REVENUE_DATA} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                                 <defs>
                                     <linearGradient id="colorRev" x1="0" y1="0" x2="0" y2="1">
@@ -311,7 +319,7 @@ export default function AdAnalyticsDashboard() {
                         </div>
                     </div>
                     <div className="h-64 pt-2">
-                        <ResponsiveContainer width="100%" height="100%">
+                        <ResponsiveContainer width="100%" height={240} minWidth={0}>
                             <BarChart data={AD_PERFORMANCE_DATA} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                                 <CartesianGrid strokeDasharray="3 3" stroke="#F1F5F9" vertical={false} />
                                 <XAxis dataKey="type" stroke="#64748B" tick={{ fontSize: 11, fontWeight: '600' }} axisLine={false} tickLine={false} />
@@ -355,7 +363,7 @@ export default function AdAnalyticsDashboard() {
                         </div>
                     </div>
                     <div className="h-64 pt-2">
-                        <ResponsiveContainer width="100%" height="100%">
+                        <ResponsiveContainer width="100%" height={240} minWidth={0}>
                             <LineChart data={BOOKING_TREND_DATA} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                                 <CartesianGrid strokeDasharray="3 3" stroke="#F1F5F9" vertical={false} />
                                 <XAxis dataKey="week" stroke="#64748B" tick={{ fontSize: 11, fontWeight: '600' }} axisLine={false} tickLine={false} />
@@ -394,7 +402,7 @@ export default function AdAnalyticsDashboard() {
                         </div>
                     </div>
                     <div className="h-64 pt-2">
-                        <ResponsiveContainer width="100%" height="100%">
+                        <ResponsiveContainer width="100%" height={240} minWidth={0}>
                             <BarChart data={CLICK_VS_BOOKING_DATA} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                                 <CartesianGrid strokeDasharray="3 3" stroke="#F1F5F9" vertical={false} />
                                 <XAxis dataKey="day" stroke="#64748B" tick={{ fontSize: 11, fontWeight: '600' }} axisLine={false} tickLine={false} />

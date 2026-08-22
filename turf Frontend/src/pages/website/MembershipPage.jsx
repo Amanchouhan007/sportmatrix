@@ -43,7 +43,7 @@ export default function MembershipPage() {
     const addToast = toastContext?.addToast
     const { setSession } = useAuth()
 
-    const [dbPlans, setDbPlans] = useState(() => defaultFallbackPlans.filter(p => p.status === 'active'))
+    const [dbPlans, setDbPlans] = useState([])
     const [isLoadingPlans, setIsLoadingPlans] = useState(false)
     const [billingCycle, setBillingCycle] = useState('monthly') // 'monthly' | 'yearly'
 
@@ -543,7 +543,8 @@ export default function MembershipPage() {
         setIsCheckoutModalOpen(false)
         navigate('/login', {
             state: {
-                email: registeredOwnerUser?.email,
+                email: registeredOwnerUser?.email || ownerFormData.email,
+                password: ownerFormData.password,
                 role: 'owner'
             }
         })
@@ -1854,31 +1855,53 @@ Support: support@sportmatrix.com | Helpline: +91 1800-419-TURF
                                     </div>
 
                                     {/* Owner Credentials summary */}
-                                    <div className="bg-slate-900 text-white rounded-2xl p-4 space-y-2 border border-slate-800">
-                                        <div className="flex items-center justify-between">
-                                            <span className="text-[10px] font-black text-[#C8FF2E] uppercase tracking-wider">
-                                                🔑 Owner Admin Login Credentials
+                                    <div className="bg-slate-900 text-white rounded-2xl p-4.5 space-y-3 border border-slate-800 shadow-xl">
+                                        <div className="flex items-center justify-between flex-wrap gap-2">
+                                            <span className="text-[11px] font-black text-[#C8FF2E] uppercase tracking-wider flex items-center gap-1.5">
+                                                🔑 Turf Admin Login Credentials
                                             </span>
-                                            <button
-                                                type="button"
-                                                onClick={() => {
-                                                    navigator.clipboard.writeText(`Email: ${registeredOwnerUser?.email}\nPassword: ${ownerFormData.password}`)
-                                                    if (addToast) addToast('Credentials copied to clipboard!', 'success')
-                                                }}
-                                                className="text-[10px] font-bold text-slate-300 hover:text-white flex items-center gap-1 cursor-pointer"
-                                            >
-                                                <HiClipboardCopy className="w-3.5 h-3.5 text-[#C8FF2E]" />
-                                                <span>Copy All</span>
-                                            </button>
+                                            <div className="flex items-center gap-2">
+                                                <a
+                                                    href={`https://wa.me/?text=${encodeURIComponent(
+                                                        `🏆 *SportMatrix Turf Admin Credentials*\n\n` +
+                                                        `Hello ${registeredOwnerUser?.name || ownerFormData.fullName}!\n` +
+                                                        `Your Turf Admin account for *${ownerFormData.businessName}* is active.\n\n` +
+                                                        `📧 *Admin Login ID*: ${registeredOwnerUser?.email || ownerFormData.email}\n` +
+                                                        `🔑 *Password*: ${ownerFormData.password}\n` +
+                                                        `💼 *Active Plan*: ${subDetails?.planName}\n\n` +
+                                                        `🌐 *Login URL*: http://localhost:5173/login`
+                                                    )}`}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    className="text-[10px] font-bold text-emerald-400 hover:text-emerald-300 flex items-center gap-1 cursor-pointer bg-emerald-950/80 px-2 py-1 rounded-lg border border-emerald-500/30"
+                                                >
+                                                    <span>Share WhatsApp 💬</span>
+                                                </a>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => {
+                                                        navigator.clipboard.writeText(`Email: ${registeredOwnerUser?.email || ownerFormData.email}\nPassword: ${ownerFormData.password}`)
+                                                        if (addToast) addToast('Credentials copied to clipboard!', 'success')
+                                                    }}
+                                                    className="text-[10px] font-bold text-slate-300 hover:text-white flex items-center gap-1 cursor-pointer bg-slate-800 px-2 py-1 rounded-lg border border-slate-700"
+                                                >
+                                                    <HiClipboardCopy className="w-3.5 h-3.5 text-[#C8FF2E]" />
+                                                    <span>Copy All</span>
+                                                </button>
+                                            </div>
                                         </div>
-                                        <div className="text-xs font-mono space-y-1">
+                                        <div className="text-xs font-mono space-y-1 bg-slate-950/60 p-3 rounded-xl border border-slate-800/80">
                                             <div className="flex justify-between text-slate-300">
-                                                <span>Email:</span>
-                                                <span className="text-white font-bold">{registeredOwnerUser?.email}</span>
+                                                <span>Admin Login ID:</span>
+                                                <span className="text-white font-bold">{registeredOwnerUser?.email || ownerFormData.email}</span>
                                             </div>
                                             <div className="flex justify-between text-slate-300">
                                                 <span>Password:</span>
                                                 <span className="text-[#C8FF2E] font-bold">{ownerFormData.password}</span>
+                                            </div>
+                                            <div className="flex justify-between text-slate-300 pt-1 border-t border-slate-800">
+                                                <span>Assigned Turf:</span>
+                                                <span className="text-emerald-400 font-bold">{ownerFormData.businessName}</span>
                                             </div>
                                         </div>
                                     </div>

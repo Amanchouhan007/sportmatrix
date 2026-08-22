@@ -80,7 +80,7 @@ export default function TournamentCreatePage({ role = 'owner' }) {
             }
         })
     }
-    
+
 
     const handleSubmit = async (e) => {
         e.preventDefault()
@@ -91,7 +91,8 @@ export default function TournamentCreatePage({ role = 'owner' }) {
 
         try {
             const token = localStorage.getItem('token');
-            const res = await fetch('http://localhost:5000/api/v1/tournaments', {
+            const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5005/api/v1';
+            const res = await fetch(`${API_URL}/tournaments`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -126,8 +127,8 @@ export default function TournamentCreatePage({ role = 'owner' }) {
 
             const data = await res.json();
             if (data.success) {
-                const msg = role === 'owner' 
-                    ? 'Tournament created and saved in MySQL DB! Turf slots locked.' 
+                const msg = role === 'owner'
+                    ? 'Tournament created and saved in MySQL DB! Turf slots locked.'
                     : 'Tournament submitted successfully! Pending Owner approval.';
 
                 addToast({ title: 'Success!', message: msg, type: 'success' });
@@ -167,7 +168,7 @@ export default function TournamentCreatePage({ role = 'owner' }) {
                     <h2 className="text-base font-extrabold text-surface-900 border-b border-surface-100 pb-3 flex items-center gap-2">
                         <HiTrophy className="text-primary-600" /> Tournament Identity & Sport
                     </h2>
-                    
+
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <Input
                             label="Tournament Title *"
@@ -519,9 +520,8 @@ export default function TournamentCreatePage({ role = 'owner' }) {
                             ].map((facility) => {
                                 const isChecked = (form.facilities || []).includes(facility)
                                 return (
-                                    <label key={facility} className={`flex items-center gap-2 p-3 rounded-xl border cursor-pointer text-xs font-bold transition-all ${
-                                        isChecked ? 'bg-primary-50 border-primary-400 text-primary-900' : 'bg-white border-surface-200 text-surface-700 hover:bg-surface-50'
-                                    }`}>
+                                    <label key={facility} className={`flex items-center gap-2 p-3 rounded-xl border cursor-pointer text-xs font-bold transition-all ${isChecked ? 'bg-primary-50 border-primary-400 text-primary-900' : 'bg-white border-surface-200 text-surface-700 hover:bg-surface-50'
+                                        }`}>
                                         <input
                                             type="checkbox"
                                             checked={isChecked}

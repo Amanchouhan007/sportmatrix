@@ -10,16 +10,11 @@ import Card from '../../components/ui/Card'
 import { useToast } from '../../components/ui/Toast'
 import { HiExclamation, HiPlus, HiRefresh } from 'react-icons/hi'
 
-const initialTasks = [
-    { id: 'MT-001', task: 'Re-paint court lines', area: 'Turf A', assignee: 'Ravi Kumar', priority: 'High', due: '2026-03-05', status: 'In Progress' },
-    { id: 'MT-002', task: 'Fix floodlight #3', area: 'Turf B', assignee: 'Suresh P.', priority: 'Urgent', due: '2026-03-03', status: 'Open' },
-    { id: 'MT-003', task: 'Replace net post', area: 'Court 1', assignee: 'Ravi Kumar', priority: 'Medium', due: '2026-03-10', status: 'Scheduled' },
-    { id: 'MT-004', task: 'Deep clean changing room', area: 'Facility', assignee: 'Staff Team', priority: 'Low', due: '2026-03-08', status: 'Completed' },
-]
+const initialTasks = []
 
 export default function MaintenancePage() {
     const { addToast } = useToast()
-    const [tasks, setTasks] = useState(initialTasks)
+    const [tasks, setTasks] = useState([])
     const [modal, setModal] = useState(false)
 
     // Status update drawer
@@ -35,6 +30,25 @@ export default function MaintenancePage() {
         priority: 'Medium',
         due: ''
     })
+
+    useEffect(() => {
+        const fetchMaintenance = async () => {
+            try {
+                const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5005/api/v1';
+                const res = await fetch(`${API_URL}/maintenance`);
+                const data = await res.json();
+                if (data.success && Array.isArray(data.data)) {
+                    setTasks(data.data);
+                } else {
+                    setTasks([]);
+                }
+            } catch (e) {
+                console.error('Error fetching maintenance tasks:', e);
+                setTasks([]);
+            }
+        };
+        fetchMaintenance();
+    }, []);
 
     const handleCreateTask = () => {
         if (!newTask.task || !newTask.assignee || !newTask.due) {

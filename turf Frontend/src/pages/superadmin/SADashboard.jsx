@@ -181,9 +181,12 @@ export default function SADashboard() {
 
     // Trigger re-fetch when filters shift
     useEffect(() => {
-        if (user && user.role === 'SUPER_ADMIN') {
-            if (range === 'CUSTOM' && (!startDate || !endDate)) return
-            fetchDashboardData()
+        if (user) {
+            const rNorm = (user.role || '').toUpperCase().replace(/[-_]/g, '');
+            if (rNorm === 'SUPERADMIN') {
+                if (range === 'CUSTOM' && (!startDate || !endDate)) return
+                fetchDashboardData()
+            }
         }
     }, [user, range, startDate, endDate])
 
@@ -326,9 +329,9 @@ export default function SADashboard() {
 
                 const kpiList = [
                     {
-                        label: 'Total Turfs',
+                        label: 'Total Branches',
                         value: numBranches.toLocaleString('en-IN'),
-                        trend: '+12% this month',
+                        trend: numBranches > 0 ? `${numBranches} Active Branches` : '0 Branches',
                         isUp: true,
                         icon: HiOfficeBuilding,
                         color: 'from-green-500 to-emerald-400'
@@ -336,7 +339,7 @@ export default function SADashboard() {
                     {
                         label: 'Total Revenue',
                         value: `₹${numRevenue.toLocaleString('en-IN')}`,
-                        trend: `${growthVal >= 0 ? '+' : ''}${growthVal}% Growth`,
+                        trend: numRevenue > 0 ? `${growthVal >= 0 ? '+' : ''}${growthVal}% Growth` : '₹0 Net Revenue',
                         isUp: growthVal >= 0,
                         icon: HiCurrencyRupee,
                         color: 'from-emerald-500 to-teal-400'
@@ -344,7 +347,7 @@ export default function SADashboard() {
                     {
                         label: 'Total Admin Users',
                         value: numUsers.toLocaleString('en-IN'),
-                        trend: '+8 New Admins',
+                        trend: `${numUsers} Registered Admins`,
                         isUp: true,
                         icon: HiUsers,
                         color: 'from-teal-500 to-green-400'
@@ -352,7 +355,7 @@ export default function SADashboard() {
                     {
                         label: 'Active Subscriptions',
                         value: numSubs.toLocaleString('en-IN'),
-                        trend: '99.2% Renewal',
+                        trend: `${numSubs} Active Subscriptions`,
                         isUp: true,
                         icon: HiCreditCard,
                         color: 'from-green-600 to-emerald-500'
@@ -525,8 +528,8 @@ export default function SADashboard() {
                     <div>
                         <div className="flex items-center justify-between mb-5">
                             <div>
-                                <h3 className="text-base font-black text-slate-900 uppercase tracking-tight">Turf Performance</h3>
-                                <p className="text-xs font-semibold text-slate-400 mt-0.5">Top performing turfs ranked by total revenue and bookings volume</p>
+                                <h3 className="text-base font-black text-slate-900 uppercase tracking-tight">Branch Performance</h3>
+                                <p className="text-xs font-semibold text-slate-400 mt-0.5">Top performing branches ranked by total branch revenue and bookings volume</p>
                             </div>
                             <button onClick={() => navigate('/super-admin/owners')} className="text-xs font-bold text-[#16A34A] hover:underline flex items-center gap-1">
                                 <span>View All</span>
@@ -545,10 +548,10 @@ export default function SADashboard() {
                                 <table className="w-full text-left border-collapse">
                                     <thead>
                                         <tr className="border-b border-slate-100 text-[10px] font-black uppercase tracking-wider text-slate-400 bg-slate-50/50">
-                                            <th className="py-3 px-4 rounded-l-xl">Turf Name</th>
+                                            <th className="py-3 px-4 rounded-l-xl">Branch Name</th>
                                             <th className="py-3 px-4">City</th>
                                             <th className="py-3 px-4">Bookings</th>
-                                            <th className="py-3 px-4">Revenue</th>
+                                            <th className="py-3 px-4">Branch Revenue</th>
                                             <th className="py-3 px-4 rounded-r-xl">Status</th>
                                         </tr>
                                     </thead>
@@ -591,8 +594,8 @@ export default function SADashboard() {
                         ) : (
                             <div className="py-12 text-center border-2 border-dashed border-slate-100 rounded-2xl bg-slate-50/50">
                                 <span className="text-2xl mb-2 block">🏟️</span>
-                                <p className="text-xs font-bold text-slate-700">No Turfs Registered Yet</p>
-                                <p className="text-[11px] text-slate-400 mt-1">Real turfs you add in Branch Management will show live performance here.</p>
+                                <p className="text-xs font-bold text-slate-700">No Branches Registered Yet</p>
+                                <p className="text-[11px] text-slate-400 mt-1">Real branches you add in Branch Management will show live performance here.</p>
                             </div>
                         )}
                     </div>

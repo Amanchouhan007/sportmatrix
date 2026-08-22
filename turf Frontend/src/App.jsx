@@ -196,6 +196,7 @@ export default function App() {
                 <Route path="inventory" element={<InventoryPage />} />
                 <Route path="maintenance" element={<MaintenancePage />} />
                 <Route path="staff" element={<StaffManagement />} />
+                <Route path="settings" element={<SystemSettings />} />
               </Route>
 
               {/* Staff Dashboard (/staff) */}

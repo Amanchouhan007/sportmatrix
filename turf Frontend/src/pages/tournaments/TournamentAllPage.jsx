@@ -33,7 +33,8 @@ export default function TournamentAllPage({ role = 'owner' }) {
     useEffect(() => {
         const fetchLiveTournaments = async () => {
             try {
-                const res = await fetch('http://localhost:5000/api/v1/tournaments');
+                const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5005/api/v1';
+                const res = await fetch(`${API_URL}/tournaments`);
                 const data = await res.json();
                 if (data.success && Array.isArray(data.data) && data.data.length > 0) {
                     setTournaments(data.data);
@@ -176,8 +177,8 @@ export default function TournamentAllPage({ role = 'owner' }) {
                             key={tab}
                             onClick={() => setActiveTab(tab)}
                             className={`px-4 py-2 rounded-xl text-xs font-extrabold transition-all cursor-pointer whitespace-nowrap ${activeTab === tab
-                                    ? 'bg-slate-900 text-white shadow-md'
-                                    : 'bg-white text-surface-600 border border-surface-200 hover:bg-surface-100'
+                                ? 'bg-slate-900 text-white shadow-md'
+                                : 'bg-white text-surface-600 border border-surface-200 hover:bg-surface-100'
                                 }`}
                         >
                             {tab.replace('_', ' ')}

@@ -9,9 +9,9 @@ import {
 export default function TournamentCardPremium({ tournament }) {
     const navigate = useNavigate();
 
-    const rawPrize = tournament?.prize || tournament?.prize_pool || tournament?.total_prize;
+    const rawPrize = tournament?.prize || tournament?.prizePool || tournament?.prize_pool || tournament?.total_prize;
     const formattedPrize = (() => {
-        if (!rawPrize || String(rawPrize).includes('NaN')) return '₹50,000';
+        if (!rawPrize || String(rawPrize).includes('NaN')) return '₹0';
         if (typeof rawPrize === 'number') return `₹${rawPrize.toLocaleString('en-IN')}`;
         const str = String(rawPrize).trim();
         return str.startsWith('₹') ? str : `₹${str}`;
@@ -19,32 +19,31 @@ export default function TournamentCardPremium({ tournament }) {
 
     const rawFee = tournament?.entryFee || tournament?.entry_fee || tournament?.price;
     const formattedFee = (() => {
-        if (!rawFee || String(rawFee).includes('NaN')) return '500';
+        if (!rawFee || String(rawFee).includes('NaN')) return '0';
         if (typeof rawFee === 'number') return rawFee.toLocaleString('en-IN');
         const str = String(rawFee).replace(/[^0-9]/g, '');
-        return str || '500';
+        return str || '0';
     })();
     
-    // Mock data for rich UI presentation if real data is missing
     const t = {
-        id: tournament?.id || tournament?._id || 't_001',
-        title: tournament?.title || tournament?.name || 'Premier Cricket Cup',
+        id: tournament?.id || tournament?._id,
+        title: tournament?.title || tournament?.name || 'Tournament',
         image: tournament?.banner || tournament?.image || '/images/turf1.png',
-        rating: tournament?.rating || 4.9,
+        rating: tournament?.rating || 5.0,
         maxTeams: tournament?.maxTeams || tournament?.max_teams || 16,
-        registeredTeams: tournament?.registrations || tournament?.registered_teams || 12,
-        location: tournament?.location || 'Vijay Nagar, Indore',
-        date: tournament?.date || tournament?.start_date || '15 Aug 2026',
-        time: tournament?.time || '6:00 PM',
-        level: tournament?.level || 'Intermediate',
-        age: tournament?.age || '18+',
+        registeredTeams: tournament?.registrations || tournament?.registered_teams || 0,
+        location: tournament?.location || tournament?.city || 'SportMatrix Venue',
+        date: tournament?.date || tournament?.start_date || 'Scheduled',
+        time: tournament?.time || 'Flexible',
+        level: tournament?.level || 'Open',
+        age: tournament?.age || 'Open',
         prize: formattedPrize,
         entryFee: formattedFee,
-        organizer: tournament?.organizer || 'SportMatrix',
+        organizer: tournament?.organizer || tournament?.createdBy || 'SportMatrix',
         isVerified: true,
-        isTrending: true,
-        status: tournament?.status === 'Approved' ? 'Open' : (tournament?.status || 'Open'),
-        daysLeft: 2
+        isTrending: false,
+        status: tournament?.status || 'Active',
+        daysLeft: 0
     };
 
     const fillPercentage = Math.round((t.registeredTeams / t.maxTeams) * 100);

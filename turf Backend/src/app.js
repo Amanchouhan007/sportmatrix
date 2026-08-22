@@ -111,6 +111,10 @@ app.use('/api/v1/corporate', corporateRouter);
 const crmRouter = require('./modules/crm/crm.routes');
 app.use('/api/v1/crm', crmRouter);
 
+// Disputes Routes registration
+const disputesRouter = require('./modules/disputes/disputes.routes');
+app.use('/api/v1/disputes', disputesRouter);
+
 // Maintenance Routes registration
 const maintenanceRouter = require('./modules/maintenance/maintenance.routes');
 app.use('/api/v1/maintenance', maintenanceRouter);
@@ -122,6 +126,10 @@ app.use('/api/v1/staff', staffRouter);
 // Teams Routes registration
 const teamsRouter = require('./modules/teams/teams.routes');
 app.use('/api/v1/teams', teamsRouter);
+
+// Umpire Routes registration
+const umpireRouter = require('./modules/umpire/umpire.routes');
+app.use('/api/v1/umpire', umpireRouter);
 
 // Start Background Expiry & Reconciliation Worker
 const MatchExpiryService = require('./services/matchExpiry.service');

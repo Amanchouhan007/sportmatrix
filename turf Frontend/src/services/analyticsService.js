@@ -1,13 +1,16 @@
 import api from './api';
 
+const unwrap = (res) => (res?.data !== undefined ? res.data : res);
+
 /**
  * Fetch global overview aggregate statistics
  */
 export const getOverview = async (filters = {}) => {
     try {
         const response = await api.get('/reports/overview', { params: filters });
-        if (response.data && response.data.success && response.data.data) {
-            return response.data;
+        const resData = unwrap(response);
+        if (resData && resData.success !== false) {
+            return resData;
         }
     } catch (error) {
         console.warn('Overview API fallback triggered:', error);
@@ -41,8 +44,9 @@ export const getOverview = async (filters = {}) => {
 export const getRevenueAnalytics = async (filters = {}) => {
     try {
         const response = await api.get('/reports/revenue', { params: filters });
-        if (response.data && response.data.success && Array.isArray(response.data.data)) {
-            return response.data;
+        const resData = unwrap(response);
+        if (resData && resData.success !== false) {
+            return resData;
         }
     } catch (error) {
         console.warn('Revenue analytics API fallback triggered:', error);
@@ -59,8 +63,9 @@ export const getRevenueAnalytics = async (filters = {}) => {
 export const getBookingAnalytics = async (filters = {}) => {
     try {
         const response = await api.get('/reports/bookings', { params: filters });
-        if (response.data && response.data.success && Array.isArray(response.data.data)) {
-            return response.data;
+        const resData = unwrap(response);
+        if (resData && resData.success !== false) {
+            return resData;
         }
     } catch (error) {
         console.warn('Booking analytics API fallback triggered:', error);
@@ -77,8 +82,9 @@ export const getBookingAnalytics = async (filters = {}) => {
 export const getUserAnalytics = async (filters = {}) => {
     try {
         const response = await api.get('/reports/users', { params: filters });
-        if (response.data && response.data.success) {
-            return response.data;
+        const resData = unwrap(response);
+        if (resData && resData.success !== false) {
+            return resData;
         }
     } catch (error) {
         console.warn('User analytics API fallback triggered:', error);
@@ -95,8 +101,9 @@ export const getUserAnalytics = async (filters = {}) => {
 export const getBranchAnalytics = async (filters = {}) => {
     try {
         const response = await api.get('/reports/top-branches', { params: filters });
-        if (response.data && response.data.success) {
-            return response.data;
+        const resData = unwrap(response);
+        if (resData && resData.success !== false) {
+            return resData;
         }
     } catch (error) {
         console.warn('Branch analytics API fallback triggered:', error);
@@ -113,8 +120,9 @@ export const getBranchAnalytics = async (filters = {}) => {
 export const getSportsAnalytics = async (filters = {}) => {
     try {
         const response = await api.get('/reports/sports', { params: filters });
-        if (response.data && response.data.success && Array.isArray(response.data.data)) {
-            return response.data;
+        const resData = unwrap(response);
+        if (resData && resData.success !== false) {
+            return resData;
         }
     } catch (error) {
         console.warn('Sports analytics API fallback triggered:', error);
@@ -131,8 +139,9 @@ export const getSportsAnalytics = async (filters = {}) => {
 export const getSubscriptionAnalytics = async (filters = {}) => {
     try {
         const response = await api.get('/reports/subscriptions', { params: filters });
-        if (response.data && response.data.success) {
-            return response.data;
+        const resData = unwrap(response);
+        if (resData && resData.success !== false) {
+            return resData;
         }
     } catch (error) {
         console.warn('Subscription analytics API fallback triggered:', error);
@@ -149,8 +158,9 @@ export const getSubscriptionAnalytics = async (filters = {}) => {
 export const getTopOwners = async (filters = {}) => {
     try {
         const response = await api.get('/reports/top-owners', { params: filters });
-        if (response.data && response.data.success) {
-            return response.data;
+        const resData = unwrap(response);
+        if (resData && resData.success !== false) {
+            return resData;
         }
     } catch (error) {
         console.warn('Top owners API fallback triggered:', error);
@@ -167,8 +177,9 @@ export const getTopOwners = async (filters = {}) => {
 export const getTopBranches = async (filters = {}) => {
     try {
         const response = await api.get('/reports/top-branches', { params: filters });
-        if (response.data && response.data.success) {
-            return response.data;
+        const resData = unwrap(response);
+        if (resData && resData.success !== false) {
+            return resData;
         }
     } catch (error) {
         console.warn('Top branches API fallback triggered:', error);
@@ -185,8 +196,9 @@ export const getTopBranches = async (filters = {}) => {
 export const getTopSports = async (filters = {}) => {
     try {
         const response = await api.get('/reports/sports', { params: filters });
-        if (response.data && response.data.success) {
-            return response.data;
+        const resData = unwrap(response);
+        if (resData && resData.success !== false) {
+            return resData;
         }
     } catch (error) {
         console.warn('Top sports API fallback triggered:', error);
@@ -198,9 +210,29 @@ export const getTopSports = async (filters = {}) => {
 };
 
 /**
- * Dummy handler for file exports (PDF/CSV)
+ * Download report as CSV or PDF via real backend export endpoint
  */
-export const downloadReport = async (reportType = 'general', format = 'pdf') => {
-    const content = `Report: ${reportType.toUpperCase()}\nGenerated at: ${new Date().toLocaleString()}\nFormat: ${format}`;
-    return new Blob([content], { type: format === 'pdf' ? 'application/pdf' : 'text/csv' });
+export const downloadReport = async (reportType = 'general', format = 'csv', range = 'LAST_30_DAYS') => {
+    try {
+        const res = await api.get('/reports/export', {
+            params: { type: reportType, format, range },
+            responseType: 'blob'
+        });
+        const blob = res.data || res;
+        const ext = format === 'csv' ? 'csv' : 'txt';
+        const url = window.URL.createObjectURL(new Blob([blob]));
+        const link = document.createElement('a');
+        link.href = url;
+        link.setAttribute('download', `sportmatrix_report_${Date.now()}.${ext}`);
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        window.URL.revokeObjectURL(url);
+        return { success: true };
+    } catch (error) {
+        console.warn('Backend /reports/export failed, generating local fallback:', error.message);
+        // Local fallback blob
+        const content = `SportMatrix Report\nGenerated: ${new Date().toLocaleString()}\nType: ${reportType}\nFormat: ${format}`;
+        return new Blob([content], { type: format === 'csv' ? 'text/csv' : 'application/octet-stream' });
+    }
 };

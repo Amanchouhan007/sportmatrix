@@ -1,3 +1,5 @@
+import api from './api';
+
 export const AVAILABLE_TURF_BRANCHES = [
     'SportZone Arena',
     'Champion Cricket Ground',
@@ -11,24 +13,29 @@ export const AVAILABLE_TURF_BRANCHES = [
 export const isDemoLead = (item) => {
     if (!item) return true;
     const name = (item.name || item.contactPerson || item.companyName || item.customerName || '').toLowerCase();
-    const phone = (item.phone || item.customerPhone || '').replace(/\D/g, '');
+    const phone = (item.phone || item.customerPhone || item.userPhone || '').replace(/\D/g, '');
     const notes = (item.notes || '').toLowerCase();
 
     const demoKeywords = [
         'techcorp', 'wrf captain', 'wrf', 'customer@gmail', 'labcoordinator',
-        'aascdsads', 'turf admin', 'website player', 'dummy', 'test company', 'sample', 'afwe'
+        'aascdsads', 'turf admin', 'website player', 'dummy', 'test company', 'sample', 'afwe',
+        'vikram malhotra', 'amit kumar', 'indore premier league', 'dadar destroyers', 'ghjk', 'rahul sharma',
+        'valued player'
     ];
-    const demoPhones = ['123', '2255', '122355', '2345688', '123456', '9876500000', '1234567890'];
+    const demoPhones = [
+        '123', '2255', '122355', '2345688', '123456', '9876500000', '1234567890',
+        '5678', '9822233344', '9711122334', '9988877665', '9876543222', '9876543210'
+    ];
 
     if (demoKeywords.some(d => name.includes(d) || notes.includes(d))) return true;
-    if (demoPhones.some(p => phone === p || (p.length >= 6 && phone.includes(p)))) return true;
+    if (demoPhones.some(p => phone === p || (p.length >= 4 && phone.includes(p)))) return true;
     if (name.includes('kiaan') && (phone === '122355' || phone.includes('122355') || phone === '123456')) return true;
     return false;
 };
 
 export const purgeDemoLeadsFromLocalStorage = () => {
     try {
-        const keys = ['turf_crm_leads', 'corporate_leads'];
+        const keys = ['turf_crm_leads', 'corporate_leads', 'customer_bookings', 'guest_bookings'];
         keys.forEach(k => {
             const raw = localStorage.getItem(k);
             if (raw) {
@@ -39,12 +46,45 @@ export const purgeDemoLeadsFromLocalStorage = () => {
                 }
             }
         });
+        // Clear mock SuperAdmin local storage caches
+        ['sa_disputes', 'sports_owners_data', 'sa_users'].forEach(k => {
+            const raw = localStorage.getItem(k);
+            if (raw) {
+                try {
+                    const arr = JSON.parse(raw);
+                    if (Array.isArray(arr) && arr.some(item => isDemoLead(item) || item.user === 'Priya Sharma' || item.name === 'Rajesh Sharma')) {
+                        localStorage.removeItem(k);
+                    }
+                } catch {
+                    localStorage.removeItem(k);
+                }
+            }
+        });
     } catch (e) {
         console.warn('LocalStorage demo lead purge note:', e);
     }
 };
 
 const INITIAL_CRM_LEADS = []
+
+export const fetchCrmLeadsAsync = async () => {
+    try {
+        const res = await api.get('/crm/leads');
+        const resData = res?.data !== undefined ? res.data : res;
+        const list = (resData && Array.isArray(resData.data)) ? resData.data : (Array.isArray(resData) ? resData : []);
+        const summary = resData?.summary || res?.summary || null;
+        if (resData && resData.success !== false) {
+            return {
+                success: true,
+                data: list,
+                summary
+            };
+        }
+    } catch (e) {
+        console.warn('Backend GET /crm/leads note:', e.message);
+    }
+    return { success: true, data: [], summary: null };
+};
 
 export const getCrmLeads = () => {
     try {
@@ -62,16 +102,16 @@ export const getCrmLeads = () => {
         const bookingLeads = allBookings.map((b, idx) => ({
             id: b.id || b.bookingId || `bmt_lead_${idx + 1}`,
             name: b.userName || b.customerName || b.name || 'Valued Player',
-            phone: b.userPhone || b.phone || b.customerPhone || '+91 98765 43210',
+            phone: b.userPhone || b.phone || b.customerPhone || '',
             role: 'player',
             teamName: b.sport ? `${b.sport} Booking` : 'Turf Player',
             preferredSport: b.sport || 'Cricket',
-            preferredSlot: `${b.time || b.slotTime || '05:25 PM'} (${b.date || b.slotDate || 'Today'})`,
-            turfBranch: b.venue || b.turfName || '📍 Indore Turf Complex',
+            preferredSlot: `${b.time || b.slotTime || 'N/A'} (${b.date || b.slotDate || 'N/A'})`,
+            turfBranch: b.venue || b.turfName || 'N/A',
             status: b.status === 'Cancelled' ? 'Cancelled' : 'Confirmed',
             totalBookings: 1,
-            amount: b.amount ? `₹${Number(b.amount).toLocaleString('en-IN')}` : '₹1,500',
-            notes: `Real Slot Booking ${b.id || `BK-${idx + 1}`} (Paid via UPI)`,
+            amount: b.amount ? `₹${Number(b.amount).toLocaleString('en-IN')}` : 'N/A',
+            notes: `Real Slot Booking ${b.id || `BK-${idx + 1}`}`,
             createdAt: b.createdAt ? b.createdAt.split('T')[0] : new Date().toISOString().split('T')[0]
         }))
 
@@ -79,15 +119,15 @@ export const getCrmLeads = () => {
         const corpLeads = JSON.parse(localStorage.getItem('corporate_leads') || '[]').map(c => ({
             id: `lead_corp_${c.id}`,
             name: c.contactPerson || c.companyName || 'Corporate Lead',
-            phone: c.phone || '+91 98765 00000',
+            phone: c.phone || '',
             role: 'corporate',
             teamName: c.companyName || 'Corporate League',
             preferredSport: c.eventType || 'Corporate Tournament',
-            preferredSlot: `${c.estimatedPlayers || 'Bulk'} (${c.city || 'Indore'})`,
-            turfBranch: c.city ? `${c.city} Turf Complex` : 'Indore Turf Arena',
+            preferredSlot: `${c.estimatedPlayers || 'Bulk'} (${c.city || 'N/A'})`,
+            turfBranch: c.city ? `${c.city} Turf Complex` : (c.preferredTurf || 'N/A'),
             status: c.status || 'Corporate Proposal',
             totalBookings: 1,
-            notes: `Corporate event request for ${c.companyName} (${c.estimatedPlayers || '20+ players'}, Budget: ${c.budget || 'Custom'})`,
+            notes: `Corporate event request for ${c.companyName || 'Client'} (${c.estimatedPlayers || 'N/A'}, Budget: ${c.budget || 'Custom'})`,
             createdAt: c.createdAt ? c.createdAt.split('T')[0] : new Date().toISOString().split('T')[0]
         }))
 
@@ -95,15 +135,15 @@ export const getCrmLeads = () => {
         const guestBookings = JSON.parse(localStorage.getItem('guest_bookings') || '[]').map(g => ({
             id: `lead_gbk_${g.id || Date.now()}`,
             name: g.customerName || g.name || 'Guest User',
-            phone: g.phone || g.mobileNumber || '+91 98765 00000',
+            phone: g.phone || g.mobileNumber || '',
             role: 'individual',
             teamName: `${g.customerName || 'Guest'}'s Squad`,
             preferredSport: 'Cricket / Football',
-            preferredSlot: `${g.slotTime || '6:00 PM'} (${g.slotDate || 'Today'})`,
-            turfBranch: g.turfName || 'Indore Turf Arena',
+            preferredSlot: `${g.slotTime || 'N/A'} (${g.slotDate || 'N/A'})`,
+            turfBranch: g.turfName || 'N/A',
             status: 'Guest Booking',
             totalBookings: 1,
-            notes: `Guest reservation for ${g.turfName || 'Arena'} (₹${g.amount || 900})`,
+            notes: `Guest reservation for ${g.turfName || 'Turf'}` + (g.amount ? ` (₹${g.amount})` : ''),
             createdAt: g.createdAt ? g.createdAt.split('T')[0] : new Date().toISOString().split('T')[0]
         }))
 

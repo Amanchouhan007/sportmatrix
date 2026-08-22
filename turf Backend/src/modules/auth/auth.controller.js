@@ -155,10 +155,11 @@ const login = async (req, res) => {
             }
         }
 
-        if (user.status === 'INACTIVE') {
+        const uStatus = (user.status || '').toUpperCase();
+        if (uStatus === 'INACTIVE' || uStatus === 'SUSPENDED') {
             return res.status(403).json({
                 success: false,
-                message: 'Your account has been deactivated.'
+                message: 'Your account has been suspended/deactivated by Super Admin. Please contact platform support.'
             });
         }
 
@@ -380,42 +381,50 @@ const changePassword = async (req, res) => {
  */
 const getAllUsers = async (req, res) => {
     try {
-        const { role, status, search } = req.query;
-        let query = `SELECT id, name, email, role, mobile, status, created_at, updated_at FROM users WHERE 1=1`;
-        const params = [];
+        const [users] = await db.query(`SELECT id, name, email, role, mobile, status, created_at FROM users ORDER BY created_at DESC`);
+        let owners = [];
+        try {
+            const [oRows] = await db.query(`SELECT id, full_name, email, mobile, status, created_at FROM owners ORDER BY created_at DESC`);
+            owners = oRows;
+        } catch (e) { console.warn('Owners query in users:', e.message); }
 
-        if (role && role !== 'ALL') {
-            query += ` AND role = ?`;
-            params.push(role);
+        const mappedUsers = users.map(u => ({
+            id: u.id,
+            name: u.name || 'User Contact',
+            email: u.email || 'N/A',
+            role: u.role === 'SUPER_ADMIN' ? 'Super Admin' : (u.role === 'OWNER' || u.role === 'ADMIN' ? 'Admin' : (u.role === 'STAFF' ? 'Staff' : 'Customer')),
+            rawRole: u.role,
+            mobile: u.mobile || 'N/A',
+            status: (u.status || 'ACTIVE').toUpperCase() === 'ACTIVE' ? 'Active' : 'Suspended',
+            joined: u.created_at ? new Date(u.created_at).toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' }) : 'Recently'
+        }));
+
+        const mappedOwners = owners.map(o => ({
+            id: o.id,
+            name: o.full_name || 'Turf Owner',
+            email: o.email || 'N/A',
+            role: 'Admin',
+            rawRole: 'OWNER',
+            mobile: o.mobile || 'N/A',
+            status: (o.status || 'ACTIVE').toUpperCase() === 'ACTIVE' ? 'Active' : 'Suspended',
+            joined: o.created_at ? new Date(o.created_at).toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' }) : 'Recently'
+        }));
+
+        const combined = [...mappedUsers, ...mappedOwners];
+        const seen = new Set();
+        const deduplicated = [];
+        for (const u of combined) {
+            const key = (u.email && u.email !== 'N/A') ? u.email : u.id;
+            if (!seen.has(key)) {
+                seen.add(key);
+                deduplicated.push(u);
+            }
         }
-
-        if (status && status !== 'ALL') {
-            query += ` AND status = ?`;
-            params.push(status);
-        }
-
-        if (search) {
-            query += ` AND (name LIKE ? OR email LIKE ? OR mobile LIKE ?)`;
-            const term = `%${search}%`;
-            params.push(term, term, term);
-        }
-
-        query += ` ORDER BY created_at DESC`;
-
-        const [users] = await db.query(query, params);
 
         return res.status(200).json({
             success: true,
-            count: users.length,
-            data: users.map(u => ({
-                id: u.id,
-                name: u.name,
-                email: u.email,
-                role: u.role,
-                mobile: u.mobile,
-                status: u.status,
-                joined: new Date(u.created_at).toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' })
-            }))
+            count: deduplicated.length,
+            data: deduplicated
         });
     } catch (error) {
         console.error('Fetch all users error:', error);
@@ -441,7 +450,8 @@ const updateUserStatus = async (req, res) => {
             });
         }
 
-        const normalizedStatus = status.toUpperCase() === 'ACTIVE' ? 'ACTIVE' : 'INACTIVE';
+        const statusUpper = (status || '').toUpperCase();
+        const normalizedStatus = statusUpper === 'ACTIVE' ? 'ACTIVE' : (statusUpper === 'SUSPENDED' || status === 'Suspended') ? 'SUSPENDED' : 'INACTIVE';
 
         const [result] = await db.query('UPDATE users SET status = ? WHERE id = ?', [normalizedStatus, id]);
 
@@ -455,7 +465,7 @@ const updateUserStatus = async (req, res) => {
         return res.status(200).json({
             success: true,
             message: `User status updated to ${normalizedStatus}`,
-            data: { id, status: normalizedStatus }
+            data: { id, status: normalizedStatus === 'ACTIVE' ? 'Active' : 'Suspended' }
         });
     } catch (error) {
         console.error('Update user status error:', error);

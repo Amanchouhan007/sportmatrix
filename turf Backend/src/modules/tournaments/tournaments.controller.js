@@ -749,16 +749,37 @@ const getLeaderboard = async (req, res) => {
     const { id } = req.params; // Tournament ID
     try {
         const [rows] = await db.query(`
-            SELECT lb.*, tm.team_name, tm.logo, tm.captain_name
+            SELECT lb.*, tm.team_name, tm.captain_name
             FROM leaderboards lb
             JOIN teams tm ON lb.team_id = tm.id
             WHERE lb.tournament_id = ?
-            ORDER BY lb.points DESC, lb.goal_difference DESC, lb.goals_for DESC
+            ORDER BY lb.points DESC, lb.matches_won DESC, lb.net_run_rate DESC
         `, [id]);
 
         return res.status(200).json({ success: true, data: rows });
     } catch (error) {
         return res.status(500).json({ success: false, message: 'Internal Server Error.' });
+    }
+};
+
+const getGlobalLeaderboard = async (req, res) => {
+    try {
+        // Query dedicated player leaderboard entries first
+        const [players] = await db.query(`SELECT * FROM player_leaderboard ORDER BY runs DESC, matches DESC`);
+        if (players && players.length > 0) {
+            return res.status(200).json({ success: true, data: players });
+        }
+
+        // Fallback to team standings
+        const [rows] = await db.query(`
+            SELECT lb.*, tm.team_name, tm.captain_name
+            FROM leaderboards lb
+            JOIN teams tm ON lb.team_id = tm.id
+            ORDER BY lb.points DESC, lb.matches_won DESC
+        `);
+        return res.status(200).json({ success: true, data: rows || [] });
+    } catch (error) {
+        return res.status(500).json({ success: false, message: error.message });
     }
 };
 
@@ -964,6 +985,7 @@ module.exports = {
     getFixtures,
     updateMatchScore,
     getLeaderboard,
+    getGlobalLeaderboard,
     getSponsors,
     createSponsor,
     updateSponsor,

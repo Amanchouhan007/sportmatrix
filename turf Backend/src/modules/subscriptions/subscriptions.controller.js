@@ -371,6 +371,129 @@ const togglePopular = async (req, res) => {
     }
 };
 
+/**
+ * POST /api/v1/subscriptions/buy
+ * Purchase a subscription plan (Creates entry in owner_subscriptions)
+ */
+const purchaseSubscription = async (req, res) => {
+    try {
+        const {
+            ownerId,
+            planId,
+            billingCycle = 'MONTHLY',
+            paymentMethod = 'UPI'
+        } = req.body;
+
+        if (!planId) {
+            return res.status(400).json({
+                success: false,
+                message: 'planId is required to purchase subscription'
+            });
+        }
+
+        // 1. Fetch Plan details
+        const [planRows] = await db.query('SELECT * FROM subscription_plans WHERE id = ?', [planId]);
+        if (planRows.length === 0) {
+            return res.status(404).json({
+                success: false,
+                message: 'Subscription plan not found'
+            });
+        }
+        const plan = planRows[0];
+        const amount = billingCycle === 'YEARLY' ? Number(plan.yearly_price || 0) : Number(plan.monthly_price || 0);
+
+        const subId = `sub_${Date.now()}`;
+        const txId = `TXN_${Date.now()}`;
+        const validOwnerId = ownerId || req.user?.id || 'own_001';
+
+        // Calculate end date
+        const startDate = new Date();
+        const endDate = new Date(startDate);
+        if (billingCycle === 'YEARLY') {
+            endDate.setFullYear(endDate.getFullYear() + 1);
+        } else {
+            endDate.setMonth(endDate.getMonth() + 1);
+        }
+
+        await db.query(`
+            INSERT INTO owner_subscriptions (
+                id, owner_id, plan_id, plan_name, amount, billing_cycle,
+                status, payment_status, payment_method, transaction_id, start_date, end_date
+            ) VALUES (?, ?, ?, ?, ?, ?, 'ACTIVE', 'COMPLETED', ?, ?, ?, ?)
+        `, [
+            subId,
+            validOwnerId,
+            plan.id,
+            plan.plan_name,
+            amount,
+            billingCycle,
+            paymentMethod,
+            txId,
+            startDate,
+            endDate
+        ]);
+
+        // Update owner active plan
+        try {
+            await db.query('UPDATE owners SET active_plan_id = ? WHERE id = ?', [plan.id, validOwnerId]);
+        } catch (e) {}
+
+        return res.status(201).json({
+            success: true,
+            message: `Successfully subscribed to ${plan.plan_name}`,
+            data: {
+                id: subId,
+                ownerId: validOwnerId,
+                planId: plan.id,
+                planName: plan.plan_name,
+                amount,
+                billingCycle,
+                paymentStatus: 'COMPLETED',
+                transactionId: txId,
+                startDate,
+                endDate
+            }
+        });
+    } catch (error) {
+        console.error('Error purchasing subscription:', error);
+        return res.status(500).json({
+            success: false,
+            message: 'Failed to complete subscription purchase',
+            error: error.message
+        });
+    }
+};
+
+/**
+ * GET /api/v1/subscriptions/purchases
+ * Get all owner subscription purchases
+ */
+const getSubscriptionPurchases = async (req, res) => {
+    try {
+        const [rows] = await db.query(`
+            SELECT 
+                os.*,
+                o.full_name as owner_name,
+                o.business_name
+            FROM owner_subscriptions os
+            LEFT JOIN owners o ON os.owner_id = o.id
+            ORDER BY os.created_at DESC
+        `);
+
+        return res.status(200).json({
+            success: true,
+            data: rows
+        });
+    } catch (error) {
+        console.error('Error fetching subscription purchases:', error);
+        return res.status(500).json({
+            success: false,
+            message: 'Failed to fetch subscription purchases',
+            error: error.message
+        });
+    }
+};
+
 module.exports = {
     getAllPlans,
     getPlanById,
@@ -378,5 +501,7 @@ module.exports = {
     updatePlan,
     deletePlan,
     toggleStatus,
-    togglePopular
+    togglePopular,
+    purchaseSubscription,
+    getSubscriptionPurchases
 };

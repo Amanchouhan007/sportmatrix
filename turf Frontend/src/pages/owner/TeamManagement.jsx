@@ -13,28 +13,40 @@ const initialTeams = [
     { id: 4, name: 'Smash Masters', sport: 'Football', players: 4, ranking: 3, wins: 5, losses: 4 },
 ]
 
+import { getTeams } from '../../services/tournamentService'
+
 export default function TeamManagement() {
-    const [teamList, setTeamList] = useState(() => {
-        const saved = localStorage.getItem('owner_teams')
-        return saved ? JSON.parse(saved) : initialTeams
-    })
+    const [teamList, setTeamList] = useState([])
     const [modal, setModal] = useState(false)
     const [editMode, setEditMode] = useState(false)
     const [editingId, setEditingId] = useState(null)
     const [deleteConfirm, setDeleteConfirm] = useState({ open: false, id: null, name: '' })
 
-    const [formData, setFormData] = useState({
-        name: '',
-        sport: 'Cricket',
-        players: '',
-        ranking: '',
-        wins: '',
-        losses: ''
-    })
-
     useEffect(() => {
-        localStorage.setItem('owner_teams', JSON.stringify(teamList))
-    }, [teamList])
+        getTeams()
+            .then(res => {
+                if (res && res.success && Array.isArray(res.data)) {
+                    const mapped = res.data.map((t, idx) => ({
+                        id: t.id || idx + 1,
+                        name: t.team_name || t.name || 'Team',
+                        sport: t.sport || 'Cricket',
+                        players: t.players_count || t.players || 11,
+                        ranking: idx + 1,
+                        wins: t.wins || 0,
+                        losses: t.losses || 0,
+                        captain: t.captain_name || t.captain || 'Captain',
+                        status: t.status || 'APPROVED'
+                    }))
+                    setTeamList(mapped)
+                } else {
+                    setTeamList([])
+                }
+            })
+            .catch(e => {
+                console.warn('Fetch teams note:', e.message)
+                setTeamList([])
+            })
+    }, [])
 
     const handleOpenCreateModal = () => {
         setEditMode(false)

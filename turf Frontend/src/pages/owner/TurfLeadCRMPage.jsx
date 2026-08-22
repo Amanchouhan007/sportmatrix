@@ -31,29 +31,33 @@ export default function TurfLeadCRMPage() {
     const [formNotes, setFormNotes] = useState('')
 
     const loadLeadsData = async () => {
-        const crmData = getCrmLeads()
         try {
-            const corpData = await getCorporateProposals()
-            if (Array.isArray(corpData) && corpData.length > 0) {
-                const mappedCorp = corpData.map(c => ({
-                    id: c.id ? String(c.id) : `corp_${Date.now()}`,
-                    name: c.company_name || c.companyName || c.contact_person || 'Corporate Client',
-                    phone: c.phone || '+91 98765 00000',
-                    email: c.email || '',
-                    role: 'organizer',
-                    teamName: `${c.estimated_players || c.estimatedPlayers || '40-50 Players'} • ${c.company_name || c.companyName || 'Corporate'}`,
-                    preferredSport: c.event_type || c.eventType || 'Corporate Tournament',
-                    preferredSlot: c.time_slot || c.timeSlot || 'Full Day Arena Booking',
-                    turfBranch: c.preferred_turf || c.preferredTurf || 'SportZone Arena',
-                    status: c.status || 'NEW',
-                    notes: `Corporate proposal request (Budget: ${c.budget || 'Custom'})`,
-                    createdAt: c.created_at ? c.created_at.split('T')[0] : (c.createdAt ? c.createdAt.split('T')[0] : new Date().toISOString().split('T')[0])
+            const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5005/api/v1';
+            const res = await fetch(`${API_URL}/crm/leads`)
+            const data = await res.json()
+            if (data.success && Array.isArray(data.data)) {
+                const mapped = data.data.map(l => ({
+                    id: l.id,
+                    name: l.contact_name || l.name || 'Valued Contact',
+                    phone: l.phone || '+91 98765 00000',
+                    email: l.email || '',
+                    role: (l.category || '').toLowerCase().includes('captain') ? 'team' : 'organizer',
+                    teamName: l.team_name || l.category || 'Team',
+                    preferredSport: l.preferred_sport || 'Cricket',
+                    preferredSlot: l.slot_preference || 'Weekend Evening',
+                    turfBranch: 'Spike Cricket Turf',
+                    status: l.status || 'NEW',
+                    notes: l.notes || '',
+                    createdAt: l.created_at ? l.created_at.split('T')[0] : 'Today'
                 }))
-                setLeads([...mappedCorp, ...crmData])
-                return
+                setLeads(mapped)
+            } else {
+                setLeads([])
             }
-        } catch (e) {}
-        setLeads(crmData)
+        } catch (e) {
+            console.warn('Error fetching CRM leads:', e);
+            setLeads([]);
+        }
     }
 
     useEffect(() => {

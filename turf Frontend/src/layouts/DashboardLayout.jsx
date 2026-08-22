@@ -11,7 +11,8 @@ import {
     HiChevronRight,
     HiPlus, 
     HiUser,
-    HiLightningBolt
+    HiLightningBolt,
+    HiCog
 } from 'react-icons/hi'
 import {
     HiTrophy,
@@ -25,6 +26,13 @@ import Modal from '../components/ui/Modal'
 import Badge from '../components/ui/Badge'
 
 const roleLabels = { superadmin: 'Super Admin', owner: 'ADMIN', staff: 'Staff', customer: 'Customer' }
+
+const profileRouteMap = {
+    superadmin: '/super-admin/settings',
+    owner: '/admin/settings',
+    staff: '/staff',
+    customer: '/customer/profile'
+}
 
 const roleNotifications = {
     superadmin: [],
@@ -177,7 +185,7 @@ export default function DashboardLayout({ role = 'owner' }) {
 
     const profileRouteMap = {
         superadmin: '/super-admin/settings',
-        owner: '/admin',
+        owner: '/admin/settings',
         staff: '/staff',
         customer: '/customer/profile',
     }
@@ -498,6 +506,16 @@ export default function DashboardLayout({ role = 'owner' }) {
                             )}
                         </div>
 
+                        {/* Quick Settings Icon Button */}
+                        <button
+                            onClick={() => navigate(profileRouteMap[role] || '/admin/settings')}
+                            className="p-2.5 rounded-xl bg-slate-100/80 hover:bg-slate-200/70 text-slate-700 cursor-pointer transition-colors border border-slate-200/60"
+                            title="System & Profile Settings"
+                            aria-label="Settings"
+                        >
+                            <HiCog className="w-4.5 h-4.5 text-slate-700 hover:text-emerald-600" />
+                        </button>
+
                         {/* Profile Dropdown */}
                         <div className="relative profile-dropdown-container">
                             <button
@@ -517,7 +535,7 @@ export default function DashboardLayout({ role = 'owner' }) {
                                         <button
                                             onClick={() => {
                                                 setDropdownOpen(false);
-                                                const fallbackRoute = role === 'owner' ? '/admin' : role === 'superadmin' ? '/super-admin' : `/${role}`;
+                                                const fallbackRoute = role === 'owner' ? '/admin/settings' : role === 'superadmin' ? '/super-admin/settings' : `/${role}`;
                                                 navigate(profileRouteMap[role] || fallbackRoute);
                                             }}
                                             className="w-full text-left px-4 py-2.5 text-xs font-bold text-slate-700 hover:bg-slate-50 transition-colors flex items-center gap-2"

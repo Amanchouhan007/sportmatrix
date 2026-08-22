@@ -137,6 +137,16 @@ export default function OwnerManagement() {
     const [ownerToReset, setOwnerToReset] = useState(null)
     const [resetPasswordData, setResetPasswordData] = useState({ password: '', confirmPassword: '' })
 
+    // Credentials Popup State
+    const [createdCredentialsModal, setCreatedCredentialsModal] = useState({
+        open: false,
+        ownerName: '',
+        email: '',
+        password: '',
+        businessName: '',
+        mobile: ''
+    })
+
     // Form inputs state
     const [formData, setFormData] = useState({
         fullName: '',
@@ -338,6 +348,14 @@ export default function OwnerManagement() {
                 await createOwner(formData)
                 addToast({ title: 'Created', message: 'New owner added successfully', type: 'success' })
                 setIsModalOpen(false)
+                setCreatedCredentialsModal({
+                    open: true,
+                    ownerName: formData.fullName,
+                    email: formData.email,
+                    password: formData.password,
+                    businessName: formData.businessName,
+                    mobile: formData.mobile
+                })
                 fetchData()
             }
         } catch (err) {
@@ -1235,6 +1253,71 @@ export default function OwnerManagement() {
                 )}
             </Modal>
 
+            {/* Generated Admin Credentials Modal */}
+            <Modal
+                isOpen={createdCredentialsModal.open}
+                onClose={() => setCreatedCredentialsModal({ ...createdCredentialsModal, open: false })}
+                title="🔑 Owner Admin Credentials Generated"
+                size="md"
+            >
+                <div className="space-y-5 pt-2">
+                    <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-2xl flex items-center gap-3 text-xs font-bold text-emerald-800">
+                        <HiShieldCheck className="w-6 h-6 text-[#16A34A] shrink-0" />
+                        <div>
+                            <span>Owner Account Created Successfully!</span>
+                            <p className="text-[11px] font-medium text-emerald-700">Share these login credentials with the Turf Owner so they can control their Admin Panel.</p>
+                        </div>
+                    </div>
+
+                    <div className="bg-slate-900 text-white p-5 rounded-2xl space-y-3 font-mono text-xs shadow-xl border border-slate-800">
+                        <div className="flex justify-between border-b border-slate-800 pb-2">
+                            <span className="text-slate-400">Turf Owner Name:</span>
+                            <span className="text-white font-bold">{createdCredentialsModal.ownerName}</span>
+                        </div>
+                        <div className="flex justify-between border-b border-slate-800 pb-2">
+                            <span className="text-slate-400">Assigned Turf Arena:</span>
+                            <span className="text-emerald-400 font-bold">{createdCredentialsModal.businessName || 'Turf Arena'}</span>
+                        </div>
+                        <div className="flex justify-between border-b border-slate-800 pb-2">
+                            <span className="text-slate-400">Admin Login ID:</span>
+                            <span className="text-white font-bold">{createdCredentialsModal.email}</span>
+                        </div>
+                        <div className="flex justify-between">
+                            <span className="text-slate-400">Password:</span>
+                            <span className="text-[#C8FF2E] font-extrabold">{createdCredentialsModal.password || '••••••••'}</span>
+                        </div>
+                    </div>
+
+                    <div className="flex items-center justify-end gap-3 pt-2">
+                        <a
+                            href={`https://wa.me/${(createdCredentialsModal.mobile || '').replace(/\D/g, '')}?text=${encodeURIComponent(
+                                `🏆 *SportMatrix Turf Admin Credentials*\n\n` +
+                                `Hello ${createdCredentialsModal.ownerName}!\n` +
+                                `Your Turf Admin panel for *${createdCredentialsModal.businessName}* has been set up.\n\n` +
+                                `📧 *Admin Login ID*: ${createdCredentialsModal.email}\n` +
+                                `🔑 *Password*: ${createdCredentialsModal.password}\n\n` +
+                                `🌐 *Login Panel*: http://localhost:5173/login`
+                            )}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="px-4 py-2.5 rounded-full bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs flex items-center gap-1.5 transition-all shadow-md"
+                        >
+                            <span>Send via WhatsApp 💬</span>
+                        </a>
+                        <button
+                            type="button"
+                            onClick={() => {
+                                navigator.clipboard.writeText(`Email: ${createdCredentialsModal.email}\nPassword: ${createdCredentialsModal.password}`)
+                                addToast({ title: 'Copied', message: 'Credentials copied to clipboard!', type: 'success' })
+                            }}
+                            className="px-4 py-2.5 rounded-full bg-slate-800 hover:bg-slate-900 text-white font-bold text-xs flex items-center gap-1.5 transition-all cursor-pointer"
+                        >
+                            <span>Copy Details 📋</span>
+                        </button>
+                    </div>
+                </div>
+            </Modal>
+
             {/* Confirmation Dialog */}
             <ConfirmDialog
                 isOpen={confirm.open}
@@ -1249,9 +1332,27 @@ export default function OwnerManagement() {
             {/* Portal Dropdown */}
             {activeActionDropdownId && dropdownOwner && createPortal(
                 <div
-                    className="actions-dropdown-portal fixed z-[9999] w-48 rounded-2xl bg-white border border-slate-200/90 shadow-xl py-2 animate-scale-in"
+                    className="actions-dropdown-portal fixed z-[9999] w-52 rounded-2xl bg-white border border-slate-200/90 shadow-xl py-2 animate-scale-in"
                     style={{ top: dropdownPos.top, left: dropdownPos.left }}
                 >
+                    <button
+                        onClick={() => {
+                            setCreatedCredentialsModal({
+                                open: true,
+                                ownerName: dropdownOwner.fullName || dropdownOwner.name,
+                                email: dropdownOwner.email,
+                                password: 'Password set by Owner / SuperAdmin',
+                                businessName: dropdownOwner.businessName,
+                                mobile: dropdownOwner.mobile
+                            })
+                            setActiveActionDropdownId(null)
+                            setDropdownOwner(null)
+                        }}
+                        className="w-full px-4 py-2 text-xs font-bold text-slate-700 hover:bg-emerald-50 hover:text-[#16A34A] flex items-center gap-2 transition-colors cursor-pointer text-left"
+                    >
+                        <HiShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
+                        <span>View / Send Credentials</span>
+                    </button>
                     <button
                         onClick={() => {
                             handleOpenResetPassword(dropdownOwner)
@@ -1277,12 +1378,12 @@ export default function OwnerManagement() {
                     >
                         {dropdownOwner.status === 'ACTIVE' ? (
                             <>
-                                <FiSlash className="w-3.5 h-3.5" />
+                                <FiSlash className="w-3.5 h-3.5 text-red-500" />
                                 <span>Suspend Account</span>
                             </>
                         ) : (
                             <>
-                                <FiCheckCircle className="w-3.5 h-3.5" />
+                                <FiCheckCircle className="w-3.5 h-3.5 text-emerald-600" />
                                 <span>Activate Account</span>
                             </>
                         )}
