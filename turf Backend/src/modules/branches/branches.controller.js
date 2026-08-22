@@ -465,12 +465,14 @@ const createBranch = async (req, res) => {
 const updateBranch = async (req, res) => {
     const { id } = req.params;
     const { 
-        branchName, description, city, zipCode, fullAddress, email, mobile, logo, images,
-        pricePerHour, price, openingTime, closingTime, turfSize, surfaceType, discountOffer, couponCode, status
+        branchName, branchCode, description, ownerId, subscriptionPlanId,
+        city, state, country, zipCode, fullAddress, email, mobile, alternateMobile, gstNumber,
+        logo, images, sports, amenities, pricePerHour, price, openingTime, closingTime,
+        turfSize, dimensions, surfaceType, discountOffer, couponCode, status
     } = req.body;
 
     try {
-        const [existing] = await db.query('SELECT id FROM branches WHERE id = ?', [id]);
+        const [existing] = await db.query('SELECT * FROM branches WHERE id = ?', [id]);
         if (existing.length === 0) {
             return res.status(404).json({
                 success: false,
@@ -478,54 +480,79 @@ const updateBranch = async (req, res) => {
             });
         }
 
-        const imagesJson = images ? (Array.isArray(images) ? JSON.stringify(images) : images) : null;
-        const targetPrice = pricePerHour !== undefined ? pricePerHour : (price !== undefined ? price : null);
+        const current = existing[0];
+        const imagesJson = images !== undefined ? (Array.isArray(images) ? JSON.stringify(images) : images) : current.images;
+        const sportsJson = sports !== undefined ? (Array.isArray(sports) ? JSON.stringify(sports) : sports) : current.sports;
+        const amenitiesJson = amenities !== undefined ? (Array.isArray(amenities) ? JSON.stringify(amenities) : amenities) : current.amenities;
+        const targetPrice = pricePerHour !== undefined ? pricePerHour : (price !== undefined ? price : current.price_per_hour);
+        const targetOwner = ownerId || current.owner_id;
+        const targetPlan = subscriptionPlanId || current.subscription_plan_id;
 
         await db.query(`
             UPDATE branches 
             SET 
-                branch_name = COALESCE(?, branch_name),
-                description = COALESCE(?, description),
-                city = COALESCE(?, city),
-                zip_code = COALESCE(?, zip_code),
-                full_address = COALESCE(?, full_address),
-                email = COALESCE(?, email),
-                mobile = COALESCE(?, mobile),
-                logo = COALESCE(?, logo),
-                images = COALESCE(?, images),
-                price_per_hour = COALESCE(?, price_per_hour),
-                opening_time = COALESCE(?, opening_time),
-                closing_time = COALESCE(?, closing_time),
-                turf_size = COALESCE(?, turf_size),
-                surface_type = COALESCE(?, surface_type),
-                discount_offer = COALESCE(?, discount_offer),
-                coupon_code = COALESCE(?, coupon_code),
-                status = COALESCE(?, status)
+                branch_name = ?,
+                branch_code = ?,
+                description = ?,
+                owner_id = ?,
+                subscription_plan_id = ?,
+                city = ?,
+                state = ?,
+                country = ?,
+                zip_code = ?,
+                full_address = ?,
+                email = ?,
+                mobile = ?,
+                alternate_mobile = ?,
+                gst_number = ?,
+                logo = ?,
+                images = ?,
+                sports = ?,
+                amenities = ?,
+                price_per_hour = ?,
+                opening_time = ?,
+                closing_time = ?,
+                turf_size = ?,
+                dimensions = ?,
+                surface_type = ?,
+                discount_offer = ?,
+                coupon_code = ?,
+                status = ?
             WHERE id = ?
         `, [
-            branchName || null, 
-            description || null, 
-            city || null, 
-            zipCode || null, 
-            fullAddress || null, 
-            email || null, 
-            mobile || null, 
-            logo || null, 
-            imagesJson, 
-            targetPrice ? Number(targetPrice) : null,
-            openingTime || null,
-            closingTime || null,
-            turfSize || null,
-            surfaceType || null,
-            discountOffer || null,
-            couponCode || null,
-            status || null,
+            branchName !== undefined ? branchName : current.branch_name,
+            branchCode !== undefined ? branchCode : current.branch_code,
+            description !== undefined ? description : current.description,
+            targetOwner,
+            targetPlan,
+            city !== undefined ? city : current.city,
+            state !== undefined ? state : current.state,
+            country !== undefined ? country : current.country,
+            zipCode !== undefined ? zipCode : current.zip_code,
+            fullAddress !== undefined ? fullAddress : current.full_address,
+            email !== undefined ? email : current.email,
+            mobile !== undefined ? mobile : current.mobile,
+            alternateMobile !== undefined ? alternateMobile : current.alternate_mobile,
+            gstNumber !== undefined ? gstNumber : current.gst_number,
+            logo !== undefined ? logo : current.logo,
+            imagesJson,
+            sportsJson,
+            amenitiesJson,
+            targetPrice ? Number(targetPrice) : 1000,
+            openingTime !== undefined ? openingTime : current.opening_time,
+            closingTime !== undefined ? closingTime : current.closing_time,
+            turfSize !== undefined ? turfSize : current.turf_size,
+            dimensions !== undefined ? dimensions : current.dimensions,
+            surfaceType !== undefined ? surfaceType : current.surface_type,
+            discountOffer !== undefined ? discountOffer : current.discount_offer,
+            couponCode !== undefined ? couponCode : current.coupon_code,
+            status !== undefined ? status : current.status,
             id
         ]);
 
         return res.status(200).json({
             success: true,
-            message: 'Branch details and hourly price updated successfully.'
+            message: 'Branch details updated successfully in database.'
         });
     } catch (error) {
         console.error('Update branch error:', error);

@@ -12,24 +12,20 @@ import { useToast } from '../../components/ui/Toast'
 import { HiPlus, HiCalendar, HiCurrencyRupee, HiUsers, HiLightningBolt } from 'react-icons/hi'
 import { HiTrophy } from 'react-icons/hi2'
 
-const initialTournaments = [
-    { id: 1, name: 'Premier Cricket Cup', sport: 'Cricket', date: 'Mar 15, 2026', entryFee: '500', prize: '₹50,000', teams: '12/16', status: 'Active', registrations: 12, maxTeams: 16 },
-    { id: 2, name: 'Indore Football Cup', sport: 'Football', date: 'Mar 22, 2026', entryFee: '800', prize: '₹30,000', teams: '6/8', status: 'Upcoming', registrations: 6, maxTeams: 8 },
-    { id: 3, name: 'Football Open Arena', sport: 'Football', date: 'Feb 28, 2026', entryFee: '300', prize: '₹15,000', teams: '16/16', status: 'Completed', registrations: 16, maxTeams: 16 },
-]
+const initialTournaments = []
 
 const bracketRounds = [
     {
         name: 'Semi-Finals',
         matches: [
-            { id: 1, teams: [{ seed: 1, name: 'Indore Thunders', score: 145, winner: true }, { seed: 4, name: 'Warriors XI', score: 122 }] },
-            { id: 2, teams: [{ seed: 2, name: 'Royal Challengers', score: 156, winner: true }, { seed: 3, name: 'Super Kings', score: 148 }] },
+            { id: 1, teams: [{ seed: 1, name: 'Team A', score: 145, winner: true }, { seed: 4, name: 'Team B', score: 122 }] },
+            { id: 2, teams: [{ seed: 2, name: 'Team C', score: 156, winner: true }, { seed: 3, name: 'Team D', score: 148 }] },
         ]
     },
     {
         name: 'Grand Finale',
         matches: [
-            { id: 3, teams: [{ seed: 1, name: 'Indore Thunders', score: '—' }, { seed: 2, name: 'Royal Challengers', score: '—' }] }
+            { id: 3, teams: [{ seed: 1, name: 'Team A', score: '—' }, { seed: 2, name: 'Team C', score: '—' }] }
         ]
     },
 ]
@@ -38,6 +34,25 @@ export default function TournamentManagement() {
     const { addToast } = useToast()
     const [tournaments, setTournaments] = useState(initialTournaments)
     const [modal, setModal] = useState(false)
+
+    useEffect(() => {
+        const fetchLiveTournaments = async () => {
+            try {
+                const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5005/api/v1';
+                const res = await fetch(`${API_URL}/tournaments`);
+                const data = await res.json();
+                if (data.success && Array.isArray(data.data)) {
+                    setTournaments(data.data);
+                } else {
+                    setTournaments([]);
+                }
+            } catch (err) {
+                console.error('Error fetching live tournaments:', err);
+                setTournaments([]);
+            }
+        };
+        fetchLiveTournaments();
+    }, []);
 
     // Create new tournament state
     const [newTourney, setNewTourney] = useState({

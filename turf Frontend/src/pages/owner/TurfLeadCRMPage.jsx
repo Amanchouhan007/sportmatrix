@@ -33,7 +33,7 @@ export default function TurfLeadCRMPage() {
     const loadLeadsData = async () => {
         try {
             const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5005/api/v1';
-            const userStr = localStorage.getItem('user');
+            const userStr = localStorage.getItem('sportmatrix_user') || localStorage.getItem('user');
             const user = userStr ? JSON.parse(userStr) : null;
             const query = user?.email ? `?email=${encodeURIComponent(user.email)}` : '';
             const res = await fetch(`${API_URL}/crm/leads${query}`)

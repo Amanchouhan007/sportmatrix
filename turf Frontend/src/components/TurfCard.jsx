@@ -151,18 +151,18 @@ export default function TurfCard({ turf, onMouseEnter, onMouseLeave, i = 0 }) {
                     </button>
 
                     {/* Ultra-Attractive Glowing Offer Badge (Prominent, Bold & Guaranteed Visible) */}
-                    {promo && (
+                    {(turf.discountOffer || promo) && (
                         <div 
                             onClick={(e) => { e.stopPropagation(); handleBookNow(e) }}
                             style={{ 
-                                background: promo.bg, 
-                                boxShadow: promo.shadow 
+                                background: promo?.bg || 'linear-gradient(135deg, #D97706 0%, #EA580C 50%, #DC2626 100%)', 
+                                boxShadow: promo?.shadow || '0 6px 18px rgba(234,88,12,0.55)' 
                             }}
                             className="absolute top-2 left-2 sm:top-2.5 sm:left-2.5 z-10 border sm:border-2 border-white/80 rounded-xl px-2 sm:px-2.5 py-0.5 sm:py-1 flex items-center gap-1 sm:gap-1.5 backdrop-blur-md transition-all duration-300 group-hover:scale-105 shadow-lg select-none cursor-pointer max-w-[calc(100%-48px)] overflow-hidden"
                         >
-                            <span className="text-[11px] sm:text-xs animate-bounce shrink-0 drop-shadow-md">{promo.icon}</span>
+                            <span className="text-[11px] sm:text-xs animate-bounce shrink-0 drop-shadow-md">{promo?.icon || '⚡'}</span>
                             <span className="text-[9.5px] sm:text-[10.5px] font-black text-white uppercase tracking-wider drop-shadow-md truncate">
-                                {promo.tag}
+                                {turf.discountOffer ? turf.discountOffer.toUpperCase() : (promo?.tag || '20% OFF FIRST MATCH')}
                             </span>
                         </div>
                     )}

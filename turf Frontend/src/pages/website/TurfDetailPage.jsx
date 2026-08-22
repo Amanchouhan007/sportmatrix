@@ -20,6 +20,7 @@ import {
 import SlotGrid from '../../components/ui/SlotGrid'
 import { useToast } from '../../components/ui/Toast'
 import { useAuth } from '../../context/AuthContext'
+import { getBranchById } from '../../services/branchService'
 import TurfHeroGallery from '../../components/turf-detail/TurfHeroGallery'
 import TurfHeaderInfo from '../../components/turf-detail/TurfHeaderInfo'
 import TurfDirectionsMap from '../../components/turf-detail/TurfDirectionsMap'
@@ -239,10 +240,62 @@ export default function TurfDetailPage() {
     const [isDeploying, setIsDeploying] = useState(false)
     const [bookingSuccessModal, setBookingSuccessModal] = useState(false)
     const [deploymentDetails, setDeploymentDetails] = useState(null)
+    const [liveBranch, setLiveBranch] = useState(null)
     const toastContext = useToast()
     const addToast = toastContext?.addToast
 
-    const activeTurf = allTurfsList.find(t => t.id === Number(id)) || allTurfsList[0];
+    useEffect(() => {
+        if (!id) return;
+        getBranchById(id).then(res => {
+            const b = res?.data || res?.branch || res;
+            if (b && (b.branchName || b.name)) {
+                setLiveBranch(b);
+            }
+        }).catch(err => {
+            console.warn('Branch detail lookup note:', err);
+        });
+    }, [id]);
+
+    const activeTurf = useMemo(() => {
+        if (liveBranch) {
+            let parsedSports = ['Cricket', 'Football'];
+            try {
+                if (Array.isArray(liveBranch.sports)) parsedSports = liveBranch.sports;
+                else if (typeof liveBranch.sports === 'string' && liveBranch.sports.trim().startsWith('[')) parsedSports = JSON.parse(liveBranch.sports);
+            } catch (_) {}
+
+            let parsedAmenities = ['Floodlights', 'Parking', 'Washroom'];
+            try {
+                if (Array.isArray(liveBranch.amenities)) parsedAmenities = liveBranch.amenities;
+                else if (typeof liveBranch.amenities === 'string' && liveBranch.amenities.trim().startsWith('[')) parsedAmenities = JSON.parse(liveBranch.amenities);
+            } catch (_) {}
+
+            let firstImg = liveBranch.logo;
+            if (!firstImg && Array.isArray(liveBranch.images) && liveBranch.images.length > 0) firstImg = liveBranch.images[0];
+
+            return {
+                id: liveBranch.id || liveBranch._id || id,
+                _id: liveBranch.id || liveBranch._id || id,
+                name: liveBranch.branchName || liveBranch.name,
+                location: liveBranch.fullAddress || `${liveBranch.city || 'Indore'}, ${liveBranch.country || 'India'}`,
+                city: liveBranch.city || 'Indore',
+                rating: Number(liveBranch.rating || 4.8),
+                price: Number(liveBranch.pricePerHour ?? liveBranch.price ?? liveBranch.price_per_hour ?? 1000),
+                dimensions: liveBranch.turfSize || liveBranch.dimensions || '5,000 Sq.Ft',
+                surfaceType: liveBranch.surfaceType || liveBranch.surface_type || 'TurfPro Synthetic Arena',
+                image: firstImg || '/images/turf1.png',
+                sports: parsedSports,
+                amenities: parsedAmenities,
+                discountOffer: liveBranch.discountOffer || liveBranch.discount_offer || '20% OFF FIRST MATCH',
+                couponCode: liveBranch.couponCode || liveBranch.coupon_code || 'CRICKET20',
+                lat: Number(liveBranch.latitude || 22.7244),
+                lng: Number(liveBranch.longitude || 75.8839)
+            };
+        }
+        const found = allTurfsList.find(t => String(t.id) === String(id));
+        return found || allTurfsList[0];
+    }, [liveBranch, id]);
+
     const videoRef = useRef(null)
 
     const defaultFallbackImage = activeTurf.image || '/images/turf1.png';
@@ -257,40 +310,14 @@ export default function TurfDetailPage() {
 
     const [isMediaModalOpen, setIsMediaModalOpen] = useState(false);
     const [isCorpModalOpen, setIsCorpModalOpen] = useState(false);
-    const [customMediaList, setCustomMediaList] = useState(() => {
-        try {
-            const saved = localStorage.getItem(`turf_media_${activeTurf.id}`) || localStorage.getItem('turf_media_custom');
-            if (saved) {
-                const parsed = JSON.parse(saved);
-                if (Array.isArray(parsed) && parsed.length > 0) return parsed;
-            }
-        } catch (e) { }
-        return initialMedia;
-    });
+    const [customMediaList, setCustomMediaList] = useState(initialMedia);
 
     useEffect(() => {
-        const fetchTurfMedia = async () => {
-            const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 800);
-            try {
-                const apiBase = import.meta.env.VITE_API_URL || 'http://localhost:5005/api/v1';
-                const res = await fetch(`${apiBase}/turfs/${activeTurf.id}`, { signal: controller.signal });
-                clearTimeout(timeoutId);
-                const data = await res.json();
-                if (data.success && data.data && data.data.media) {
-                    const backendMedia = typeof data.data.media === 'string' ? JSON.parse(data.data.media) : data.data.media;
-                    if (Array.isArray(backendMedia) && backendMedia.length > 0) {
-                        setCustomMediaList(backendMedia);
-                        localStorage.setItem(`turf_media_${activeTurf.id}`, JSON.stringify(backendMedia));
-                    }
-                }
-            } catch (err) {
-                clearTimeout(timeoutId);
-                // Fail silently to local preview state
-            }
-        };
-        fetchTurfMedia();
-    }, [activeTurf.id]);
+        setCustomMediaList([
+            { type: 'image', url: activeTurf.image || defaultFallbackImage, thumbnail: activeTurf.image || defaultFallbackImage },
+            ...defaultTurfData.media
+        ]);
+    }, [activeTurf.image]);
 
     const turfData = {
         ...defaultTurfData,
@@ -298,12 +325,12 @@ export default function TurfDetailPage() {
         name: activeTurf.name,
         location: activeTurf.location,
         rating: activeTurf.rating,
-        sports: activeTurf.sports.map(s => ({
+        sports: (activeTurf.sports || ['Cricket']).map(s => ({
             name: s,
             price: activeTurf.price,
             peakPrice: activeTurf.price + 400
         })),
-        amenities: activeTurf.amenities.length > 0 ? activeTurf.amenities : defaultTurfData.amenities,
+        amenities: (activeTurf.amenities && activeTurf.amenities.length > 0) ? activeTurf.amenities : defaultTurfData.amenities,
         media: customMediaList.length > 0 ? customMediaList : initialMedia,
         coordinates: { lat: activeTurf.lat, lng: activeTurf.lng }
     };

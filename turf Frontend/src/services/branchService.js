@@ -75,9 +75,9 @@ export const deleteBranch = async (id) => {
 /**
  * Fetch branch statistics count summary
  */
-export const getDashboardStats = async () => {
+export const getDashboardStats = async (filters = {}) => {
     try {
-        const response = await api.get('/branches/stats');
+        const response = await api.get('/branches/stats', { params: filters });
         return response.data || response;
     } catch (error) {
         throw new Error(error.response?.data?.message || error.message || 'Failed to fetch dashboard stats.');

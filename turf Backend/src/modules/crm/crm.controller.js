@@ -45,24 +45,24 @@ const getLeads = async (req, res) => {
             }));
         } catch (e) { console.warn('Booking leads error:', e.message); }
 
-        // 2. Fetch registered Users & Owners as contacts
+        // 2. Fetch registered Customer / Player Users as contacts (Excluding Admins & Owners!)
         let userLeads = [];
         try {
-            const [uRows] = await db.query(`SELECT id, name, email, mobile, role, created_at FROM users WHERE role != 'SUPER_ADMIN'`);
+            const [uRows] = await db.query(`SELECT id, name, email, mobile, role, created_at FROM users WHERE role NOT IN ('SUPER_ADMIN', 'SUPERADMIN', 'OWNER', 'ADMIN')`);
             userLeads = uRows.map(u => ({
                 id: `user_lead_${u.id}`,
-                name: u.name || 'Registered User',
+                name: u.name || 'Registered Customer',
                 phone: u.mobile || '',
                 email: u.email || '',
-                role: u.role ? u.role.toLowerCase() : 'player',
-                category: u.role || 'PLAYER',
-                teamName: u.role === 'OWNER' ? 'Venue Manager' : 'Registered Member',
+                role: 'player',
+                category: 'PLAYER',
+                teamName: 'Registered Member',
                 preferredSport: 'Cricket',
                 preferredSlot: 'Flexible',
                 turfBranch: 'All Turf Branches',
                 status: 'Confirmed',
                 totalBookings: 1,
-                notes: `Platform Registered User (${u.role})`,
+                notes: `Platform Registered Player`,
                 createdAt: u.created_at ? new Date(u.created_at).toISOString().split('T')[0] : new Date().toISOString().split('T')[0]
             }));
         } catch (e) { console.warn('User leads error:', e.message); }

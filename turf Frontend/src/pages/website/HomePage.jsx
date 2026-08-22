@@ -88,21 +88,47 @@ export default function HomePage() {
         getBranches().then(res => {
             const rawBranches = res?.data?.branches || res?.branches || []
             if (Array.isArray(rawBranches) && rawBranches.length > 0) {
-                const mapped = rawBranches.map((b, idx) => ({
-                    id: b.id || b._id || (idx + 1),
-                    _id: b.id || b._id,
-                    name: b.branchName || b.name,
-                    location: b.fullAddress || `${b.city || 'Indore'}, India`,
-                    city: b.city || 'Indore',
-                    rating: 4.8,
-                    price: 1000,
-                    dimensions: '100 × 50 ft',
-                    image: b.logo || `/images/turf${(idx % 5) + 1}.png`,
-                    sports: ['Cricket', 'Football'],
-                    amenities: ['Floodlights', 'Parking', 'Washroom'],
-                    lat: 22.7244 + (idx * 0.01),
-                    lng: 75.8839 + (idx * 0.01)
-                }))
+                const mapped = rawBranches.map((b, idx) => {
+                    let parsedSports = ['Cricket', 'Football'];
+                    try {
+                        if (Array.isArray(b.sports)) parsedSports = b.sports;
+                        else if (typeof b.sports === 'string' && b.sports.trim().startsWith('[')) parsedSports = JSON.parse(b.sports);
+                    } catch (_) {}
+
+                    let parsedAmenities = ['Floodlights', 'Parking', 'Washroom'];
+                    try {
+                        if (Array.isArray(b.amenities)) parsedAmenities = b.amenities;
+                        else if (typeof b.amenities === 'string' && b.amenities.trim().startsWith('[')) parsedAmenities = JSON.parse(b.amenities);
+                    } catch (_) {}
+
+                    let firstImg = b.logo;
+                    if (!firstImg && Array.isArray(b.images) && b.images.length > 0) firstImg = b.images[0];
+                    if (!firstImg && typeof b.images === 'string' && b.images.startsWith('[')) {
+                        try {
+                            const arr = JSON.parse(b.images);
+                            if (arr.length > 0) firstImg = arr[0];
+                        } catch (_) {}
+                    }
+
+                    return {
+                        id: b.id || b._id || (idx + 1),
+                        _id: b.id || b._id,
+                        name: b.branchName || b.name,
+                        location: b.fullAddress || `${b.city || 'Indore'}, ${b.country || 'India'}`,
+                        city: b.city || 'Indore',
+                        rating: Number(b.rating || 4.8),
+                        price: Number(b.pricePerHour ?? b.price ?? b.minPriceHourly ?? b.price_per_hour ?? 1000),
+                        dimensions: b.turfSize || b.dimensions || b.dimensionsSqft || b.dimensions_sqft || '5,000 Sq.Ft',
+                        surfaceType: b.surfaceType || b.surface_type || 'TurfPro Synthetic Arena',
+                        image: firstImg || `/images/turf${(idx % 5) + 1}.png`,
+                        sports: parsedSports,
+                        amenities: parsedAmenities,
+                        discountOffer: b.discountOffer || b.discount_offer || '20% OFF FIRST MATCH',
+                        couponCode: b.couponCode || b.coupon_code || 'CRICKET20',
+                        lat: Number(b.latitude || (22.7244 + (idx * 0.01))),
+                        lng: Number(b.longitude || (75.8839 + (idx * 0.01)))
+                    }
+                })
                 setDynamicTurfs(mapped)
             }
         }).catch(() => { })

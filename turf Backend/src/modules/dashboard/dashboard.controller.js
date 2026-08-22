@@ -317,6 +317,7 @@ const getTopBranches = async (req, res) => {
                 br.city as City,
                 br.status as status,
                 br.status as Status,
+                COALESCE(o.full_name, u.name, 'Admin') as ownerName,
                 COALESCE(os.plan_name, sp.plan_name, 'Starter Plan') as planName,
                 COALESCE(br.subscription_price_snapshot, NULLIF(os.amount, 0), sp.monthly_price, 1000) as planPrice,
                 COUNT(bk.id) as Bookings,
@@ -324,6 +325,8 @@ const getTopBranches = async (req, res) => {
                 (COALESCE(br.subscription_price_snapshot, NULLIF(os.amount, 0), sp.monthly_price, 1000) + COALESCE(SUM(bk.amount), 0)) as Revenue,
                 (COALESCE(br.subscription_price_snapshot, NULLIF(os.amount, 0), sp.monthly_price, 1000) + COALESCE(SUM(bk.amount), 0)) as totalRevenue
             FROM branches br
+            LEFT JOIN owners o ON br.owner_id = o.id
+            LEFT JOIN users u ON br.owner_id = u.id OR br.owner_user_id = u.id
             LEFT JOIN (
                 SELECT os1.* FROM owner_subscriptions os1
                 INNER JOIN (
@@ -332,9 +335,9 @@ const getTopBranches = async (req, res) => {
             ) os ON (br.owner_id = os.owner_id)
             LEFT JOIN subscription_plans sp ON (br.subscription_plan_id = sp.id OR LOWER(br.subscription_plan_id) = LOWER(sp.plan_name))
             LEFT JOIN bookings bk ON bk.branch_id = br.id AND bk.status IN ('CONFIRMED', 'COMPLETED')
-            GROUP BY br.id, br.branch_name, br.city, br.status, br.subscription_price_snapshot, os.plan_name, os.amount, sp.plan_name, sp.monthly_price
+            GROUP BY br.id, br.branch_name, br.city, br.status, o.full_name, u.name, br.subscription_price_snapshot, os.plan_name, os.amount, sp.plan_name, sp.monthly_price
             ORDER BY totalRevenue DESC, br.created_at DESC
-            LIMIT 5
+            LIMIT 100
         `);
 
         const formattedBranches = rows.map(r => ({

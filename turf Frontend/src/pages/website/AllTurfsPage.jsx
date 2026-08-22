@@ -51,7 +51,7 @@ export default function AllTurfsPage() {
                         dimensions: b.turf_size || b.turfSize || '5,000 Sq.Ft',
                         surfaceType: b.surface_type || b.surfaceType || 'TurfPro Synthetic Arena',
                         amenities: Array.isArray(b.amenities) ? b.amenities : ['Floodlights', 'Parking', 'Washroom'],
-                        image: `/images/turf${(idx % 6) + 1}.png`
+                        image: b.logo || (Array.isArray(b.images) && b.images[0] ? b.images[0] : `/images/turf${(idx % 6) + 1}.png`)
                     }))
                     setTurfList(mapped)
                 }
@@ -62,7 +62,6 @@ export default function AllTurfsPage() {
         fetchRealBranches()
     }, [])
 
-    /* detect mobile/tablet (≤ 767px) — overlay mode */
     const [isMobile, setIsMobile] = useState(window.innerWidth < 768)
     useEffect(() => {
         const onResize = () => setIsMobile(window.innerWidth < 768)

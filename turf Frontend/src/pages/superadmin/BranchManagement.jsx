@@ -617,8 +617,8 @@ export default function BranchManagement() {
         },
         { 
             key: 'totalRevenue', 
-            label: 'Revenue', 
-            render: (v, r) => `₹${Number(r?.totalRevenue ?? r?.bookingRevenue ?? r?.planPrice ?? v ?? 0).toLocaleString('en-IN')}` 
+            label: 'Plan Price', 
+            render: (v, r) => `₹${Number(r?.subscriptionPlanId?.monthlyPrice || r?.planPrice || r?.subscription_price_snapshot || r?.totalRevenue || v || 1000).toLocaleString('en-IN')}` 
         },
         { 
             key: 'createdAt', 
@@ -885,7 +885,7 @@ export default function BranchManagement() {
                     <div className="col-span-2">Owner</div>
                     <div className="col-span-2">Plan</div>
                     <div className="col-span-1 text-center">Status</div>
-                    <div className="col-span-1 text-right">Revenue</div>
+                    <div className="col-span-1 text-right">Plan Price</div>
                     <div className="col-span-2 text-right pr-2">Actions</div>
                 </div>
 
@@ -974,10 +974,10 @@ export default function BranchManagement() {
                                     })()}
                                 </div>
 
-                                {/* Revenue */}
+                                {/* Plan Price */}
                                 <div className="col-span-1 text-right">
                                     <span className="text-emerald-600 font-bold text-xs tracking-tight whitespace-nowrap">
-                                        ₹{Number(r.totalRevenue !== undefined && r.totalRevenue !== null ? r.totalRevenue : (Number(r.planPrice || r.plan_price || r.subscriptionPlanId?.monthlyPrice || r.subscriptionPlanId?.monthly_price || 0) + Number(r.booking_revenue || r.bookingRevenue || 0))).toLocaleString('en-IN')}
+                                        ₹{Number(r.subscriptionPlanId?.monthlyPrice || r.planPrice || r.subscription_price_snapshot || (r.totalRevenue && r.totalRevenue <= 3000 ? r.totalRevenue : 1000)).toLocaleString('en-IN')}
                                     </span>
                                 </div>
 

@@ -179,16 +179,11 @@ export default function SADashboard() {
         }
     }
 
-    // Trigger re-fetch when filters shift
+    // Trigger re-fetch when page mounts or filters shift
     useEffect(() => {
-        if (user) {
-            const rNorm = (user.role || '').toUpperCase().replace(/[-_]/g, '');
-            if (rNorm === 'SUPERADMIN') {
-                if (range === 'CUSTOM' && (!startDate || !endDate)) return
-                fetchDashboardData()
-            }
-        }
-    }, [user, range, startDate, endDate])
+        if (range === 'CUSTOM' && (!startDate || !endDate)) return
+        fetchDashboardData()
+    }, [range, startDate, endDate])
 
     if (authLoading || isPageLoading) {
         return (
@@ -550,8 +545,9 @@ export default function SADashboard() {
                                         <tr className="border-b border-slate-100 text-[10px] font-black uppercase tracking-wider text-slate-400 bg-slate-50/50">
                                             <th className="py-3 px-4 rounded-l-xl">Branch Name</th>
                                             <th className="py-3 px-4">City</th>
+                                            <th className="py-3 px-4">Owner</th>
                                             <th className="py-3 px-4">Bookings</th>
-                                            <th className="py-3 px-4">Branch Revenue</th>
+                                            <th className="py-3 px-4">Plan Price</th>
                                             <th className="py-3 px-4 rounded-r-xl">Status</th>
                                         </tr>
                                     </thead>
@@ -567,6 +563,11 @@ export default function SADashboard() {
                                                 <td className="py-3.5 px-4 text-slate-600 font-bold">
                                                     <span className="px-2.5 py-1 rounded-lg bg-slate-100 border border-slate-200 text-[11px]">
                                                         📍 {row.City || row.city || 'India'}
+                                                    </span>
+                                                </td>
+                                                <td className="py-3.5 px-4 text-slate-700 font-bold">
+                                                    <span className="px-2 py-0.5 rounded bg-emerald-50 border border-emerald-200/60 text-emerald-800 text-[11px]">
+                                                        👤 {row.ownerName || 'Admin'}
                                                     </span>
                                                 </td>
                                                 <td className="py-3.5 px-4 text-slate-700 font-bold">
