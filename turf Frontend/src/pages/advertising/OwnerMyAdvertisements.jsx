@@ -129,13 +129,13 @@ export default function OwnerMyAdvertisements() {
                         Campaigns: <strong className="text-surface-900 font-extrabold">{ads.length}</strong>
                     </div>
                     <div className="px-3.5 py-1.5 rounded-xl bg-emerald-50 text-emerald-700 text-xs font-bold border border-emerald-200/80">
-                        Revenue: <strong className="text-emerald-700 font-extrabold">₹2.85L</strong>
+                        Revenue: <strong className="text-emerald-700 font-extrabold">₹{ads.reduce((sum, a) => sum + (Number(String(a.revenue || '').replace(/[^\d.]/g, '')) || 0), 0).toLocaleString('en-IN')}</strong>
                     </div>
                     <div className="px-3.5 py-1.5 rounded-xl bg-purple-50 text-purple-700 text-xs font-bold border border-purple-200/80">
                         Conversion: <strong className="text-surface-900 font-extrabold">11.3%</strong>
                     </div>
                     <div className="px-3.5 py-1.5 rounded-xl bg-amber-50 text-amber-700 text-xs font-bold border border-amber-200/80">
-                        Active: <strong className="text-amber-700 font-extrabold">{ads.filter(a => a.status === 'Active').length}</strong>
+                        Active: <strong className="text-amber-700 font-extrabold">{ads.filter(a => (a.status || '').toUpperCase() === 'ACTIVE').length}</strong>
                     </div>
                 </div>
             </div>

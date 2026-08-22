@@ -2,7 +2,17 @@ const db = require('../../config/db');
 
 const getTickets = async (req, res) => {
     try {
-        const [rows] = await db.query('SELECT * FROM maintenance_tickets ORDER BY created_at DESC');
+        const ownerFilter = req.query.ownerId || req.query.owner_id || (req.user?.role === 'OWNER' ? req.user.id : null);
+        const emailFilter = req.query.email || req.user?.email;
+
+        let sql = 'SELECT * FROM maintenance_tickets WHERE 1=1';
+        const params = [];
+        if (req.user?.role === 'OWNER' || (ownerFilter && ownerFilter !== 'ALL')) {
+            sql += ' AND (branch_id IN (SELECT id FROM branches WHERE owner_id = ? OR owner_id IN (SELECT id FROM owners WHERE email = ? OR user_id = ? OR id = ?) OR email = ?) OR created_by = ? OR created_by = ?)';
+            params.push(ownerFilter || '', emailFilter || '', ownerFilter || '', ownerFilter || '', emailFilter || '', ownerFilter || '', emailFilter || '');
+        }
+        sql += ' ORDER BY created_at DESC';
+        const [rows] = await db.query(sql, params);
         return res.status(200).json({ success: true, data: rows });
     } catch (error) {
         return res.status(500).json({ success: false, message: error.message });

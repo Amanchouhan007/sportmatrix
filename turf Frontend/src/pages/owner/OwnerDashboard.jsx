@@ -22,32 +22,32 @@ import { useToast } from '../../components/ui/Toast'
 import { getOverview } from '../../services/dashboardService'
 
 const DEFAULT_PEAK_DATA_TODAY = [
-    { h: '6 AM', v: 30, count: 2 },
-    { h: '8 AM', v: 65, count: 5 },
-    { h: '10 AM', v: 45, count: 3 },
-    { h: '12 PM', v: 35, count: 2 },
-    { h: '2 PM', v: 40, count: 3 },
-    { h: '4 PM', v: 80, count: 6 },
-    { h: '6 PM', v: 95, count: 8 },
-    { h: '8 PM', v: 88, count: 7 },
-    { h: '10 PM', v: 50, count: 4 }
+    { h: '6 AM', v: 0, count: 0 },
+    { h: '8 AM', v: 0, count: 0 },
+    { h: '10 AM', v: 0, count: 0 },
+    { h: '12 PM', v: 0, count: 0 },
+    { h: '2 PM', v: 0, count: 0 },
+    { h: '4 PM', v: 0, count: 0 },
+    { h: '6 PM', v: 0, count: 0 },
+    { h: '8 PM', v: 0, count: 0 },
+    { h: '10 PM', v: 0, count: 0 }
 ]
 
 const DEFAULT_PEAK_DATA_7DAYS = [
-    { h: 'Mon', v: 55, count: 18 },
-    { h: 'Tue', v: 60, count: 20 },
-    { h: 'Wed', v: 75, count: 25 },
-    { h: 'Thu', v: 70, count: 22 },
-    { h: 'Fri', v: 85, count: 28 },
-    { h: 'Sat', v: 98, count: 35 },
-    { h: 'Sun', v: 92, count: 32 }
+    { h: 'Mon', v: 0, count: 0 },
+    { h: 'Tue', v: 0, count: 0 },
+    { h: 'Wed', v: 0, count: 0 },
+    { h: 'Thu', v: 0, count: 0 },
+    { h: 'Fri', v: 0, count: 0 },
+    { h: 'Sat', v: 0, count: 0 },
+    { h: 'Sun', v: 0, count: 0 }
 ]
 
 const DEFAULT_PEAK_DATA_30DAYS = [
-    { h: 'Week 1', v: 68, count: 95 },
-    { h: 'Week 2', v: 74, count: 110 },
-    { h: 'Week 3', v: 82, count: 124 },
-    { h: 'Week 4', v: 88, count: 135 }
+    { h: 'Week 1', v: 0, count: 0 },
+    { h: 'Week 2', v: 0, count: 0 },
+    { h: 'Week 3', v: 0, count: 0 },
+    { h: 'Week 4', v: 0, count: 0 }
 ]
 
 const DEFAULT_BOOKINGS = []

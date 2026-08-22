@@ -70,6 +70,7 @@ const sidebarConfig = {
             ]
         },
         { isHeader: true, label: 'TURF OPERATIONS' },
+        { label: 'My Turfs & Venues', icon: <HiOfficeBuilding />, path: '/admin/branches' },
         { label: 'Turf & Rates Setup', icon: <HiBolt />, path: '/admin/sports' },
         { label: 'Turf Calendar', icon: <HiCalendar />, path: '/admin/calendar' },
         { label: 'Bookings', icon: <HiTicket />, path: '/admin/bookings' },

@@ -16,6 +16,11 @@ const isValidMobile = (mobile) => {
  * Validate Owner Creation Payload
  */
 const validateCreateOwner = (req, res, next) => {
+    // Normalize property aliases for full name and mobile
+    if (!req.body.fullName && req.body.name) req.body.fullName = req.body.name;
+    if (!req.body.mobile && req.body.phone) req.body.mobile = req.body.phone;
+    if (!req.body.mobile && req.body.mobileNumber) req.body.mobile = req.body.mobileNumber;
+
     const {
         fullName,
         email,

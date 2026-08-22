@@ -31,6 +31,18 @@ const getAdvertisements = async (req, res) => {
             params.push(type);
         }
 
+        const ownerFilter = req.query.ownerId || req.query.owner_id || (req.user?.role === 'OWNER' ? req.user.id : null);
+        const emailFilter = req.query.email || req.user?.email;
+
+        if (req.user?.role === 'OWNER' || (ownerFilter && ownerFilter !== 'ALL')) {
+            sql += ` AND (
+                a.owner_id = ? 
+                OR a.owner_id IN (SELECT id FROM owners WHERE email = ? OR user_id = ? OR id = ?)
+                OR a.branch_id IN (SELECT id FROM branches WHERE owner_id = ? OR owner_id IN (SELECT id FROM owners WHERE email = ? OR user_id = ? OR id = ?) OR email = ?)
+            )`;
+            params.push(ownerFilter || '', emailFilter || '', ownerFilter || '', ownerFilter || '', ownerFilter || '', emailFilter || '', ownerFilter || '', ownerFilter || '', emailFilter || '');
+        }
+
         sql += ' ORDER BY a.created_at DESC';
 
         const [rows] = await db.query(sql, params);

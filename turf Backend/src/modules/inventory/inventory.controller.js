@@ -7,8 +7,19 @@ const getInventory = async (req, res) => {
     const { branchId } = req.query;
 
     try {
-        const query = branchId ? 'SELECT * FROM inventory WHERE branch_id = ? ORDER BY item_name ASC' : 'SELECT * FROM inventory ORDER BY item_name ASC';
-        const params = branchId ? [branchId] : [];
+        const ownerFilter = req.query.ownerId || req.query.owner_id || (req.user?.role === 'OWNER' ? req.user.id : null);
+        const emailFilter = req.query.email || req.user?.email;
+
+        let query = 'SELECT * FROM inventory WHERE 1=1';
+        const params = [];
+        if (branchId) {
+            query += ' AND branch_id = ?';
+            params.push(branchId);
+        } else if (req.user?.role === 'OWNER' || (ownerFilter && ownerFilter !== 'ALL')) {
+            query += ' AND (branch_id IN (SELECT id FROM branches WHERE owner_id = ? OR owner_id IN (SELECT id FROM owners WHERE email = ? OR user_id = ? OR id = ?) OR email = ?))';
+            params.push(ownerFilter || '', emailFilter || '', ownerFilter || '', ownerFilter || '', emailFilter || '');
+        }
+        query += ' ORDER BY item_name ASC';
         const [rows] = await db.query(query, params);
 
         const formatted = rows.map(r => {

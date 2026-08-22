@@ -4,38 +4,85 @@ const db = require('../../config/db');
  * List branches with filters and pagination
  */
 const getBranches = async (req, res) => {
-    const { status, ownerId, search, page = 1, limit = 10 } = req.query;
+    const { status, ownerId, email, search, page = 1, limit = 10 } = req.query;
 
     try {
         let sql = `
             SELECT b.*, 
                    COALESCE(o.full_name, u.name, 'Turf Owner') as owner_full_name,
-                   COALESCE(p.plan_name, 'Starter Plan') as plan_name,
-                   COALESCE(p.monthly_price, 0) as plan_price,
+                   COALESCE(os.plan_name, p.plan_name, 'Starter Plan') as plan_name,
+                   COALESCE(b.subscription_price_snapshot, NULLIF(os.amount, 0), p.monthly_price, 1000) as plan_price,
                    (SELECT COALESCE(SUM(amount), 0) FROM bookings WHERE branch_id = b.id AND status IN ('CONFIRMED', 'COMPLETED')) as booking_revenue
             FROM branches b
             LEFT JOIN owners o ON (b.owner_id = o.id OR b.owner_id = o.user_id)
             LEFT JOIN users u ON (b.owner_id = u.id)
-            LEFT JOIN subscription_plans p ON b.subscription_plan_id = p.id
+            LEFT JOIN (
+                SELECT os1.* FROM owner_subscriptions os1
+                INNER JOIN (
+                    SELECT owner_id, MAX(created_at) as max_created FROM owner_subscriptions GROUP BY owner_id
+                ) os2 ON os1.owner_id = os2.owner_id AND os1.created_at = os2.max_created
+            ) os ON (b.owner_id = os.owner_id OR o.id = os.owner_id)
+            LEFT JOIN subscription_plans p ON (b.subscription_plan_id = p.id OR LOWER(b.subscription_plan_id) = LOWER(p.plan_name))
             WHERE 1=1
         `;
+        let countSql = `SELECT COUNT(*) as count FROM branches b WHERE 1=1`;
         const params = [];
+        const countParams = [];
 
         if (status && status !== 'ALL') {
             sql += ' AND b.status = ?';
+            countSql += ' AND b.status = ?';
             params.push(status);
-        }
-        if (ownerId && ownerId !== 'ALL') {
-            sql += ' AND b.owner_id = ?';
-            params.push(ownerId);
-        }
-        if (search) {
-            sql += ' AND (b.branch_name LIKE ? OR b.city LIKE ? OR b.branch_code LIKE ?)';
-            const q = `%${search}%`;
-            params.push(q, q, q);
+            countParams.push(status);
         }
 
-        const [countRows] = await db.query('SELECT COUNT(*) as count FROM branches');
+        const userRole = req.user?.role?.toUpperCase();
+        const isSuperAdmin = userRole === 'SUPER_ADMIN' || userRole === 'SUPERADMIN';
+
+        if (!isSuperAdmin) {
+            // STRICT MULTI-TENANT ISOLATION FOR TURF OWNERS: Resolve owner by ID, user_id, or email
+            const targetOwnerId = (ownerId && ownerId !== 'ALL') ? ownerId : (req.user ? req.user.id : null);
+            const targetEmail = email || req.user?.email || '';
+
+            if (targetOwnerId && targetOwnerId !== 'ALL') {
+                const ownerClause = ` AND (
+                    b.owner_id = ? 
+                    OR b.owner_id IN (SELECT id FROM owners WHERE id = ? OR user_id = ? OR (email IS NOT NULL AND email != '' AND LOWER(email) = LOWER(?)))
+                    OR (b.email IS NOT NULL AND b.email != '' AND LOWER(b.email) = LOWER(?))
+                    OR b.owner_id IN (SELECT id FROM owners WHERE email IS NOT NULL AND email != '' AND (LOWER(email) = LOWER(?) OR LOWER(email) = LOWER(?)))
+                )`;
+                sql += ownerClause;
+                countSql += ownerClause;
+                params.push(targetOwnerId, targetOwnerId, targetOwnerId, targetEmail, targetEmail, targetEmail, targetOwnerId);
+                countParams.push(targetOwnerId, targetOwnerId, targetOwnerId, targetEmail, targetEmail, targetEmail, targetOwnerId);
+            }
+        } else {
+            // SuperAdmin user role
+            if (ownerId && ownerId !== 'ALL') {
+                const targetEmail = email || '';
+                const ownerClause = ` AND (
+                    b.owner_id = ? 
+                    OR b.owner_id IN (SELECT id FROM owners WHERE id = ? OR user_id = ? OR (email IS NOT NULL AND email != '' AND LOWER(email) = LOWER(?)))
+                    OR (b.email IS NOT NULL AND b.email != '' AND LOWER(b.email) = LOWER(?))
+                )`;
+                sql += ownerClause;
+                countSql += ownerClause;
+                params.push(ownerId, ownerId, ownerId, targetEmail, targetEmail);
+                countParams.push(ownerId, ownerId, ownerId, targetEmail, targetEmail);
+            }
+            // If SuperAdmin & ownerId === 'ALL': NO OWNER FILTER IS APPLIED, RETURNS ALL 6 BRANCHES
+        }
+
+        if (search) {
+            const searchClause = ' AND (b.branch_name LIKE ? OR b.city LIKE ? OR b.branch_code LIKE ?)';
+            sql += searchClause;
+            countSql += searchClause;
+            const q = `%${search}%`;
+            params.push(q, q, q);
+            countParams.push(q, q, q);
+        }
+
+        const [countRows] = await db.query(countSql, countParams);
         const count = countRows[0]?.count || 0;
 
         const offset = (Number(page) - 1) * Number(limit);
@@ -301,10 +348,12 @@ const createBranch = async (req, res) => {
 
         // Fetch plan name
         let planName = 'Starter Plan';
+        let planPriceSnapshot = 1000;
         const planId = subscriptionPlanId || 'plan_starter';
-        const [planRows] = await db.query('SELECT id, plan_name FROM subscription_plans WHERE id = ?', [planId]);
+        const [planRows] = await db.query('SELECT id, plan_name, monthly_price FROM subscription_plans WHERE id = ? OR LOWER(id) = LOWER(?) OR LOWER(plan_name) = LOWER(?)', [planId, planId, planId]);
         if (planRows.length > 0) {
             planName = planRows[0].plan_name;
+            planPriceSnapshot = Number(planRows[0].monthly_price || 1000);
         }
 
         const sportsJson = Array.isArray(sports) ? JSON.stringify(sports) : (sports || '["Cricket", "Football"]');
@@ -313,13 +362,13 @@ const createBranch = async (req, res) => {
 
         await db.query(`
             INSERT INTO branches (
-                id, branch_name, branch_code, description, owner_id, subscription_plan_id,
+                id, branch_name, branch_code, description, owner_id, subscription_plan_id, subscription_price_snapshot,
                 country, state, city, zip_code, full_address, email, mobile, alternate_mobile,
                 gst_number, timezone, currency, logo, images, status,
                 price_per_hour, opening_time, closing_time, turf_size, surface_type,
                 sports, amenities, discount_offer, coupon_code
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'ACTIVE', ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'ACTIVE', ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `, [
             branchId,
             branchName,
@@ -327,6 +376,7 @@ const createBranch = async (req, res) => {
             description || '',
             validOwnerId,
             planId,
+            planPriceSnapshot,
             country || 'India',
             state || '',
             city || '',
@@ -354,13 +404,12 @@ const createBranch = async (req, res) => {
         // Auto-record subscription purchase entry for owner when branch is created
         try {
             const subId = `sub_${Date.now()}`;
-            const planPrice = planRows[0]?.monthly_price || 999;
             await db.query(`
                 INSERT INTO owner_subscriptions (
                     id, owner_id, plan_id, plan_name, amount, billing_cycle,
                     status, payment_status, payment_method, transaction_id, start_date, end_date
                 ) VALUES (?, ?, ?, ?, ?, 'MONTHLY', 'ACTIVE', 'COMPLETED', 'ONLINE', ?, NOW(), DATE_ADD(NOW(), INTERVAL 1 MONTH))
-            `, [subId, validOwnerId, planId, planName, planPrice, `TXN_${Date.now()}`]);
+            `, [subId, validOwnerId, planId, planName, planPriceSnapshot, `TXN_${Date.now()}`]);
         } catch (subErr) {
             console.warn('Branch subscription auto-creation note:', subErr.message);
         }
@@ -549,21 +598,82 @@ const deleteBranch = async (req, res) => {
  */
 const getDashboardStats = async (req, res) => {
     try {
+        const userRole = req.user?.role?.toUpperCase();
+        const isSuperAdmin = userRole === 'SUPER_ADMIN' || userRole === 'SUPERADMIN';
+        const targetOwnerId = (req.query.ownerId && req.query.ownerId !== 'ALL') ? req.query.ownerId : (req.user ? req.user.id : null);
+        const targetEmail = req.query.email || req.user?.email || '';
+
+        let branchWhere = '';
+        const params = [];
+
+        if (!isSuperAdmin) {
+            const targetOwnerId = (req.query.ownerId && req.query.ownerId !== 'ALL') ? req.query.ownerId : (req.user ? req.user.id : null);
+            const targetEmail = req.query.email || req.user?.email || '';
+
+            if (targetOwnerId && targetOwnerId !== 'ALL') {
+                branchWhere = ` WHERE (
+                    b.owner_id = ? 
+                    OR b.owner_id IN (SELECT id FROM owners WHERE id = ? OR user_id = ? OR (email IS NOT NULL AND email != '' AND LOWER(email) = LOWER(?)))
+                    OR (b.email IS NOT NULL AND b.email != '' AND LOWER(b.email) = LOWER(?))
+                    OR b.owner_id IN (SELECT id FROM owners WHERE email IS NOT NULL AND email != '' AND (LOWER(email) = LOWER(?) OR LOWER(email) = LOWER(?)))
+                )`;
+                params.push(targetOwnerId, targetOwnerId, targetOwnerId, targetEmail, targetEmail, targetEmail, targetOwnerId);
+            }
+        } else {
+            if (req.query.ownerId && req.query.ownerId !== 'ALL') {
+                const targetEmail = req.query.email || '';
+                branchWhere = ` WHERE (
+                    b.owner_id = ? 
+                    OR b.owner_id IN (SELECT id FROM owners WHERE id = ? OR user_id = ? OR (email IS NOT NULL AND email != '' AND LOWER(email) = LOWER(?)))
+                    OR (b.email IS NOT NULL AND b.email != '' AND LOWER(b.email) = LOWER(?))
+                )`;
+                params.push(req.query.ownerId, req.query.ownerId, req.query.ownerId, targetEmail, targetEmail);
+            }
+            // SuperAdmin & ownerId === 'ALL': NO WHERE CLAUSE APPLIED, RETURNS STATS FOR ALL 6 BRANCHES
+        }
+
         const [rows] = await db.query(`
             SELECT 
                 COUNT(*) as total,
-                SUM(CASE WHEN status='ACTIVE' THEN 1 ELSE 0 END) as active,
-                SUM(CASE WHEN status='INACTIVE' THEN 1 ELSE 0 END) as inactive
-            FROM branches
-        `);
+                SUM(CASE WHEN b.status='ACTIVE' THEN 1 ELSE 0 END) as active,
+                SUM(CASE WHEN b.status='INACTIVE' THEN 1 ELSE 0 END) as inactive
+            FROM branches b ${branchWhere}
+        `, params);
+
+        const [revenueRows] = await db.query(`
+            SELECT SUM(plan_price) as total_plan_revenue FROM (
+                SELECT 
+                    COALESCE(b.subscription_price_snapshot, NULLIF(os.amount, 0), p.monthly_price, 1000) as plan_price
+                FROM branches b
+                LEFT JOIN owners o ON (b.owner_id = o.id OR b.owner_id = o.user_id)
+                LEFT JOIN (
+                    SELECT os1.* FROM owner_subscriptions os1
+                    INNER JOIN (
+                        SELECT owner_id, MAX(created_at) as max_created FROM owner_subscriptions GROUP BY owner_id
+                    ) os2 ON os1.owner_id = os2.owner_id AND os1.created_at = os2.max_created
+                ) os ON (b.owner_id = os.owner_id OR o.id = os.owner_id)
+                LEFT JOIN subscription_plans p ON (b.subscription_plan_id = p.id OR LOWER(b.subscription_plan_id) = LOWER(p.plan_name))
+                ${branchWhere}
+            ) as b_prices
+        `, params);
+
+        const [bookingRevRows] = await db.query(`
+            SELECT COALESCE(SUM(amount), 0) as booking_rev
+            FROM bookings
+            WHERE status IN ('CONFIRMED', 'COMPLETED')
+            ${branchWhere ? `AND branch_id IN (SELECT b.id FROM branches b ${branchWhere})` : ''}
+        `, branchWhere ? params : []);
+
+        const totalRevenue = Number(revenueRows[0]?.total_plan_revenue || 0) + Number(bookingRevRows[0]?.booking_rev || 0);
 
         return res.status(200).json({
             success: true,
             data: {
-                totalBranches: rows[0].total,
-                activeBranches: rows[0].active,
-                inactiveBranches: rows[0].inactive,
-                suspendedBranches: 0
+                totalBranches: Number(rows[0]?.total || 0),
+                activeBranches: Number(rows[0]?.active || 0),
+                inactiveBranches: Number(rows[0]?.inactive || 0),
+                suspendedBranches: 0,
+                totalRevenue: totalRevenue
             }
         });
     } catch (error) {

@@ -13,26 +13,25 @@ const { verifyToken, authorizeRoles } = require('../../middleware/auth.middlewar
 
 const router = express.Router();
 
-// Allow public listing of branches (needed for login/signup selectors)
-router.get('/stats', getDashboardStats);
-router.get('/', getBranches);
-router.get('/:id', getBranchById);
-
 const optionalAuth = (req, res, next) => {
     const authHeader = req.headers['authorization'];
     const token = authHeader && authHeader.split(' ')[1];
     if (!token) {
-        req.user = { id: 'usr_superadmin', role: 'SUPER_ADMIN' };
+        req.user = null;
         return next();
     }
     return verifyToken(req, res, (err) => {
         if (err || res.statusCode >= 400) {
-            req.user = { id: 'usr_superadmin', role: 'SUPER_ADMIN' };
+            req.user = null;
             return next();
         }
         return next();
     });
 };
+
+router.get('/stats', optionalAuth, getDashboardStats);
+router.get('/', optionalAuth, getBranches);
+router.get('/:id', optionalAuth, getBranchById);
 
 // Owner / Super Admin restrict routes
 router.post('/', optionalAuth, createBranch);

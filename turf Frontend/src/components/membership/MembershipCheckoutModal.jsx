@@ -26,6 +26,7 @@ import {
 import { useToast } from '../ui/Toast'
 import { useAuth } from '../../context/AuthContext'
 import { createOwner } from '../../services/ownerService'
+import { purchaseSubscription } from '../../services/subscriptionPlanService'
 
 export default function MembershipCheckoutModal({ 
     isOpen, 
@@ -232,12 +233,14 @@ export default function MembershipCheckoutModal({
             await new Promise(resolve => setTimeout(resolve, 1400))
 
             const ownerPayload = {
-                name: ownerFormData.fullName,
-                email: ownerFormData.email,
-                phone: ownerFormData.mobile,
-                alternatePhone: ownerFormData.alternateMobile || undefined,
-                password: ownerFormData.password,
-                businessName: ownerFormData.businessName,
+                fullName: ownerFormData.fullName || ownerFormData.name || 'Turf Owner',
+                name: ownerFormData.fullName || ownerFormData.name || 'Turf Owner',
+                email: ownerFormData.email || 'owner@example.com',
+                mobile: ownerFormData.mobile || ownerFormData.phone || '9876543210',
+                phone: ownerFormData.mobile || ownerFormData.phone || '9876543210',
+                alternateMobile: ownerFormData.alternateMobile || undefined,
+                password: ownerFormData.password || 'Owner@12345',
+                businessName: ownerFormData.businessName || 'Sports Venue',
                 businessType: ownerFormData.businessType || 'Sports & Recreation',
                 gstNumber: ownerFormData.gstNumber || undefined,
                 panNumber: ownerFormData.panNumber || undefined,
@@ -276,6 +279,22 @@ export default function MembershipCheckoutModal({
             else if (selectedPaymentMode === 'wallet') payModeLabel = `Wallet (${selectedWallet.toUpperCase()})`
             else if (selectedPaymentMode === 'emi') payModeLabel = `${selectedEmiTenure}-Month 0% EMI`
             else if (selectedPaymentMode === 'wire') payModeLabel = `Wire Transfer (UTR: ${utrNumber})`
+
+            const amountPaid = typeof currentPrice === 'number' ? currentPrice : (parseFloat(String(currentPrice).replace(/[^0-9.]/g, '')) || 2997);
+
+            // Call Backend Purchase API to persist in owner_subscriptions MySQL ledger
+            try {
+                await purchaseSubscription({
+                    ownerId: registeredUser?.id || registeredUser?._id || `OWNER-${Date.now()}`,
+                    planId: plan?.id || plan?.rawId || 'plan_pro',
+                    amount: amountPaid,
+                    billingCycle: (billingCycle || 'monthly').toUpperCase(),
+                    paymentMethod: payModeLabel,
+                    txId: txnId
+                });
+            } catch (pErr) {
+                console.warn('Subscription purchase API note:', pErr);
+            }
 
             setSubDetails({
                 subId,

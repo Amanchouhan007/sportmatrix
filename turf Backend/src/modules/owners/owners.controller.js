@@ -93,23 +93,17 @@ const createOwner = async (req, res) => {
         const normalizedEmail = email ? email.toLowerCase().trim() : '';
         const normalizedMobile = mobile ? mobile.trim() : '';
 
-        // 1. Check if email already exists
-        const [existingEmail] = await conn.query('SELECT id FROM owners WHERE LOWER(email) = ?', [normalizedEmail]);
-        if (existingEmail.length > 0) {
+        // 1. Check if email or mobile already exists
+        const [existing] = await conn.query('SELECT * FROM owners WHERE (email IS NOT NULL AND LOWER(email) = ?) OR (mobile IS NOT NULL AND mobile = ?) LIMIT 1', [normalizedEmail, normalizedMobile]);
+        if (existing.length > 0) {
             conn.release();
-            return res.status(409).json({
-                success: false,
-                message: 'An owner with this Email address already exists.'
-            });
-        }
-
-        // 2. Check if mobile already exists
-        const [existingMobile] = await conn.query('SELECT id FROM owners WHERE mobile = ?', [normalizedMobile]);
-        if (existingMobile.length > 0) {
-            conn.release();
-            return res.status(409).json({
-                success: false,
-                message: 'An owner with this Mobile number already exists.'
+            const existingOwner = formatOwner(existing[0]);
+            return res.status(200).json({
+                success: true,
+                message: 'Owner already registered. Using existing owner account.',
+                data: existingOwner,
+                owner: existingOwner,
+                id: existingOwner.id
             });
         }
 

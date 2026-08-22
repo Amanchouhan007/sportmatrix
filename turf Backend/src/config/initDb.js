@@ -224,6 +224,13 @@ async function initializeDatabase() {
             );
         `);
 
+        // Migration checks for owner_subscriptions columns
+        try { await connection.query(`ALTER TABLE owner_subscriptions ADD COLUMN plan_name VARCHAR(100) DEFAULT 'Starter Plan';`); } catch (e) {}
+        try { await connection.query(`ALTER TABLE owner_subscriptions ADD COLUMN amount DECIMAL(10,2) DEFAULT 0.00;`); } catch (e) {}
+        try { await connection.query(`ALTER TABLE owner_subscriptions ADD COLUMN payment_status ENUM('PENDING', 'COMPLETED', 'FAILED') DEFAULT 'COMPLETED';`); } catch (e) {}
+        try { await connection.query(`ALTER TABLE owner_subscriptions ADD COLUMN payment_method VARCHAR(50) DEFAULT 'ONLINE';`); } catch (e) {}
+        try { await connection.query(`ALTER TABLE owner_subscriptions ADD COLUMN transaction_id VARCHAR(100);`); } catch (e) {}
+
         // Payments (Billing & Invoices)
         await connection.query(`
             CREATE TABLE IF NOT EXISTS payments (

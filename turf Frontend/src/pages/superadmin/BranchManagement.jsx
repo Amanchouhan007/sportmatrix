@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import DataTable from '../../components/ui/DataTable'
 import Button from '../../components/ui/Button'
@@ -39,9 +39,8 @@ export default function BranchManagement() {
             } else {
                 const normalizeRole = (r) => (r || '').toUpperCase().replace(/[-_]/g, '');
                 const rNorm = normalizeRole(user.role);
-                if (rNorm !== 'SUPERADMIN') {
-                    if (rNorm === 'OWNER') navigate('/admin')
-                    else if (rNorm === 'STAFF') navigate('/staff')
+                if (rNorm !== 'SUPERADMIN' && rNorm !== 'OWNER') {
+                    if (rNorm === 'STAFF') navigate('/staff')
                     else if (rNorm === 'CUSTOMER') navigate('/customer')
                     else navigate('/login')
                 }
@@ -199,13 +198,19 @@ export default function BranchManagement() {
     // Load statistics
     const loadStats = async () => {
         try {
-            const res = await getDashboardStats()
-            const statsData = (res && res.data) || (res && res.totalBranches !== undefined ? res : null)
+            const userRoleNorm = (user?.role || '').toUpperCase().replace(/[-_]/g, '');
+            const isOwnerRole = userRoleNorm === 'OWNER' || userRoleNorm === 'ADMIN';
+            const statsFilters = {
+                ownerId: isOwnerRole ? (user?._id || user?.id) : selectedOwnerId,
+                email: isOwnerRole ? (user?.email || '') : ''
+            };
+            const res = await getDashboardStats(statsFilters);
+            const statsData = (res && res.data) || (res && res.totalBranches !== undefined ? res : null);
             if (statsData) {
-                setStats(statsData)
+                setStats(statsData);
             }
         } catch (error) {
-            console.error('Error loading stats:', error)
+            console.error('Error loading stats:', error);
         }
     }
 
@@ -277,12 +282,15 @@ export default function BranchManagement() {
     const loadBranches = async () => {
         try {
             setIsTableLoading(true)
+            const userRoleNorm = (user?.role || '').toUpperCase().replace(/[-_]/g, '');
+            const isOwnerRole = userRoleNorm === 'OWNER' || userRoleNorm === 'ADMIN';
             const filters = {
                 page,
                 limit,
                 search: searchTerm,
                 status: selectedStatus,
-                ownerId: selectedOwnerId,
+                ownerId: isOwnerRole ? (user?._id || user?.id) : selectedOwnerId,
+                email: isOwnerRole ? (user?.email || '') : '',
                 subscriptionPlanId: selectedPlanId
             }
             const res = await getBranches(filters)
@@ -292,6 +300,20 @@ export default function BranchManagement() {
             if (branchList && Array.isArray(branchList)) {
                 setBranches(branchList)
                 setPagination(paginationInfo || { total: branchList.length, page: 1, limit: 10, pages: 1 })
+
+                const userRoleNorm = (user?.role || '').toUpperCase().replace(/[-_]/g, '');
+                if (userRoleNorm === 'OWNER' || userRoleNorm === 'ADMIN') {
+                    const activeCount = branchList.filter(b => b.status === 'ACTIVE' || !b.status).length;
+                    const inactiveCount = branchList.filter(b => b.status === 'INACTIVE' || b.status === 'SUSPENDED').length;
+                    const revenueSum = branchList.reduce((acc, b) => acc + (Number(b.totalRevenue ?? b.bookingRevenue ?? b.planPrice ?? 0)), 0);
+                    setStats({
+                        totalBranches: branchList.length,
+                        activeBranches: activeCount,
+                        inactiveBranches: inactiveCount,
+                        suspendedBranches: 0,
+                        totalRevenue: revenueSum
+                    });
+                }
             } else {
                 setBranches([])
                 setPagination({ total: 0, page: 1, limit: 10, pages: 1 })
@@ -304,6 +326,28 @@ export default function BranchManagement() {
             setIsTableLoading(false)
         }
     }
+
+    const ownerOptions = useMemo(() => {
+        const map = new Map();
+        (branches || []).forEach(b => {
+            const ownerObj = b.ownerId;
+            const id = typeof ownerObj === 'object' ? (ownerObj?._id || ownerObj?.id) : (typeof ownerObj === 'string' ? ownerObj : null);
+            const name = typeof ownerObj === 'object' ? (ownerObj?.fullName || ownerObj?.name) : 'Owner';
+            if (id && typeof id === 'string') {
+                map.set(id, { value: id, label: name || 'Owner' });
+            }
+        });
+        return [{ value: 'ALL', label: 'All Owners' }, ...Array.from(map.values())];
+    }, [branches]);
+
+    const planOptions = useMemo(() => {
+        const list = (subscriptionPlans || []).map(p => {
+            const id = typeof p === 'object' ? (p._id || p.id) : String(p);
+            const name = typeof p === 'object' ? (p.planName || p.name) : String(p);
+            return { value: id, label: name };
+        }).filter(p => p.value && typeof p.value === 'string');
+        return [{ value: 'ALL', label: 'All Plans' }, ...list];
+    }, [subscriptionPlans]);
 
     // Load branches reactively on mount and filter changes
     useEffect(() => {
@@ -574,7 +618,7 @@ export default function BranchManagement() {
         { 
             key: 'totalRevenue', 
             label: 'Revenue', 
-            render: v => `₹${Number(v || 0).toLocaleString()}` 
+            render: (v, r) => `₹${Number(r?.totalRevenue ?? r?.bookingRevenue ?? r?.planPrice ?? v ?? 0).toLocaleString('en-IN')}` 
         },
         { 
             key: 'createdAt', 
@@ -756,7 +800,7 @@ export default function BranchManagement() {
                     </div>
                     <div className="my-1.5">
                         <div className="text-2xl lg:text-3xl font-black text-slate-900 tracking-tight leading-none">
-                            ₹{Number(stats.totalRevenue && Number(stats.totalRevenue) > 0 ? stats.totalRevenue : branches.reduce((sum, b) => sum + Number(b.totalRevenue || b.planPrice || b.plan_price || b.subscriptionPlanId?.monthlyPrice || b.subscriptionPlanId?.monthly_price || 0), 0)).toLocaleString('en-IN')}
+                            ₹{Number(branches.reduce((sum, b) => sum + Number(b.totalRevenue ?? b.bookingRevenue ?? b.planPrice ?? 0), 0)).toLocaleString('en-IN')}
                         </div>
                     </div>
                     <div className="flex items-center justify-between gap-2 mt-3 pt-2.5 border-t border-slate-100 text-[11px]">
@@ -809,30 +853,14 @@ export default function BranchManagement() {
                         <Select
                             value={selectedOwnerId}
                             onChange={e => { setSelectedOwnerId(e.target.value); setPage(1); }}
-                            options={[
-                                { value: 'ALL', label: 'All Owners' },
-                                ...Array.from(
-                                    new Map(
-                                        branches.map(b => [
-                                            b.ownerId?._id || b.ownerId?.id || b.ownerId,
-                                            {
-                                                value: b.ownerId?._id || b.ownerId?.id || b.ownerId,
-                                                label: b.ownerId?.fullName || b.ownerId?.name || 'Owner'
-                                            }
-                                        ])
-                                    ).values()
-                                ).filter(o => o.value)
-                            ]}
+                            options={ownerOptions}
                             className="w-44"
                         />
 
                         <Select
                             value={selectedPlanId}
                             onChange={e => { setSelectedPlanId(e.target.value); setPage(1); }}
-                            options={[
-                                { value: 'ALL', label: 'All Plans' },
-                                ...subscriptionPlans.map(p => ({ value: p._id, label: p.planName }))
-                            ]}
+                            options={planOptions}
                             className="w-44"
                         />
                     </div>

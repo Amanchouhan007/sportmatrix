@@ -85,11 +85,15 @@ export default function DiscountOffersList() {
     const fetchData = async () => {
         setLoading(true)
         try {
+            const userStr = localStorage.getItem('user');
+            const user = userStr ? JSON.parse(userStr) : null;
             const res = await getDiscountOffers({
                 search: searchTerm,
                 turfId: turfFilter,
                 discountType: typeFilter,
                 status: statusFilter,
+                ownerId: user?.id,
+                email: user?.email,
                 page,
                 limit: 10
             })

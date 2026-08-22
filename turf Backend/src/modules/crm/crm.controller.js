@@ -5,18 +5,27 @@ const db = require('../../config/db');
  */
 const getLeads = async (req, res) => {
     try {
+        const ownerFilter = req.query.ownerId || req.query.owner_id || (req.user?.role === 'OWNER' ? req.user.id : null);
+        const emailFilter = req.query.email || req.user?.email;
+
         const [crmRows] = await db.query('SELECT * FROM crm_leads ORDER BY created_at DESC');
 
         // 1. Fetch real slot bookings as Customer / Player leads
         let bookingLeads = [];
         try {
-            const [bRows] = await db.query(`
+            let bookingSql = `
                 SELECT b.id, b.customer_name, b.mobile_number, b.sport_name, b.duty_date, b.time_slot, b.amount, b.status, b.created_at,
                        br.branch_name, br.city
                 FROM bookings b
                 LEFT JOIN branches br ON b.branch_id = br.id
-                ORDER BY b.created_at DESC
-            `);
+            `;
+            const bParams = [];
+            if (req.user?.role === 'OWNER' || (ownerFilter && ownerFilter !== 'ALL')) {
+                bookingSql += ` WHERE (b.branch_id IN (SELECT id FROM branches WHERE owner_id = ? OR owner_id IN (SELECT id FROM owners WHERE email = ? OR user_id = ? OR id = ?) OR email = ?))`;
+                bParams.push(ownerFilter || '', emailFilter || '', ownerFilter || '', ownerFilter || '', emailFilter || '');
+            }
+            bookingSql += ` ORDER BY b.created_at DESC`;
+            const [bRows] = await db.query(bookingSql, bParams);
             bookingLeads = bRows.map(b => ({
                 id: `bmt_lead_${b.id}`,
                 name: b.customer_name || 'Player Contact',

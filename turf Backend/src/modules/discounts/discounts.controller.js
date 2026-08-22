@@ -79,6 +79,18 @@ const getDiscountOffers = async (req, res) => {
             params.push(discountType);
         }
 
+        const ownerFilter = req.query.ownerId || req.query.owner_id || (req.user?.role === 'OWNER' ? req.user.id : null);
+        const emailFilter = req.query.email || req.user?.email;
+
+        if (req.user?.role === 'OWNER' || (ownerFilter && ownerFilter !== 'ALL')) {
+            query += ` AND (
+                d.owner_id = ? 
+                OR d.owner_id IN (SELECT id FROM owners WHERE email = ? OR user_id = ? OR id = ?)
+                OR d.branch_id IN (SELECT id FROM branches WHERE owner_id = ? OR owner_id IN (SELECT id FROM owners WHERE email = ? OR user_id = ? OR id = ?) OR email = ?)
+            )`;
+            params.push(ownerFilter || '', emailFilter || '', ownerFilter || '', ownerFilter || '', ownerFilter || '', emailFilter || '', ownerFilter || '', ownerFilter || '', emailFilter || '');
+        }
+
         if (search) {
             query += ` AND (LOWER(d.title) LIKE ? OR LOWER(d.promo_code) LIKE ? OR LOWER(b.branch_name) LIKE ?)`;
             const q = `%${search.toLowerCase().trim()}%`;

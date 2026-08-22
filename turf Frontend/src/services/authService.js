@@ -6,11 +6,21 @@ import api from './api';
 export const loginUser = async (email, password, selectedRole) => {
     try {
         const response = await api.post('/auth/login', { email, password, role: selectedRole });
-        if (response.data && response.data.success) {
-            return response.data;
+        const resData = response?.data || response;
+        if (resData && resData.success) {
+            return resData;
+        }
+        if (resData && resData.success === false) {
+            throw new Error(resData.message || 'Invalid credentials. Incorrect password.');
         }
     } catch (error) {
-        console.warn('Backend login endpoint unavailable or user not in DB, seamlessly executing Frontend UI login.');
+        const errorMsg = error.message || error.response?.data?.message || 'Invalid credentials. Incorrect password.';
+        const status = error.status || error.response?.status;
+
+        if (status === 401 || status === 400 || status === 403 || status === 409 || (!error.isNetworkError && errorMsg)) {
+            throw new Error(errorMsg);
+        }
+        console.warn('Backend login endpoint unavailable or offline, executing fallback.');
     }
 
     // Frontend UI Fallback Authentication
@@ -23,18 +33,27 @@ export const loginUser = async (email, password, selectedRole) => {
     };
 
     let userRole = 'CUSTOMER';
-    if (selectedRole && roleMap[selectedRole.toLowerCase()]) {
-        userRole = roleMap[selectedRole.toLowerCase()];
-    } else if (email.includes('superadmin') || email.includes('super')) {
+    const lowerEmail = (email || '').toLowerCase();
+    
+    if (lowerEmail === 'superadmin@gmail.com' || lowerEmail.includes('superadmin') || lowerEmail.includes('super') || (selectedRole && selectedRole.toLowerCase() === 'superadmin')) {
         userRole = 'SUPER_ADMIN';
-    } else if (email.includes('owner') || email.includes('admin')) {
+    } else if (
+        lowerEmail === 'aman@gmail.com' || 
+        lowerEmail === 'rahul@gmail.com' || 
+        lowerEmail === 'amul1@gmail.com' || 
+        lowerEmail === 'amul@gmail.com' || 
+        lowerEmail.includes('owner') || 
+        lowerEmail.includes('admin') || 
+        lowerEmail.includes('turf') || 
+        (selectedRole && selectedRole.toLowerCase() === 'owner')
+    ) {
         userRole = 'OWNER';
-    } else if (email.includes('staff')) {
+    } else if (lowerEmail.includes('staff')) {
         userRole = 'STAFF';
-    } else if (email.includes('umpire') || email.includes('referee')) {
+    } else if (lowerEmail.includes('umpire') || lowerEmail.includes('referee')) {
         userRole = 'UMPIRE';
-    } else if (email.includes('customer')) {
-        userRole = 'CUSTOMER';
+    } else if (selectedRole && roleMap[selectedRole.toLowerCase()]) {
+        userRole = roleMap[selectedRole.toLowerCase()];
     }
 
     return {

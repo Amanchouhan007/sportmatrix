@@ -9,7 +9,7 @@ const verifyToken = (req, res, next) => {
     const token = authHeader && authHeader.split(' ')[1];
 
     if (!token) {
-        req.user = { id: 'usr_superadmin', role: 'SUPER_ADMIN', email: 'admin@sportmatrix.com' };
+        req.user = null;
         return next();
     }
 
@@ -23,13 +23,13 @@ const verifyToken = (req, res, next) => {
             if (decoded && (decoded.id || decoded.email || decoded.role)) {
                 req.user = {
                     ...decoded,
-                    role: decoded.role ? decoded.role.toUpperCase() : 'SUPER_ADMIN'
+                    role: decoded.role ? decoded.role.toUpperCase() : 'OWNER'
                 };
                 return next();
             }
         } catch (e) {}
 
-        req.user = { id: 'usr_superadmin', role: 'SUPER_ADMIN', email: 'admin@sportmatrix.com' };
+        req.user = null;
         return next();
     }
 };

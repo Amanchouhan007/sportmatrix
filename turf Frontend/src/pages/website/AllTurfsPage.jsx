@@ -43,7 +43,13 @@ export default function AllTurfsPage() {
                         sports: Array.isArray(b.sports) ? b.sports : ['Cricket', 'Football'],
                         rating: 4.9,
                         reviews: 120,
-                        price: Number(b.pricePerHour || b.price || 1200),
+                        price: Number(b.price_per_hour || b.pricePerHour || b.price || 1000),
+                        pricePerHour: Number(b.price_per_hour || b.pricePerHour || b.price || 1000),
+                        openingTime: b.opening_time || b.openingTime || '06:00 AM',
+                        closingTime: b.closing_time || b.closingTime || '11:00 PM',
+                        turfSize: b.turf_size || b.turfSize || '5,000 Sq.Ft',
+                        dimensions: b.turf_size || b.turfSize || '5,000 Sq.Ft',
+                        surfaceType: b.surface_type || b.surfaceType || 'TurfPro Synthetic Arena',
                         amenities: Array.isArray(b.amenities) ? b.amenities : ['Floodlights', 'Parking', 'Washroom'],
                         image: `/images/turf${(idx % 6) + 1}.png`
                     }))

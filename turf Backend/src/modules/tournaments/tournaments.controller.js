@@ -56,10 +56,18 @@ const getTournaments = async (req, res) => {
             WHERE 1=1
         `;
         const params = [];
+        const ownerFilter = req.query.ownerId || req.query.owner_id || (req.user?.role === 'OWNER' ? req.user.id : null);
+        const emailFilter = req.query.email || req.user?.email;
 
         if (branchId) {
             query += ` AND t.branch_id = ?`;
             params.push(branchId);
+        } else if (req.user?.role === 'OWNER' || (ownerFilter && ownerFilter !== 'ALL')) {
+            query += ` AND (
+                t.branch_id IN (SELECT id FROM branches WHERE owner_id = ? OR owner_id IN (SELECT id FROM owners WHERE email = ? OR user_id = ? OR id = ?) OR email = ?)
+                OR t.created_by = ? OR t.created_by = ?
+            )`;
+            params.push(ownerFilter || '', emailFilter || '', ownerFilter || '', ownerFilter || '', emailFilter || '', ownerFilter || '', emailFilter || '');
         }
 
         if (status) {

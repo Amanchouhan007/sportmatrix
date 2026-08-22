@@ -75,7 +75,7 @@ class MatchExpiryService {
     }
 
     /**
-     * Expire stale player payment invites past invite_expires_at.
+     * Expire stale player payment invites past expires_at.
      */
     static async expireStalePlayerInvites() {
         try {
@@ -85,8 +85,8 @@ class MatchExpiryService {
             const [result] = await pool.query(
                 `UPDATE match_invites SET status = 'EXPIRED' 
                  WHERE status IN ('SENT', 'VIEWED') 
-                 AND invite_expires_at IS NOT NULL 
-                 AND invite_expires_at <= NOW()`
+                 AND expires_at IS NOT NULL 
+                 AND expires_at <= NOW()`
             );
             return result.affectedRows || 0;
         } catch (error) {

@@ -215,11 +215,10 @@ const getUpcomingBookings = async (req, res) => {
                 params.push(branchId);
             } else if (userId || userEmail) {
                 sql += ` AND (
-                    sl.branch_id IN (SELECT id FROM branches WHERE owner_id = ? OR email = ?)
-                    OR sl.branch_id IN (SELECT b2.id FROM branches b2 JOIN owners o ON o.email = ? WHERE b2.owner_id = o.id)
+                    sl.branch_id IN (SELECT id FROM branches WHERE owner_id = ? OR owner_id IN (SELECT id FROM owners WHERE email = ? OR user_id = ? OR id = ?) OR email = ?)
                     OR b.notes LIKE ?
                 )`;
-                params.push(userId || '', userEmail || '', userEmail || '', `%${userEmail || ''}%`);
+                params.push(userId || '', userEmail || '', userId || '', userId || '', userEmail || '', `%${userEmail || ''}%`);
             }
         }
         // SUPER_ADMIN sees all records
@@ -291,11 +290,10 @@ const getBookingHistory = async (req, res) => {
                 params.push(branchId);
             } else if (userId || userEmail) {
                 sql += ` AND (
-                    sl.branch_id IN (SELECT id FROM branches WHERE owner_id = ? OR email = ?)
-                    OR sl.branch_id IN (SELECT b2.id FROM branches b2 JOIN owners o ON o.email = ? WHERE b2.owner_id = o.id)
+                    sl.branch_id IN (SELECT id FROM branches WHERE owner_id = ? OR owner_id IN (SELECT id FROM owners WHERE email = ? OR user_id = ? OR id = ?) OR email = ?)
                     OR b.notes LIKE ?
                 )`;
-                params.push(userId || '', userEmail || '', userEmail || '', `%${userEmail || ''}%`);
+                params.push(userId || '', userEmail || '', userId || '', userId || '', userEmail || '', `%${userEmail || ''}%`);
             }
         }
         // SUPER_ADMIN sees all records

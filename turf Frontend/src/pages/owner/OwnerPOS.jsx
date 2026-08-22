@@ -7,6 +7,7 @@ import Select from '../../components/ui/Select'
 import CustomDatePicker from '../../components/ui/CustomDatePicker'
 import Badge from '../../components/ui/Badge'
 import { useToast } from '../../components/ui/Toast'
+import { processPayment } from '../../services/paymentLogService'
 import { 
     HiPlus, HiTrash, HiPrinter, HiDownload, HiRefresh, HiUser, 
     HiShoppingCart, HiTag, HiCheckCircle, HiExclamationCircle, 
@@ -436,6 +437,16 @@ export default function OwnerPOS() {
             paymentStatus,
             method: paymentMethod,
             date: new Date().toLocaleString()
+        }
+
+        try {
+            await processPayment({
+                customerName: customerName,
+                amount: grandTotal,
+                paymentMethod: paymentMethod || 'UPI'
+            })
+        } catch (e) {
+            console.warn('POS MySQL sync note:', e.message)
         }
 
         setLastBill(billData)

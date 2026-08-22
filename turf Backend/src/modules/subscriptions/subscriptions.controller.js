@@ -392,7 +392,7 @@ const purchaseSubscription = async (req, res) => {
         }
 
         // 1. Fetch Plan details
-        const [planRows] = await db.query('SELECT * FROM subscription_plans WHERE id = ?', [planId]);
+        const [planRows] = await db.query('SELECT * FROM subscription_plans WHERE id = ? OR LOWER(id) = LOWER(?) OR LOWER(plan_name) = LOWER(?)', [planId, planId, planId]);
         if (planRows.length === 0) {
             return res.status(404).json({
                 success: false,
@@ -400,7 +400,10 @@ const purchaseSubscription = async (req, res) => {
             });
         }
         const plan = planRows[0];
-        const amount = billingCycle === 'YEARLY' ? Number(plan.yearly_price || 0) : Number(plan.monthly_price || 0);
+        const reqAmount = req.body.amount || req.body.price;
+        const amount = reqAmount != null && !isNaN(Number(reqAmount)) 
+            ? Number(reqAmount) 
+            : (billingCycle === 'YEARLY' ? Number(plan.yearly_price || 0) : Number(plan.monthly_price || 0));
 
         const subId = `sub_${Date.now()}`;
         const txId = `TXN_${Date.now()}`;
@@ -473,10 +476,11 @@ const getSubscriptionPurchases = async (req, res) => {
         const [rows] = await db.query(`
             SELECT 
                 os.*,
-                o.full_name as owner_name,
-                o.business_name
+                COALESCE(o.full_name, u.name, 'Turf Owner') as owner_name,
+                COALESCE(o.business_name, 'Turf Network') as business_name
             FROM owner_subscriptions os
-            LEFT JOIN owners o ON os.owner_id = o.id
+            LEFT JOIN owners o ON (os.owner_id = o.id OR os.owner_id = o.user_id)
+            LEFT JOIN users u ON (os.owner_id = u.id)
             ORDER BY os.created_at DESC
         `);
 

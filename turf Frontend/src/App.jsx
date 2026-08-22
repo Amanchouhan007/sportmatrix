@@ -157,6 +157,7 @@ export default function App() {
               {/* Admin Dashboard (/admin) */}
               <Route path="/admin" element={<ProtectedRoute allowedRoles={['OWNER']}><DashboardLayout role="owner" /></ProtectedRoute>}>
                 <Route index element={<OwnerDashboard />} />
+                <Route path="branches" element={<BranchManagement />} />
                 <Route path="crm" element={<TurfLeadCRMPage />} />
                 <Route path="ads" element={<OwnerMyAdvertisements />} />
                 <Route path="ads/all" element={<AllAdvertisements />} />

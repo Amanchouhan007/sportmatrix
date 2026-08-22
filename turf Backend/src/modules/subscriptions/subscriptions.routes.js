@@ -23,6 +23,7 @@ router.get('/', getAllPlans);
 
 // Purchase a subscription plan (Creates owner_subscription purchase record)
 router.post('/buy', purchaseSubscription);
+router.post('/purchase', purchaseSubscription);
 
 // Get all subscription purchases
 router.get('/purchases', getSubscriptionPurchases);

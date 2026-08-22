@@ -107,3 +107,29 @@ export const resolveMatchDispute = async (payload) => {
         return { success: false, message: error.message };
     }
 };
+
+/**
+ * Process POS Payment in Backend MySQL
+ */
+export const processPayment = async (payload) => {
+    try {
+        const response = await api.post('/billing/pay', payload);
+        return response.data || response;
+    } catch (error) {
+        console.warn('Backend POST /billing/pay note:', error.message);
+        return { success: false, message: error.message };
+    }
+};
+
+/**
+ * Create Manual Payment Log in Backend MySQL
+ */
+export const createPaymentLog = async (payload) => {
+    try {
+        const response = await api.post('/billing/create-log', payload);
+        return response.data || response;
+    } catch (error) {
+        console.warn('Backend POST /billing/create-log note:', error.message);
+        return { success: false, message: error.message };
+    }
+};

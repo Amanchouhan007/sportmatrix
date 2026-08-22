@@ -124,7 +124,7 @@ export default function LoginPage() {
 
             const userRole = (userObj?.role || '').toUpperCase();
             const targetRoute = roleRoutes[userRole] || (
-                userRole.includes('OWNER') ? '/admin' :
+                (userRole.includes('OWNER') || userRole.includes('ADMIN')) ? '/admin' :
                     userRole.includes('STAFF') ? '/staff' :
                         userRole.includes('UMPIRE') ? '/umpire' :
                             userRole.includes('CUSTOMER') ? '/customer' : '/super-admin'

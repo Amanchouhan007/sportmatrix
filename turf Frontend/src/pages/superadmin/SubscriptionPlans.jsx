@@ -12,7 +12,8 @@ import {
     updatePlan, 
     deletePlan, 
     toggleStatus, 
-    togglePopular 
+    togglePopular,
+    getSubscriptionPurchases
 } from '../../services/subscriptionPlanService'
 
 export default function SubscriptionPlans() {
@@ -20,7 +21,9 @@ export default function SubscriptionPlans() {
     
     // Loading states
     const [plans, setPlans] = useState([])
+    const [purchases, setPurchases] = useState([])
     const [isLoading, setIsLoading] = useState(false)
+    const [isPurchasesLoading, setIsPurchasesLoading] = useState(false)
     const [isSaving, setIsSaving] = useState(false)
     const [isDeleting, setIsDeleting] = useState(false)
     const [statusUpdatingId, setStatusUpdatingId] = useState(null)
@@ -58,10 +61,25 @@ export default function SubscriptionPlans() {
         features: []
     })
 
-    // Load plans from server on mount
+    // Load plans & purchases from server on mount
     useEffect(() => {
         fetchPlans()
+        fetchPurchases()
     }, [])
+
+    const fetchPurchases = async () => {
+        setIsPurchasesLoading(true)
+        try {
+            const res = await getSubscriptionPurchases()
+            if (res && res.success) {
+                setPurchases(res.data || [])
+            }
+        } catch (e) {
+            console.error('Error loading subscription purchases:', e)
+        } finally {
+            setIsPurchasesLoading(false)
+        }
+    }
 
     const fetchPlans = async () => {
         setIsLoading(true)
@@ -427,6 +445,74 @@ export default function SubscriptionPlans() {
                     ))}
                 </div>
             )}
+
+            {/* Realtime Subscriptions Ledger Section */}
+            <div className="bg-white rounded-[24px] border border-slate-200/80 shadow-md p-6 space-y-5">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-4">
+                    <div>
+                        <h2 className="text-xl font-black text-slate-900 tracking-tight flex items-center gap-2">
+                            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                            Live Subscriptions Ledger
+                        </h2>
+                        <p className="text-xs text-slate-500 font-semibold mt-0.5">Real-time owner plan purchases, active receipts & renewal schedules</p>
+                    </div>
+                    <div className="flex items-center gap-2 text-xs font-bold text-slate-600 bg-slate-100 px-3 py-1.5 rounded-full self-start sm:self-auto">
+                        <span>Total Active Purchases:</span>
+                        <span className="text-emerald-600 font-black">{purchases.length}</span>
+                    </div>
+                </div>
+
+                {isPurchasesLoading ? (
+                    <div className="min-h-[150px] flex items-center justify-center gap-3">
+                        <div className="w-6 h-6 border-3 border-emerald-600 border-t-transparent rounded-full animate-spin"></div>
+                        <span className="text-xs font-bold text-slate-500">Loading live subscription purchases...</span>
+                    </div>
+                ) : purchases.length === 0 ? (
+                    <div className="text-center py-10 bg-slate-50/50 rounded-2xl border border-dashed border-slate-200 text-xs font-semibold text-slate-400">
+                        No subscription plan purchases recorded yet.
+                    </div>
+                ) : (
+                    <div className="overflow-x-auto">
+                        <table className="w-full text-left border-collapse text-xs font-medium">
+                            <thead>
+                                <tr className="bg-slate-50 text-slate-500 font-bold uppercase tracking-wider border-b border-slate-200">
+                                    <th className="py-3 px-4">Subscription Ref</th>
+                                    <th className="py-3 px-4">Owner / Business</th>
+                                    <th className="py-3 px-4">Plan Name</th>
+                                    <th className="py-3 px-4">Amount Paid</th>
+                                    <th className="py-3 px-4">Billing Cycle</th>
+                                    <th className="py-3 px-4">Payment Method</th>
+                                    <th className="py-3 px-4 text-center">Status</th>
+                                    <th className="py-3 px-4 text-right">Purchase Date</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-slate-100 font-bold text-slate-800">
+                                {purchases.map(p => (
+                                    <tr key={p.id} className="hover:bg-slate-50/80 transition-colors">
+                                        <td className="py-3.5 px-4 font-mono text-emerald-600">{p.id}</td>
+                                        <td className="py-3.5 px-4">
+                                            <div className="font-bold text-slate-900">{p.owner_name || 'Turf Owner'}</div>
+                                            <div className="text-[10px] text-slate-400 font-medium">{p.business_name || 'Turf'}</div>
+                                        </td>
+                                        <td className="py-3.5 px-4 font-black text-slate-900">{p.plan_name || 'Membership Plan'}</td>
+                                        <td className="py-3.5 px-4 font-black text-emerald-700">₹{Number(p.amount || 0).toLocaleString('en-IN')}</td>
+                                        <td className="py-3.5 px-4 uppercase text-slate-600">{p.billing_cycle || 'MONTHLY'}</td>
+                                        <td className="py-3.5 px-4 text-slate-700">{p.payment_method || 'UPI'}</td>
+                                        <td className="py-3.5 px-4 text-center">
+                                            <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase bg-emerald-100 text-emerald-800 border border-emerald-300">
+                                                {p.status || 'ACTIVE'}
+                                            </span>
+                                        </td>
+                                        <td className="py-3.5 px-4 text-right text-slate-500 font-mono text-[11px]">
+                                            {p.created_at ? new Date(p.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : '—'}
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                )}
+            </div>
 
             {/* Create/Edit Modal */}
             <Modal

@@ -21,6 +21,7 @@ const getDashboardSummary = async (req, res) => {
             let activeMatches = 0;
             let availableSlots = 0;
             let recentBookings = [];
+            let peakDataToday = [];
 
             if (turfIds.length > 0) {
                 const placeholders = turfIds.map(() => '?').join(',');
@@ -72,10 +73,41 @@ const getDashboardSummary = async (req, res) => {
                     amount: `₹${Number(b.amount || 0).toLocaleString()}`,
                     status: b.status === 'CONFIRMED' || b.status === 'COMPLETED' ? 'Confirmed' : 'Pending'
                 }));
+
+                // Calculate Real Hourly Peak Occupancy for Today from MySQL slots
+                const [hourlyRes] = await db.query(
+                    `SELECT HOUR(start_time) as hour, COUNT(*) as count 
+                     FROM slots 
+                     WHERE status = 'BOOKED' AND slot_date = CURDATE() AND branch_id IN (${placeholders}) 
+                     GROUP BY HOUR(start_time)`,
+                    [...turfIds]
+                );
+                const hourMap = {};
+                hourlyRes.forEach(r => { hourMap[r.hour] = Number(r.count || 0); });
+
+                const defaultHours = [6, 8, 10, 12, 14, 16, 18, 20, 22];
+                peakDataToday = defaultHours.map(h => {
+                    const ampm = h >= 12 ? 'PM' : 'AM';
+                    const displayHour = h % 12 === 0 ? 12 : h % 12;
+                    const count = hourMap[h] || 0;
+                    return {
+                        h: `${displayHour} ${ampm}`,
+                        v: Math.min(count * 20, 100),
+                        count
+                    };
+                });
+            } else {
+                // If owner has 0 turfs, return empty 0-count hours
+                const defaultHours = [6, 8, 10, 12, 14, 16, 18, 20, 22];
+                peakDataToday = defaultHours.map(h => {
+                    const ampm = h >= 12 ? 'PM' : 'AM';
+                    const displayHour = h % 12 === 0 ? 12 : h % 12;
+                    return { h: `${displayHour} ${ampm}`, v: 0, count: 0 };
+                });
             }
 
             const [sportsRes] = await db.query(`SELECT COUNT(*) as count FROM sports`);
-            const sportsCount = Number(sportsRes[0]?.count || 5);
+            const sportsCount = Number(sportsRes[0]?.count || 0);
 
             return res.status(200).json({
                 success: true,
@@ -87,7 +119,8 @@ const getDashboardSummary = async (req, res) => {
                     totalRevenue: totalRev,
                     availableSlots: availableSlots,
                     sportsCount,
-                    recentBookings: recentBookings
+                    recentBookings: recentBookings,
+                    peakData: peakDataToday
                 }
             });
         }
@@ -111,9 +144,15 @@ const getDashboardSummary = async (req, res) => {
         try {
             const [branchPlanRes] = await db.query(`
                 SELECT 
-                    COALESCE(SUM(sp.monthly_price), 0) as total,
+                    COALESCE(SUM(COALESCE(b.subscription_price_snapshot, NULLIF(os.amount, 0), sp.monthly_price, 1000)), 0) as total,
                     COUNT(b.id) as count
                 FROM branches b
+                LEFT JOIN (
+                    SELECT os1.* FROM owner_subscriptions os1
+                    INNER JOIN (
+                        SELECT owner_id, MAX(created_at) as max_created FROM owner_subscriptions GROUP BY owner_id
+                    ) os2 ON os1.owner_id = os2.owner_id AND os1.created_at = os2.max_created
+                ) os ON (b.owner_id = os.owner_id)
                 LEFT JOIN subscription_plans sp ON (b.subscription_plan_id = sp.id OR LOWER(b.subscription_plan_id) = LOWER(sp.plan_name))
                 WHERE b.status = 'ACTIVE'
             `);
@@ -278,16 +317,22 @@ const getTopBranches = async (req, res) => {
                 br.city as City,
                 br.status as status,
                 br.status as Status,
-                COALESCE(sp.plan_name, 'Starter Plan') as planName,
-                COALESCE(sp.monthly_price, 0) as planPrice,
+                COALESCE(os.plan_name, sp.plan_name, 'Starter Plan') as planName,
+                COALESCE(br.subscription_price_snapshot, NULLIF(os.amount, 0), sp.monthly_price, 1000) as planPrice,
                 COUNT(bk.id) as Bookings,
                 COUNT(bk.id) as bookingsCount,
-                (COALESCE(sp.monthly_price, 0) + COALESCE(SUM(bk.amount), 0)) as Revenue,
-                (COALESCE(sp.monthly_price, 0) + COALESCE(SUM(bk.amount), 0)) as totalRevenue
+                (COALESCE(br.subscription_price_snapshot, NULLIF(os.amount, 0), sp.monthly_price, 1000) + COALESCE(SUM(bk.amount), 0)) as Revenue,
+                (COALESCE(br.subscription_price_snapshot, NULLIF(os.amount, 0), sp.monthly_price, 1000) + COALESCE(SUM(bk.amount), 0)) as totalRevenue
             FROM branches br
-            LEFT JOIN subscription_plans sp ON br.subscription_plan_id = sp.id
+            LEFT JOIN (
+                SELECT os1.* FROM owner_subscriptions os1
+                INNER JOIN (
+                    SELECT owner_id, MAX(created_at) as max_created FROM owner_subscriptions GROUP BY owner_id
+                ) os2 ON os1.owner_id = os2.owner_id AND os1.created_at = os2.max_created
+            ) os ON (br.owner_id = os.owner_id)
+            LEFT JOIN subscription_plans sp ON (br.subscription_plan_id = sp.id OR LOWER(br.subscription_plan_id) = LOWER(sp.plan_name))
             LEFT JOIN bookings bk ON bk.branch_id = br.id AND bk.status IN ('CONFIRMED', 'COMPLETED')
-            GROUP BY br.id, br.branch_name, br.city, br.status, sp.plan_name, sp.monthly_price
+            GROUP BY br.id, br.branch_name, br.city, br.status, br.subscription_price_snapshot, os.plan_name, os.amount, sp.plan_name, sp.monthly_price
             ORDER BY totalRevenue DESC, br.created_at DESC
             LIMIT 5
         `);
@@ -318,21 +363,20 @@ const getTopBranches = async (req, res) => {
  */
 const getRecentActivities = async (req, res) => {
     try {
+        const ownerId = req.query.ownerId || req.query.owner_id || (req.user?.role === 'OWNER' ? req.user.id : null);
+        const userEmail = req.query.email || req.user?.email;
+
         const activities = [];
 
-        // 1. Fetch recent branch/turf creations
-        try {
-            const [branchRows] = await db.query(`
-                SELECT 
-                    id,
-                    branch_name,
-                    city,
-                    created_at
-                FROM branches
-                ORDER BY created_at DESC
-                LIMIT 5
-            `);
-            branchRows.forEach(b => {
+        if (ownerId || userEmail) {
+            // 1. Get owner's branch IDs
+            const [ownerBranches] = await db.query(
+                `SELECT id, branch_name, city, created_at FROM branches WHERE owner_id = ? OR owner_id = (SELECT id FROM owners WHERE email = ? OR id = ?) OR email = ?`,
+                [ownerId || '', userEmail || '', ownerId || '', userEmail || '']
+            );
+
+            // Add branch creations for this owner
+            ownerBranches.forEach(b => {
                 activities.push({
                     id: `branch_${b.id}`,
                     activity: 'Turf Created',
@@ -340,35 +384,143 @@ const getRecentActivities = async (req, res) => {
                     timestamp: b.created_at || new Date().toISOString()
                 });
             });
-        } catch (e) {
-            console.warn('Branch activities query note:', e.message);
-        }
 
-        // 2. Fetch recent Admin/Owners registered
-        try {
-            const [ownerRows] = await db.query(`
-                SELECT 
-                    id, 
-                    full_name, 
-                    business_name, 
-                    created_at 
-                FROM owners 
-                ORDER BY created_at DESC 
-                LIMIT 5
-            `);
-            ownerRows.forEach(o => {
-                activities.push({
-                    id: `owner_${o.id}`,
-                    activity: 'Admin Created',
-                    details: `${o.full_name || 'Admin'} registered (${o.business_name || 'Turf Admin'})`,
-                    timestamp: o.created_at || new Date().toISOString()
+            const turfIds = ownerBranches.map(t => t.id);
+
+            if (turfIds.length > 0) {
+                const placeholders = turfIds.map(() => '?').join(',');
+
+                // Fetch recent bookings for owner's turfs
+                try {
+                    const [bookings] = await db.query(
+                        `SELECT id, customer_name, sport_name, court_name, amount, created_at 
+                         FROM bookings 
+                         WHERE branch_id IN (${placeholders}) 
+                         ORDER BY created_at DESC LIMIT 5`,
+                        [...turfIds]
+                    );
+                    bookings.forEach(b => {
+                        activities.push({
+                            id: `booking_${b.id}`,
+                            activity: 'Booking Confirmed',
+                            details: `${b.customer_name || 'Customer'} booked ${b.sport_name || 'Slot'} at ${b.court_name || 'Turf'} (₹${Number(b.amount || 0).toLocaleString()})`,
+                            timestamp: b.created_at || new Date().toISOString()
+                        });
+                    });
+                } catch (e) {}
+
+                // Fetch recent POS orders for owner's turfs
+                try {
+                    const [posOrders] = await db.query(
+                        `SELECT id, invoice_number, customer_name, grand_total, created_at 
+                         FROM pos_orders 
+                         WHERE branch_id IN (${placeholders}) 
+                         ORDER BY created_at DESC LIMIT 5`,
+                        [...turfIds]
+                    );
+                    posOrders.forEach(p => {
+                        activities.push({
+                            id: `pos_${p.id}`,
+                            activity: 'POS Order Created',
+                            details: `Invoice #${p.invoice_number} generated for ${p.customer_name || 'Guest'} (₹${Number(p.grand_total || 0).toLocaleString()})`,
+                            timestamp: p.created_at || new Date().toISOString()
+                        });
+                    });
+                } catch (e) {}
+
+                // Fetch recent tournaments for owner's turfs
+                try {
+                    const [tournaments] = await db.query(
+                        `SELECT id, title, created_at 
+                         FROM tournaments 
+                         WHERE branch_id IN (${placeholders}) 
+                         ORDER BY created_at DESC LIMIT 5`,
+                        [...turfIds]
+                    );
+                    tournaments.forEach(t => {
+                        activities.push({
+                            id: `tournament_${t.id}`,
+                            activity: 'Tournament Published',
+                            details: `${t.title} announced at venue`,
+                            timestamp: t.created_at || new Date().toISOString()
+                        });
+                    });
+                } catch (e) {}
+            }
+        } else {
+            // Global Super Admin Activity Feed
+            // 1. Subscription Purchases & Plan Authorizations
+            try {
+                const [subRows] = await db.query(`
+                    SELECT os.id, os.plan_name, os.amount, os.created_at, COALESCE(o.full_name, 'Admin') as owner_name
+                    FROM owner_subscriptions os
+                    LEFT JOIN owners o ON os.owner_id = o.id
+                    ORDER BY os.created_at DESC LIMIT 5
+                `);
+                subRows.forEach(s => {
+                    activities.push({
+                        id: `sub_${s.id}`,
+                        activity: 'Plan Authorized',
+                        details: `${s.owner_name} subscribed to ${s.plan_name || 'Membership'} (₹${Number(s.amount || 0).toLocaleString('en-IN')})`,
+                        timestamp: s.created_at || new Date().toISOString()
+                    });
                 });
-            });
-        } catch (e) {
-            console.warn('Owner activities query note:', e.message);
+            } catch (e) {}
+
+            // 2. Branch / Turf Creations
+            try {
+                const [branchRows] = await db.query(`
+                    SELECT id, branch_name, city, created_at
+                    FROM branches
+                    ORDER BY created_at DESC LIMIT 5
+                `);
+                branchRows.forEach(b => {
+                    activities.push({
+                        id: `branch_${b.id}`,
+                        activity: 'Turf Created',
+                        details: `${b.branch_name || 'Turf'} venue established in ${b.city || 'India'}`,
+                        timestamp: b.created_at || new Date().toISOString()
+                    });
+                });
+            } catch (e) {}
+
+            // 3. Owner / Admin Registrations
+            try {
+                const [ownerRows] = await db.query(`
+                    SELECT id, full_name, business_name, created_at 
+                    FROM owners 
+                    ORDER BY created_at DESC LIMIT 5
+                `);
+                ownerRows.forEach(o => {
+                    activities.push({
+                        id: `owner_${o.id}`,
+                        activity: 'Admin Created',
+                        details: `${o.full_name || 'Admin'} registered (${o.business_name || 'Turf Admin'})`,
+                        timestamp: o.created_at || new Date().toISOString()
+                    });
+                });
+            } catch (e) {}
+
+            // 4. Customer Bookings
+            try {
+                const [recentBookings] = await db.query(`
+                    SELECT id, customer_name, sport_name, amount, created_at 
+                    FROM bookings 
+                    ORDER BY created_at DESC LIMIT 5
+                `);
+                recentBookings.forEach(b => {
+                    activities.push({
+                        id: `booking_${b.id}`,
+                        activity: 'Booking Created',
+                        details: `${b.customer_name || 'Customer'} reserved ${b.sport_name || 'slot'} (₹${Number(b.amount || 0).toLocaleString('en-IN')})`,
+                        timestamp: b.created_at || new Date().toISOString()
+                    });
+                });
+            } catch (e) {}
         }
 
-        activities.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+        // Sort all activities chronologically (newest first)
+        activities.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
 
         return res.status(200).json({
             success: true,

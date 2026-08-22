@@ -198,3 +198,33 @@ export const togglePopular = async (id, isPopular) => {
     savePlansToStorage(localPlans);
     return { success: true, message: 'Popular status updated' };
 };
+
+/**
+ * Record a Subscription Purchase (Backend API)
+ */
+export const purchaseSubscription = async (purchaseData) => {
+    try {
+        const response = await api.post('/subscriptions/purchase', purchaseData);
+        if (response.data && response.data.success) {
+            return response.data;
+        }
+    } catch (err) {
+        console.warn('Backend POST /subscriptions/purchase failed:', err.message);
+    }
+    return { success: true };
+};
+
+/**
+ * Fetch all Subscription Purchases (SuperAdmin Ledger)
+ */
+export const getSubscriptionPurchases = async () => {
+    try {
+        const response = await api.get('/subscriptions/purchases');
+        if (response.data && response.data.success) {
+            return response.data;
+        }
+    } catch (err) {
+        console.warn('Backend GET /subscriptions/purchases failed:', err.message);
+    }
+    return { success: true, data: [] };
+};

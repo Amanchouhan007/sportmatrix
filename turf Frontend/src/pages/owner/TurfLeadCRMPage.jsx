@@ -33,22 +33,26 @@ export default function TurfLeadCRMPage() {
     const loadLeadsData = async () => {
         try {
             const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5005/api/v1';
-            const res = await fetch(`${API_URL}/crm/leads`)
+            const userStr = localStorage.getItem('user');
+            const user = userStr ? JSON.parse(userStr) : null;
+            const query = user?.email ? `?email=${encodeURIComponent(user.email)}` : '';
+            const res = await fetch(`${API_URL}/crm/leads${query}`)
             const data = await res.json()
             if (data.success && Array.isArray(data.data)) {
                 const mapped = data.data.map(l => ({
                     id: l.id,
-                    name: l.contact_name || l.name || 'Valued Contact',
-                    phone: l.phone || '+91 98765 00000',
+                    name: l.name || l.contact_name || 'Valued Contact',
+                    phone: l.phone || l.mobile || '',
                     email: l.email || '',
-                    role: (l.category || '').toLowerCase().includes('captain') ? 'team' : 'organizer',
-                    teamName: l.team_name || l.category || 'Team',
-                    preferredSport: l.preferred_sport || 'Cricket',
-                    preferredSlot: l.slot_preference || 'Weekend Evening',
-                    turfBranch: 'Spike Cricket Turf',
-                    status: l.status || 'NEW',
+                    role: l.role || (l.category || '').toLowerCase(),
+                    category: l.category || 'PLAYER',
+                    teamName: l.teamName || l.team_name || 'Registered Member',
+                    preferredSport: l.preferredSport || l.preferred_sport || 'Cricket',
+                    preferredSlot: l.preferredSlot || l.slot_preference || 'Flexible',
+                    turfBranch: l.turfBranch || l.branch_name || 'Indore Strikers Arena',
+                    status: l.status || 'Confirmed',
                     notes: l.notes || '',
-                    createdAt: l.created_at ? l.created_at.split('T')[0] : 'Today'
+                    createdAt: l.createdAt ? l.createdAt.split('T')[0] : 'Today'
                 }))
                 setLeads(mapped)
             } else {

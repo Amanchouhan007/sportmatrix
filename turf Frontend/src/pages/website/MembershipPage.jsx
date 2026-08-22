@@ -34,7 +34,7 @@ import {
 } from 'react-icons/hi2'
 import { useToast } from '../../components/ui/Toast'
 import { useAuth } from '../../context/AuthContext'
-import { getAllPlans, defaultFallbackPlans } from '../../services/subscriptionPlanService'
+import { getAllPlans, defaultFallbackPlans, purchaseSubscription } from '../../services/subscriptionPlanService'
 import { createOwner } from '../../services/ownerService'
 
 export default function MembershipPage() {
@@ -73,6 +73,11 @@ export default function MembershipPage() {
         city: '',
         zipCode: '',
         fullAddress: '',
+        openingTime: '06:00 AM',
+        closingTime: '11:00 PM',
+        pricePerHour: 1000,
+        turfSize: '5,000 Sq.Ft',
+        surfaceType: 'TurfPro Synthetic Arena'
     })
 
     // Payment Mode Selection State
@@ -484,6 +489,16 @@ export default function MembershipPage() {
 
             const payload = {
                 ...ownerFormData,
+                branchName: ownerFormData.businessName,
+                newOwnerName: ownerFormData.fullName,
+                newOwnerBusinessName: ownerFormData.businessName,
+                openingTime: ownerFormData.openingTime || '06:00 AM',
+                closingTime: ownerFormData.closingTime || '11:00 PM',
+                pricePerHour: Number(ownerFormData.pricePerHour) || 1000,
+                turfSize: ownerFormData.turfSize || '5,000 Sq.Ft',
+                surfaceType: ownerFormData.surfaceType || 'TurfPro Synthetic Arena',
+                city: ownerFormData.city || 'Indore',
+                fullAddress: ownerFormData.fullAddress || '',
                 confirmPassword: ownerFormData.password,
                 role: 'OWNER',
                 planId: selectedPlanForRegistration?.rawId,
@@ -510,6 +525,23 @@ export default function MembershipPage() {
                 }
 
                 setRegisteredOwnerUser(ownerUser)
+
+                const amountPaid = selectedPlanForRegistration?.numericPrice || 2997;
+
+                // Persist subscription purchase into MySQL owner_subscriptions ledger
+                try {
+                    await purchaseSubscription({
+                        ownerId: ownerUser.id,
+                        planId: selectedPlanForRegistration?.rawId || 'plan_pro',
+                        amount: amountPaid,
+                        billingCycle: (billingCycle || 'monthly').toUpperCase(),
+                        paymentMethod: payModeLabel,
+                        txId: txnId
+                    });
+                } catch (pErr) {
+                    console.warn('Backend subscription purchase record note:', pErr);
+                }
+
                 setSubDetails({
                     subId: subId,
                     txnId: txnId,
@@ -1122,6 +1154,30 @@ Support: support@sportmatrix.com | Helpline: +91 1800-419-TURF
                                                     onChange={e => setOwnerFormData({ ...ownerFormData, businessName: e.target.value })}
                                                     className="w-full bg-[#F7F9FC] border border-[#E5E7EB] rounded-xl px-3.5 py-2 text-xs text-[#111827] placeholder-[#6B7280] focus:outline-none focus:border-[#16A34A] font-bold"
                                                 />
+                                            </div>
+                                            <div>
+                                                <label className="block text-[10px] font-bold text-[#111827] uppercase mb-1">City *</label>
+                                                <input type="text" required placeholder="e.g. Indore, MP" value={ownerFormData.city} onChange={e => setOwnerFormData({ ...ownerFormData, city: e.target.value })} className="w-full bg-[#F7F9FC] border border-[#E5E7EB] rounded-xl px-3.5 py-2 text-xs text-[#111827] font-bold" />
+                                            </div>
+                                            <div>
+                                                <label className="block text-[10px] font-bold text-[#111827] uppercase mb-1">Price Per Hour (₹/hr) *</label>
+                                                <input type="number" required placeholder="e.g. 1000" value={ownerFormData.pricePerHour} onChange={e => setOwnerFormData({ ...ownerFormData, pricePerHour: e.target.value })} className="w-full bg-[#F7F9FC] border border-[#E5E7EB] rounded-xl px-3.5 py-2 text-xs text-[#111827] font-bold" />
+                                            </div>
+                                            <div>
+                                                <label className="block text-[10px] font-bold text-[#111827] uppercase mb-1">Opening Time *</label>
+                                                <input type="text" placeholder="e.g. 06:00 AM" value={ownerFormData.openingTime} onChange={e => setOwnerFormData({ ...ownerFormData, openingTime: e.target.value })} className="w-full bg-[#F7F9FC] border border-[#E5E7EB] rounded-xl px-3.5 py-2 text-xs text-[#111827] font-bold" />
+                                            </div>
+                                            <div>
+                                                <label className="block text-[10px] font-bold text-[#111827] uppercase mb-1">Closing Time *</label>
+                                                <input type="text" placeholder="e.g. 11:00 PM" value={ownerFormData.closingTime} onChange={e => setOwnerFormData({ ...ownerFormData, closingTime: e.target.value })} className="w-full bg-[#F7F9FC] border border-[#E5E7EB] rounded-xl px-3.5 py-2 text-xs text-[#111827] font-bold" />
+                                            </div>
+                                            <div>
+                                                <label className="block text-[10px] font-bold text-[#111827] uppercase mb-1">Turf Size / Dimensions</label>
+                                                <input type="text" placeholder="e.g. 5,000 Sq.Ft or 100 x 50 ft" value={ownerFormData.turfSize} onChange={e => setOwnerFormData({ ...ownerFormData, turfSize: e.target.value })} className="w-full bg-[#F7F9FC] border border-[#E5E7EB] rounded-xl px-3.5 py-2 text-xs text-[#111827] font-bold" />
+                                            </div>
+                                            <div>
+                                                <label className="block text-[10px] font-bold text-[#111827] uppercase mb-1">Surface Type</label>
+                                                <input type="text" placeholder="e.g. TurfPro Synthetic Arena" value={ownerFormData.surfaceType} onChange={e => setOwnerFormData({ ...ownerFormData, surfaceType: e.target.value })} className="w-full bg-[#F7F9FC] border border-[#E5E7EB] rounded-xl px-3.5 py-2 text-xs text-[#111827] font-bold" />
                                             </div>
                                             <div>
                                                 <label className="block text-[10px] font-bold text-[#111827] uppercase mb-1">Business Type</label>
