@@ -1,10 +1,11 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useMemo } from 'react'
 import Modal from '../ui/Modal'
 import Input from '../ui/Input'
 import Select from '../ui/Select'
 import Button from '../ui/Button'
 import { useToast } from '../ui/Toast'
 import { submitCorporateProposal } from '../../services/corporateService'
+import { getBranches } from '../../services/branchService'
 import { HiOfficeBuilding, HiPhone, HiMail, HiUser, HiCalendar, HiCurrencyRupee, HiCheckCircle, HiSearch, HiChevronDown, HiCheck, HiLocationMarker } from 'react-icons/hi'
 
 const EVENT_CONFIG = {
@@ -136,6 +137,38 @@ export default function CorporateBookingModal({ isOpen, onClose, preselectedTurf
     const [userCoords, setUserCoords] = useState(null)
     const [isLocating, setIsLocating] = useState(false)
     const [userLocationLabel, setUserLocationLabel] = useState('')
+    const [realTurfs, setRealTurfs] = useState([])
+
+    // Fetch real DB turfs on open
+    useEffect(() => {
+        if (isOpen) {
+            getBranches()
+                .then(res => {
+                    const list = res?.data?.branches || res?.branches || (Array.isArray(res) ? res : [])
+                    if (Array.isArray(list) && list.length > 0) {
+                        const formatted = list.map(b => ({
+                            id: b.id,
+                            name: b.branchName || b.name || 'Turf Arena',
+                            location: b.addressLine1 || b.location || b.city || 'Indore',
+                            city: b.city || 'Indore',
+                            tag: 'Box Cricket & Pro Turf Arena',
+                            rating: '4.8 ★',
+                            lat: Number(b.latitude) || 22.7196,
+                            lng: Number(b.longitude) || 75.8577
+                        }))
+                        setRealTurfs(formatted)
+                    }
+                })
+                .catch(() => {})
+        }
+    }, [isOpen])
+
+    const displayTurfs = useMemo(() => {
+        if (realTurfs.length > 0) {
+            return realTurfs.filter(t => t.name && t.name.trim().length > 1)
+        }
+        return DETAILED_TURFS
+    }, [realTurfs])
 
     // Live Geolocation Detection
     const detectUserLocation = (notify = false) => {
@@ -253,6 +286,9 @@ export default function CorporateBookingModal({ isOpen, onClose, preselectedTurf
             const res = await submitCorporateProposal(finalPayload)
             setSubmittedId(res.data.id)
             setSubmitted(true)
+            if (typeof window !== 'undefined') {
+                window.dispatchEvent(new CustomEvent('corporate_proposal_created', { detail: res?.data || res }))
+            }
             if (addToast) addToast({ message: 'Corporate Inquiry submitted! Stored in database successfully.', type: 'success' })
         } catch (err) {
             console.error('Corporate proposal error:', err)
@@ -290,7 +326,7 @@ export default function CorporateBookingModal({ isOpen, onClose, preselectedTurf
     }
 
     return (
-        <Modal isOpen={isOpen} onClose={resetAndClose} title="🏢 Corporate & Bulk Turf Booking Proposal">
+        <Modal isOpen={isOpen} onClose={resetAndClose} title="🏢 Corporate & Bulk Turf Booking Proposal" size="enterprise">
             {submitted ? (
                 <div className="text-center py-6 space-y-4">
                     <div className="w-16 h-16 bg-emerald-100 border-4 border-emerald-300 rounded-full flex items-center justify-center mx-auto text-emerald-600 text-3xl animate-bounce">
@@ -452,234 +488,45 @@ export default function CorporateBookingModal({ isOpen, onClose, preselectedTurf
                             </Select>
                         </div>
 
-                        {/* Custom Searchable List Dropdown for Turf Selection */}
-                        <div className="relative" ref={turfDropdownRef}>
-                            <label className="font-bold text-slate-700 block mb-1 flex items-center justify-between">
-                                <span>🏟️ Preferred Turf Arena / Ground</span>
-                                <span className="text-[10px] text-emerald-600 font-bold bg-emerald-50 px-1.5 py-0.2 rounded border border-emerald-200">Interactive List</span>
-                            </label>
-
-                            {/* Trigger Button */}
-                            <button
-                                type="button"
-                                onClick={() => setIsTurfDropdownOpen(prev => !prev)}
-                                className="w-full h-[38px] px-3 bg-white hover:bg-slate-50/80 border border-slate-300 hover:border-emerald-500 rounded-xl flex items-center justify-between text-left transition-all shadow-xs cursor-pointer focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                        {/* Preferred Turf Arena / Ground Dropdown */}
+                        <div>
+                            <label className="font-bold text-slate-700 block mb-1">🏟️ Preferred Turf Arena / Ground</label>
+                            <Select
+                                value={isCustomTurf ? 'CUSTOM' : (form.preferredTurf || '')}
+                                onChange={(e) => {
+                                    const val = e.target.value
+                                    if (val === 'CUSTOM') {
+                                        setIsCustomTurf(true)
+                                        setForm({ ...form, preferredTurf: customTurfName || 'Custom Arena' })
+                                    } else {
+                                        setIsCustomTurf(false)
+                                        setCustomTurfName('')
+                                        setForm({ ...form, preferredTurf: val })
+                                    }
+                                }}
                             >
-                                <div className="flex items-center gap-2 min-w-0 pr-1">
-                                    <span className="text-sm shrink-0">🏟️</span>
-                                    <span className="font-bold text-xs text-slate-800 truncate block">
-                                        {isCustomTurf ? (customTurfName ? `✏️ ${customTurfName}` : '✏️ Custom Ground / Enter Name') : (form.preferredTurf || 'Select Preferred Arena')}
-                                    </span>
-                                </div>
-                                <HiChevronDown className={`w-4 h-4 text-slate-400 shrink-0 transition-transform duration-200 ${isTurfDropdownOpen ? 'rotate-180 text-emerald-600' : ''}`} />
-                            </button>
+                                <option value="🏟️ Any Top Recommended Arena (Platform Best Match)">⭐ Any Top Recommended Arena (Platform Best Match)</option>
+                                {displayTurfs.map(turf => {
+                                    const label = `${turf.name} (${turf.location || turf.city || 'Indore'})`
+                                    return (
+                                        <option key={turf.id} value={label}>
+                                            🏟️ {label}
+                                        </option>
+                                    )
+                                })}
+                                <option value="CUSTOM">✏️ Other / Enter Custom Ground Name...</option>
+                            </Select>
 
-                            {/* Custom List Dropdown Popover */}
-                            {isTurfDropdownOpen && (
-                                <div className="absolute left-0 right-0 top-full mt-1 bg-white border-2 border-emerald-500 rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.2)] z-50 p-2 max-h-72 overflow-y-auto space-y-1 animate-in fade-in zoom-in-95 duration-150">
-                                    {/* Sticky Search Filter */}
-                                    <div className="sticky top-0 bg-white pb-1.5 z-10">
-                                        <div className="relative">
-                                            <HiSearch className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
-                                            <input
-                                                type="text"
-                                                placeholder="Search arena, area, landmark..."
-                                                value={turfSearchTerm}
-                                                onChange={(e) => setTurfSearchTerm(e.target.value)}
-                                                onClick={(e) => e.stopPropagation()}
-                                                className="w-full pl-8 pr-2.5 py-1.5 text-xs font-semibold bg-slate-50 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:bg-white text-slate-800"
-                                                autoFocus
-                                            />
-                                        </div>
-                                    </div>
-
-                                    {/* Recommended Top Choice Option */}
-                                    <button
-                                        type="button"
-                                        onClick={() => {
-                                            setIsCustomTurf(false)
-                                            setForm({ ...form, preferredTurf: `🏟️ Any Top Recommended Arena (${form.city === 'ALL' ? 'Best Match' : form.city})` })
-                                            setIsTurfDropdownOpen(false)
-                                            setTurfSearchTerm('')
-                                        }}
-                                        className={`w-full p-2 rounded-xl text-left transition-all flex items-center justify-between cursor-pointer border ${
-                                            !isCustomTurf && form.preferredTurf?.includes('Any Top Recommended')
-                                                ? 'bg-emerald-50 border-emerald-400 text-emerald-950 font-black'
-                                                : 'bg-amber-50/50 hover:bg-amber-100/70 border-amber-200 text-amber-950'
-                                        }`}
-                                    >
-                                        <div className="flex items-center gap-2">
-                                            <span className="text-base">⭐</span>
-                                            <div>
-                                                <div className="text-xs font-black">Any Top Recommended Arena (Platform Best Match)</div>
-                                                <div className="text-[10px] text-amber-700 font-semibold">SportMatrix will match highest-rated turf in your area</div>
-                                            </div>
-                                        </div>
-                                        {!isCustomTurf && form.preferredTurf?.includes('Any Top Recommended') && (
-                                            <HiCheck className="w-4 h-4 text-emerald-600 shrink-0" />
-                                        )}
-                                    </button>
-
-                                    {/* Nearest Location Header & GPS Action */}
-                                    <div className="flex items-center justify-between px-2.5 py-1.5 bg-emerald-50/90 rounded-xl border border-emerald-200 text-[11px] mb-1">
-                                        <div className="flex items-center gap-1.5 text-emerald-950 font-bold min-w-0 pr-1">
-                                            <HiLocationMarker className="w-3.5 h-3.5 text-emerald-600 shrink-0 animate-bounce" />
-                                            <span className="truncate">
-                                                Sorted by Nearest: <strong className="text-emerald-700">{userLocationLabel || form.city}</strong>
-                                            </span>
-                                        </div>
-                                        <button
-                                            type="button"
-                                            onClick={() => detectUserLocation(true)}
-                                            disabled={isLocating}
-                                            className="text-[10px] font-black text-emerald-800 bg-white hover:bg-emerald-100 px-2 py-0.5 rounded-lg border border-emerald-300 shadow-xs cursor-pointer shrink-0 transition-colors"
-                                        >
-                                            {isLocating ? 'Locating...' : '📍 Refresh GPS'}
-                                        </button>
-                                    </div>
-
-                                    {/* Filtered Turfs in Clean List Form (Sorted by Nearest First) */}
-                                    <div className="space-y-1 pt-1">
-                                        {(() => {
-                                            const activeCityCoords = userCoords || CITY_COORDINATES[form.city] || CITY_COORDINATES['Indore']
-                                            
-                                            let availableTurfs = form.city === 'ALL'
-                                                ? DETAILED_TURFS
-                                                : DETAILED_TURFS.filter(t => t.city.toLowerCase() === form.city.toLowerCase())
-
-                                            // Calculate live distance in km
-                                            availableTurfs = availableTurfs.map(turf => {
-                                                const dist = activeCityCoords ? calculateDistanceKm(activeCityCoords.lat, activeCityCoords.lng, turf.lat, turf.lng) : null
-                                                return { ...turf, distance: dist }
-                                            })
-
-                                            // Sort nearest first (ascending distance)
-                                            availableTurfs.sort((a, b) => {
-                                                if (a.distance == null) return 1
-                                                if (b.distance == null) return -1
-                                                return a.distance - b.distance
-                                            })
-
-                                            const filteredTurfs = availableTurfs.filter(t =>
-                                                t.name.toLowerCase().includes(turfSearchTerm.toLowerCase()) ||
-                                                t.location.toLowerCase().includes(turfSearchTerm.toLowerCase()) ||
-                                                t.city.toLowerCase().includes(turfSearchTerm.toLowerCase()) ||
-                                                (t.tag && t.tag.toLowerCase().includes(turfSearchTerm.toLowerCase()))
-                                            )
-
-                                            if (filteredTurfs.length === 0) {
-                                                return (
-                                                    <div className="py-3 text-center text-xs text-slate-400">
-                                                        No turfs found for "{turfSearchTerm}". Use custom option below!
-                                                    </div>
-                                                )
-                                            }
-
-                                            return filteredTurfs.map((turf, idx) => {
-                                                const fullLabel = `${turf.name} (${turf.location})`
-                                                const isSelected = !isCustomTurf && form.preferredTurf === fullLabel
-                                                const isNearest = idx === 0 && turf.distance != null
-
-                                                return (
-                                                    <button
-                                                        key={turf.id}
-                                                        type="button"
-                                                        onClick={() => {
-                                                            setIsCustomTurf(false)
-                                                            setForm({ ...form, preferredTurf: fullLabel })
-                                                            setIsTurfDropdownOpen(false)
-                                                            setTurfSearchTerm('')
-                                                        }}
-                                                        className={`w-full p-2.5 rounded-xl text-left transition-all flex items-center justify-between cursor-pointer border ${
-                                                            isSelected
-                                                                ? 'bg-emerald-50 border-emerald-400 shadow-xs ring-1 ring-emerald-300'
-                                                                : isNearest
-                                                                    ? 'bg-emerald-50/40 hover:bg-emerald-50 border-emerald-200 hover:border-emerald-300'
-                                                                    : 'bg-white hover:bg-slate-50 border-slate-100 hover:border-slate-300'
-                                                        }`}
-                                                    >
-                                                        <div className="flex items-start gap-2.5 min-w-0 pr-1">
-                                                            <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 mt-0.5 text-xs ${
-                                                                isSelected ? 'bg-emerald-500 text-white font-bold' : isNearest ? 'bg-emerald-100 text-emerald-800 font-bold' : 'bg-slate-100 text-slate-600'
-                                                            }`}>
-                                                                {isNearest ? '🏆' : '🏟️'}
-                                                            </div>
-                                                            <div className="min-w-0">
-                                                                <div className="flex items-center gap-1.5 flex-wrap">
-                                                                    <span className={`text-xs font-black ${isSelected ? 'text-emerald-950' : 'text-slate-900'}`}>
-                                                                        {turf.name}
-                                                                    </span>
-                                                                    {isNearest ? (
-                                                                        <span className="px-1.5 py-0.2 rounded-full bg-emerald-600 text-white font-black text-[9px] shadow-xs animate-pulse">
-                                                                            🟢 NEAREST ({turf.distance} km)
-                                                                        </span>
-                                                                    ) : turf.distance != null ? (
-                                                                        <span className="px-1.5 py-0.2 rounded bg-slate-100 text-slate-700 font-bold text-[9px] border border-slate-200">
-                                                                            📍 {turf.distance} km
-                                                                        </span>
-                                                                    ) : null}
-                                                                    <span className="px-1 py-0.2 rounded bg-amber-50 text-amber-700 font-bold text-[9px] border border-amber-200">
-                                                                        {turf.rating}
-                                                                    </span>
-                                                                </div>
-                                                                <div className="flex items-center gap-1 text-[10px] text-slate-500 font-medium mt-0.5">
-                                                                    <HiLocationMarker className="w-2.5 h-2.5 text-slate-400 shrink-0" />
-                                                                    <span>{turf.location}</span>
-                                                                    {turf.tag && (
-                                                                        <>
-                                                                            <span>•</span>
-                                                                            <span className="text-emerald-700 font-semibold">{turf.tag}</span>
-                                                                        </>
-                                                                    )}
-                                                                </div>
-                                                            </div>
-                                                        </div>
-                                                        {isSelected && (
-                                                            <div className="w-4 h-4 rounded-full bg-emerald-500 text-white flex items-center justify-center shrink-0">
-                                                                <HiCheck className="w-3 h-3" />
-                                                            </div>
-                                                        )}
-                                                    </button>
-                                                )
-                                            })
-                                        })()}
-                                    </div>
-
-                                    {/* Option: Other / Custom Ground */}
-                                    <button
-                                        type="button"
-                                        onClick={() => {
-                                            setIsCustomTurf(true)
-                                            setIsTurfDropdownOpen(false)
-                                            setTurfSearchTerm('')
-                                        }}
-                                        className={`w-full p-2 rounded-xl text-left transition-all flex items-center justify-between cursor-pointer border ${
-                                            isCustomTurf
-                                                ? 'bg-purple-50 border-purple-400 text-purple-950 font-black'
-                                                : 'bg-slate-50 hover:bg-slate-100 border-slate-200 text-slate-800'
-                                        }`}
-                                    >
-                                        <div className="flex items-center gap-2">
-                                            <span className="text-sm">✏️</span>
-                                            <div>
-                                                <div className="text-xs font-bold">Other / Enter Custom Ground Name</div>
-                                                <div className="text-[10px] text-slate-500">Specify any private arena or ground manually</div>
-                                            </div>
-                                        </div>
-                                        {isCustomTurf && (
-                                            <HiCheck className="w-4 h-4 text-purple-600 shrink-0" />
-                                        )}
-                                    </button>
-                                </div>
-                            )}
-
-                            {/* Custom Turf Input Field */}
+                            {/* Manual Custom Input Field */}
                             {isCustomTurf && (
-                                <div className="mt-2 animate-in fade-in slide-in-from-top-1 duration-200">
+                                <div className="mt-2">
                                     <Input
                                         placeholder="Enter Ground Name & Landmark (e.g. VIP Club Arena, Vijay Nagar)"
                                         value={customTurfName}
-                                        onChange={(e) => setCustomTurfName(e.target.value)}
+                                        onChange={(e) => {
+                                            setCustomTurfName(e.target.value)
+                                            setForm({ ...form, preferredTurf: e.target.value })
+                                        }}
                                         autoFocus
                                         required
                                     />
