@@ -1,33 +1,46 @@
 /**
  * MatchPricingService
- * Server-side authoritative calculation for venue prices, duration multipliers,
- * convenience fees, tax adjustments, split ratio validation, and owner commission snapshots.
+ * Server-side authoritative calculation for match rent, per-mode share split,
+ * and platform commission snapshot. Base price always comes from the real,
+ * already-resolved Slot (or its BranchSport configuration) -- never a
+ * hardcoded fallback figure.
  */
-
-const pool = require('../config/db');
+const prisma = require('../config/prisma');
 
 class MatchPricingService {
     /**
-     * Calculates authoritative pricing and financial snapshot for a match booking.
+     * @param baseHourlyPrice real regular/peak price resolved from the Slot being booked
+     * @param durationHours number of hours the match runs
+     * @param paymentMode one of FULL_PAY | SPLIT_50_50 | PER_PLAYER | DARE_TO_PLAY
+     * @param totalPayingPlayers used to compute PER_PLAYER share
      */
-    static async calculateMatchPricing({ turfId, durationHours = 1, paymentMode, captainShareInput, totalPayingPlayers = 12, ownerPlanId = 'plan_starter' }) {
-        let baseHourlyPrice = 1200;
+    static async calculateMatchPricing({ baseHourlyPrice, durationHours = 1, paymentMode, totalPayingPlayers = 12, promoCode = null, branchId = null }) {
+        const rawRent = Math.round(baseHourlyPrice * durationHours);
+        let discountAmount = 0;
 
-        try {
-            const [rows] = await pool.query('SELECT price, regular_price, name, location FROM turfs WHERE id = ?', [turfId]);
-            if (rows && rows.length > 0) {
-                baseHourlyPrice = rows[0].price || rows[0].regular_price || 1200;
+        if (promoCode && branchId) {
+            const offer = await prisma.discountOffer.findFirst({
+                where: {
+                    promoCode: String(promoCode).trim().toUpperCase(),
+                    branchId,
+                    status: 'ACTIVE',
+                    deletedAt: null
+                }
+            });
+            if (offer) {
+                const val = Number(offer.discountValue);
+                if (offer.discountType === 'PERCENTAGE') {
+                    discountAmount = Math.round((rawRent * val) / 100);
+                    if (offer.maximumDiscountAmount && Number(offer.maximumDiscountAmount) > 0) {
+                        discountAmount = Math.min(discountAmount, Number(offer.maximumDiscountAmount));
+                    }
+                } else if (offer.discountType === 'FLAT_AMOUNT') {
+                    discountAmount = Math.min(val, rawRent);
+                }
             }
-        } catch (err) {
-            console.warn('[MatchPricingService] Using fallback base price for turf:', turfId);
         }
 
-        const totalRent = baseHourlyPrice * durationHours;
-        const convenienceFeePerPlayer = 30;
-        const estimatedPlayers = totalPayingPlayers > 0 ? totalPayingPlayers : 12;
-        const totalConvenienceFee = convenienceFeePerPlayer * (paymentMode === 'PER_PLAYER' ? estimatedPlayers : 2);
-        const taxAmount = Math.round(totalRent * 0.05); // 5% GST
-        const totalBookingAmount = totalRent + totalConvenienceFee + taxAmount;
+        const totalRent = Math.max(0, rawRent - discountAmount);
 
         let teamAShare = totalRent;
         let teamBShare = 0;
@@ -39,47 +52,28 @@ class MatchPricingService {
                 teamAShare = totalRent;
                 teamBShare = 0;
                 break;
-
             case 'SPLIT_50_50':
                 teamAShare = Math.round(totalRent / 2);
                 teamBShare = totalRent - teamAShare;
                 break;
-
-            case 'CUSTOM_SPLIT':
-                if (!captainShareInput || captainShareInput <= 0 || captainShareInput >= totalRent) {
-                    teamAShare = Math.round(totalRent * 0.6); // Default 60%
-                } else {
-                    teamAShare = Math.round(captainShareInput);
-                }
-                teamBShare = totalRent - teamAShare;
-                if (teamAShare <= 0 || teamBShare <= 0 || (teamAShare + teamBShare !== totalRent)) {
-                    throw new Error('Invalid custom split amounts. Shares must be > 0 and sum to total rent.');
-                }
-                break;
-
             case 'DARE_TO_PLAY':
-                depositAmount = 100; // Refundable deposit
+                depositAmount = 100;
                 teamAShare = depositAmount;
                 teamBShare = depositAmount;
                 break;
-
-            case 'PER_PLAYER':
+            case 'PER_PLAYER': {
+                const estimatedPlayers = totalPayingPlayers > 0 ? totalPayingPlayers : 12;
                 perPlayerAmount = Math.round(totalRent / estimatedPlayers);
                 teamAShare = perPlayerAmount;
                 teamBShare = perPlayerAmount;
                 break;
-
+            }
             default:
                 teamAShare = totalRent;
                 teamBShare = 0;
         }
 
-        // Commission Snapshot based on Owner Plan
-        let commissionRate = 10.00; // Starter plan 10%
-        if (ownerPlanId === 'plan_growth') commissionRate = 8.00;
-        if (ownerPlanId === 'plan_pro') commissionRate = 6.00;
-        if (ownerPlanId === 'plan_elite') commissionRate = 5.00;
-
+        const commissionRate = await this.getPlatformCommissionRate();
         const platformCommissionAmount = Math.round((totalRent * commissionRate) / 100);
         const ownerNetAmount = totalRent - platformCommissionAmount;
 
@@ -87,9 +81,6 @@ class MatchPricingService {
             baseHourlyPrice,
             durationHours,
             totalRent,
-            convenienceFee: totalConvenienceFee,
-            taxAmount,
-            totalBookingAmount,
             teamAShare,
             teamBShare,
             perPlayerAmount,
@@ -97,14 +88,10 @@ class MatchPricingService {
             commissionRateSnapshot: commissionRate,
             commissionAmountSnapshot: platformCommissionAmount,
             ownerNetAmountSnapshot: ownerNetAmount,
-            planIdSnapshot: ownerPlanId,
             financialSnapshot: {
                 basePrice: baseHourlyPrice,
                 duration: durationHours,
                 subtotal: totalRent,
-                convenienceFee: totalConvenienceFee,
-                tax: taxAmount,
-                totalCustomerPayable: totalBookingAmount,
                 teamAShare,
                 teamBShare,
                 perPlayerAmount,
@@ -114,6 +101,12 @@ class MatchPricingService {
                 ownerNet: ownerNetAmount
             }
         };
+    }
+
+    /** Real global commission rate from SystemSetting -- falls back to a documented platform default only if an admin has never configured one. */
+    static async getPlatformCommissionRate() {
+        const settings = await prisma.systemSetting.findUnique({ where: { id: 'global_commission' } });
+        return settings ? Number(settings.defaultRate) : 5.0;
     }
 }
 

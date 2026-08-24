@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { HiUserGroup, HiPlus, HiSearch, HiFilter, HiPaperAirplane, HiDownload, HiTrash, HiPencilAlt, HiSparkles, HiPhone, HiTag, HiOutlineRefresh, HiCheck } from 'react-icons/hi'
-import { getCrmLeads, saveCrmLead, deleteCrmLead, AVAILABLE_TURF_BRANCHES } from '../../services/crmService'
+import { getCrmLeads, saveCrmLead, deleteCrmLead, fetchCrmLeadsAsync, AVAILABLE_TURF_BRANCHES } from '../../services/crmService'
 import { getCorporateProposals } from '../../services/corporateService'
 import OfferBroadcastModal from '../../components/crm/OfferBroadcastModal'
 import { useToast } from '../../components/ui/Toast'
@@ -32,12 +32,7 @@ export default function TurfLeadCRMPage() {
 
     const loadLeadsData = async () => {
         try {
-            const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5005/api/v1';
-            const userStr = localStorage.getItem('sportmatrix_user') || localStorage.getItem('user');
-            const user = userStr ? JSON.parse(userStr) : null;
-            const query = user?.email ? `?email=${encodeURIComponent(user.email)}` : '';
-            const res = await fetch(`${API_URL}/crm/leads${query}`)
-            const data = await res.json()
+            const data = await fetchCrmLeadsAsync()
             if (data.success && Array.isArray(data.data)) {
                 const mapped = data.data.map(l => ({
                     id: l.id,

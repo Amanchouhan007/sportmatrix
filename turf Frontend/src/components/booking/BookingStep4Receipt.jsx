@@ -119,8 +119,8 @@ export default function BookingStep4Receipt({
 
                     <div class="total">
                         <div>
-                            <div style="font-size: 9px; text-transform: uppercase; color: #9ca3af;">Total Amount Paid (Zero GST Tax)</div>
-                            <div style="font-size: 11px; color: #10b981; font-weight: bold;">Verified Electronic Payment Completed</div>
+                            <div style="font-size: 9px; text-transform: uppercase; color: #9ca3af;">${bookingResult?.paymentStatus === 'PENDING' ? 'Amount Due (Zero GST Tax)' : 'Total Amount Paid (Zero GST Tax)'}</div>
+                            <div style="font-size: 11px; color: ${bookingResult?.paymentStatus === 'PENDING' ? '#d97706' : '#10b981'}; font-weight: bold;">${bookingResult?.paymentStatus === 'PENDING' ? 'Pending Venue & Platform Confirmation' : 'Verified Electronic Payment Completed'}</div>
                         </div>
                         <div class="total-val">${paidAmount}</div>
                     </div>
@@ -194,8 +194,8 @@ export default function BookingStep4Receipt({
                     <span className="font-black text-[#10B981] font-mono">{paymentMode.replace(/_/g, ' ')}</span>
                 </div>
                 <div className="flex justify-between border-t border-slate-200 pt-2 text-sm">
-                    <span className="font-black text-[#111827]">Amount Paid:</span>
-                    <span className="font-black text-[#10B981] font-mono text-base">₹{myPaymentAmount.toLocaleString('en-IN')}</span>
+                    <span className="font-black text-[#111827]">{bookingResult?.paymentStatus === 'PENDING' ? 'Amount Due:' : 'Amount Paid:'}</span>
+                    <span className={`font-black font-mono text-base ${bookingResult?.paymentStatus === 'PENDING' ? 'text-amber-600' : 'text-[#10B981]'}`}>₹{myPaymentAmount.toLocaleString('en-IN')}</span>
                 </div>
             </div>
 
@@ -284,42 +284,56 @@ export default function BookingStep4Receipt({
                 )}
             </div>
 
-            {/* GUEST AUTO-ACCOUNT CREATION OFFER CARD (Visible when guest completes booking) */}
+            {/* GUEST ACCOUNT CREATION OFFER CARD (Visible when guest completes booking) --
+                links to real registration; no fabricated session/token is ever created here. */}
             {!user && (
                 <div className="bg-gradient-to-r from-emerald-500 to-green-600 rounded-2xl p-5 text-white text-left max-w-lg mx-auto shadow-lg space-y-3">
                     <div className="flex items-center gap-2">
                         <span className="text-2xl">🎁</span>
                         <div>
-                            <h4 className="font-black text-sm uppercase tracking-tight">Claim ₹100 Cashback Credits!</h4>
-                            <p className="text-[11px] text-emerald-100">Set a password to create your account & track bookings automatically.</p>
+                            <h4 className="font-black text-sm uppercase tracking-tight">Create Your Account</h4>
+                            <p className="text-[11px] text-emerald-100">Sign up to track this booking, get match updates, and manage future bookings.</p>
                         </div>
                     </div>
-                    <div className="flex gap-2">
-                        <input
-                            type="password"
-                            placeholder="Create account password"
-                            className="bg-white text-slate-900 px-3 py-2 rounded-xl text-xs flex-1 border-0 outline-none font-bold"
-                            defaultValue="123456"
-                        />
-                        <button
-                            type="button"
-                            onClick={() => {
-                                const guestUser = {
-                                    id: `usr_guest_${Date.now()}`,
-                                    name: 'Guest Player',
-                                    email: 'guest@sportmatrix.com',
-                                    role: 'CUSTOMER',
-                                    walletBalance: 100
-                                }
-                                localStorage.setItem('token', 'guest_demo_token')
-                                localStorage.setItem('user', JSON.stringify(guestUser))
-                                window.location.href = '/customer'
-                            }}
-                            className="bg-[#C8FF2E] hover:bg-[#b8f51a] text-[#111827] font-black text-xs uppercase px-4 py-2 rounded-xl shrink-0 transition-transform hover:scale-105 cursor-pointer shadow-md"
-                        >
-                            Claim ₹100 & Save
-                        </button>
+                    <button
+                        type="button"
+                        onClick={() => navigate('/register')}
+                        className="w-full bg-[#C8FF2E] hover:bg-[#b8f51a] text-[#111827] font-black text-xs uppercase px-4 py-2.5 rounded-xl transition-transform hover:scale-[1.01] cursor-pointer shadow-md"
+                    >
+                        Create Account →
+                    </button>
+                </div>
+            )}
+
+            {/* Owner Payout Destination -- no live payment gateway yet, so the customer
+                pays the venue's own UPI/bank/QR account directly; payment stays pending
+                until the venue and platform both confirm their settlement legs. */}
+            {bookingResult?.paymentStatus === 'PENDING' && (
+                <div className="bg-amber-50 border-2 border-amber-300 rounded-2xl p-5 max-w-lg mx-auto text-left space-y-3">
+                    <div className="flex items-center gap-2">
+                        <span className="text-xl">⏳</span>
+                        <h4 className="text-xs font-black text-amber-950 uppercase tracking-tight">Payment Pending Confirmation</h4>
                     </div>
+                    {bookingResult.payoutDestination?.configured ? (
+                        <div className="bg-white rounded-xl border border-amber-200 p-3 text-xs space-y-1.5">
+                            <p className="text-slate-600 font-semibold">Pay ₹{myPaymentAmount?.toLocaleString('en-IN')} directly to the venue:</p>
+                            {bookingResult.payoutDestination.accountType === 'UPI' && (
+                                <p className="font-black text-slate-900 font-mono text-sm">{bookingResult.payoutDestination.upiId}</p>
+                            )}
+                            {bookingResult.payoutDestination.accountType === 'BANK_ACCOUNT' && (
+                                <div className="font-bold text-slate-800">
+                                    <p>{bookingResult.payoutDestination.bankAccountHolder}</p>
+                                    <p className="font-mono">{bookingResult.payoutDestination.bankAccountNumber} · {bookingResult.payoutDestination.bankIfsc}</p>
+                                </div>
+                            )}
+                            {bookingResult.payoutDestination.accountType === 'QR_CODE' && bookingResult.payoutDestination.qrCodeImageUrl && (
+                                <img src={bookingResult.payoutDestination.qrCodeImageUrl} alt="Venue payment QR code" className="w-32 h-32 object-contain border border-slate-200 rounded-lg" />
+                            )}
+                        </div>
+                    ) : (
+                        <p className="text-[11px] text-amber-900 font-medium">{bookingResult.payoutDestination?.message || 'This venue has not added a payout account yet. Confirm payment details with the venue directly.'}</p>
+                    )}
+                    <p className="text-[10px] text-amber-800 font-medium">Your booking will show as fully confirmed once the venue and platform confirm this payment.</p>
                 </div>
             )}
 

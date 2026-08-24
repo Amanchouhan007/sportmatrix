@@ -1,64 +1,80 @@
-import { useState } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
-import Card from '../../components/ui/Card'
 import Button from '../../components/ui/Button'
 import Input from '../../components/ui/Input'
 import Select from '../../components/ui/Select'
 import { useToast } from '../../components/ui/Toast'
 import {
-    FiCheck, FiArrowLeft, FiTag, FiEye, FiPlusCircle,
-    FiCalendar, FiMapPin, FiDollarSign, FiInfo, FiChevronRight, FiChevronLeft, FiSave, FiExternalLink, FiVideo, FiImage, FiLayers, FiTarget, FiTrendingUp, FiActivity
+    FiTag, FiEye, FiArrowLeft, FiInfo, FiChevronRight, FiChevronLeft, FiSave, FiExternalLink, FiVideo, FiImage
 } from 'react-icons/fi'
+import { createAd, updateAd, updateAdStatus } from '../../services/adsService'
+import { getBranches } from '../../services/branchService'
+import { uploadMedia } from '../../services/uploadService'
+
+const EMPTY_FORM = {
+    campaignName: '',
+    branchId: '',
+    branchName: '',
+    startDate: '',
+    endDate: '',
+    description: '',
+
+    commissionPercent: '15',
+    minBookingGoal: '30',
+    avgBookingPrice: '1500',
+    targetArea: '5',
+
+    campaignBudget: '5000',
+    dailyBudget: '500',
+    cpmRate: '50',
+    placements: [],
+    adTitle: '',
+    shortHeadline: '',
+    adDescription: '',
+    callToAction: 'Book Now',
+    redirectUrl: '',
+    bannerImage: '',
+    mobileBannerImage: '',
+    thumbnailImage: '',
+    promotionalVideo: '',
+    campaignStatus: 'Active'
+}
+
+const STATUS_TO_BACKEND = { Active: 'ACTIVE', Draft: 'DRAFT', Paused: 'PAUSED' }
 
 export default function CreateAdvertisement() {
     const navigate = useNavigate()
     const { addToast } = useToast()
 
-    // 1. Campaign Type State: 'guaranteed_booking' | 'impression_ad'
     const [campaignType, setCampaignType] = useState('guaranteed_booking')
-
-    // 2. Wizard Step State
     const [currentStep, setCurrentStep] = useState(1)
-
-    // 3. Form Data State
-    const [formData, setFormData] = useState({
-        // Common Fields
-        campaignName: 'Champions Night Drive Promo',
-        turfId: 'turf-1',
-        turfName: 'Champions Turf Arena (Mumbai)',
-        location: 'Mumbai Suburban',
-        startDate: '2026-08-02',
-        endDate: '2026-09-02',
-        description: 'Boost evening slot bookings between 6PM-10PM for weekend customers.',
-
-        // Guaranteed Booking Fields
-        commissionPercent: '15',
-        minBookingGoal: '30',
-        avgBookingPrice: '1500',
-        targetArea: '5',
-
-        // Impression Ad Fields
-        campaignBudget: '5000',
-        dailyBudget: '500',
-        pricingModel: 'CPM',
-        cpmRate: '50', // ₹50 per 1,000 Impressions
-        placements: ['Homepage Banner', 'Search Bar Banner'],
-        adTitle: 'Champions Arena Weekend Floodlight Pass',
-        shortHeadline: 'Get 20% Off Prime Evening Turf Slots',
-        adDescription: 'Book premium synthetic grass turf for evening cricket & football matches under FIFA-standard floodlights.',
-        callToAction: 'Book Now',
-        redirectUrl: 'https://sportmatrix.in/turfs/champions-arena',
-        bannerImage: 'https://images.unsplash.com/photo-1551958219-acbc608c6377?auto=format&fit=crop&q=80&w=800',
-        mobileBannerImage: '',
-        thumbnailImage: '',
-        promotionalVideo: '',
-        campaignStatus: 'Active'
-    })
-
-    // Duration Preset State
+    const [formData, setFormData] = useState(EMPTY_FORM)
     const [durationPreset, setDurationPreset] = useState('1m')
 
-    // Dynamic Stepper Tabs based on selected campaignType
+    const [branches, setBranches] = useState([])
+    const [isLoadingBranches, setIsLoadingBranches] = useState(true)
+    const [uploadingField, setUploadingField] = useState(null)
+    const [isSubmitting, setIsSubmitting] = useState(false)
+    const [draftAdId, setDraftAdId] = useState(null)
+
+    const fetchBranches = useCallback(async () => {
+        setIsLoadingBranches(true)
+        try {
+            const res = await getBranches({ limit: 100 })
+            const list = res.data || res.branches || []
+            setBranches(list)
+            if (list.length > 0) {
+                setFormData(prev => ({ ...prev, branchId: list[0].id, branchName: list[0].branchName || list[0].name || '' }))
+            }
+        } catch (err) {
+            addToast({ title: 'Load Failed', message: err.message || 'Failed to load your branches.', type: 'error' })
+        } finally {
+            setIsLoadingBranches(false)
+        }
+    }, [addToast])
+
+    useEffect(() => { fetchBranches() }, [fetchBranches])
+
     const steps = campaignType === 'guaranteed_booking' ? [
         { step: 1, title: 'Select Type', subtitle: 'Choose Model' },
         { step: 2, title: 'Campaign Details', subtitle: 'Turf & Schedule' },
@@ -79,11 +95,9 @@ export default function CreateAdvertisement() {
         }
     }
 
-    const handleTurfSelect = (turfId) => {
-        let turfName = 'Champions Turf Arena (Mumbai)'
-        if (turfId === 'turf-2') turfName = 'SkyLine Football Turf (Pune)'
-        else if (turfId === 'turf-3') turfName = 'Velocity Sports Hub (Bangalore)'
-        setFormData(prev => ({ ...prev, turfId, turfName }))
+    const handleBranchSelect = (branchId) => {
+        const branch = branches.find(b => b.id === branchId)
+        setFormData(prev => ({ ...prev, branchId, branchName: branch?.branchName || branch?.name || '' }))
     }
 
     const togglePlacement = (placement) => {
@@ -91,42 +105,39 @@ export default function CreateAdvertisement() {
             const current = prev.placements || []
             if (current.includes(placement)) {
                 return { ...prev, placements: current.filter(p => p !== placement) }
-            } else {
-                return { ...prev, placements: [...current, placement] }
             }
+            return { ...prev, placements: [...current, placement] }
         })
     }
 
-    // File Upload Handler (FileReader Data URL)
-    const handleFileUpload = (field, e) => {
+    const handleFileUpload = async (field, e) => {
         const file = e.target.files[0]
-        if (file) {
-            const reader = new FileReader()
-            reader.onloadend = () => {
-                setFormData(prev => ({ ...prev, [field]: reader.result }))
-                addToast({ message: `${field} uploaded successfully!`, type: 'success' })
-            }
-            reader.readAsDataURL(file)
+        if (!file) return
+        setUploadingField(field)
+        try {
+            const { url } = await uploadMedia(file)
+            setFormData(prev => ({ ...prev, [field]: url }))
+            addToast({ message: `${file.name} uploaded successfully!`, type: 'success' })
+        } catch (err) {
+            addToast({ title: 'Upload Failed', message: err.message || 'Could not upload this file.', type: 'error' })
+        } finally {
+            setUploadingField(null)
         }
     }
 
-    // Duration Preset Handler
     const handleDurationPresetChange = (presetValue) => {
         setDurationPreset(presetValue)
         if (presetValue === 'custom') return
-
         const start = formData.startDate ? new Date(formData.startDate) : new Date()
         const end = new Date(start)
-
         if (presetValue === '1m') end.setMonth(end.getMonth() + 1)
         else if (presetValue === '2m') end.setMonth(end.getMonth() + 2)
         else if (presetValue === '3m') end.setMonth(end.getMonth() + 3)
         else if (presetValue === '6m') end.setMonth(end.getMonth() + 6)
         else if (presetValue === '1y') end.setFullYear(end.getFullYear() + 1)
-
         setFormData(prev => ({
             ...prev,
-            startDate: start.toISOString().split('T')[0],
+            startDate: prev.startDate || start.toISOString().split('T')[0],
             endDate: end.toISOString().split('T')[0]
         }))
     }
@@ -151,7 +162,6 @@ export default function CreateAdvertisement() {
         setFormData(prev => ({ ...prev, endDate: val }))
     }
 
-    // Calculate duration in days
     const calculateDuration = () => {
         if (!formData.startDate || !formData.endDate) return 30
         const start = new Date(formData.startDate)
@@ -172,8 +182,8 @@ export default function CreateAdvertisement() {
     }
 
     const durationDays = calculateDuration()
+    const durationMonths = Math.max(1, Math.round(durationDays / 30))
 
-    // Guaranteed Booking Calculations
     const expectedBookings = Number(formData.minBookingGoal || 30)
     const bookingPrice = Number(formData.avgBookingPrice || 1500)
     const grossRevenue = expectedBookings * bookingPrice
@@ -181,13 +191,11 @@ export default function CreateAdvertisement() {
     const netOwnerRevenue = grossRevenue - commissionAmount
     const estimatedReach = Number(formData.targetArea || 5) * 2500
 
-    // Impression Ad Calculations
     const totalBudget = Number(formData.campaignBudget || 5000)
     const cpmRate = Number(formData.cpmRate || 50)
     const estimatedImpressions = cpmRate > 0 ? Math.round((totalBudget / cpmRate) * 1000) : 100000
     const estimatedAudience = Number(formData.targetArea || 5) * 3500
 
-    // Strict Dynamic Validation per Step & Model
     const validateStep = () => {
         if (currentStep === 1) {
             if (!campaignType) {
@@ -202,8 +210,8 @@ export default function CreateAdvertisement() {
                 addToast({ message: 'Campaign Name is required!', type: 'error' })
                 return false
             }
-            if (!formData.turfId) {
-                addToast({ message: 'Please select a Turf!', type: 'error' })
+            if (!formData.branchId) {
+                addToast({ message: 'Please select a Turf/Branch!', type: 'error' })
                 return false
             }
             if (!formData.startDate || !formData.endDate) {
@@ -281,28 +289,83 @@ export default function CreateAdvertisement() {
         }
     }
 
+    const buildPayload = (statusOverride) => ({
+        branchId: formData.branchId,
+        campaignName: formData.campaignName,
+        type: campaignType === 'guaranteed_booking' ? 'GUARANTEED_BOOKING' : 'IMPRESSION_AD',
+        status: statusOverride,
+        startDate: formData.startDate,
+        endDate: formData.endDate,
+        description: formData.description,
+        durationMonths,
+        commissionRate: campaignType === 'guaranteed_booking' ? Number(formData.commissionPercent) : undefined,
+        bookingGoal: campaignType === 'guaranteed_booking' ? Number(formData.minBookingGoal) : undefined,
+        avgSlotPrice: campaignType === 'guaranteed_booking' ? Number(formData.avgBookingPrice) : undefined,
+        targetRadiusKm: Number(formData.targetArea),
+        estimatedReach: campaignType === 'guaranteed_booking' ? estimatedReach : estimatedAudience,
+        budgetTotal: campaignType === 'impression_ad' ? Number(formData.campaignBudget) : undefined,
+        dailyBudget: campaignType === 'impression_ad' ? Number(formData.dailyBudget) : undefined,
+        pricingModel: campaignType === 'impression_ad' ? 'CPM' : undefined,
+        cpmRate: campaignType === 'impression_ad' ? Number(formData.cpmRate) : undefined,
+        placements: campaignType === 'impression_ad' ? formData.placements : undefined,
+        adTitle: campaignType === 'impression_ad' ? formData.adTitle : undefined,
+        shortHeadline: campaignType === 'impression_ad' ? formData.shortHeadline : undefined,
+        ctaText: campaignType === 'impression_ad' ? formData.callToAction : undefined,
+        redirectUrl: campaignType === 'impression_ad' ? formData.redirectUrl : undefined,
+        bannerImageUrl: campaignType === 'impression_ad' ? formData.bannerImage : undefined,
+        mobileBannerImageUrl: campaignType === 'impression_ad' ? formData.mobileBannerImage : undefined,
+        thumbnailImageUrl: campaignType === 'impression_ad' ? formData.thumbnailImage : undefined,
+        videoUrl: campaignType === 'impression_ad' ? formData.promotionalVideo : undefined
+    })
+
     const handleSubmit = async (e) => {
         e?.preventDefault()
-        addToast({ message: `Campaign "${formData.campaignName}" published successfully & sent for review!`, type: 'success' })
-        navigate('/admin/ads')
+        if (!validateStep()) return
+        setIsSubmitting(true)
+        try {
+            const finalStatus = STATUS_TO_BACKEND[formData.campaignStatus] || 'ACTIVE'
+            if (draftAdId) {
+                await updateAd(draftAdId, buildPayload(finalStatus))
+                await updateAdStatus(draftAdId, finalStatus)
+            } else {
+                await createAd(buildPayload(finalStatus))
+            }
+            addToast({ title: 'Campaign Published', message: `"${formData.campaignName}" is now live.`, type: 'success' })
+            navigate('/admin/ads')
+        } catch (err) {
+            addToast({ title: 'Publish Failed', message: err.message || 'Could not publish this campaign.', type: 'error' })
+        } finally {
+            setIsSubmitting(false)
+        }
     }
 
-    const handleSaveDraft = () => {
-        addToast({ message: `Campaign draft "${formData.campaignName}" saved successfully!`, type: 'info' })
+    const handleSaveDraft = async () => {
+        if (!formData.campaignName.trim() || !formData.branchId || !formData.startDate || !formData.endDate) {
+            addToast({ message: 'Campaign Name, Turf, and dates are required before saving a draft.', type: 'error' })
+            return
+        }
+        setIsSubmitting(true)
+        try {
+            if (draftAdId) {
+                await updateAd(draftAdId, buildPayload('DRAFT'))
+            } else {
+                const res = await createAd(buildPayload('DRAFT'))
+                setDraftAdId(res.data?.id || res.data?._id || null)
+            }
+            addToast({ title: 'Draft Saved', message: `Campaign draft "${formData.campaignName}" saved successfully!`, type: 'info' })
+        } catch (err) {
+            addToast({ title: 'Save Failed', message: err.message || 'Could not save this draft.', type: 'error' })
+        } finally {
+            setIsSubmitting(false)
+        }
     }
 
     const getStatusBadge = (status) => {
         switch (status) {
-            case 'Active':
-                return 'bg-emerald-500 text-white'
-            case 'Draft':
-                return 'bg-slate-500 text-white'
-            case 'Paused':
-                return 'bg-amber-500 text-white'
-            case 'Scheduled':
-                return 'bg-blue-500 text-white'
-            default:
-                return 'bg-emerald-500 text-white'
+            case 'Active': return 'bg-emerald-500 text-white'
+            case 'Draft': return 'bg-slate-500 text-white'
+            case 'Paused': return 'bg-amber-500 text-white'
+            default: return 'bg-emerald-500 text-white'
         }
     }
 
@@ -323,10 +386,6 @@ export default function CreateAdvertisement() {
                         </h1>
                         <p className="text-surface-500 text-sm mt-0.5 font-medium">Launch a targeted marketing campaign based on your business model.</p>
                     </div>
-                </div>
-
-                <div className="flex items-center gap-2 px-4 py-2 rounded-2xl bg-emerald-50 border border-emerald-200/80 text-xs font-bold text-emerald-700 shadow-sm">
-                    ⏱️ Setup Time: <span className="text-emerald-800 font-extrabold">2 Minutes</span>
                 </div>
             </div>
 
@@ -380,7 +439,6 @@ export default function CreateAdvertisement() {
                             </div>
 
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-                                {/* Card 1: Guaranteed Booking */}
                                 <div
                                     onClick={() => handleCampaignTypeSelect('guaranteed_booking')}
                                     className={`p-6 rounded-3xl cursor-pointer relative overflow-hidden transition-all duration-300 border ${campaignType === 'guaranteed_booking'
@@ -404,7 +462,6 @@ export default function CreateAdvertisement() {
                                     </div>
                                 </div>
 
-                                {/* Card 2: Impression Ad */}
                                 <div
                                     onClick={() => handleCampaignTypeSelect('impression_ad')}
                                     className={`p-6 rounded-3xl cursor-pointer relative overflow-hidden transition-all duration-300 border ${campaignType === 'impression_ad'
@@ -457,17 +514,19 @@ export default function CreateAdvertisement() {
 
                                     <Select
                                         label="Select Turf *"
-                                        value={formData.turfId}
-                                        onChange={(e) => handleTurfSelect(e.target.value)}
+                                        value={formData.branchId}
+                                        onChange={(e) => handleBranchSelect(e.target.value)}
+                                        disabled={isLoadingBranches || branches.length === 0}
                                     >
-                                        <option value="turf-1">Champions Turf Arena (Mumbai)</option>
-                                        <option value="turf-2">SkyLine Football Turf (Pune)</option>
-                                        <option value="turf-3">Velocity Sports Hub (Bangalore)</option>
+                                        {isLoadingBranches && <option value="">Loading branches...</option>}
+                                        {!isLoadingBranches && branches.length === 0 && <option value="">No branches found</option>}
+                                        {branches.map(b => (
+                                            <option key={b.id} value={b.id}>{b.branchName || b.name} {b.city ? `(${b.city})` : ''}</option>
+                                        ))}
                                     </Select>
                                 </div>
                             </div>
 
-                            {/* Section 2: 📅 Campaign Schedule & Dates */}
                             <div className="space-y-5 bg-surface-50/60 p-5 rounded-2xl border border-surface-200/60">
                                 <h3 className="text-xs font-extrabold text-surface-800 uppercase tracking-wider flex items-center gap-2">
                                     📅 Campaign Schedule & Dates
@@ -607,7 +666,6 @@ export default function CreateAdvertisement() {
                                     <span className="text-sm font-black text-amber-700">👁️ ~{estimatedImpressions.toLocaleString()} Impressions</span>
                                 </div>
 
-                                {/* Ad Placements */}
                                 <div className="space-y-2 pt-2">
                                     <label className="block text-xs font-bold text-surface-700">Ad Placements</label>
                                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
@@ -660,7 +718,6 @@ export default function CreateAdvertisement() {
                                 </span>
                             </div>
 
-                            {/* Section 1: Ad Text & Content */}
                             <div className="space-y-4 bg-surface-50/60 p-5 rounded-2xl border border-surface-200/60">
                                 <h3 className="text-xs font-extrabold text-surface-800 uppercase tracking-wider flex items-center gap-2">
                                     📝 Ad Copy & Branding
@@ -720,7 +777,6 @@ export default function CreateAdvertisement() {
                                         <option value="Active">Active</option>
                                         <option value="Draft">Draft</option>
                                         <option value="Paused">Paused</option>
-                                        <option value="Scheduled">Scheduled</option>
                                     </Select>
 
                                     <Input
@@ -732,7 +788,6 @@ export default function CreateAdvertisement() {
                                 </div>
                             </div>
 
-                            {/* Section 2: Media Uploads */}
                             <div className="space-y-4 bg-surface-50/60 p-5 rounded-2xl border border-surface-200/60">
                                 <h3 className="text-xs font-extrabold text-surface-800 uppercase tracking-wider flex items-center gap-2">
                                     🖼️ Banners & Graphic Uploads
@@ -746,9 +801,11 @@ export default function CreateAdvertisement() {
                                         <input
                                             type="file"
                                             accept="image/*"
+                                            disabled={uploadingField === 'bannerImage'}
                                             onChange={(e) => handleFileUpload('bannerImage', e)}
                                             className="block w-full text-xs text-surface-500 file:mr-3 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-extrabold file:bg-emerald-50 file:text-emerald-700 hover:file:bg-emerald-100 cursor-pointer"
                                         />
+                                        {uploadingField === 'bannerImage' && <p className="text-[11px] text-surface-400 font-semibold">Uploading...</p>}
                                         {formData.bannerImage && (
                                             <div className="h-20 w-full rounded-xl overflow-hidden border border-surface-200 mt-2">
                                                 <img src={formData.bannerImage} alt="Banner Preview" className="w-full h-full object-cover" />
@@ -763,9 +820,11 @@ export default function CreateAdvertisement() {
                                         <input
                                             type="file"
                                             accept="image/*"
+                                            disabled={uploadingField === 'mobileBannerImage'}
                                             onChange={(e) => handleFileUpload('mobileBannerImage', e)}
                                             className="block w-full text-xs text-surface-500 file:mr-3 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-extrabold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100 cursor-pointer"
                                         />
+                                        {uploadingField === 'mobileBannerImage' && <p className="text-[11px] text-surface-400 font-semibold">Uploading...</p>}
                                         {formData.mobileBannerImage && (
                                             <div className="h-20 w-full rounded-xl overflow-hidden border border-surface-200 mt-2">
                                                 <img src={formData.mobileBannerImage} alt="Mobile Banner Preview" className="w-full h-full object-cover" />
@@ -780,9 +839,11 @@ export default function CreateAdvertisement() {
                                         <input
                                             type="file"
                                             accept="image/*"
+                                            disabled={uploadingField === 'thumbnailImage'}
                                             onChange={(e) => handleFileUpload('thumbnailImage', e)}
                                             className="block w-full text-xs text-surface-500 file:mr-3 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-extrabold file:bg-purple-50 file:text-purple-700 hover:file:bg-purple-100 cursor-pointer"
                                         />
+                                        {uploadingField === 'thumbnailImage' && <p className="text-[11px] text-surface-400 font-semibold">Uploading...</p>}
                                         {formData.thumbnailImage && (
                                             <div className="h-20 w-full rounded-xl overflow-hidden border border-surface-200 mt-2">
                                                 <img src={formData.thumbnailImage} alt="Thumbnail Preview" className="w-full h-full object-cover" />
@@ -797,9 +858,11 @@ export default function CreateAdvertisement() {
                                         <input
                                             type="file"
                                             accept="video/*"
+                                            disabled={uploadingField === 'promotionalVideo'}
                                             onChange={(e) => handleFileUpload('promotionalVideo', e)}
                                             className="block w-full text-xs text-surface-500 file:mr-3 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-extrabold file:bg-amber-50 file:text-amber-700 hover:file:bg-amber-100 cursor-pointer"
                                         />
+                                        {uploadingField === 'promotionalVideo' && <p className="text-[11px] text-surface-400 font-semibold">Uploading...</p>}
                                         {formData.promotionalVideo && (
                                             <div className="h-20 w-full rounded-xl overflow-hidden border border-surface-200 mt-2">
                                                 <video src={formData.promotionalVideo} controls className="w-full h-full object-cover" />
@@ -864,7 +927,7 @@ export default function CreateAdvertisement() {
 
                             <div className="p-4 rounded-2xl bg-amber-50 border border-amber-200/80 text-amber-800 text-xs font-semibold flex items-center gap-2">
                                 <FiInfo className="w-5 h-5 shrink-0" />
-                                <span>Publishing this campaign will submit it for immediate review and approval.</span>
+                                <span>Publishing this campaign creates it live and immediately visible per its status.</span>
                             </div>
                         </div>
                     )}
@@ -880,18 +943,19 @@ export default function CreateAdvertisement() {
                             <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
                         </div>
 
-                        {/* Interactive Banner Card ONLY shown for Impression Ad */}
                         {campaignType === 'impression_ad' && (
                             <div className="bg-slate-950 text-white rounded-3xl overflow-hidden border border-white/10 shadow-2xl space-y-0 relative group">
                                 <div className="h-44 w-full relative bg-slate-900 overflow-hidden">
                                     {formData.promotionalVideo ? (
                                         <video src={formData.promotionalVideo} autoPlay loop muted className="w-full h-full object-cover" />
-                                    ) : (
+                                    ) : formData.bannerImage ? (
                                         <img
-                                            src={formData.bannerImage || 'https://images.unsplash.com/photo-1551958219-acbc608c6377?auto=format&fit=crop&q=80&w=800'}
+                                            src={formData.bannerImage}
                                             alt={formData.adTitle}
                                             className="w-full h-full object-cover opacity-90"
                                         />
+                                    ) : (
+                                        <div className="w-full h-full flex items-center justify-center text-slate-600 text-xs font-bold">No banner uploaded yet</div>
                                     )}
                                     <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-transparent to-black/30" />
 
@@ -938,17 +1002,15 @@ export default function CreateAdvertisement() {
                             </div>
                         )}
 
-                        {/* Financial / Impression Live Stats Summary Card */}
                         {campaignType === 'guaranteed_booking' ? (
-                            /* GUARANTEED BOOKING LIVE SUMMARY */
                             <div className="space-y-2 bg-[#F8FAFC] p-4 rounded-2xl border border-surface-200/60 text-xs">
                                 <div className="flex justify-between items-center pb-1.5 border-b border-surface-200/40">
                                     <span className="text-surface-500 font-bold">Campaign Name</span>
-                                    <span className="font-extrabold text-surface-900 truncate max-w-[150px]">{formData.campaignName}</span>
+                                    <span className="font-extrabold text-surface-900 truncate max-w-[150px]">{formData.campaignName || '—'}</span>
                                 </div>
                                 <div className="flex justify-between items-center pb-1.5 border-b border-surface-200/40">
                                     <span className="text-surface-500 font-bold">Turf</span>
-                                    <span className="font-bold text-surface-900 truncate max-w-[150px]">{formData.turfName}</span>
+                                    <span className="font-bold text-surface-900 truncate max-w-[150px]">{formData.branchName || '—'}</span>
                                 </div>
                                 <div className="flex justify-between items-center pb-1.5 border-b border-surface-200/40">
                                     <span className="text-surface-500 font-bold">Duration</span>
@@ -976,15 +1038,14 @@ export default function CreateAdvertisement() {
                                 </div>
                             </div>
                         ) : (
-                            /* IMPRESSION AD LIVE SUMMARY */
                             <div className="space-y-2 bg-[#F8FAFC] p-4 rounded-2xl border border-surface-200/60 text-xs">
                                 <div className="flex justify-between items-center pb-1.5 border-b border-surface-200/40">
                                     <span className="text-surface-500 font-bold">Campaign Name</span>
-                                    <span className="font-extrabold text-surface-900 truncate max-w-[150px]">{formData.campaignName}</span>
+                                    <span className="font-extrabold text-surface-900 truncate max-w-[150px]">{formData.campaignName || '—'}</span>
                                 </div>
                                 <div className="flex justify-between items-center pb-1.5 border-b border-surface-200/40">
                                     <span className="text-surface-500 font-bold">Turf</span>
-                                    <span className="font-bold text-surface-900 truncate max-w-[150px]">{formData.turfName}</span>
+                                    <span className="font-bold text-surface-900 truncate max-w-[150px]">{formData.branchName || '—'}</span>
                                 </div>
                                 <div className="flex justify-between items-center pb-1.5 border-b border-surface-200/40">
                                     <span className="text-surface-500 font-bold">Duration</span>
@@ -1030,18 +1091,18 @@ export default function CreateAdvertisement() {
             <div className="fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-surface-200 p-4 shadow-xl">
                 <div className="max-w-7xl mx-auto flex items-center justify-between gap-4">
                     <div className="flex items-center gap-3">
-                        <Button variant="secondary" size="sm" onClick={() => navigate('/admin/ads')}>
+                        <Button variant="secondary" size="sm" onClick={() => navigate('/admin/ads')} disabled={isSubmitting}>
                             Cancel
                         </Button>
                         <button
                             onClick={handleSaveDraft}
-                            className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-surface-100 hover:bg-surface-200 text-surface-700 text-xs font-bold transition-all cursor-pointer"
+                            disabled={isSubmitting}
+                            className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-surface-100 hover:bg-surface-200 text-surface-700 text-xs font-bold transition-all cursor-pointer disabled:opacity-50"
                         >
-                            <FiSave className="w-4 h-4 text-indigo-600" /> Save Draft
+                            <FiSave className="w-4 h-4 text-indigo-600" /> {isSubmitting ? 'Saving...' : 'Save Draft'}
                         </button>
                     </div>
 
-                    {/* Dynamic Step Navigation Buttons */}
                     <div className="flex items-center gap-3">
                         {currentStep > 1 && (
                             <Button
@@ -1049,6 +1110,7 @@ export default function CreateAdvertisement() {
                                 size="sm"
                                 onClick={() => setCurrentStep(prev => prev - 1)}
                                 className="flex items-center gap-1"
+                                disabled={isSubmitting}
                             >
                                 <FiChevronLeft /> Previous
                             </Button>
@@ -1060,6 +1122,7 @@ export default function CreateAdvertisement() {
                                 size="sm"
                                 onClick={handleNextStep}
                                 className="flex items-center gap-1 shadow-lg shadow-emerald-500/20"
+                                disabled={isSubmitting}
                             >
                                 Next Step <FiChevronRight />
                             </Button>
@@ -1068,9 +1131,10 @@ export default function CreateAdvertisement() {
                                 variant="primary"
                                 size="sm"
                                 onClick={handleSubmit}
+                                disabled={isSubmitting}
                                 className="flex items-center gap-1 shadow-lg shadow-emerald-500/20 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold px-6"
                             >
-                                Publish Campaign ✓
+                                {isSubmitting ? 'Publishing...' : 'Publish Campaign ✓'}
                             </Button>
                         )}
                     </div>

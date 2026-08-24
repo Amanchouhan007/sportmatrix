@@ -3,8 +3,26 @@ import { HiMail, HiPhone, HiLocationMarker, HiPaperAirplane, HiShieldCheck, HiCh
 import { useToast } from '../../components/ui/Toast'
 
 export default function ContactPage() {
+    const [contactInfo, setContactInfo] = useState({
+        addressLine1: '2341/E, Sudama Nagar',
+        cityStateCountry: 'Indore, M.P., India',
+        email: 'info@kiaantechnology.com',
+        phone: '+91 97521 00980',
+        weekdayHours: 'MON-FRI: 09:00 AM - 07:00 PM IST',
+        weekendHours: 'SAT: 10:00 AM - 04:00 PM IST'
+    })
+
     useEffect(() => {
         window.scrollTo(0, 0)
+        const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5005/api/v1';
+        fetch(`${API_URL}/settings/contact-info`)
+            .then(res => res.json())
+            .then(data => {
+                if (data?.success && data?.data) {
+                    setContactInfo(data.data)
+                }
+            })
+            .catch(() => {})
     }, [])
 
     const toastContext = useToast()
@@ -176,10 +194,10 @@ export default function ContactPage() {
                     {/* Info Cards */}
                     <div className="space-y-4">
                         {[
-                            { icon: <HiLocationMarker />, title: 'OUR HEADQUARTERS', details: ['Sector 24, Cyber City, BKC', 'Mumbai, MH 40051, India'] },
-                            { icon: <HiMail />, title: 'EMAIL INQUIRIES', details: ['support@sportmatrix.com', 'operations@sportmatrix.com'] },
-                            { icon: <HiPhone />, title: 'DIRECT PHONE HOTLINE', details: ['+91 (022) 2890-5000', '1800-SPORT-MATRIX'] },
-                            { icon: <HiShieldCheck />, title: 'OPERATING HOURS', details: ['MON-FRI: 09:00 AM - 06:00 PM IST', 'SAT: 10:00 AM - 02:00 PM IST'] },
+                            { icon: <HiLocationMarker />, title: 'OUR HEADQUARTERS', details: [contactInfo.addressLine1, contactInfo.cityStateCountry] },
+                            { icon: <HiMail />, title: 'EMAIL INQUIRIES', details: [contactInfo.email] },
+                            { icon: <HiPhone />, title: 'DIRECT PHONE HOTLINE', details: [contactInfo.phone] },
+                            { icon: <HiShieldCheck />, title: 'OPERATING HOURS', details: [contactInfo.weekdayHours, contactInfo.weekendHours].filter(Boolean) },
                         ].map((c, i) => (
                             <div key={i} className="group bg-white border border-[#E5E7EB] hover:border-[#C8FF2E] p-4 sm:p-5 rounded-3xl transition-all duration-300 flex items-center gap-4 shadow-[0_8px_25px_rgba(0,0,0,0.02)] hover:-translate-y-0.5">
                                 {/* Icon container */}

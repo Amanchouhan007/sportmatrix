@@ -1,62 +1,69 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import DataTable from '../../components/ui/DataTable'
 import Badge from '../../components/ui/Badge'
 import Button from '../../components/ui/Button'
 import Modal from '../../components/ui/Modal'
 import { useToast } from '../../components/ui/Toast'
-import api from '../../services/api'
+import { getMaintenanceTickets, updateMaintenanceTicket } from '../../services/maintenanceService'
+import useRealtime from '../../utils/useRealtime'
 
-const initialTasks = [
-    { id: 'MT-001', task: 'Fix floodlight #3', area: 'Turf B', priority: 'Urgent', due: 'Mar 3', status: 'Completed' },
-    { id: 'MT-002', task: 'Replace net post', area: 'Court 1', priority: 'Medium', due: 'Mar 10', status: 'Open' },
-    { id: 'MT-003', task: 'Check AC unit', area: 'Indoor Court', priority: 'Low', due: 'Mar 12', status: 'Open' },
-]
+const PRIORITY_FROM_BACKEND = { URGENT: 'Urgent', HIGH: 'High', MEDIUM: 'Medium', LOW: 'Low' }
+const STATUS_FROM_BACKEND = { OPEN: 'Open', SCHEDULED: 'Scheduled', IN_PROGRESS: 'In Progress', COMPLETED: 'Completed' }
 
 export default function StaffMaintenance() {
     const { addToast } = useToast()
-    const [tasks, setTasks] = useState(initialTasks)
+    const [tasks, setTasks] = useState([])
+    const [isLoading, setIsLoading] = useState(true)
     const [isViewOpen, setIsViewOpen] = useState(false)
     const [selectedTask, setSelectedTask] = useState(null)
+    const [busyId, setBusyId] = useState(null)
 
-    // Connect to backend REST API
-    useEffect(() => {
-        api.get('/maintenance/tickets')
-            .then(res => {
-                if (res.data && res.data.success && Array.isArray(res.data.data) && res.data.data.length > 0) {
-                    const mapped = res.data.data.map(t => ({
-                        id: t.id,
-                        task: t.issue_description || t.asset_name,
-                        area: t.category || 'Turf Arena',
-                        priority: t.priority === 'CRITICAL' || t.priority === 'HIGH' ? 'Urgent' : 'Medium',
-                        due: 'Today',
-                        status: t.status === 'RESOLVED' ? 'Completed' : t.status === 'IN_PROGRESS' ? 'In Progress' : 'Open'
-                    }))
-                    setTasks(prev => [...mapped, ...prev])
-                }
-            })
-            .catch(e => console.warn('StaffMaintenance API note:', e.message))
-    }, [])
+    const fetchTasks = useCallback(async () => {
+        setIsLoading(true)
+        try {
+            const res = await getMaintenanceTickets()
+            setTasks((res.data || []).map(t => ({
+                id: t.id,
+                task: t.issueDescription,
+                area: t.turfArea,
+                priority: PRIORITY_FROM_BACKEND[t.priorityLevel] || t.priorityLevel,
+                due: t.targetDeadline ? new Date(t.targetDeadline).toLocaleDateString('en-IN') : '',
+                status: STATUS_FROM_BACKEND[t.status] || t.status
+            })))
+        } catch (err) {
+            addToast({ title: 'Load Failed', message: err.message || 'Failed to load maintenance tasks.', type: 'error' })
+        } finally {
+            setIsLoading(false)
+        }
+    }, [addToast])
 
-    const handleStartTask = (taskId) => {
-        setTasks(prev => prev.map(t => 
-            t.id === taskId ? { ...t, status: 'In Progress' } : t
-        ))
-        addToast({
-            title: 'Task Started',
-            message: `Task ${taskId} is now In Progress`,
-            type: 'info'
-        })
+    useEffect(() => { fetchTasks() }, [fetchTasks])
+    useRealtime(['maintenance:updated'], () => fetchTasks())
+
+    const handleStartTask = async (taskId) => {
+        setBusyId(taskId)
+        try {
+            await updateMaintenanceTicket(taskId, { status: 'IN_PROGRESS' })
+            addToast({ title: 'Task Started', message: `Task ${taskId} is now In Progress`, type: 'info' })
+            fetchTasks()
+        } catch (err) {
+            addToast({ title: 'Update Failed', message: err.message || 'Could not start this task.', type: 'error' })
+        } finally {
+            setBusyId(null)
+        }
     }
 
-    const handleCompleteTask = (taskId) => {
-        setTasks(prev => prev.map(t => 
-            t.id === taskId ? { ...t, status: 'Completed' } : t
-        ))
-        addToast({
-            title: 'Task Completed',
-            message: `Task ${taskId} has been completed`,
-            type: 'success'
-        })
+    const handleCompleteTask = async (taskId) => {
+        setBusyId(taskId)
+        try {
+            await updateMaintenanceTicket(taskId, { status: 'COMPLETED' })
+            addToast({ title: 'Task Completed', message: `Task ${taskId} has been completed`, type: 'success' })
+            fetchTasks()
+        } catch (err) {
+            addToast({ title: 'Update Failed', message: err.message || 'Could not complete this task.', type: 'error' })
+        } finally {
+            setBusyId(null)
+        }
     }
 
     const handleView = (task) => {
@@ -65,35 +72,36 @@ export default function StaffMaintenance() {
     }
 
     const taskColumns = [
-        { key: 'id', label: 'ID' }, 
-        { key: 'task', label: 'Task' }, 
+        { key: 'id', label: 'ID' },
+        { key: 'task', label: 'Task' },
         { key: 'area', label: 'Area' },
-        { 
-            key: 'priority', 
-            label: 'Priority', 
-            render: v => <Badge variant={v === 'Urgent' ? 'danger' : v === 'Medium' ? 'warning' : 'default'}>{v}</Badge> 
+        {
+            key: 'priority',
+            label: 'Priority',
+            render: v => <Badge variant={v === 'Urgent' ? 'danger' : v === 'Medium' ? 'warning' : 'default'}>{v}</Badge>
         },
         { key: 'due', label: 'Due' },
-        { 
-            key: 'status', 
-            label: 'Status', 
-            render: v => <Badge variant={v === 'In Progress' ? 'primary' : v === 'Completed' ? 'success' : 'warning'} dot={v !== 'Completed'}>{v}</Badge> 
+        {
+            key: 'status',
+            label: 'Status',
+            render: v => <Badge variant={v === 'In Progress' ? 'primary' : v === 'Completed' ? 'success' : 'warning'} dot={v !== 'Completed'}>{v}</Badge>
         },
-        { 
-            key: 'action', 
-            label: 'Action', 
+        {
+            key: 'action',
+            label: 'Action',
             render: (_, r) => {
-                if (r.status === 'Open') {
+                const isBusy = busyId === r.id
+                if (r.status === 'Open' || r.status === 'Scheduled') {
                     return (
-                        <Button size="sm" variant="accent" onClick={() => handleStartTask(r.id)}>
-                            ▶️ Start Task
+                        <Button size="sm" variant="accent" onClick={() => handleStartTask(r.id)} disabled={isBusy}>
+                            ▶️ {isBusy ? 'Starting...' : 'Start Task'}
                         </Button>
                     )
                 }
                 if (r.status === 'In Progress') {
                     return (
-                        <Button size="sm" variant="success" onClick={() => handleCompleteTask(r.id)}>
-                            ✅ Complete Task
+                        <Button size="sm" variant="success" onClick={() => handleCompleteTask(r.id)} disabled={isBusy}>
+                            ✅ {isBusy ? 'Completing...' : 'Complete Task'}
                         </Button>
                     )
                 }
@@ -117,7 +125,13 @@ export default function StaffMaintenance() {
             </div>
 
             <div className="bg-white rounded-xl shadow-sm border border-surface-200 overflow-hidden pt-4">
-                <DataTable columns={taskColumns} data={tasks} />
+                {isLoading ? (
+                    <div className="py-10 text-center text-slate-400 text-sm font-semibold">Loading tasks...</div>
+                ) : tasks.length === 0 ? (
+                    <div className="py-10 text-center text-slate-400 text-sm font-semibold">No maintenance tasks assigned.</div>
+                ) : (
+                    <DataTable columns={taskColumns} data={tasks} />
+                )}
             </div>
 
             {/* View Completed Task Modal */}

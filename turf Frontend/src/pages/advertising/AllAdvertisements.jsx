@@ -56,6 +56,8 @@ export default function AllAdvertisements() {
     const statusBadgeVariant = (status) => {
         const s = (status || '').toUpperCase().replace(/_/g, ' ');
         switch (s) {
+            case 'DRAFT': return 'default'
+            case 'PAUSED': return 'warning'
             case 'PENDING': return 'warning'
             case 'APPROVED': return 'info'
             case 'ACTIVE': return 'success'
@@ -71,6 +73,8 @@ export default function AllAdvertisements() {
 
     const formatStatus = (status) => {
         const map = {
+            'DRAFT': 'Draft',
+            'PAUSED': 'Paused',
             'PENDING': 'Pending',
             'APPROVED': 'Approved',
             'ACTIVE': 'Active',

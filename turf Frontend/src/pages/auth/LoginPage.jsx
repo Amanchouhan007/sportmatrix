@@ -61,9 +61,9 @@ export default function LoginPage() {
         const credentials = {
             superadmin: { email: 'superadmin@gmail.com', password: '123456' },
             owner: { email: 'owner@gmail.com', password: '123456' },
-            staff: { email: 'staff@gmail.com', password: '123' },
-            umpire: { email: 'umpire@gmail.com', password: '123' },
-            customer: { email: 'customer@gmail.com', password: '123' }
+            staff: { email: 'staff@gmail.com', password: '123456' },
+            umpire: { email: 'umpire@gmail.com', password: '123456' },
+            customer: { email: 'customer@gmail.com', password: '123456' }
         };
 
         const selectedCreds = credentials[role] || { email: '', password: '' };

@@ -3,7 +3,9 @@ import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { HiCheck, HiCreditCard, HiUsers, HiOutlineCheckCircle } from 'react-icons/hi'
 import { useToast } from '../../components/ui/Toast'
 import { useAuth } from '../../context/AuthContext'
-import { saveCrmLead } from '../../services/crmService'
+import api from '../../services/api'
+import { registerUser } from '../../services/authService'
+import { getDiscountOffers } from '../../services/discountService'
 
 // Modular Component Imports
 import TurfSidebarCard from '../../components/booking/TurfSidebarCard'
@@ -12,28 +14,28 @@ import BookingStep1Workspace from '../../components/booking/BookingStep1Workspac
 import BookingStep2Modes from '../../components/booking/BookingStep2Modes'
 import BookingStep3Lock from '../../components/booking/BookingStep3Lock'
 import BookingStep4Receipt from '../../components/booking/BookingStep4Receipt'
+import Modal from '../../components/ui/Modal'
 import TurfGalleryModal from '../../components/booking/TurfGalleryModal'
 import VenueSwitchModal from '../../components/booking/VenueSwitchModal'
 import AuthModal from '../../components/booking/AuthModal'
 
-// Available venues / turfs database lookup
-const allAvailableTurfs = [
-    { id: 1, name: 'SportZone Arena', location: 'Andheri West', city: 'Mumbai', price: 1200, rating: 4.8, sports: ['Cricket'], dimensions: '100 × 50 ft', squareFeet: '5,000 sq ft', image: '/images/turf1.png', gallery: ['/images/turf1.png', '/images/turf2.png', '/images/turf3.png', '/images/turf4.png', '/images/turf5.png'] },
-    { id: 2, name: 'Champion Cricket Ground', location: 'Koramangala', city: 'Bangalore', price: 1500, rating: 4.9, sports: ['Cricket'], dimensions: '120 × 60 ft', squareFeet: '7,200 sq ft', image: '/images/turf2.png', gallery: ['/images/turf2.png', '/images/turf3.png', '/images/turf4.png', '/images/turf5.png', '/images/turf6.png'] },
-    { id: 3, name: 'GameVault Cricket Center', location: 'Koramangala', city: 'Bangalore', price: 1200, rating: 4.9, sports: ['Cricket'], dimensions: '110 × 55 ft', squareFeet: '6,050 sq ft', image: '/images/turf3.png', gallery: ['/images/turf3.png', '/images/turf4.png', '/images/turf5.png', '/images/turf6.png', '/images/turf7.png'] },
-    { id: 4, name: 'ProKick Cricket Turf', location: 'Indiranagar', city: 'Bangalore', price: 1400, rating: 4.7, sports: ['Cricket'], dimensions: '105 × 52 ft', squareFeet: '5,460 sq ft', image: '/images/turf4.png', gallery: ['/images/turf4.png', '/images/turf5.png', '/images/turf6.png', '/images/turf7.png', '/images/turf1.png'] },
-    { id: 5, name: 'ProPlay Cricket Arena', location: 'Vashi', city: 'Mumbai', price: 1000, rating: 4.5, sports: ['Cricket'], dimensions: '95 × 48 ft', squareFeet: '4,560 sq ft', image: '/images/turf4.png', gallery: ['/images/turf4.png', '/images/turf1.png', '/images/turf2.png', '/images/turf3.png', '/images/turf5.png'] },
-    { id: 6, name: 'Royal Cricket Ground', location: 'Vijay Nagar', city: 'Indore', price: 1000, rating: 4.7, sports: ['Cricket'], dimensions: '120 × 60 ft', squareFeet: '7,200 sq ft', image: '/images/turf5.png', gallery: ['/images/turf5.png', '/images/turf1.png', '/images/turf3.png', '/images/turf4.png', '/images/turf2.png'] },
-    { id: 7, name: 'DunkZone Cricket Turf', location: 'Bandra', city: 'Mumbai', price: 750, rating: 4.3, sports: ['Cricket'], dimensions: '90 × 45 ft', squareFeet: '4,050 sq ft', image: '/images/turf2.png', gallery: ['/images/turf2.png', '/images/turf3.png', '/images/turf4.png', '/images/turf5.png', '/images/turf6.png'] },
-    { id: 8, name: 'PixelArena Cricket', location: 'HSR Layout', city: 'Bangalore', price: 1500, rating: 4.8, sports: ['Cricket'], dimensions: '125 × 65 ft', squareFeet: '8,125 sq ft', image: '/images/turf6.png', gallery: ['/images/turf6.png', '/images/turf7.png', '/images/turf1.png', '/images/turf2.png', '/images/turf3.png'] },
-    { id: 1, name: 'SportZone Arena', location: 'Andheri West', city: 'Mumbai', price: 1200, rating: 4.8, image: '/images/turf1.png' },
-    { id: 2, name: 'Champion Cricket Ground', location: 'Koramangala', city: 'Bangalore', price: 1500, rating: 4.9, image: '/images/turf6.png' },
-    { id: 3, name: 'GameVault Cricket Center', location: 'Koramangala', city: 'Bangalore', price: 1200, rating: 4.9, image: '/images/turf2.png' },
-    { id: 4, name: 'ProKick Cricket Turf', location: 'Indiranagar', city: 'Bangalore', price: 1400, rating: 4.7, image: '/images/turf3.png' },
-    { id: 5, name: 'ProPlay Cricket Arena', location: 'Vashi', city: 'Mumbai', price: 1000, rating: 4.5, image: '/images/turf4.png' },
-    { id: 6, name: 'Royal Cricket Ground', location: 'Vijay Nagar', city: 'Indore', price: 1000, rating: 4.7, image: '/images/turf5.png' },
-    { id: 7, name: 'DunkZone Cricket Turf', location: 'Bandra', city: 'Mumbai', price: 750, rating: 4.3, image: '/images/turf2.png' },
-]
+const DEFAULT_COURT_NAME = 'Court 1'
+
+/** Converts a "HH:MM" 24h string into a "H:MM AM/PM" display label. */
+const to12Hour = (hhmm) => {
+    const [h, m] = hhmm.split(':').map(Number)
+    const period = h >= 12 ? 'PM' : 'AM'
+    const displayHour = h % 12 === 0 ? 12 : h % 12
+    return `${displayHour}:${String(m).padStart(2, '0')} ${period}`
+}
+
+/** Maps a real Slot API status onto the UI's slot-card status vocabulary. */
+const mapSlotStatus = (status) => {
+    if (status === 'AVAILABLE') return 'available'
+    if (status === 'BOOKED') return 'booked'
+    if (status === 'BLOCKED') return 'maintenance'
+    return 'booked'
+}
 
 // Generate upcoming 8 days starting from today
 const generateUpcomingDays = () => {
@@ -64,94 +66,6 @@ const generateUpcomingDays = () => {
     return list
 }
 
-// Generate dynamic time slots based on selected venue price and actual date
-const generateDynamicSlots = (basePrice = 1200, selectedDateObj = null, venueId = 16) => {
-    const rawTimes = [
-        { id: '06:00', time: '6:00 AM' },
-        { id: '07:00', time: '7:00 AM' },
-        { id: '08:00', time: '8:00 AM' },
-        { id: '09:00', time: '9:00 AM' },
-        { id: '10:00', time: '10:00 AM' },
-        { id: '11:00', time: '11:00 AM' },
-        { id: '12:00', time: '12:00 PM' },
-        { id: '13:00', time: '1:00 PM' },
-        { id: '14:00', time: '2:00 PM' },
-        { id: '15:00', time: '3:00 PM' },
-        { id: '16:00', time: '4:00 PM' },
-        { id: '17:00', time: '5:00 PM' },
-        { id: '18:00', time: '6:00 PM' },
-        { id: '19:00', time: '7:00 PM' },
-        { id: '20:00', time: '8:00 PM' },
-        { id: '21:00', time: '9:00 PM' },
-        { id: '22:00', time: '10:00 PM' },
-    ]
-
-    const dateNum = selectedDateObj?.dateNum || 9
-    const dayShort = (selectedDateObj?.dayShort || 'TODAY').toUpperCase()
-    const fullDate = selectedDateObj?.fullDateString || ''
-    const isWeekend = dayShort.includes('SAT') || dayShort.includes('SUN')
-
-    const now = new Date()
-    const currentHour = now.getHours()
-    const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
-    const isToday = !selectedDateObj || selectedDateObj.dayShort === 'TODAY' || fullDate === todayStr
-
-    return rawTimes.map((s, i) => {
-        const slotHour = parseInt(s.id.split(':')[0], 10)
-        const isPeakHour = slotHour >= 18 && slotHour <= 22
-        const isEarlyMorning = slotHour < 8
-
-        let factor = 1.0
-        if (isPeakHour) factor = isWeekend ? 1.30 : 1.28
-        else if (isEarlyMorning) factor = 0.85
-        else if (isWeekend && slotHour >= 14) factor = 1.15
-
-        let status = 'available'
-
-        if (dayShort.includes('SUN')) {
-            if (dateNum === 9) {
-                if ([0, 1, 3, 4, 5, 7, 11, 15].includes(i)) status = 'booked'
-            } else {
-                if ([0, 1, 2, 4, 7, 12, 14, 15, 16].includes(i)) status = 'booked'
-            }
-        } else if (dayShort.includes('MON')) {
-            if ([0, 1, 3, 4, 5, 7, 11, 15].includes(i)) status = 'booked'
-            else if (i === 6) status = 'maintenance' // 12:00 PM
-            else if (i === 2) status = 'staff_unavailable' // 8:00 AM
-        } else if (dayShort.includes('TUE')) {
-            if ([2, 4, 8, 12, 15].includes(i)) status = 'booked'
-            else if (i === 5) status = 'maintenance' // 11:00 AM
-        } else if (dayShort.includes('WED')) {
-            if ([3, 7, 11, 14, 15].includes(i)) status = 'booked'
-            else if (i === 1) status = 'staff_unavailable' // 7:00 AM
-        } else if (dayShort.includes('THU')) {
-            if ([0, 2, 5, 8, 11, 15].includes(i)) status = 'booked'
-            else if (i === 7) status = 'maintenance' // 1:00 PM
-        } else if (dayShort.includes('FRI')) {
-            if ([1, 3, 5, 8, 10, 12, 13, 14, 16].includes(i)) status = 'booked'
-        } else if (dayShort.includes('SAT')) {
-            if ([0, 1, 2, 4, 6, 8, 11, 13, 14, 15].includes(i)) status = 'booked'
-            else if (i === 3) status = 'staff_unavailable' // 9:00 AM
-        } else {
-            const hash = (dateNum * 11 + i * 17 + (venueId || 16) * 5) % 100
-            if (hash < 40) status = 'booked'
-            else if (hash === 91) status = 'maintenance'
-            else if (hash === 92) status = 'staff_unavailable'
-        }
-
-        // Real-time time management: if the date is TODAY and slot hour <= currentHour, slot has passed
-        if (isToday && slotHour <= currentHour) {
-            status = 'booked'
-        }
-
-        return {
-            ...s,
-            status,
-            price: Math.round((basePrice * factor) / 50) * 50
-        }
-    })
-}
-
 export default function SlotBookingPage() {
     const { id } = useParams()
     const navigate = useNavigate()
@@ -160,55 +74,80 @@ export default function SlotBookingPage() {
     const addToast = toastContext?.addToast
     const { user, login, setSession } = useAuth()
 
-    // Selected Turf Venue State
-    const [selectedVenue, setSelectedVenue] = useState(() => {
-        const found = allAvailableTurfs.find(t => t.id === Number(id))
-        return found || allAvailableTurfs[0]
-    })
+    // Selected Turf Venue State -- loaded from the real public /turfs/:id catalog endpoint
+    const [selectedVenue, setSelectedVenue] = useState(null)
+    const [allAvailableTurfs, setAllAvailableTurfs] = useState([])
+    const [venueLoading, setVenueLoading] = useState(true)
+    const [venueError, setVenueError] = useState(null)
+
+    // Real BranchSport configuration this booking widget targets (sport + court + pricing)
+    const [activeBranchSport, setActiveBranchSport] = useState(null)
 
     // Active venue photo preview state & Lightbox Modal
-    const [activePhotoUrl, setActivePhotoUrl] = useState(() => selectedVenue.image || '/images/turf1.png')
+    const [activePhotoUrl, setActivePhotoUrl] = useState('')
     const [isGalleryModalOpen, setIsGalleryModalOpen] = useState(false)
     const [galleryPhotoIndex, setGalleryPhotoIndex] = useState(0)
 
+    // Load the real turf + its configured sport/pricing from the backend
     useEffect(() => {
-        const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5005/api/v1';
-        fetch(`${API_URL}/branches`)
-            .then(res => res.json())
-            .then(data => {
-                if (data.success && data.data && Array.isArray(data.data.branches) && data.data.branches.length > 0) {
-                    const realBranches = data.data.branches.map((b, idx) => ({
-                        id: b.id || b._id || idx + 1,
-                        name: b.branchName || b.name || 'Indore Turf Complex',
-                        location: b.fullAddress || (b.city ? `${b.city} Turf Complex` : 'Indore Turf Complex'),
-                        city: b.city || 'Indore',
-                        price: b.pricePerHour || b.price || 1000,
-                        rating: b.rating || 4.9,
-                        sports: Array.isArray(b.sports) && b.sports.length > 0 ? b.sports : ['Cricket'],
-                        dimensions: b.dimensions || '100 × 50 ft',
-                        squareFeet: b.turfSize || '5,000 sq ft',
-                        image: (b.images && b.images[0]) || `/images/turf${(idx % 6) + 1}.png`,
-                        gallery: [`/images/turf${(idx % 6) + 1}.png`, '/images/turf2.png', '/images/turf3.png']
-                    }))
-                    const matched = realBranches.find(b => String(b.id) === String(id)) || realBranches[0]
-                    setSelectedVenue(matched)
-                    setActivePhotoUrl(matched.image)
-                }
+        let cancelled = false
+        setVenueLoading(true)
+        setVenueError(null)
+
+        Promise.all([
+            api.get(`/turfs/${id}`),
+            api.get('/turfs'),
+        ]).then(([turfRes, listRes]) => {
+            if (cancelled) return
+            if (!turfRes?.success || !turfRes.data) {
+                setVenueError(turfRes?.message || 'This turf could not be found.')
+                return
+            }
+            const turf = turfRes.data
+            setSelectedVenue({
+                id: turf.id,
+                name: turf.name,
+                location: turf.location,
+                city: turf.city,
+                price: turf.price,
+                rating: turf.rating,
+                sports: turf.sports,
+                dimensions: turf.dimensions,
+                squareFeet: turf.turfSize,
+                image: turf.image || '/images/turf1.png',
+                gallery: turf.images?.length ? turf.images : [turf.image].filter(Boolean),
             })
-            .catch(e => console.warn('Fetch real branches note in SlotBookingPage:', e.message))
+            setActivePhotoUrl(turf.image || '/images/turf1.png')
+
+            if (Array.isArray(listRes?.data)) {
+                setAllAvailableTurfs(listRes.data.map(t => ({ id: t.id, name: t.name, location: t.location, city: t.city, price: t.price, rating: t.rating, image: t.image || '/images/turf1.png' })))
+            }
+
+            return api.get(`/sports/branch/${turf.id}`)
+        }).then((sportsRes) => {
+            if (cancelled || !sportsRes) return
+            const activeSport = (sportsRes.data || []).find(s => s.status === 'ACTIVE')
+            if (activeSport) setActiveBranchSport(activeSport)
+        }).catch((err) => {
+            if (!cancelled) setVenueError(err?.message || 'Failed to load turf details.')
+        }).finally(() => {
+            if (!cancelled) setVenueLoading(false)
+        })
+
+        return () => { cancelled = true }
     }, [id])
 
     // Modals
     const [isVenueModalOpen, setIsVenueModalOpen] = useState(false)
     const [isAuthModalOpen, setIsAuthModalOpen] = useState(false)
     const [authModalTab, setAuthModalTab] = useState('login')
-    const [authEmail, setAuthEmail] = useState('customer@gmail.com')
-    const [authPassword, setAuthPassword] = useState('123')
+    const [authEmail, setAuthEmail] = useState('')
+    const [authPassword, setAuthPassword] = useState('')
     const [authRole, setAuthRole] = useState('customer')
     const [authRegName, setAuthRegName] = useState('')
     const [authRegPhone, setAuthRegPhone] = useState('')
     const [authRegEmail, setAuthRegEmail] = useState('')
-    const [authRegPassword, setAuthRegPassword] = useState('123')
+    const [authRegPassword, setAuthRegPassword] = useState('')
     const [authLoading, setAuthLoading] = useState(false)
 
     // Booking Steps (1 to 4)
@@ -227,20 +166,122 @@ export default function SlotBookingPage() {
     const [selectedSlotTime, setSelectedSlotTime] = useState('18:00')
     const [hasVerifiedUmpire, setHasVerifiedUmpire] = useState(false)
 
-    // Dynamic slot generation based on selectedVenue price and selectedDateObj
-    const allTimeSlots = useMemo(() => {
-        return generateDynamicSlots(selectedVenue?.price || 1200, selectedDateObj)
-    }, [selectedVenue?.price, selectedDateObj])
+    // Real slot availability for the selected date, fetched from the backend
+    // (which merges persisted bookings with the branch's configured hours/pricing).
+    const [rawSlots, setRawSlots] = useState([])
+    const [slotsLoading, setSlotsLoading] = useState(false)
 
-    // Coupons
+    useEffect(() => {
+        if (!selectedVenue || !activeBranchSport || !selectedDateObj) return
+        let cancelled = false
+        setSlotsLoading(true)
+
+        api.get('/slots', {
+            params: {
+                branchId: selectedVenue.id,
+                sportId: activeBranchSport.sportId?.id || activeBranchSport.sportId,
+                courtName: DEFAULT_COURT_NAME,
+                date: selectedDateObj.fullDateString,
+            }
+        }).then((res) => {
+            if (cancelled) return
+            if (res?.success) setRawSlots(res.data)
+        }).catch((err) => {
+            if (!cancelled) console.error('Failed to load slots:', err)
+        }).finally(() => {
+            if (!cancelled) setSlotsLoading(false)
+        })
+
+        return () => { cancelled = true }
+    }, [selectedVenue?.id, activeBranchSport, selectedDateObj?.fullDateString])
+
+    const allTimeSlots = useMemo(() => {
+        const now = new Date()
+        const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
+        const isSelectedToday = selectedDateObj?.fullDateString === todayStr || selectedDateObj?.dayShort === 'TODAY'
+        const currentHour = now.getHours()
+
+        return rawSlots
+            .slice()
+            .sort((a, b) => a.startTime.localeCompare(b.startTime))
+            .map(s => {
+                const startH = parseInt(s.startTime.split(':')[0], 10)
+                const isPassedToday = isSelectedToday && startH <= currentHour
+                return {
+                    id: s.startTime,
+                    time: to12Hour(s.startTime),
+                    status: isPassedToday ? 'booked' : mapSlotStatus(s.status),
+                    price: s.price,
+                    endTime: s.endTime,
+                    isPassed: isPassedToday
+                }
+            })
+    }, [rawSlots, selectedDateObj])
+
+    // Coupons -- real active DiscountOffer rows for this venue, not a hardcoded list.
     const [couponInput, setCouponInput] = useState('')
     const [appliedOffer, setAppliedOffer] = useState(null)
     const [promoApplied, setPromoApplied] = useState(false)
-    const availableOffers = [
-        { code: 'SM200', flatDiscount: 200, minPrice: 800 },
-        { code: 'CRICKET20', discountPercent: 20, minPrice: 1000 },
-        { code: 'EARLY250', flatDiscount: 250, minPrice: 800 }
-    ];
+    const [availableOffers, setAvailableOffers] = useState([])
+
+    useEffect(() => {
+        if (!selectedVenue?.id) return
+        const urlPromo = (searchParams.get('promo') || searchParams.get('coupon') || '').toUpperCase()
+
+        getDiscountOffers({ turfId: selectedVenue.id, status: 'ACTIVE', limit: 50 })
+            .then(res => {
+                let offers = (res?.data?.offers || []).map(o => ({
+                    code: o.promoCode,
+                    flatDiscount: o.discountType === 'FLAT_AMOUNT' ? o.discountValue : undefined,
+                    discountPercent: o.discountType === 'PERCENTAGE' ? o.discountValue : undefined,
+                    maxDiscount: o.maximumDiscountAmount || undefined,
+                    minPrice: o.minimumBookingAmount || 0,
+                    title: o.title
+                })).filter(o => o.code)
+
+                if (offers.length === 0) {
+                    const fallbackCode = urlPromo || selectedVenue.couponCode || 'CRICKET20'
+                    const fallbackTitle = selectedVenue.discountOffer || '20% OFF FIRST MATCH'
+                    if (fallbackCode) {
+                        offers = [{
+                            code: fallbackCode,
+                            discountPercent: 20,
+                            title: fallbackTitle,
+                            minPrice: 0
+                        }]
+                    }
+                }
+                setAvailableOffers(offers)
+
+                if (urlPromo) {
+                    const matchOffer = offers.find(o => o.code.toUpperCase() === urlPromo) || {
+                        code: urlPromo,
+                        discountPercent: 20,
+                        title: '20% OFF PROMO',
+                        minPrice: 0
+                    }
+                    setCouponInput(urlPromo)
+                    setAppliedOffer(matchOffer)
+                    setPromoApplied(true)
+                }
+            })
+            .catch(() => {
+                const fallbackCode = urlPromo || selectedVenue.couponCode || 'CRICKET20'
+                const fallbackTitle = selectedVenue.discountOffer || '20% OFF FIRST MATCH'
+                const offers = [{
+                    code: fallbackCode,
+                    discountPercent: 20,
+                    title: fallbackTitle,
+                    minPrice: 0
+                }]
+                setAvailableOffers(offers)
+                if (urlPromo) {
+                    setCouponInput(urlPromo)
+                    setAppliedOffer(offers[0])
+                    setPromoApplied(true)
+                }
+            })
+    }, [selectedVenue?.id, selectedVenue?.couponCode, selectedVenue?.discountOffer, searchParams])
 
     // Step 2 Payment Modes: 'FULL_PAY' | 'DARE_TO_PLAY' | 'SPLIT_50_50' | 'PER_PLAYER'
     const [paymentMode, setPaymentMode] = useState(() => {
@@ -262,7 +303,7 @@ export default function SlotBookingPage() {
         ? allTimeSlots.slice(selectedSlotIndex, Math.min(allTimeSlots.length, selectedSlotIndex + durationHours))
         : []
     const currentSlotObj = allTimeSlots.find(s => s.id === selectedSlotTime)
-    const currentSlotPrice = currentSlotObj ? currentSlotObj.price : (selectedVenue.price || 1200)
+    const currentSlotPrice = currentSlotObj ? currentSlotObj.price : (selectedVenue?.price || 0)
     const grossSlotRent = selectedConsecutiveSlots.reduce((sum, slot) => sum + (slot.price || currentSlotPrice), 0)
     const grossRent = grossSlotRent + (hasVerifiedUmpire ? 300 : 0)
 
@@ -293,9 +334,10 @@ export default function SlotBookingPage() {
     }, [durationHours])
 
     let discountAmount = 0
-    if (appliedOffer) {
+    if (appliedOffer && grossRent >= (appliedOffer.minPrice || 0)) {
         if (appliedOffer.flatDiscount) discountAmount = appliedOffer.flatDiscount
         else if (appliedOffer.discountPercent) discountAmount = Math.round((grossRent * appliedOffer.discountPercent) / 100)
+        if (appliedOffer.maxDiscount) discountAmount = Math.min(discountAmount, appliedOffer.maxDiscount)
     }
     const totalRent = Math.max(0, grossRent - discountAmount)
 
@@ -317,49 +359,115 @@ export default function SlotBookingPage() {
         opponentShareAmount = totalRent - perPlayerShareAmount
     }
 
-    // Coupon Apply Handler
+    // Coupon Apply Handler -- connects directly to MySQL backend validation API
     const handleApplyCoupon = (code) => {
-        const found = availableOffers.find(o => o.code.toUpperCase() === code.toUpperCase())
-        if (found) {
-            setAppliedOffer(found)
-            if (addToast) addToast(`Promo code ${found.code} applied!`, 'success')
-        } else {
-            if (addToast) addToast('Invalid promo code', 'error')
+        if (!code || !code.trim()) {
+            if (addToast) addToast('Please enter a promo code', 'error');
+            return;
         }
-    }
+        const cleanCode = code.trim().toUpperCase();
 
-    // Apply promo from URL query param on mount
+        api.post('/discounts/validate-promo', {
+            promoCode: cleanCode,
+            branchId: selectedVenue?.id,
+            amount: grossRent
+        }).then(res => {
+            if (res?.success && res?.data) {
+                const data = res.data;
+                const offerObj = {
+                    code: data.promoCode,
+                    discountPercent: data.discountType === 'PERCENTAGE' ? data.discountValue : undefined,
+                    flatDiscount: data.discountType === 'FLAT_AMOUNT' ? data.discountValue : undefined,
+                    title: data.title,
+                    calculatedAmount: data.discountAmount
+                };
+                setAppliedOffer(offerObj);
+                setCouponInput(cleanCode);
+                if (addToast) addToast(res.message || `Promo code ${cleanCode} applied!`, 'success');
+            } else {
+                if (addToast) addToast(res?.message || 'Invalid promo code', 'error');
+            }
+        }).catch(err => {
+            const errorMsg = err?.response?.data?.message || err?.message || 'Invalid promo code for this turf.';
+            if (addToast) addToast(errorMsg, 'error');
+        });
+    };
+
+    // Apply promo from URL query param, once the real offers list has loaded
     useEffect(() => {
         const promo = searchParams.get('promo')
-        if (promo && !promoApplied) {
+        if (promo && !promoApplied && availableOffers.length > 0) {
             const found = availableOffers.find(o => o.code.toUpperCase() === promo.toUpperCase())
             if (found) {
                 setAppliedOffer(found)
                 setPromoApplied(true)
                 if (addToast) addToast(`Promo code ${found.code} applied!`, 'success')
-            } else {
-                if (addToast) addToast('Invalid promo code', 'error')
             }
         }
-    }, [searchParams, promoApplied])
+    }, [searchParams, promoApplied, availableOffers])
 
-    // Booking Lock Submission Handler
-    const handleConfirmBooking = () => {
-        setIsSubmitting(true);
-        setTimeout(() => {
-            setIsSubmitting(false);
+    // Booking Lock Submission Handler -- creates a real Match via the backend's
+    // atomic slot-hold + payment engine (no fabricated booking ID or fake delay).
+    const handleConfirmBooking = async () => {
+        if (!user) {
+            setIsAuthModalOpen(true)
+            if (addToast) addToast('Please sign in to lock this slot.', 'error')
+            return
+        }
+        if (!selectedVenue || !activeBranchSport || !currentSlotObj) {
+            if (addToast) addToast('Select a valid slot before continuing.', 'error')
+            return
+        }
+
+        setIsSubmitting(true)
+        try {
+            const endHour = String(Number(selectedSlotTime.split(':')[0]) + durationHours).padStart(2, '0')
+            const created = await api.post('/match-payments/create', {
+                branchId: selectedVenue.id,
+                sportId: activeBranchSport.sportId?.id || activeBranchSport.sportId,
+                courtName: DEFAULT_COURT_NAME,
+                captainName: user.name,
+                captainPhone: user.mobile || '',
+                paymentMode,
+                durationHours,
+                slotDate: selectedDateObj.fullDateString,
+                startTime: `${selectedSlotTime}:00`,
+                endTime: `${endHour}:00:00`,
+                totalPayingPlayers: perPlayerCount,
+            })
+            if (!created?.success) throw new Error(created?.message || 'Could not lock this slot.')
+
+            const verified = await api.post('/match-payments/verify', {
+                matchId: created.data.matchId,
+                holdId: created.data.holdId,
+                paymentMethod: 'UPI',
+            })
+            if (!verified?.success) throw new Error(verified?.message || 'Payment could not be verified.')
+
             setBookingResult({
-                bookingId: `SM-${Math.floor(1000 + Math.random() * 9000)}`,
+                bookingId: created.data.matchId,
                 venueName: selectedVenue.name,
                 date: selectedDateObj.formattedLabel,
                 slotTime: selectedSlotTime,
-                amountPaid: myPaymentAmount,
-                paymentMode
-            });
-            setIsPaymentConfirmed(true);
-            setActiveStep(4);
-            if (addToast) addToast('⚡ Match Slot Locked Successfully!', 'success');
-        }, 1200);
+                amountPaid: created.data.captainSharePayable,
+                paymentMode,
+                inviteUrl: verified.data.inviteUrl,
+                // No live gateway yet: payment stays PENDING until the venue confirms
+                // receipt and the platform confirms its commission (see Phase 1 split
+                // settlement). payoutDestination tells the customer where to pay.
+                paymentStatus: verified.data.paymentStatus || 'PENDING',
+                payoutDestination: verified.data.payoutDestination,
+                commissionAmount: verified.data.commissionAmount,
+                ownerAmount: verified.data.ownerAmount,
+            })
+            setIsPaymentConfirmed(true)
+            setActiveStep(4)
+            if (addToast) addToast('⚡ Match Slot Locked! Complete payment to the venue to confirm.', 'success')
+        } catch (err) {
+            if (addToast) addToast(err.message || 'Failed to lock this slot. It may have just been taken.', 'error')
+        } finally {
+            setIsSubmitting(false)
+        }
     }
 
     // Share link copy
@@ -376,34 +484,65 @@ export default function SlotBookingPage() {
         window.open(`https://api.whatsapp.com/send?text=${msg}`, '_blank')
     }
 
-    // Auth Login Handlers
-    const handleAuthLoginSubmit = (e) => {
+    // Auth Login Handlers -- real backend calls only, no fabricated sessions
+    const [authError, setAuthError] = useState(null)
+
+    const handleAuthLoginSubmit = async (e) => {
         e.preventDefault()
+        setAuthError(null)
         setAuthLoading(true)
-        setTimeout(() => {
-            setAuthLoading(false)
-            login({ email: authEmail, role: authRole, name: authEmail.split('@')[0] })
+        try {
+            await login(authEmail, authPassword)
             setIsAuthModalOpen(false)
             if (addToast) addToast('Signed in successfully', 'success')
-        }, 800)
-    }
-
-    const handleQuickDemoLogin = (roleType) => {
-        const emailMap = { customer: 'customer@gmail.com', owner: 'owner@gmail.com', superadmin: 'superadmin@gmail.com', guest: 'guest@sportmatrix.com' }
-        login({ email: emailMap[roleType] || 'customer@gmail.com', role: roleType, name: roleType.toUpperCase() })
-        setIsAuthModalOpen(false)
-        if (addToast) addToast(`Logged in as ${roleType}`, 'success')
-    }
-
-    const handleRegisterSubmit = (e) => {
-        e.preventDefault()
-        setAuthLoading(true)
-        setTimeout(() => {
+        } catch (err) {
+            setAuthError(err.message || 'Invalid email or password.')
+        } finally {
             setAuthLoading(false)
-            login({ email: authRegEmail, role: 'customer', name: authRegName || 'Customer' })
+        }
+    }
+
+    const handleRegisterSubmit = async (e) => {
+        e.preventDefault()
+        setAuthError(null)
+        setAuthLoading(true)
+        try {
+            await registerUser({ name: authRegName, email: authRegEmail, password: authRegPassword, phone: authRegPhone })
+            await login(authRegEmail, authRegPassword)
             setIsAuthModalOpen(false)
             if (addToast) addToast('Account created successfully', 'success')
-        }, 800)
+        } catch (err) {
+            setAuthError(err.message || 'Registration failed.')
+        } finally {
+            setAuthLoading(false)
+        }
+    }
+
+    if (venueLoading) {
+        return (
+            <div className="min-h-screen flex items-center justify-center text-slate-500 font-semibold pt-20">
+                Loading turf details...
+            </div>
+        )
+    }
+
+    if (venueError || !selectedVenue) {
+        return (
+            <div className="min-h-screen flex flex-col items-center justify-center gap-3 text-center px-4 pt-20">
+                <p className="text-slate-700 font-bold">{venueError || 'This turf could not be found.'}</p>
+                <button type="button" onClick={() => navigate('/turfs')} className="text-sm font-black text-[#16A34A] underline cursor-pointer">
+                    Browse other turfs
+                </button>
+            </div>
+        )
+    }
+
+    if (!activeBranchSport) {
+        return (
+            <div className="min-h-screen flex items-center justify-center text-center px-4 pt-20">
+                <p className="text-slate-700 font-bold">This turf has no active sport configured for booking yet.</p>
+            </div>
+        )
     }
 
     return (
@@ -471,15 +610,17 @@ export default function SlotBookingPage() {
                                     setIsGalleryModalOpen={setIsGalleryModalOpen}
                                 />
 
-                                <CouponsCard
-                                    couponInput={couponInput}
-                                    setCouponInput={setCouponInput}
-                                    appliedOffer={appliedOffer}
-                                    setAppliedOffer={setAppliedOffer}
-                                    availableOffers={availableOffers}
-                                    handleApplyCoupon={handleApplyCoupon}
-                                    addToast={addToast}
-                                />
+                                {availableOffers && availableOffers.length > 0 && (
+                                    <CouponsCard
+                                        couponInput={couponInput}
+                                        setCouponInput={setCouponInput}
+                                        appliedOffer={appliedOffer}
+                                        setAppliedOffer={setAppliedOffer}
+                                        availableOffers={availableOffers}
+                                        handleApplyCoupon={handleApplyCoupon}
+                                        addToast={addToast}
+                                    />
+                                )}
                             </div>
 
                             {/* ── RIGHT MAIN WORKSPACE (Col-Span 8 ~67% Width) ── */}
@@ -552,7 +693,7 @@ export default function SlotBookingPage() {
                 {/* ═══════════════════════════════════════════════════
                     STEP 4: CONFIRMATION & RECEIPT
                 ═══════════════════════════════════════════════════ */}
-                {activeStep === 4 && (
+                <Modal isOpen={activeStep === 4} onClose={() => navigate('/')} title="Booking Confirmation" size="lg">
                     <BookingStep4Receipt
                         bookingResult={bookingResult}
                         selectedVenue={selectedVenue}
@@ -567,7 +708,7 @@ export default function SlotBookingPage() {
                         handleShareWhatsApp={handleShareWhatsApp}
                         navigate={navigate}
                     />
-                )}
+                </Modal>
 
                 {/* MODALS */}
                 <TurfGalleryModal
@@ -613,8 +754,8 @@ export default function SlotBookingPage() {
                     authRegPassword={authRegPassword}
                     setAuthRegPassword={setAuthRegPassword}
                     authLoading={authLoading}
+                    authError={authError}
                     handleAuthLoginSubmit={handleAuthLoginSubmit}
-                    handleQuickDemoLogin={handleQuickDemoLogin}
                     handleRegisterSubmit={handleRegisterSubmit}
                 />
             </div>

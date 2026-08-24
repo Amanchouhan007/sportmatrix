@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import DataTable from '../../components/ui/DataTable'
 import Button from '../../components/ui/Button'
 import Badge from '../../components/ui/Badge'
@@ -10,152 +10,137 @@ import { useToast } from '../../components/ui/Toast'
 import { HiPlay, HiCheck, HiExclamation } from 'react-icons/hi'
 import { HiTrophy } from 'react-icons/hi2'
 import CricketScorerConsole from '../../components/cricket/CricketScorerConsole'
+import { getAllTournamentMatches, updateMatchScore } from '../../services/tournamentService'
+import useRealtime from '../../utils/useRealtime'
 
-const mockMatches = [
-    {
-        id: 'fix_101',
-        roundName: 'Semi-Finals',
-        matchNumber: 1,
-        team1Name: 'Indore Thunders',
-        team1Score: 145,
-        team2Name: 'Warriors XI',
-        team2Score: 122,
-        winnerName: 'Indore Thunders',
-        winnerTeamId: 'tm_101',
-        status: 'Completed',
-        scheduledDate: '2026-03-16',
-        scheduledTime: '16:00',
-        yellowCards: 2,
-        redCards: 0,
-        remarks: 'High scoring match',
-        verificationTier: 'Tier 3',
-        trustMultiplier: '2.0x'
-    },
-    {
-        id: 'fix_102',
-        roundName: 'Semi-Finals',
-        matchNumber: 2,
-        team1Name: 'Royal Challengers',
-        team1Score: 156,
-        team2Name: 'Super Kings',
-        team2Score: 148,
-        winnerName: 'Royal Challengers',
-        winnerTeamId: 'tm_102',
-        status: 'Completed',
-        scheduledDate: '2026-03-16',
-        scheduledTime: '18:00',
-        yellowCards: 1,
-        redCards: 1,
-        remarks: '1 Red card issued in 18th over',
-        verificationTier: 'Tier 3',
-        trustMultiplier: '2.0x'
-    },
-    {
-        id: 'fix_103',
-        roundName: 'Grand Finale',
-        matchNumber: 3,
-        team1Name: 'Indore Thunders',
-        team1Score: 0,
-        team2Name: 'Royal Challengers',
-        team2Score: 0,
-        winnerName: null,
-        status: 'Scheduled',
-        scheduledDate: '2026-03-20',
-        scheduledTime: '19:00',
-        yellowCards: 0,
-        redCards: 0,
-        remarks: '',
-        verificationTier: 'Tier 3',
-        trustMultiplier: '2.0x'
-    }
-]
+const TIER_LABEL = {
+    SELF_ENTRY: { label: 'Tier 0: Self-Reported', multiplier: '0.0x', icon: '' },
+    CAPTAIN_HANDSHAKE: { label: 'Tier 1: Captain Handshake', multiplier: '1.0x', icon: '✓' },
+    PAID_UMPIRE: { label: 'Tier 2: Umpire Verified', multiplier: '1.5x', icon: '⚖️' },
+    OFFICIAL_TOURNAMENT: { label: 'Tier 3: Official Tournament', multiplier: '2.0x', icon: '🏆' }
+}
+
+const STATUS_LABEL = { SCHEDULED: 'Scheduled', LIVE: 'Live', COMPLETED: 'Completed', ABANDONED: 'Abandoned' }
+
+const mapFixture = (m) => ({
+    id: m.id,
+    roundName: m.roundName || 'Playoffs',
+    matchNumber: m.matchNumber,
+    team1Id: m.teamAId,
+    team1Name: m.teamA?.teamName || 'Team A',
+    team1Score: m.teamAScore || '',
+    team2Id: m.teamBId,
+    team2Name: m.teamB?.teamName || 'Team B',
+    team2Score: m.teamBScore || '',
+    winnerId: m.winnerId,
+    winnerName: m.winnerId === m.teamAId ? (m.teamA?.teamName) : m.winnerId === m.teamBId ? (m.teamB?.teamName) : null,
+    status: STATUS_LABEL[m.status] || m.status,
+    rawStatus: m.status,
+    scheduledDate: m.matchDate ? new Date(m.matchDate).toLocaleDateString('en-IN') : '',
+    scheduledTime: m.matchTime || '',
+    yellowCards: (m.yellowCardsTeamA || 0) + (m.yellowCardsTeamB || 0),
+    redCards: (m.redCardsTeamA || 0) + (m.redCardsTeamB || 0),
+    yellowCardsTeamA: m.yellowCardsTeamA || 0,
+    redCardsTeamA: m.redCardsTeamA || 0,
+    yellowCardsTeamB: m.yellowCardsTeamB || 0,
+    redCardsTeamB: m.redCardsTeamB || 0,
+    remarks: m.matchSummary || '',
+    tournament: m.tournament?.title || '',
+    verificationTier: m.verificationTier || 'OFFICIAL_TOURNAMENT'
+})
 
 export default function TournamentMatchesPage() {
     const { addToast } = useToast()
-    const [matches, setMatches] = useState(mockMatches)
+    const [matches, setMatches] = useState([])
+    const [isLoading, setIsLoading] = useState(true)
     const [scoreModal, setScoreModal] = useState({ open: false, match: null })
     const [activeLiveScorerMatch, setActiveLiveScorerMatch] = useState(null)
+    const [confirmLaunchMatch, setConfirmLaunchMatch] = useState(null)
+    const [isSaving, setIsSaving] = useState(false)
     const [form, setForm] = useState({
-        team1Score: '0',
-        team2Score: '0',
-        status: 'Completed',
-        yellowCards: '0',
-        redCards: '0',
-        remarks: ''
+        team1Score: '',
+        team2Score: '',
+        status: 'COMPLETED',
+        winnerSide: '',
+        yellowCardsTeamA: '0',
+        redCardsTeamA: '0',
+        yellowCardsTeamB: '0',
+        redCardsTeamB: '0'
     })
 
-    // Fetch live matches from MySQL DB via REST API
-    useEffect(() => {
-        const fetchMatches = async () => {
-            try {
-                const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5005/api/v1';
-                const res = await fetch(`${API_URL}/tournaments/matches/all`)
-                const data = await res.json()
-                if (data.success && Array.isArray(data.data) && data.data.length > 0) {
-                    const mapped = data.data.map(m => ({
-                        id: m.id,
-                        roundName: m.round_name || 'Playoffs',
-                        matchNumber: m.match_number,
-                        team1Name: m.team1_name,
-                        team1Score: m.team1_score,
-                        team2Name: m.team2_name,
-                        team2Score: m.team2_score,
-                        winnerName: m.winner_name,
-                        status: m.status || 'Scheduled',
-                        scheduledDate: '2026-03-20',
-                        scheduledTime: '19:00',
-                        yellowCards: 0,
-                        redCards: 0,
-                        remarks: m.live_state_json ? 'Live Scorer Console Enabled' : ''
-                    }))
-                    setMatches(mapped)
-                }
-            } catch (err) {
-                console.warn('API fetch matches note:', err.message)
-            }
+    const fetchMatches = useCallback(async () => {
+        setIsLoading(true)
+        try {
+            const res = await getAllTournamentMatches()
+            setMatches((res.data || []).map(mapFixture))
+        } catch (err) {
+            addToast({ title: 'Load Failed', message: err.message || 'Failed to load tournament matches.', type: 'error' })
+        } finally {
+            setIsLoading(false)
         }
-        fetchMatches()
-    }, [])
+    }, [addToast])
+
+    useEffect(() => { fetchMatches() }, [fetchMatches])
+    useRealtime(['tournament:match-updated'], () => fetchMatches())
 
     const handleOpenScoreModal = (match) => {
         setScoreModal({ open: true, match })
         setForm({
-            team1Score: String(match.team1Score || 0),
-            team2Score: String(match.team2Score || 0),
-            status: match.status || 'Completed',
-            yellowCards: String(match.yellowCards || 0),
-            redCards: String(match.redCards || 0),
-            remarks: match.remarks || ''
+            team1Score: match.team1Score || '',
+            team2Score: match.team2Score || '',
+            status: match.rawStatus || 'COMPLETED',
+            winnerSide: match.winnerId === match.team1Id ? 'team1' : match.winnerId === match.team2Id ? 'team2' : '',
+            yellowCardsTeamA: String(match.yellowCardsTeamA || 0),
+            redCardsTeamA: String(match.redCardsTeamA || 0),
+            yellowCardsTeamB: String(match.yellowCardsTeamB || 0),
+            redCardsTeamB: String(match.redCardsTeamB || 0)
         })
     }
 
-    const handleSaveScore = () => {
-        const t1Score = Number(form.team1Score)
-        const t2Score = Number(form.team2Score)
+    const handleSaveScore = async () => {
         const currentMatch = scoreModal.match
+        const winnerId = form.winnerSide === 'team1' ? currentMatch.team1Id : form.winnerSide === 'team2' ? currentMatch.team2Id : null
 
-        let winnerName = null
-        if (t1Score > t2Score) winnerName = currentMatch.team1Name
-        else if (t2Score > t1Score) winnerName = currentMatch.team2Name
-
-        setMatches(matches.map(m => m.id === currentMatch.id ? {
-            ...m,
-            team1Score: t1Score,
-            team2Score: t2Score,
-            winnerName,
-            status: form.status,
-            yellowCards: Number(form.yellowCards),
-            redCards: Number(form.redCards),
-            remarks: form.remarks
-        } : m))
-
-        setScoreModal({ open: false, match: null })
-        addToast({ title: 'Match Score Updated!', message: 'Scorecard, cards & live standings updated.', type: 'success' })
+        setIsSaving(true)
+        try {
+            await updateMatchScore(currentMatch.id, {
+                teamAScore: form.team1Score,
+                teamBScore: form.team2Score,
+                winnerId,
+                status: form.status,
+                yellowCardsTeamA: Number(form.yellowCardsTeamA),
+                redCardsTeamA: Number(form.redCardsTeamA),
+                yellowCardsTeamB: Number(form.yellowCardsTeamB),
+                redCardsTeamB: Number(form.redCardsTeamB)
+            })
+            addToast({ title: 'Match Score Updated!', message: 'Scorecard, cards & live standings updated.', type: 'success' })
+            setScoreModal({ open: false, match: null })
+            fetchMatches()
+        } catch (err) {
+            addToast({ title: 'Save Failed', message: err.message || 'Could not update this match score.', type: 'error' })
+        } finally {
+            setIsSaving(false)
+        }
     }
 
+    // Clicking "Live Score" no longer jumps straight into the console -- it opens
+    // a confirmation popup with match/venue/team details first, from which the
+    // operator chooses live scoring or manual scorecard entry.
     const handleLiveScore = (match) => {
+        setConfirmLaunchMatch(match)
+    }
+
+    const handleConfirmEnterLiveConsole = () => {
+        const match = confirmLaunchMatch
+        setConfirmLaunchMatch(null)
         setActiveLiveScorerMatch(match)
         addToast({ title: 'Live Cricket Operator Console', message: `Opened live scoring console for Match #${match.matchNumber}`, type: 'info' })
+    }
+
+    const handleConfirmManualEntry = () => {
+        const match = confirmLaunchMatch
+        setConfirmLaunchMatch(null)
+        handleOpenScoreModal(match)
     }
 
     const columns = [
@@ -202,14 +187,17 @@ export default function TournamentMatchesPage() {
         {
             key: 'verification',
             label: 'Verification Tier',
-            render: (_, r) => (
-                <div className="flex flex-col gap-0.5">
-                    <span className="px-2 py-0.5 rounded-full text-[10px] font-black uppercase bg-purple-50 text-purple-700 border border-purple-200 inline-flex items-center gap-1 w-max">
-                        🏆 Tier 3 Official
-                    </span>
-                    <span className="text-[10px] font-mono font-bold text-slate-500">2.0x Rank Weight</span>
-                </div>
-            )
+            render: (_, r) => {
+                const tier = TIER_LABEL[r.verificationTier] || TIER_LABEL.OFFICIAL_TOURNAMENT
+                return (
+                    <div className="flex flex-col gap-0.5">
+                        <span className="px-2 py-0.5 rounded-full text-[10px] font-black uppercase bg-purple-50 text-purple-700 border border-purple-200 inline-flex items-center gap-1 w-max">
+                            {tier.icon} {tier.label}
+                        </span>
+                        <span className="text-[10px] font-mono font-bold text-slate-500">{tier.multiplier} Rank Weight</span>
+                    </div>
+                )
+            }
         },
         {
             key: 'status',
@@ -247,8 +235,46 @@ export default function TournamentMatchesPage() {
 
             {/* Match Datatable */}
             <Card className="p-6">
-                <DataTable columns={columns} data={matches} />
+                {isLoading ? (
+                    <div className="py-10 text-center text-slate-400 text-sm font-semibold">Loading tournament matches...</div>
+                ) : matches.length === 0 ? (
+                    <div className="py-10 text-center text-slate-400 text-sm font-semibold">No tournament fixtures found.</div>
+                ) : (
+                    <DataTable columns={columns} data={matches} />
+                )}
             </Card>
+
+            {/* Match Selection Confirmation Popup -- shown before launching either the
+                live scorer console or the manual scorecard entry modal. */}
+            <Modal isOpen={!!confirmLaunchMatch} onClose={() => setConfirmLaunchMatch(null)} title="Confirm Match Selection" size="sm">
+                {confirmLaunchMatch && (
+                    <div className="space-y-4">
+                        <div className="bg-surface-50 p-4 rounded-2xl border border-surface-200 text-center">
+                            <div className="text-xs font-bold text-surface-400 uppercase">{confirmLaunchMatch.roundName} &bull; Match #{confirmLaunchMatch.matchNumber}</div>
+                            <div className="flex justify-around items-center mt-2">
+                                <span className="font-black text-surface-900 text-base">{confirmLaunchMatch.team1Name}</span>
+                                <span className="text-xs font-black text-surface-400 bg-surface-200 px-2 py-1 rounded-lg">VS</span>
+                                <span className="font-black text-surface-900 text-base">{confirmLaunchMatch.team2Name}</span>
+                            </div>
+                            <div className="text-[11px] text-surface-500 font-semibold mt-2">
+                                {confirmLaunchMatch.scheduledDate} &middot; {confirmLaunchMatch.scheduledTime}
+                            </div>
+                        </div>
+                        <p className="text-xs text-surface-500 font-medium text-center">Choose how you want to record this match's result.</p>
+                        <div className="flex flex-col gap-2 pt-2">
+                            <Button onClick={handleConfirmEnterLiveConsole} className="cursor-pointer">
+                                <HiPlay className="w-3.5 h-3.5 mr-1" /> Enter Live Scorer Console
+                            </Button>
+                            <Button variant="secondary" onClick={handleConfirmManualEntry} className="cursor-pointer">
+                                Manual Scorecard Entry
+                            </Button>
+                            <Button variant="secondary" onClick={() => setConfirmLaunchMatch(null)} className="cursor-pointer">
+                                Cancel
+                            </Button>
+                        </div>
+                    </div>
+                )}
+            </Modal>
 
             {/* Score Updater Modal */}
             <Modal isOpen={scoreModal.open} onClose={() => setScoreModal({ open: false, match: null })} title="Update Match Scorecard" size="md">
@@ -266,57 +292,62 @@ export default function TournamentMatchesPage() {
                         <div className="grid grid-cols-2 gap-4">
                             <Input
                                 label={`${scoreModal.match.team1Name} Score`}
-                                type="number"
+                                placeholder="e.g. 142/4 (16.2 ov)"
                                 value={form.team1Score}
                                 onChange={(e) => setForm({ ...form, team1Score: e.target.value })}
                             />
                             <Input
                                 label={`${scoreModal.match.team2Name} Score`}
-                                type="number"
+                                placeholder="e.g. 138/8 (20 ov)"
                                 value={form.team2Score}
                                 onChange={(e) => setForm({ ...form, team2Score: e.target.value })}
                             />
                         </div>
 
-                        <div className="grid grid-cols-3 gap-4">
+                        <div className="grid grid-cols-2 gap-4">
                             <Select
                                 label="Status"
                                 value={form.status}
                                 onChange={(e) => setForm({ ...form, status: e.target.value })}
                                 options={[
-                                    { value: 'Scheduled', label: 'Scheduled' },
-                                    { value: 'Live', label: 'Live Now' },
-                                    { value: 'Completed', label: 'Completed' },
+                                    { value: 'SCHEDULED', label: 'Scheduled' },
+                                    { value: 'LIVE', label: 'Live Now' },
+                                    { value: 'COMPLETED', label: 'Completed' },
+                                    { value: 'ABANDONED', label: 'Abandoned' },
                                 ]}
                             />
-                            <Input
-                                label="Yellow Cards 🟨"
-                                type="number"
-                                value={form.yellowCards}
-                                onChange={(e) => setForm({ ...form, yellowCards: e.target.value })}
-                            />
-                            <Input
-                                label="Red Cards 🟥"
-                                type="number"
-                                value={form.redCards}
-                                onChange={(e) => setForm({ ...form, redCards: e.target.value })}
+                            <Select
+                                label="Winner"
+                                value={form.winnerSide}
+                                onChange={(e) => setForm({ ...form, winnerSide: e.target.value })}
+                                options={[
+                                    { value: '', label: 'Not decided / Draw' },
+                                    { value: 'team1', label: scoreModal.match.team1Name },
+                                    { value: 'team2', label: scoreModal.match.team2Name },
+                                ]}
                             />
                         </div>
 
-                        <div>
-                            <label className="block text-xs font-bold text-surface-700 mb-1">Match Remarks & Notes</label>
-                            <textarea
-                                rows="2"
-                                placeholder="e.g. Player of match: Rajesh Patel"
-                                value={form.remarks}
-                                onChange={(e) => setForm({ ...form, remarks: e.target.value })}
-                                className="w-full p-3 text-xs bg-white border border-surface-200 rounded-xl outline-none focus:ring-2 focus:ring-primary-500"
-                            />
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                                <label className="block text-xs font-bold text-surface-700">{scoreModal.match.team1Name} Cards</label>
+                                <div className="flex gap-2">
+                                    <Input placeholder="🟨 Yellow" type="number" value={form.yellowCardsTeamA} onChange={(e) => setForm({ ...form, yellowCardsTeamA: e.target.value })} />
+                                    <Input placeholder="🟥 Red" type="number" value={form.redCardsTeamA} onChange={(e) => setForm({ ...form, redCardsTeamA: e.target.value })} />
+                                </div>
+                            </div>
+                            <div className="space-y-2">
+                                <label className="block text-xs font-bold text-surface-700">{scoreModal.match.team2Name} Cards</label>
+                                <div className="flex gap-2">
+                                    <Input placeholder="🟨 Yellow" type="number" value={form.yellowCardsTeamB} onChange={(e) => setForm({ ...form, yellowCardsTeamB: e.target.value })} />
+                                    <Input placeholder="🟥 Red" type="number" value={form.redCardsTeamB} onChange={(e) => setForm({ ...form, redCardsTeamB: e.target.value })} />
+                                </div>
+                            </div>
                         </div>
 
                         <div className="flex gap-3 justify-end pt-3 border-t border-surface-100">
-                            <Button variant="secondary" onClick={() => setScoreModal({ open: false, match: null })}>Cancel</Button>
-                            <Button onClick={handleSaveScore}>Save Match Result</Button>
+                            <Button variant="secondary" onClick={() => setScoreModal({ open: false, match: null })} disabled={isSaving}>Cancel</Button>
+                            <Button onClick={handleSaveScore} disabled={isSaving}>{isSaving ? 'Saving...' : 'Save Match Result'}</Button>
                         </div>
                     </div>
                 )}

@@ -82,6 +82,7 @@ app.use('/api/v1/owners', ownersRouter);
 // Discount Offers Routes registration
 const discountOffersRouter = require('./modules/discounts/discounts.routes');
 app.use('/api/v1/discount-offers', discountOffersRouter);
+app.use('/api/v1/discounts', discountOffersRouter);
 
 // Upload Routes registration (Photos & Videos)
 const uploadRouter = require('./modules/upload/upload.routes');
@@ -130,6 +131,10 @@ app.use('/api/v1/teams', teamsRouter);
 // Umpire Routes registration
 const umpireRouter = require('./modules/umpire/umpire.routes');
 app.use('/api/v1/umpire', umpireRouter);
+
+// Refund Requests Routes registration
+const refundsRouter = require('./modules/refunds/refunds.routes');
+app.use('/api/v1/refunds', refundsRouter);
 
 // Start Background Expiry & Reconciliation Worker
 const MatchExpiryService = require('./services/matchExpiry.service');

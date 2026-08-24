@@ -1,511 +1,274 @@
-const db = require('../../config/db');
+const prisma = require('../../config/prisma');
 
-/**
- * Format subscription plan row to clean JSON matching frontend expectations
- */
+const genId = (prefix) => `${prefix}_${Date.now()}_${Math.floor(Math.random() * 100000)}`;
+
 const formatPlan = (r) => {
     if (!r) return null;
-    let featuresArr = [];
-    if (r.features) {
-        if (typeof r.features === 'string') {
-            try {
-                featuresArr = JSON.parse(r.features);
-            } catch (e) {
-                featuresArr = [];
-            }
-        } else if (Array.isArray(r.features)) {
-            featuresArr = r.features;
-        }
-    }
-
     return {
         id: r.id,
         _id: r.id,
-        planName: r.plan_name,
+        planName: r.planName,
         description: r.description || '',
-        isPopular: Boolean(r.is_popular),
-        status: r.status || 'active',
+        isPopular: r.isPopular,
+        status: r.status,
         monthlyPricing: {
-            price: Number(r.monthly_price || 0),
-            branchLimit: Number(r.monthly_branch_limit ?? 1),
-            sportsLimit: Number(r.monthly_sports_limit ?? 2),
-            bookingLimit: Number(r.monthly_booking_limit ?? 200),
-            activeUsersLimit: Number(r.monthly_active_users_limit ?? 5)
+            price: Number(r.monthlyPrice),
+            branchLimit: r.monthlyBranchLimit,
+            sportsLimit: r.monthlySportsLimit,
+            bookingLimit: r.monthlyBookingLimit,
+            activeUsersLimit: r.monthlyActiveUsersLimit
         },
         yearlyPricing: {
-            price: Number(r.yearly_price || 0),
-            branchLimit: Number(r.yearly_branch_limit ?? 1),
-            sportsLimit: Number(r.yearly_sports_limit ?? 2),
-            bookingLimit: Number(r.yearly_booking_limit ?? 2500),
-            activeUsersLimit: Number(r.yearly_active_users_limit ?? 5)
+            price: Number(r.yearlyPrice),
+            branchLimit: r.yearlyBranchLimit,
+            sportsLimit: r.yearlySportsLimit,
+            bookingLimit: r.yearlyBookingLimit,
+            activeUsersLimit: r.yearlyActiveUsersLimit
         },
-        features: featuresArr,
-        createdAt: r.created_at,
-        updatedAt: r.updated_at
+        features: r.features || [],
+        createdAt: r.createdAt,
+        updatedAt: r.updatedAt
     };
 };
 
-/**
- * GET /api/v1/subscriptions
- * Fetch all subscription plans
- */
 const getAllPlans = async (req, res) => {
     try {
-        const [rows] = await db.query('SELECT * FROM subscription_plans ORDER BY created_at ASC');
-        const plans = rows.map(formatPlan);
-
-        return res.status(200).json({
-            success: true,
-            data: plans
-        });
+        const plans = await prisma.subscriptionPlan.findMany({ orderBy: { createdAt: 'asc' } });
+        return res.status(200).json({ success: true, data: plans.map(formatPlan) });
     } catch (error) {
         console.error('Error fetching subscription plans:', error);
-        return res.status(500).json({
-            success: false,
-            message: 'Failed to fetch subscription plans',
-            error: error.message
-        });
+        return res.status(500).json({ success: false, message: 'Failed to fetch subscription plans', error: error.message });
     }
 };
 
-/**
- * GET /api/v1/subscriptions/:id
- * Fetch single plan by ID
- */
 const getPlanById = async (req, res) => {
     try {
-        const { id } = req.params;
-        const [rows] = await db.query('SELECT * FROM subscription_plans WHERE id = ?', [id]);
-
-        if (rows.length === 0) {
-            return res.status(404).json({
-                success: false,
-                message: 'Subscription plan not found'
-            });
+        const plan = await prisma.subscriptionPlan.findUnique({ where: { id: req.params.id } });
+        if (!plan) {
+            return res.status(404).json({ success: false, message: 'Subscription plan not found' });
         }
-
-        return res.status(200).json({
-            success: true,
-            data: formatPlan(rows[0])
-        });
+        return res.status(200).json({ success: true, data: formatPlan(plan) });
     } catch (error) {
         console.error('Error fetching plan by ID:', error);
-        return res.status(500).json({
-            success: false,
-            message: 'Failed to fetch plan details',
-            error: error.message
-        });
+        return res.status(500).json({ success: false, message: 'Failed to fetch plan details', error: error.message });
     }
 };
 
-/**
- * POST /api/v1/subscriptions
- * Create a new Subscription Plan
- */
 const createPlan = async (req, res) => {
     try {
-        const {
-            planName,
-            description,
-            isPopular = false,
-            status = 'active',
-            monthlyPricing = {},
-            yearlyPricing = {},
-            features = []
-        } = req.body;
+        const { planName, description, isPopular = false, status = 'ACTIVE', monthlyPricing = {}, yearlyPricing = {}, features = [] } = req.body;
 
-        const planId = `plan_${Date.now()}`;
-        const featuresJson = JSON.stringify(features);
-
-        const insertQuery = `
-            INSERT INTO subscription_plans (
-                id, plan_name, description, is_popular, status,
-                monthly_price, monthly_branch_limit, monthly_sports_limit, monthly_booking_limit, monthly_active_users_limit,
-                yearly_price, yearly_branch_limit, yearly_sports_limit, yearly_booking_limit, yearly_active_users_limit,
+        const plan = await prisma.subscriptionPlan.create({
+            data: {
+                id: genId('plan'),
+                planName: planName.trim(),
+                description: description ? description.trim() : null,
+                isPopular: !!isPopular,
+                status: status.toUpperCase(),
+                monthlyPrice: monthlyPricing.price || 0,
+                monthlyBranchLimit: monthlyPricing.branchLimit ?? 1,
+                monthlySportsLimit: monthlyPricing.sportsLimit ?? 2,
+                monthlyBookingLimit: monthlyPricing.bookingLimit ?? 200,
+                monthlyActiveUsersLimit: monthlyPricing.activeUsersLimit ?? 5,
+                yearlyPrice: yearlyPricing.price || 0,
+                yearlyBranchLimit: yearlyPricing.branchLimit ?? 1,
+                yearlySportsLimit: yearlyPricing.sportsLimit ?? 2,
+                yearlyBookingLimit: yearlyPricing.bookingLimit ?? 2500,
+                yearlyActiveUsersLimit: yearlyPricing.activeUsersLimit ?? 5,
                 features
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        `;
-
-        await db.query(insertQuery, [
-            planId,
-            planName.trim(),
-            description ? description.trim() : null,
-            isPopular ? 1 : 0,
-            status,
-            monthlyPricing.price || 0,
-            monthlyPricing.branchLimit ?? 1,
-            monthlyPricing.sportsLimit ?? 2,
-            monthlyPricing.bookingLimit ?? 200,
-            monthlyPricing.activeUsersLimit ?? 5,
-            yearlyPricing.price || 0,
-            yearlyPricing.branchLimit ?? 1,
-            yearlyPricing.sportsLimit ?? 2,
-            yearlyPricing.bookingLimit ?? 2500,
-            yearlyPricing.activeUsersLimit ?? 5,
-            featuresJson
-        ]);
-
-        const [rows] = await db.query('SELECT * FROM subscription_plans WHERE id = ?', [planId]);
-        const created = formatPlan(rows[0]);
-
-        return res.status(201).json({
-            success: true,
-            message: 'Subscription plan created successfully',
-            data: created
+            }
         });
+
+        return res.status(201).json({ success: true, message: 'Subscription plan created successfully', data: formatPlan(plan) });
     } catch (error) {
         console.error('Error creating subscription plan:', error);
-        return res.status(500).json({
-            success: false,
-            message: 'Failed to create subscription plan',
-            error: error.message
-        });
+        return res.status(500).json({ success: false, message: 'Failed to create subscription plan', error: error.message });
     }
 };
 
-/**
- * PUT /api/v1/subscriptions/:id
- * Update an existing Subscription Plan
- */
 const updatePlan = async (req, res) => {
     try {
         const { id } = req.params;
+        const { planName, description, isPopular, status, monthlyPricing, yearlyPricing, features } = req.body;
 
-        const [existing] = await db.query('SELECT * FROM subscription_plans WHERE id = ?', [id]);
-        if (existing.length === 0) {
-            return res.status(404).json({
-                success: false,
-                message: 'Subscription plan not found'
-            });
+        const updated = await prisma.subscriptionPlan.update({
+            where: { id },
+            data: {
+                planName: planName !== undefined ? planName.trim() : undefined,
+                description: description !== undefined ? description.trim() : undefined,
+                isPopular: isPopular !== undefined ? !!isPopular : undefined,
+                status: status !== undefined ? status.toUpperCase() : undefined,
+                monthlyPrice: monthlyPricing?.price ?? undefined,
+                monthlyBranchLimit: monthlyPricing?.branchLimit ?? undefined,
+                monthlySportsLimit: monthlyPricing?.sportsLimit ?? undefined,
+                monthlyBookingLimit: monthlyPricing?.bookingLimit ?? undefined,
+                monthlyActiveUsersLimit: monthlyPricing?.activeUsersLimit ?? undefined,
+                yearlyPrice: yearlyPricing?.price ?? undefined,
+                yearlyBranchLimit: yearlyPricing?.branchLimit ?? undefined,
+                yearlySportsLimit: yearlyPricing?.sportsLimit ?? undefined,
+                yearlyBookingLimit: yearlyPricing?.bookingLimit ?? undefined,
+                yearlyActiveUsersLimit: yearlyPricing?.activeUsersLimit ?? undefined,
+                features: features ?? undefined
+            }
+        }).catch(() => null);
+
+        if (!updated) {
+            return res.status(404).json({ success: false, message: 'Subscription plan not found' });
         }
 
-        const current = existing[0];
-        const {
-            planName,
-            description,
-            isPopular,
-            status,
-            monthlyPricing,
-            yearlyPricing,
-            features
-        } = req.body;
-
-        const updateName = planName !== undefined ? planName.trim() : current.plan_name;
-        const updateDesc = description !== undefined ? description.trim() : current.description;
-        const updatePopular = isPopular !== undefined ? (isPopular ? 1 : 0) : current.is_popular;
-        const updateStatus = status !== undefined ? status : current.status;
-
-        const mPrice = monthlyPricing?.price !== undefined ? monthlyPricing.price : current.monthly_price;
-        const mBranch = monthlyPricing?.branchLimit !== undefined ? monthlyPricing.branchLimit : current.monthly_branch_limit;
-        const mSports = monthlyPricing?.sportsLimit !== undefined ? monthlyPricing.sportsLimit : current.monthly_sports_limit;
-        const mBooking = monthlyPricing?.bookingLimit !== undefined ? monthlyPricing.bookingLimit : current.monthly_booking_limit;
-        const mUsers = monthlyPricing?.activeUsersLimit !== undefined ? monthlyPricing.activeUsersLimit : current.monthly_active_users_limit;
-
-        const yPrice = yearlyPricing?.price !== undefined ? yearlyPricing.price : current.yearly_price;
-        const yBranch = yearlyPricing?.branchLimit !== undefined ? yearlyPricing.branchLimit : current.yearly_branch_limit;
-        const ySports = yearlyPricing?.sportsLimit !== undefined ? yearlyPricing.sportsLimit : current.yearly_sports_limit;
-        const yBooking = yearlyPricing?.bookingLimit !== undefined ? yearlyPricing.bookingLimit : current.yearly_booking_limit;
-        const yUsers = yearlyPricing?.activeUsersLimit !== undefined ? yearlyPricing.activeUsersLimit : current.yearly_active_users_limit;
-
-        const featuresJson = features !== undefined ? JSON.stringify(features) : current.features;
-
-        const updateQuery = `
-            UPDATE subscription_plans SET
-                plan_name = ?,
-                description = ?,
-                is_popular = ?,
-                status = ?,
-                monthly_price = ?,
-                monthly_branch_limit = ?,
-                monthly_sports_limit = ?,
-                monthly_booking_limit = ?,
-                monthly_active_users_limit = ?,
-                yearly_price = ?,
-                yearly_branch_limit = ?,
-                yearly_sports_limit = ?,
-                yearly_booking_limit = ?,
-                yearly_active_users_limit = ?,
-                features = ?
-            WHERE id = ?
-        `;
-
-        await db.query(updateQuery, [
-            updateName,
-            updateDesc,
-            updatePopular,
-            updateStatus,
-            mPrice,
-            mBranch,
-            mSports,
-            mBooking,
-            mUsers,
-            yPrice,
-            yBranch,
-            ySports,
-            yBooking,
-            yUsers,
-            featuresJson,
-            id
-        ]);
-
-        const [rows] = await db.query('SELECT * FROM subscription_plans WHERE id = ?', [id]);
-        const updated = formatPlan(rows[0]);
-
-        return res.status(200).json({
-            success: true,
-            message: 'Subscription plan updated successfully',
-            data: updated
-        });
+        return res.status(200).json({ success: true, message: 'Subscription plan updated successfully', data: formatPlan(updated) });
     } catch (error) {
         console.error('Error updating subscription plan:', error);
-        return res.status(500).json({
-            success: false,
-            message: 'Failed to update subscription plan',
-            error: error.message
-        });
+        return res.status(500).json({ success: false, message: 'Failed to update subscription plan', error: error.message });
     }
 };
 
-/**
- * DELETE /api/v1/subscriptions/:id
- * Delete a Subscription Plan
- */
 const deletePlan = async (req, res) => {
     try {
-        const { id } = req.params;
-
-        const [existing] = await db.query('SELECT id FROM subscription_plans WHERE id = ?', [id]);
-        if (existing.length === 0) {
-            return res.status(404).json({
-                success: false,
-                message: 'Subscription plan not found'
-            });
-        }
-
-        await db.query('DELETE FROM subscription_plans WHERE id = ?', [id]);
-
-        return res.status(200).json({
-            success: true,
-            message: 'Subscription plan deleted successfully'
-        });
+        await prisma.subscriptionPlan.delete({ where: { id: req.params.id } });
+        return res.status(200).json({ success: true, message: 'Subscription plan deleted successfully' });
     } catch (error) {
+        if (error.code === 'P2025') {
+            return res.status(404).json({ success: false, message: 'Subscription plan not found' });
+        }
         console.error('Error deleting subscription plan:', error);
-        return res.status(500).json({
-            success: false,
-            message: 'Failed to delete subscription plan',
-            error: error.message
-        });
+        return res.status(500).json({ success: false, message: 'Failed to delete subscription plan', error: error.message });
     }
 };
 
-/**
- * PATCH /api/v1/subscriptions/:id/status
- * Toggle Status (active / inactive)
- */
 const toggleStatus = async (req, res) => {
     try {
-        const { id } = req.params;
         const { status } = req.body;
-
-        if (!status || !['active', 'inactive'].includes(status)) {
-            return res.status(400).json({
-                success: false,
-                message: 'Valid status is required (active, inactive)'
-            });
+        if (!status || !['ACTIVE', 'INACTIVE'].includes(status.toUpperCase())) {
+            return res.status(400).json({ success: false, message: 'Valid status is required (ACTIVE, INACTIVE)' });
         }
 
-        const [existing] = await db.query('SELECT id FROM subscription_plans WHERE id = ?', [id]);
-        if (existing.length === 0) {
-            return res.status(404).json({
-                success: false,
-                message: 'Subscription plan not found'
-            });
+        const updated = await prisma.subscriptionPlan.update({ where: { id: req.params.id }, data: { status: status.toUpperCase() } }).catch(() => null);
+        if (!updated) {
+            return res.status(404).json({ success: false, message: 'Subscription plan not found' });
         }
-
-        await db.query('UPDATE subscription_plans SET status = ? WHERE id = ?', [status, id]);
-
-        return res.status(200).json({
-            success: true,
-            message: `Status updated to ${status}`
-        });
+        return res.status(200).json({ success: true, message: `Status updated to ${status}` });
     } catch (error) {
         console.error('Error toggling plan status:', error);
-        return res.status(500).json({
-            success: false,
-            message: 'Failed to update plan status',
-            error: error.message
-        });
+        return res.status(500).json({ success: false, message: 'Failed to update plan status', error: error.message });
     }
 };
 
-/**
- * PATCH /api/v1/subscriptions/:id/popular
- * Toggle Popularity (true / false)
- */
 const togglePopular = async (req, res) => {
     try {
-        const { id } = req.params;
         const { isPopular } = req.body;
-
-        const [existing] = await db.query('SELECT id FROM subscription_plans WHERE id = ?', [id]);
-        if (existing.length === 0) {
-            return res.status(404).json({
-                success: false,
-                message: 'Subscription plan not found'
-            });
+        const updated = await prisma.subscriptionPlan.update({ where: { id: req.params.id }, data: { isPopular: !!isPopular } }).catch(() => null);
+        if (!updated) {
+            return res.status(404).json({ success: false, message: 'Subscription plan not found' });
         }
-
-        await db.query('UPDATE subscription_plans SET is_popular = ? WHERE id = ?', [isPopular ? 1 : 0, id]);
-
-        return res.status(200).json({
-            success: true,
-            message: 'Popular status updated'
-        });
+        return res.status(200).json({ success: true, message: 'Popular status updated' });
     } catch (error) {
         console.error('Error toggling plan popularity:', error);
-        return res.status(500).json({
-            success: false,
-            message: 'Failed to update plan popularity',
-            error: error.message
-        });
+        return res.status(500).json({ success: false, message: 'Failed to update plan popularity', error: error.message });
     }
 };
 
 /**
- * POST /api/v1/subscriptions/buy
- * Purchase a subscription plan (Creates entry in owner_subscriptions)
+ * Purchase a subscription plan for the requesting owner (or a specific owner,
+ * for Super Admin-driven purchases). No fake fallback owner id is ever used.
  */
 const purchaseSubscription = async (req, res) => {
     try {
-        const {
-            ownerId,
-            planId,
-            billingCycle = 'MONTHLY',
-            paymentMethod = 'UPI'
-        } = req.body;
-
+        const { ownerId, planId, billingCycle = 'MONTHLY', paymentMethod = 'ONLINE' } = req.body;
         if (!planId) {
-            return res.status(400).json({
-                success: false,
-                message: 'planId is required to purchase subscription'
-            });
+            return res.status(400).json({ success: false, message: 'planId is required to purchase subscription' });
+        }
+        if (!req.user) {
+            return res.status(401).json({ success: false, message: 'Authentication required.' });
         }
 
-        // 1. Fetch Plan details
-        const [planRows] = await db.query('SELECT * FROM subscription_plans WHERE id = ? OR LOWER(id) = LOWER(?) OR LOWER(plan_name) = LOWER(?)', [planId, planId, planId]);
-        if (planRows.length === 0) {
-            return res.status(404).json({
-                success: false,
-                message: 'Subscription plan not found'
-            });
+        const plan = await prisma.subscriptionPlan.findUnique({ where: { id: planId } });
+        if (!plan) {
+            return res.status(404).json({ success: false, message: 'Subscription plan not found' });
         }
-        const plan = planRows[0];
-        const reqAmount = req.body.amount || req.body.price;
-        const amount = reqAmount != null && !isNaN(Number(reqAmount)) 
-            ? Number(reqAmount) 
-            : (billingCycle === 'YEARLY' ? Number(plan.yearly_price || 0) : Number(plan.monthly_price || 0));
 
-        const subId = `sub_${Date.now()}`;
-        const txId = `TXN_${Date.now()}`;
-        const validOwnerId = ownerId || req.user?.id || 'own_001';
+        let owner;
+        if (req.user.role === 'SUPER_ADMIN' && ownerId) {
+            owner = await prisma.owner.findUnique({ where: { id: ownerId } });
+        } else {
+            owner = await prisma.owner.findUnique({ where: { userId: req.user.id } });
+        }
+        if (!owner) {
+            return res.status(404).json({ success: false, message: 'Owner account not found.' });
+        }
 
-        // Calculate end date
+        const amount = billingCycle === 'YEARLY' ? Number(plan.yearlyPrice) : Number(plan.monthlyPrice);
         const startDate = new Date();
         const endDate = new Date(startDate);
-        if (billingCycle === 'YEARLY') {
-            endDate.setFullYear(endDate.getFullYear() + 1);
-        } else {
-            endDate.setMonth(endDate.getMonth() + 1);
-        }
+        if (billingCycle === 'YEARLY') endDate.setFullYear(endDate.getFullYear() + 1);
+        else endDate.setMonth(endDate.getMonth() + 1);
 
-        await db.query(`
-            INSERT INTO owner_subscriptions (
-                id, owner_id, plan_id, plan_name, amount, billing_cycle,
-                status, payment_status, payment_method, transaction_id, start_date, end_date
-            ) VALUES (?, ?, ?, ?, ?, ?, 'ACTIVE', 'COMPLETED', ?, ?, ?, ?)
-        `, [
-            subId,
-            validOwnerId,
-            plan.id,
-            plan.plan_name,
-            amount,
-            billingCycle,
-            paymentMethod,
-            txId,
-            startDate,
-            endDate
-        ]);
-
-        // Update owner active plan
-        try {
-            await db.query('UPDATE owners SET active_plan_id = ? WHERE id = ?', [plan.id, validOwnerId]);
-        } catch (e) {}
+        const subscription = await prisma.$transaction(async (tx) => {
+            const sub = await tx.ownerSubscription.create({
+                data: {
+                    id: genId('sub'),
+                    ownerId: owner.id,
+                    planId: plan.id,
+                    planName: plan.planName,
+                    amount,
+                    billingCycle,
+                    status: 'ACTIVE',
+                    paymentStatus: 'COMPLETED',
+                    paymentMethod,
+                    transactionId: genId('TXN'),
+                    startDate,
+                    endDate
+                }
+            });
+            await tx.owner.update({ where: { id: owner.id }, data: { subscriptionPlan: { connect: { id: plan.id } } } });
+            return sub;
+        });
 
         return res.status(201).json({
             success: true,
-            message: `Successfully subscribed to ${plan.plan_name}`,
-            data: {
-                id: subId,
-                ownerId: validOwnerId,
-                planId: plan.id,
-                planName: plan.plan_name,
-                amount,
-                billingCycle,
-                paymentStatus: 'COMPLETED',
-                transactionId: txId,
-                startDate,
-                endDate
-            }
+            message: `Successfully subscribed to ${plan.planName}`,
+            data: { id: subscription.id, ownerId: owner.id, planId: plan.id, planName: plan.planName, amount, billingCycle, paymentStatus: 'COMPLETED', transactionId: subscription.transactionId, startDate, endDate }
         });
     } catch (error) {
         console.error('Error purchasing subscription:', error);
-        return res.status(500).json({
-            success: false,
-            message: 'Failed to complete subscription purchase',
-            error: error.message
-        });
+        return res.status(500).json({ success: false, message: 'Failed to complete subscription purchase', error: error.message });
     }
 };
 
-/**
- * GET /api/v1/subscriptions/purchases
- * Get all owner subscription purchases
- */
 const getSubscriptionPurchases = async (req, res) => {
     try {
-        const [rows] = await db.query(`
-            SELECT 
-                os.*,
-                COALESCE(o.full_name, u.name, 'Turf Owner') as owner_name,
-                COALESCE(o.business_name, 'Turf Network') as business_name
-            FROM owner_subscriptions os
-            LEFT JOIN owners o ON (os.owner_id = o.id OR os.owner_id = o.user_id)
-            LEFT JOIN users u ON (os.owner_id = u.id)
-            ORDER BY os.created_at DESC
-        `);
+        const rows = await prisma.ownerSubscription.findMany({
+            include: { owner: true },
+            orderBy: { createdAt: 'desc' }
+        });
 
         return res.status(200).json({
             success: true,
-            data: rows
+            data: rows.map(r => ({
+                id: r.id,
+                ownerId: r.ownerId,
+                ownerName: r.owner?.fullName || null,
+                businessName: r.owner?.businessName || null,
+                planId: r.planId,
+                planName: r.planName,
+                amount: Number(r.amount),
+                billingCycle: r.billingCycle,
+                status: r.status,
+                paymentStatus: r.paymentStatus,
+                paymentMethod: r.paymentMethod,
+                transactionId: r.transactionId,
+                startDate: r.startDate,
+                endDate: r.endDate,
+                createdAt: r.createdAt
+            }))
         });
     } catch (error) {
         console.error('Error fetching subscription purchases:', error);
-        return res.status(500).json({
-            success: false,
-            message: 'Failed to fetch subscription purchases',
-            error: error.message
-        });
+        return res.status(500).json({ success: false, message: 'Failed to fetch subscription purchases', error: error.message });
     }
 };
 
 module.exports = {
-    getAllPlans,
-    getPlanById,
-    createPlan,
-    updatePlan,
-    deletePlan,
-    toggleStatus,
-    togglePopular,
-    purchaseSubscription,
-    getSubscriptionPurchases
+    getAllPlans, getPlanById, createPlan, updatePlan, deletePlan,
+    toggleStatus, togglePopular, purchaseSubscription, getSubscriptionPurchases
 };

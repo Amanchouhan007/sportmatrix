@@ -31,19 +31,19 @@ export default function TournamentCardPremium({ tournament }) {
         image: tournament?.banner || tournament?.image || '/images/turf1.png',
         rating: tournament?.rating || 5.0,
         maxTeams: tournament?.maxTeams || tournament?.max_teams || 16,
-        registeredTeams: tournament?.registrations || tournament?.registered_teams || 0,
-        location: tournament?.location || tournament?.city || 'SportMatrix Venue',
-        date: tournament?.date || tournament?.start_date || 'Scheduled',
+        registeredTeams: tournament?.registrations || tournament?.registeredTeams || tournament?.registered_teams || 0,
+        location: tournament?.location || tournament?.courtName || tournament?.city || 'SportMatrix Venue',
+        date: tournament?.startDate ? new Date(tournament.startDate).toLocaleDateString('en-IN', { month: 'short', day: 'numeric', year: 'numeric' }) : (tournament?.date || 'Scheduled'),
         time: tournament?.time || 'Flexible',
-        level: tournament?.level || 'Open',
-        age: tournament?.age || 'Open',
+        level: tournament?.level || tournament?.skillLevel || 'Open',
+        age: tournament?.age || tournament?.ageLimit || 'Open',
         prize: formattedPrize,
         entryFee: formattedFee,
         organizer: tournament?.organizer || tournament?.createdBy || 'SportMatrix',
         isVerified: true,
         isTrending: false,
-        status: tournament?.status || 'Active',
-        daysLeft: 0
+        status: tournament?.status === 'APPROVED' ? 'REGISTRATION OPEN' : (tournament?.status || 'Active'),
+        daysLeft: tournament?.registrationLastDate ? Math.max(0, Math.ceil((new Date(tournament.registrationLastDate) - new Date()) / (1000 * 60 * 60 * 24))) : 7
     };
 
     const fillPercentage = Math.round((t.registeredTeams / t.maxTeams) * 100);

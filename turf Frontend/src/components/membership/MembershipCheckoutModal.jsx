@@ -254,19 +254,11 @@ export default function MembershipCheckoutModal({
                 commissionRate: 5
             }
 
-            let registeredUser = null
-            try {
-                const res = await createOwner(ownerPayload)
-                registeredUser = res.data || res.owner || res
-            } catch (apiErr) {
-                console.warn('API error registering owner, proceeding with local credentials:', apiErr)
-                registeredUser = {
-                    id: `OWNER-${Date.now()}`,
-                    name: ownerFormData.fullName,
-                    email: ownerFormData.email,
-                    role: 'OWNER'
-                }
-            }
+            // No fake-account fallback: if real registration fails, this throws
+            // up to the outer catch below, which shows a real error and never
+            // advances to the "payment confirmed" success step.
+            const res = await createOwner(ownerPayload)
+            const registeredUser = res.data || res.owner || res
 
             setRegisteredOwnerUser(registeredUser)
 
@@ -282,7 +274,9 @@ export default function MembershipCheckoutModal({
 
             const amountPaid = typeof currentPrice === 'number' ? currentPrice : (parseFloat(String(currentPrice).replace(/[^0-9.]/g, '')) || 2997);
 
-            // Call Backend Purchase API to persist in owner_subscriptions MySQL ledger
+            // Owner account is already real at this point; a failure recording the
+            // subscription ledger entry is a secondary issue worth surfacing but
+            // not worth discarding the successful account creation over.
             try {
                 await purchaseSubscription({
                     ownerId: registeredUser?.id || registeredUser?._id || `OWNER-${Date.now()}`,
@@ -293,7 +287,8 @@ export default function MembershipCheckoutModal({
                     txId: txnId
                 });
             } catch (pErr) {
-                console.warn('Subscription purchase API note:', pErr);
+                console.warn('Subscription purchase ledger API note:', pErr);
+                if (addToast) addToast('Account created, but the subscription ledger entry could not be recorded. Contact support with your account email.', 'warning');
             }
 
             setSubDetails({
@@ -374,7 +369,7 @@ export default function MembershipCheckoutModal({
                         {[
                             { step: 1, label: '1. Venue Details' },
                             { step: 2, label: '2. Payment Mode' },
-                            { step: 3, label: '3. 3D Secure' },
+                            { step: 3, label: '3. Confirm' },
                             { step: 4, label: '4. Active Receipt' }
                         ].map((item) => (
                             <div key={item.step} className="flex flex-col items-center sm:items-start">
@@ -1099,10 +1094,10 @@ export default function MembershipCheckoutModal({
 
                             <div>
                                 <h3 className="text-lg font-black text-[#111827] uppercase tracking-tight">
-                                    3D-Secure 2.0 Verification
+                                    Confirm Your Order
                                 </h3>
                                 <p className="text-xs text-slate-500 font-semibold mt-1">
-                                    Enter the 6-digit one-time password sent to <span className="font-bold text-slate-800">+91 ******{ownerFormData.mobile.slice(-4) || '3210'}</span>
+                                    Enter the 6-digit confirmation code below to authorize this purchase
                                 </p>
                             </div>
 
@@ -1122,29 +1117,29 @@ export default function MembershipCheckoutModal({
                                 ))}
                             </div>
 
-                            {/* Quick Auto-Fill Demo OTP Pill */}
+                            {/* Quick Auto-Fill Pill -- no real code is sent anywhere; this just fills the field */}
                             <button
                                 type="button"
                                 onClick={() => setOtpValue(['8', '4', '9', '2', '0', '1'])}
                                 className="text-[10px] font-black bg-[#C8FF2E]/40 border border-[#aee810] px-3 py-1 rounded-full text-[#111827] hover:bg-[#C8FF2E] transition-colors cursor-pointer"
                             >
-                                ⚡ Use Demo OTP: 849201
+                                ⚡ Autofill Confirmation Code
                             </button>
 
-                            {/* Resend OTP */}
+                            {/* Refresh code */}
                             <div className="text-xs font-bold text-slate-500">
                                 {otpTimer > 0 ? (
-                                    <span>Resend OTP code in <span className="text-[#16A34A] font-mono">{otpTimer}s</span></span>
+                                    <span>Code expires in <span className="text-[#16A34A] font-mono">{otpTimer}s</span></span>
                                 ) : (
                                     <button
                                         type="button"
                                         onClick={() => {
                                             setOtpTimer(45)
-                                            if (addToast) addToast('New OTP sent to your registered mobile!', 'info')
+                                            if (addToast) addToast('Confirmation code refreshed.', 'info')
                                         }}
                                         className="text-[#16A34A] hover:underline cursor-pointer font-black"
                                     >
-                                        Resend OTP Code
+                                        Refresh Code
                                     </button>
                                 )}
                             </div>

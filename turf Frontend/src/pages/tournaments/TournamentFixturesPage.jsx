@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import Card from '../../components/ui/Card'
 import Button from '../../components/ui/Button'
 import Badge from '../../components/ui/Badge'
@@ -6,89 +6,135 @@ import Select from '../../components/ui/Select'
 import BracketComponent from '../../components/ui/BracketComponent'
 import AdminMatchControlModal from '../../components/tournaments/AdminMatchControlModal'
 import { useToast } from '../../components/ui/Toast'
-import { HiRefresh, HiCalendar, HiPlay, HiPencilAlt } from 'react-icons/hi'
+import { HiRefresh, HiPlay } from 'react-icons/hi'
 import { HiTrophy } from 'react-icons/hi2'
+import { getPublicTournaments, getFixtures, generateFixtures, updateMatchScore } from '../../services/tournamentService'
 
-const mockBracketRounds = [
-    {
-        name: 'Quarter-Finals',
-        matches: [
-            { id: 1, teams: [{ seed: 1, name: 'Indore Thunders', score: 180, winner: true }, { seed: 8, name: 'Warriors XI', score: 142 }] },
-            { id: 2, teams: [{ seed: 4, name: 'Red Devils Futsal', score: 165, winner: true }, { seed: 5, name: 'Blue Eagles', score: 160 }] },
-            { id: 3, teams: [{ seed: 2, name: 'Royal Challengers', score: 195, winner: true }, { seed: 7, name: 'Super Kings', score: 178 }] },
-            { id: 4, teams: [{ seed: 3, name: 'Strikers XI', score: 150 }, { seed: 6, name: 'Mumbai Express', score: 154, winner: true }] },
-        ]
-    },
-    {
-        name: 'Semi-Finals',
-        matches: [
-            { id: 5, teams: [{ seed: 1, name: 'Indore Thunders', score: 145, winner: true }, { seed: 4, name: 'Red Devils Futsal', score: 122 }] },
-            { id: 6, teams: [{ seed: 2, name: 'Royal Challengers', score: 156, winner: true }, { seed: 6, name: 'Mumbai Express', score: 148 }] },
-        ]
-    },
-    {
-        name: 'Grand Finale',
-        matches: [
-            { id: 7, teams: [{ seed: 1, name: 'Indore Thunders', score: '—' }, { seed: 2, name: 'Royal Challengers', score: '—' }] }
-        ]
-    },
-]
+const STATUS_TO_BACKEND = { Scheduled: 'SCHEDULED', Live: 'LIVE', Completed: 'COMPLETED', Cancelled: 'ABANDONED' }
+const STATUS_FROM_BACKEND = { SCHEDULED: 'Scheduled', LIVE: 'Live', COMPLETED: 'Completed', ABANDONED: 'Cancelled' }
 
 export default function TournamentFixturesPage() {
     const { addToast } = useToast()
-    const [selectedTournament, setSelectedTournament] = useState('t_001')
-    const [rounds, setRounds] = useState(mockBracketRounds)
+    const [tournaments, setTournaments] = useState([])
+    const [selectedTournament, setSelectedTournament] = useState('')
+    const [fixtures, setFixtures] = useState([])
+    const [isLoadingTournaments, setIsLoadingTournaments] = useState(true)
+    const [isLoadingFixtures, setIsLoadingFixtures] = useState(false)
+    const [isGenerating, setIsGenerating] = useState(false)
+    const [isSaving, setIsSaving] = useState(false)
     const [selectedMatch, setSelectedMatch] = useState(null)
     const [activeRoundName, setActiveRoundName] = useState('')
-    const [matchLocationMeta, setMatchLocationMeta] = useState({ roundIdx: 0, matchIdx: 0 })
 
-    const handleGenerateFixtures = () => {
-        addToast({ title: 'Fixtures Generated!', message: 'Automated match bracket schedule generated for tournament.', type: 'success' })
-    }
-
-    const handleMatchClick = (match, roundName, roundIdx, matchIdx) => {
-        setSelectedMatch(match)
-        setActiveRoundName(roundName)
-        setMatchLocationMeta({ roundIdx, matchIdx })
-    }
-
-    const handleSaveMatch = (updatedMatch) => {
-        const { roundIdx, matchIdx } = matchLocationMeta
-        const newRounds = JSON.parse(JSON.stringify(rounds))
-
-        // 1. Update target match in current round
-        newRounds[roundIdx].matches[matchIdx] = updatedMatch
-
-        // 2. Identify winner team object
-        const winningTeam = updatedMatch.teams.find(t => t.winner)
-
-        // 3. Automatic Playoff Tree Advancement logic
-        if (winningTeam && roundIdx < newRounds.length - 1) {
-            const nextRoundIdx = roundIdx + 1
-            const nextMatchIdx = Math.floor(matchIdx / 2)
-            const teamSlotIdx = matchIdx % 2 // 0 for Team 1, 1 for Team 2
-
-            if (newRounds[nextRoundIdx] && newRounds[nextRoundIdx].matches[nextMatchIdx]) {
-                const targetNextMatch = newRounds[nextRoundIdx].matches[nextMatchIdx]
-                targetNextMatch.teams[teamSlotIdx] = {
-                    seed: winningTeam.seed,
-                    name: winningTeam.name,
-                    score: targetNextMatch.teams[teamSlotIdx]?.score !== undefined ? targetNextMatch.teams[teamSlotIdx].score : '—'
-                }
-            }
+    const fetchTournaments = useCallback(async () => {
+        setIsLoadingTournaments(true)
+        try {
+            const res = await getPublicTournaments({})
+            const list = res.data || []
+            setTournaments(list)
+            if (list.length > 0) setSelectedTournament(list[0].id || list[0]._id)
+        } catch (err) {
+            addToast({ title: 'Load Failed', message: err.message || 'Failed to load tournaments.', type: 'error' })
+        } finally {
+            setIsLoadingTournaments(false)
         }
+    }, [addToast])
 
-        setRounds(newRounds)
-        if (addToast) {
-            addToast({ 
-                title: 'Playoff Bracket Updated!', 
-                message: winningTeam 
-                    ? `Match scores saved! ${winningTeam.name} marked as winner & advanced to next round.` 
-                    : 'Match details & slot schedule updated.', 
-                type: 'success' 
+    useEffect(() => { fetchTournaments() }, [fetchTournaments])
+
+    const fetchFixtures = useCallback(async () => {
+        if (!selectedTournament) return
+        setIsLoadingFixtures(true)
+        try {
+            const res = await getFixtures(selectedTournament)
+            setFixtures(res.data || [])
+        } catch (err) {
+            addToast({ title: 'Load Failed', message: err.message || 'Failed to load fixtures.', type: 'error' })
+            setFixtures([])
+        } finally {
+            setIsLoadingFixtures(false)
+        }
+    }, [selectedTournament, addToast])
+
+    useEffect(() => { fetchFixtures() }, [fetchFixtures])
+
+    // Group real fixtures into bracket rounds, preserving backend round order (matchNumber asc)
+    const rounds = useMemo(() => {
+        const byRound = []
+        const roundIndex = {}
+        for (const f of fixtures) {
+            if (!(f.roundName in roundIndex)) {
+                roundIndex[f.roundName] = byRound.length
+                byRound.push({ name: f.roundName, matches: [] })
+            }
+            byRound[roundIndex[f.roundName]].matches.push({
+                id: f.id,
+                teamAId: f.teamAId,
+                teamBId: f.teamBId,
+                status: STATUS_FROM_BACKEND[f.status] || 'Scheduled',
+                date: f.matchDate ? String(f.matchDate).split('T')[0] : '',
+                time: f.matchTime || '',
+                groundCourtName: f.groundCourtName || '',
+                teams: [
+                    { seed: 1, name: f.teamA?.teamName || 'TBD', score: f.teamAScore ?? '—', winner: !!f.winnerId && f.winnerId === f.teamAId },
+                    { seed: 2, name: f.teamB?.teamName || 'TBD', score: f.teamBScore ?? '—', winner: !!f.winnerId && f.winnerId === f.teamBId }
+                ]
             })
         }
+        return byRound
+    }, [fixtures])
+
+    const handleGenerateFixtures = async () => {
+        if (!selectedTournament) return
+        setIsGenerating(true)
+        try {
+            const res = await generateFixtures(selectedTournament)
+            addToast({ title: 'Fixtures Generated!', message: res.message || `Generated ${res.count || ''} match fixtures.`, type: 'success' })
+            fetchFixtures()
+        } catch (err) {
+            addToast({ title: 'Generation Failed', message: err.message || 'Could not generate fixtures.', type: 'error' })
+        } finally {
+            setIsGenerating(false)
+        }
     }
+
+    const handleMatchClick = (match, roundName) => {
+        setSelectedMatch(match)
+        setActiveRoundName(roundName)
+    }
+
+    const handleSaveMatch = async (updatedMatch) => {
+        const [t1, t2] = updatedMatch.teams
+        let winnerId
+        if (t1.winner) winnerId = updatedMatch.teamAId
+        else if (t2.winner) winnerId = updatedMatch.teamBId
+        else winnerId = ''
+
+        setIsSaving(true)
+        try {
+            await updateMatchScore(updatedMatch.id, {
+                teamAScore: String(t1.score),
+                teamBScore: String(t2.score),
+                winnerId,
+                status: STATUS_TO_BACKEND[updatedMatch.status] || 'COMPLETED',
+                matchDate: updatedMatch.date || undefined,
+                matchTime: updatedMatch.time || undefined,
+                groundCourtName: updatedMatch.groundCourtName || undefined
+            })
+            addToast({
+                title: 'Match Updated!',
+                message: winnerId ? 'Score saved and winner advanced on the leaderboard.' : 'Match details updated.',
+                type: 'success'
+            })
+            setSelectedMatch(null)
+            fetchFixtures()
+        } catch (err) {
+            addToast({ title: 'Save Failed', message: err.message || 'Could not update this match.', type: 'error' })
+        } finally {
+            setIsSaving(false)
+        }
+    }
+
+    const selectedTournamentTitle = tournaments.find(t => (t.id || t._id) === selectedTournament)?.title || ''
 
     return (
         <div className="space-y-8 animate-in fade-in duration-500">
@@ -98,21 +144,18 @@ export default function TournamentFixturesPage() {
                     <h1 className="text-2xl font-black text-surface-900 tracking-tight flex items-center gap-2">
                         <HiTrophy className="text-amber-500" /> Fixture Generator & Bracket View
                     </h1>
-                    <p className="text-surface-500 text-sm mt-0.5 font-medium">Automatic playoff bracket generation for Knockout, League & Hybrid formats</p>
+                    <p className="text-surface-500 text-sm mt-0.5 font-medium">Automatic playoff bracket generation for Knockout & League formats</p>
                 </div>
 
                 <div className="flex gap-3 items-center">
                     <Select
                         value={selectedTournament}
                         onChange={(e) => setSelectedTournament(e.target.value)}
-                        options={[
-                            { value: 't_001', label: 'Premier Cricket Cup (Knockout)' },
-                            { value: 't_002', label: 'Indore Football Cup (League)' },
-                            { value: 't_003', label: 'Football Open (Hybrid)' },
-                        ]}
+                        disabled={isLoadingTournaments || tournaments.length === 0}
+                        options={tournaments.map(t => ({ value: t.id || t._id, label: `${t.title || t.name} (${t.tournamentFormat || t.format || 'Knockout'})` }))}
                     />
-                    <Button onClick={handleGenerateFixtures} className="whitespace-nowrap">
-                        <HiRefresh className="w-5 h-5 mr-1" /> Auto-Generate Fixtures
+                    <Button onClick={handleGenerateFixtures} disabled={isGenerating || !selectedTournament} className="whitespace-nowrap">
+                        <HiRefresh className="w-5 h-5 mr-1" /> {isGenerating ? 'Generating...' : 'Auto-Generate Fixtures'}
                     </Button>
                 </div>
             </div>
@@ -125,16 +168,26 @@ export default function TournamentFixturesPage() {
                             <HiPlay className="text-emerald-500" /> Interactive Playoff Bracket Tree
                         </h2>
                         <p className="text-surface-500 text-xs mt-0.5 flex items-center gap-1">
-                            <span>Premier Cricket Cup Playoffs</span>
-                            <span className="text-emerald-600 font-bold text-[11px] bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200 ml-2">
-                                💡 Click any match box to edit scores & advance winners
-                            </span>
+                            <span>{selectedTournamentTitle || 'Select a tournament'}</span>
+                            {rounds.length > 0 && (
+                                <span className="text-emerald-600 font-bold text-[11px] bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200 ml-2">
+                                    💡 Click any match box to edit scores & advance winners
+                                </span>
+                            )}
                         </p>
                     </div>
                     <Badge variant="success">LIVE BRACKET</Badge>
                 </div>
 
-                <BracketComponent rounds={rounds} onMatchClick={handleMatchClick} />
+                {isLoadingFixtures ? (
+                    <div className="py-16 text-center text-slate-400 text-sm font-semibold">Loading fixtures...</div>
+                ) : rounds.length === 0 ? (
+                    <div className="py-16 text-center text-slate-400 text-sm font-semibold">
+                        No fixtures generated yet for this tournament -- click "Auto-Generate Fixtures" above (requires at least 2 approved teams).
+                    </div>
+                ) : (
+                    <BracketComponent rounds={rounds} onMatchClick={handleMatchClick} />
+                )}
             </Card>
 
             {/* Admin Match Control Modal */}
@@ -144,6 +197,7 @@ export default function TournamentFixturesPage() {
                 matchData={selectedMatch}
                 roundName={activeRoundName}
                 onSaveMatch={handleSaveMatch}
+                isSaving={isSaving}
             />
         </div>
     )

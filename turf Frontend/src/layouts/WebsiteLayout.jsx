@@ -260,8 +260,9 @@ export default function WebsiteLayout({ children }) {
                         </div>
                     </div>
                     
-                    <div className="mt-10 pt-6 border-t border-[#16A34A]/15 text-center text-[11px] font-semibold text-[#6B7280]">
-                        © {new Date().getFullYear()} SportMatrix. All rights reserved.
+                    <div className="mt-10 pt-6 border-t border-[#16A34A]/15 flex flex-col sm:flex-row items-center justify-between gap-2 text-[11px] font-semibold text-[#6B7280]">
+                        <span>© {new Date().getFullYear()} SportMatrix. All rights reserved. <strong className="text-slate-800 font-extrabold">Powered by Kiaan Technology</strong></span>
+                        <span>📍 2341/E, Sudama Nagar, Indore, M.P. | 📞 +91-97521 00980 | ✉️ info@kiaantechnology.com</span>
                     </div>
                 </div>
             </footer>

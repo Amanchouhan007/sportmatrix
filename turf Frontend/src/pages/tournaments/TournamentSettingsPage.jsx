@@ -1,12 +1,15 @@
-import { useState } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import Card from '../../components/ui/Card'
 import Input from '../../components/ui/Input'
 import Button from '../../components/ui/Button'
 import { useToast } from '../../components/ui/Toast'
 import { HiAdjustments, HiCheck } from 'react-icons/hi'
+import { getTournamentSettings, updateTournamentSettings } from '../../services/tournamentService'
 
 export default function TournamentSettingsPage() {
     const { addToast } = useToast()
+    const [isLoading, setIsLoading] = useState(true)
+    const [isSaving, setIsSaving] = useState(false)
 
     const [settings, setSettings] = useState({
         platformCommissionPercentage: '10',
@@ -15,9 +18,42 @@ export default function TournamentSettingsPage() {
         notifyOnApproval: true
     })
 
-    const handleSave = (e) => {
+    const fetchSettings = useCallback(async () => {
+        setIsLoading(true)
+        try {
+            const res = await getTournamentSettings()
+            const d = res.data || {}
+            setSettings({
+                platformCommissionPercentage: String(d.platformCommissionPercentage ?? '10'),
+                autoLockSlots: d.automaticSlotReservation ?? true,
+                allowStaffCreate: d.allowStaffTournamentCreation ?? true,
+                notifyOnApproval: d.automatedApprovalNotifications ?? true
+            })
+        } catch (err) {
+            addToast({ title: 'Load Failed', message: err.message || 'Failed to load tournament settings.', type: 'error' })
+        } finally {
+            setIsLoading(false)
+        }
+    }, [addToast])
+
+    useEffect(() => { fetchSettings() }, [fetchSettings])
+
+    const handleSave = async (e) => {
         e.preventDefault()
-        addToast({ title: 'Settings Saved', message: 'Tournament settings updated successfully.', type: 'success' })
+        setIsSaving(true)
+        try {
+            await updateTournamentSettings({
+                platformCommissionPercentage: Number(settings.platformCommissionPercentage),
+                autoLockSlots: settings.autoLockSlots,
+                allowStaffCreate: settings.allowStaffCreate,
+                notifyOnApproval: settings.notifyOnApproval
+            })
+            addToast({ title: 'Settings Saved', message: 'Tournament settings updated successfully.', type: 'success' })
+        } catch (err) {
+            addToast({ title: 'Save Failed', message: err.message || 'Could not save tournament settings.', type: 'error' })
+        } finally {
+            setIsSaving(false)
+        }
     }
 
     return (
@@ -32,6 +68,9 @@ export default function TournamentSettingsPage() {
                 </div>
             </div>
 
+            {isLoading ? (
+                <div className="py-16 text-center text-slate-400 text-sm font-semibold bg-white rounded-3xl border border-surface-200/60">Loading settings...</div>
+            ) : (
             <form onSubmit={handleSave} className="space-y-6">
                 <Card className="p-6 space-y-6">
                     <h2 className="text-base font-extrabold text-surface-900 border-b border-surface-100 pb-3">
@@ -90,12 +129,13 @@ export default function TournamentSettingsPage() {
                     </div>
 
                     <div className="flex justify-end pt-4 border-t border-surface-100">
-                        <Button type="submit">
-                            <HiCheck className="w-4 h-4 mr-1" /> Save Settings
+                        <Button type="submit" disabled={isSaving}>
+                            <HiCheck className="w-4 h-4 mr-1" /> {isSaving ? 'Saving...' : 'Save Settings'}
                         </Button>
                     </div>
                 </Card>
             </form>
+            )}
         </div>
     )
 }

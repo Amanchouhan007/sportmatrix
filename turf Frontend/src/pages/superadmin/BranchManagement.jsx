@@ -1215,11 +1215,11 @@ export default function BranchManagement() {
                             value={formData.subscriptionPlanId}
                             onChange={e => setFormData({ ...formData, subscriptionPlanId: e.target.value })}
                             options={subscriptionPlans.map(p => {
-                                const limit = p.monthlyPricing?.branchLimit ?? -1;
-                                const limitStr = limit === -1 ? 'Unlimited' : limit;
+                                const price = Number(p.monthlyPrice || p.monthly_price || p.monthlyPricing?.price || 0);
+                                const priceStr = price > 0 ? `₹${price.toLocaleString('en-IN')}/mo` : 'Free';
                                 return {
-                                    value: p._id,
-                                    label: `${p.planName} (Limit: ${limitStr})`
+                                    value: p._id || p.id,
+                                    label: `${p.planName || 'Plan'} — ${priceStr}`
                                 }
                             })} 
                         />
@@ -1759,7 +1759,7 @@ export default function BranchManagement() {
                                         <div className="flex flex-wrap gap-1.5">
                                             {(Array.isArray(viewingBranch.sports) ? viewingBranch.sports : ['Cricket', 'Football']).map((sp, idx) => (
                                                 <span key={idx} className="bg-slate-900 text-white font-bold text-[11px] px-3 py-0.5 rounded-md">
-                                                    {sp}
+                                                    {typeof sp === 'object' ? `${sp.icon || '🏏'} ${sp.name || ''}`.trim() : sp}
                                                 </span>
                                             ))}
                                         </div>

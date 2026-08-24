@@ -14,9 +14,11 @@ export const getPublicTournaments = async (filters = {}, config = {}) => {
     try {
         const params = { role: 'CUSTOMER', ...filters };
         const res = await api.get('/tournaments', { params, ...config });
-        const payload = (res && res.data) ? res.data : res;
-        if (payload && payload.success && Array.isArray(payload.data)) {
-            return payload;
+        if (res && res.success && Array.isArray(res.data)) {
+            return res;
+        }
+        if (Array.isArray(res)) {
+            return { success: true, data: res };
         }
     } catch (error) {
         console.warn('Backend GET /tournaments unavailable or empty:', error.message);
@@ -34,9 +36,11 @@ export const getPublicTournaments = async (filters = {}, config = {}) => {
 export const getTournamentById = async (id) => {
     try {
         const res = await api.get(`/tournaments/${id}`);
-        const payload = (res && res.data) ? res.data : res;
-        if (payload && payload.success) {
-            return payload;
+        if (res && res.success && res.data) {
+            return res;
+        }
+        if (res && res.id) {
+            return { success: true, data: res };
         }
     } catch (error) {
         console.warn(`Backend GET /tournaments/${id} failed:`, error.message);
@@ -55,8 +59,9 @@ export const getTournamentById = async (id) => {
 export const getFixtures = async (tournamentId) => {
     try {
         const res = await api.get(`/tournaments/${tournamentId}/fixtures`);
-        const payload = (res && res.data) ? res.data : res;
-        return payload;
+        if (res && res.success && Array.isArray(res.data)) return res;
+        if (Array.isArray(res)) return { success: true, data: res };
+        return { success: true, data: [] };
     } catch (error) {
         return { success: true, data: [] };
     }
@@ -68,8 +73,9 @@ export const getFixtures = async (tournamentId) => {
 export const getLeaderboard = async (tournamentId) => {
     try {
         const res = await api.get(`/tournaments/${tournamentId}/leaderboard`);
-        const payload = (res && res.data) ? res.data : res;
-        return payload;
+        if (res && res.success && Array.isArray(res.data)) return res;
+        if (Array.isArray(res)) return { success: true, data: res };
+        return { success: true, data: [] };
     } catch (error) {
         return { success: true, data: [] };
     }
@@ -81,8 +87,7 @@ export const getLeaderboard = async (tournamentId) => {
 export const registerTeam = async (tournamentId, teamData) => {
     try {
         const res = await api.post(`/tournaments/${tournamentId}/register`, teamData);
-        const payload = (res && res.data) ? res.data : res;
-        return payload;
+        return res;
     } catch (error) {
         return { success: true, message: 'Team registration request submitted successfully!' };
     }
@@ -94,8 +99,9 @@ export const registerTeam = async (tournamentId, teamData) => {
 export const getCategories = async () => {
     try {
         const res = await api.get('/tournaments/categories');
-        const payload = (res && res.data) ? res.data : res;
-        return payload;
+        if (res && res.success && Array.isArray(res.data)) return res;
+        if (Array.isArray(res)) return { success: true, data: res };
+        return { success: true, data: [] };
     } catch (error) {
         return { success: true, data: [] };
     }
@@ -107,9 +113,136 @@ export const getCategories = async () => {
 export const getTeams = async (filters = {}) => {
     try {
         const res = await api.get('/tournaments/teams', { params: filters });
-        const payload = (res && res.data) ? res.data : res;
-        return payload;
+        if (res && res.success && Array.isArray(res.data)) return res;
+        if (Array.isArray(res)) return { success: true, data: res };
+        return { success: true, data: [] };
     } catch (error) {
         return { success: true, data: [] };
     }
+};
+
+/**
+ * Fetch every scheduled/live/completed tournament fixture across all
+ * tournaments (Owner/Staff/Super Admin match management view).
+ */
+export const getAllTournamentMatches = async () => {
+    const res = await api.get('/tournaments/matches/all');
+    if (!res || res.success === false) {
+        throw new Error(res?.message || 'Failed to fetch tournament matches.');
+    }
+    return res;
+};
+
+/**
+ * Update a fixture's final score/result -- also updates the real tournament
+ * leaderboard (matches played/won/lost/points) when status is COMPLETED.
+ */
+export const updateMatchScore = async (matchId, payload) => {
+    const res = await api.put(`/tournaments/matches/${matchId}/score`, payload);
+    if (!res || res.success === false) {
+        throw new Error(res?.message || 'Failed to update match score.');
+    }
+    return res;
+};
+
+/** Generate playoff/league fixtures for a tournament from its approved teams. */
+export const generateFixtures = async (tournamentId) => {
+    const res = await api.post(`/tournaments/${tournamentId}/generate-fixtures`);
+    if (!res || res.success === false) {
+        throw new Error(res?.message || 'Failed to generate fixtures.');
+    }
+    return res;
+};
+
+/** Save live in-progress match state (used by the live scorer console). */
+export const saveLiveMatchScore = async (payload) => {
+    const res = await api.post('/tournaments/matches/save-score', payload);
+    if (!res || res.success === false) {
+        throw new Error(res?.message || 'Failed to save live match score.');
+    }
+    return res;
+};
+
+// ==========================================
+// SPONSORS
+// ==========================================
+
+/** Fetch all tournament sponsors. */
+export const getSponsors = async () => {
+    const res = await api.get('/tournaments/sponsors');
+    if (!res || res.success === false) {
+        throw new Error(res?.message || 'Failed to fetch sponsors.');
+    }
+    return res;
+};
+
+/** Add a new sponsor for a tournament. */
+export const createSponsor = async (payload) => {
+    const res = await api.post('/tournaments/sponsors', payload);
+    if (!res || res.success === false) {
+        throw new Error(res?.message || 'Failed to add sponsor.');
+    }
+    return res;
+};
+
+/** Update sponsor details/status. */
+export const updateSponsor = async (id, payload) => {
+    const res = await api.put(`/tournaments/sponsors/${id}`, payload);
+    if (!res || res.success === false) {
+        throw new Error(res?.message || 'Failed to update sponsor.');
+    }
+    return res;
+};
+
+/** Remove a sponsor. */
+export const deleteSponsor = async (id) => {
+    const res = await api.delete(`/tournaments/sponsors/${id}`);
+    if (!res || res.success === false) {
+        throw new Error(res?.message || 'Failed to delete sponsor.');
+    }
+    return res;
+};
+
+// ==========================================
+// PAYMENTS & REPORTS
+// ==========================================
+
+/** Fetch tournament registration payments + revenue/commission summary. */
+export const getTournamentPayments = async () => {
+    const res = await api.get('/tournaments/payments');
+    if (!res || res.success === false) {
+        throw new Error(res?.message || 'Failed to fetch tournament payments.');
+    }
+    return res;
+};
+
+/** Fetch tournament-wide reports (status breakdown, teams, revenue). */
+export const getTournamentReports = async () => {
+    const res = await api.get('/tournaments/reports');
+    if (!res || res.success === false) {
+        throw new Error(res?.message || 'Failed to fetch tournament reports.');
+    }
+    return res;
+};
+
+// ==========================================
+// SETTINGS
+// ==========================================
+
+/** Fetch global tournament system settings (commission %, slot locking, approval rules). */
+export const getTournamentSettings = async () => {
+    const res = await api.get('/tournaments/settings');
+    if (!res || res.success === false) {
+        throw new Error(res?.message || 'Failed to fetch tournament settings.');
+    }
+    return res;
+};
+
+/** Update global tournament system settings. */
+export const updateTournamentSettings = async (payload) => {
+    const res = await api.put('/tournaments/settings', payload);
+    if (!res || res.success === false) {
+        throw new Error(res?.message || 'Failed to update tournament settings.');
+    }
+    return res;
 };

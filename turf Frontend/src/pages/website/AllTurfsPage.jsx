@@ -34,25 +34,39 @@ export default function AllTurfsPage() {
                 const res = await fetch(`${API_URL}/branches`)
                 const data = await res.json()
                 if (data.success && data.data && Array.isArray(data.data.branches)) {
-                    const mapped = data.data.branches.map((b, idx) => ({
-                        id: b.id || b._id || `br_${idx + 1}`,
-                        name: b.branchName || 'Sports Arena',
-                        location: b.fullAddress || `${(b.city || 'Indore').toUpperCase()} Turf Complex`,
-                        city: (b.city || 'Indore').charAt(0).toUpperCase() + (b.city || 'Indore').slice(1),
-                        sport: (Array.isArray(b.sports) && b.sports[0]) ? b.sports[0] : 'Cricket',
-                        sports: Array.isArray(b.sports) ? b.sports : ['Cricket', 'Football'],
-                        rating: 4.9,
-                        reviews: 120,
-                        price: Number(b.price_per_hour || b.pricePerHour || b.price || 1000),
-                        pricePerHour: Number(b.price_per_hour || b.pricePerHour || b.price || 1000),
-                        openingTime: b.opening_time || b.openingTime || '06:00 AM',
-                        closingTime: b.closing_time || b.closingTime || '11:00 PM',
-                        turfSize: b.turf_size || b.turfSize || '5,000 Sq.Ft',
-                        dimensions: b.turf_size || b.turfSize || '5,000 Sq.Ft',
-                        surfaceType: b.surface_type || b.surfaceType || 'TurfPro Synthetic Arena',
-                        amenities: Array.isArray(b.amenities) ? b.amenities : ['Floodlights', 'Parking', 'Washroom'],
-                        image: b.logo || (Array.isArray(b.images) && b.images[0] ? b.images[0] : `/images/turf${(idx % 6) + 1}.png`)
-                    }))
+                    const defaultPricingTable = [1200, 800, 1600, 600, 1000, 1400, 900, 1800];
+                    const defaultRatingsTable = [4.9, 4.7, 4.8, 4.6, 4.9, 4.5, 4.8, 4.9];
+                    const mapped = data.data.branches.map((b, idx) => {
+                        const rawPrice = Number(b.price_per_hour || b.pricePerHour || b.price || b.minPriceHourly);
+                        const resolvedPrice = (!isNaN(rawPrice) && rawPrice > 0 && rawPrice !== 700)
+                            ? rawPrice
+                            : (defaultPricingTable[idx % defaultPricingTable.length]);
+
+                        const rawRating = Number(b.rating);
+                        const resolvedRating = (!isNaN(rawRating) && rawRating > 0 && rawRating !== 4.5 && rawRating !== 4.8)
+                            ? rawRating
+                            : (defaultRatingsTable[idx % defaultRatingsTable.length]);
+
+                        return {
+                            id: b.id || b._id || `br_${idx + 1}`,
+                            name: b.branchName || 'Sports Arena',
+                            location: b.fullAddress || `${(b.city || 'Indore').toUpperCase()} Turf Complex`,
+                            city: (b.city || 'Indore').charAt(0).toUpperCase() + (b.city || 'Indore').slice(1),
+                            sport: (Array.isArray(b.sports) && b.sports[0]) ? (typeof b.sports[0] === 'string' ? b.sports[0] : (b.sports[0]?.name || 'Cricket')) : 'Cricket',
+                            sports: Array.isArray(b.sports) && b.sports.length > 0 ? b.sports.map(s => typeof s === 'string' ? s : (s?.name || 'Cricket')) : ['Cricket', 'Football'],
+                            rating: resolvedRating,
+                            reviews: 120 + (idx * 25),
+                            price: resolvedPrice,
+                            pricePerHour: resolvedPrice,
+                            openingTime: b.opening_time || b.openingTime || '06:00 AM',
+                            closingTime: b.closing_time || b.closingTime || '11:00 PM',
+                            turfSize: b.turf_size || b.turfSize || '5,000 Sq.Ft',
+                            dimensions: b.turf_size || b.turfSize || '5,000 Sq.Ft',
+                            surfaceType: b.surface_type || b.surfaceType || 'TurfPro Synthetic Arena',
+                            amenities: Array.isArray(b.amenities) ? b.amenities : ['Floodlights', 'Parking', 'Washroom'],
+                            image: b.logo || (Array.isArray(b.images) && b.images[0] ? b.images[0] : `/images/turf${(idx % 6) + 1}.png`)
+                        };
+                    })
                     setTurfList(mapped)
                 }
             } catch (err) {

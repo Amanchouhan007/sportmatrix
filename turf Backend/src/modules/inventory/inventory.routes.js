@@ -7,14 +7,15 @@ const {
     restockItem
 } = require('./inventory.controller');
 
-const { verifyToken, optionalToken } = require('../../middleware/auth.middleware');
+const { verifyToken, authorizeRoles } = require('../../middleware/auth.middleware');
 
 const router = express.Router();
+const requireOwnerOrAdmin = [verifyToken, authorizeRoles(['OWNER', 'STAFF', 'SUPER_ADMIN'])];
 
-router.get('/', optionalToken, getInventory);
-router.post('/', optionalToken, createInventoryItem);
-router.put('/:id', optionalToken, updateInventoryItem);
-router.delete('/:id', optionalToken, deleteInventoryItem);
-router.post('/:id/restock', optionalToken, restockItem);
+router.get('/', ...requireOwnerOrAdmin, getInventory);
+router.post('/', ...requireOwnerOrAdmin, createInventoryItem);
+router.put('/:id', ...requireOwnerOrAdmin, updateInventoryItem);
+router.delete('/:id', ...requireOwnerOrAdmin, deleteInventoryItem);
+router.post('/:id/restock', ...requireOwnerOrAdmin, restockItem);
 
 module.exports = router;

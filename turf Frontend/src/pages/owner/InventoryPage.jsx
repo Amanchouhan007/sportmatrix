@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import DataTable from '../../components/ui/DataTable'
 import Badge from '../../components/ui/Badge'
 import Button from '../../components/ui/Button'
@@ -7,89 +7,137 @@ import Input from '../../components/ui/Input'
 import Select from '../../components/ui/Select'
 import Card from '../../components/ui/Card'
 import CardGrid from '../../components/ui/CardGrid'
+import ConfirmDialog from '../../components/ui/ConfirmDialog'
 import { useToast } from '../../components/ui/Toast'
-import { HiCube, HiExclamation, HiPlus, HiRefresh, HiShieldCheck, HiViewGrid, HiViewList } from 'react-icons/hi'
+import { HiCube, HiExclamation, HiPlus, HiRefresh, HiShieldCheck, HiViewGrid, HiViewList, HiPencil, HiTrash } from 'react-icons/hi'
+import { getInventory, createInventoryItem, updateInventoryItem, deleteInventoryItem, restockItem } from '../../services/inventoryService'
+import { getBranches } from '../../services/branchService'
 
-const initialItems = []
+const EMPTY_ITEM = { name: '', category: 'Equipment', stock: '', price: '', threshold: '5' }
 
 export default function InventoryPage() {
     const { addToast } = useToast()
     const [items, setItems] = useState([])
+    const [isLoading, setIsLoading] = useState(true)
+    const [myBranchId, setMyBranchId] = useState(null)
     const [modal, setModal] = useState(false)
+    const [editMode, setEditMode] = useState(false)
+    const [editingId, setEditingId] = useState(null)
     const [restockModal, setRestockModal] = useState(false)
     const [selectedItem, setSelectedItem] = useState(null)
     const [restockQty, setRestockQty] = useState('')
+    const [restockCost, setRestockCost] = useState('')
+    const [restockSupplier, setRestockSupplier] = useState('')
     const [viewMode, setViewMode] = useState('table')
     const [searchQuery, setSearchQuery] = useState('')
-    const [newItem, setNewItem] = useState({
-        name: '',
-        category: 'Equipment',
-        stock: '',
-        price: '',
-        threshold: '5'
-    })
+    const [isSaving, setIsSaving] = useState(false)
+    const [deleteConfirm, setDeleteConfirm] = useState({ open: false, id: null, name: '' })
+    const [newItem, setNewItem] = useState(EMPTY_ITEM)
+
+    const fetchInventory = useCallback(async () => {
+        setIsLoading(true)
+        try {
+            const res = await getInventory()
+            setItems(res.data || [])
+        } catch (err) {
+            addToast({ title: 'Load Failed', message: err.message || 'Failed to load inventory.', type: 'error' })
+        } finally {
+            setIsLoading(false)
+        }
+    }, [addToast])
+
+    useEffect(() => { fetchInventory() }, [fetchInventory])
 
     useEffect(() => {
-        const fetchInventory = async () => {
-            try {
-                const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5005/api/v1';
-                const res = await fetch(`${API_URL}/inventory`);
-                const data = await res.json();
-                if (data.success && Array.isArray(data.data)) {
-                    setItems(data.data);
-                } else {
-                    setItems([]);
-                }
-            } catch (e) {
-                console.error('Error fetching inventory from backend:', e);
-                setItems([]);
-            }
-        };
-        fetchInventory();
-    }, []);
+        getBranches().then(res => {
+            const branch = (res?.data || res || [])[0]
+            if (branch) setMyBranchId(branch.id)
+        }).catch(() => {})
+    }, [])
 
-    const handleCreateItem = () => {
+    const handleCreateItem = async () => {
         if (!newItem.name || !newItem.stock || !newItem.price) {
             addToast({ title: 'Missing Information', message: 'Please enter name, initial stock and unit price', type: 'error' })
             return
         }
-        const nextId = items.length + 1
-        const totalValStr = '₹' + (Number(newItem.stock) * Number(newItem.price)).toLocaleString()
-        const isLow = Number(newItem.stock) < Number(newItem.threshold)
-        setItems([...items, {
-            id: nextId,
-            name: newItem.name,
-            category: newItem.category,
-            stock: Number(newItem.stock),
-            threshold: Number(newItem.threshold),
-            value: totalValStr,
-            status: isLow ? 'Low Stock' : 'In Stock'
-        }])
-        setModal(false)
-        addToast({ title: 'Item Registered', message: `${newItem.name} successfully added to inventory logs`, type: 'success' })
+        if (!editMode && !myBranchId) {
+            addToast({ title: 'No Branch Found', message: 'No branch is linked to this account yet.', type: 'error' })
+            return
+        }
+
+        setIsSaving(true)
+        try {
+            if (editMode) {
+                await updateInventoryItem(editingId, {
+                    name: newItem.name, category: newItem.category, price: Number(newItem.price), threshold: Number(newItem.threshold)
+                })
+                addToast({ title: 'Item Updated', message: `${newItem.name} successfully updated.`, type: 'success' })
+            } else {
+                await createInventoryItem({
+                    branchId: myBranchId, name: newItem.name, category: newItem.category,
+                    stock: Number(newItem.stock), price: Number(newItem.price), threshold: Number(newItem.threshold)
+                })
+                addToast({ title: 'Item Registered', message: `${newItem.name} successfully added to inventory logs`, type: 'success' })
+            }
+            setModal(false)
+            setEditMode(false)
+            setEditingId(null)
+            setNewItem(EMPTY_ITEM)
+            fetchInventory()
+        } catch (err) {
+            addToast({ title: 'Save Failed', message: err.message || 'Could not save this item.', type: 'error' })
+        } finally {
+            setIsSaving(false)
+        }
+    }
+
+    const handleEditTrigger = (item) => {
+        setNewItem({ name: item.name, category: item.category, stock: String(item.stock), price: String(item.price), threshold: String(item.threshold) })
+        setEditingId(item.id)
+        setEditMode(true)
+        setModal(true)
+    }
+
+    const handleDelete = async () => {
+        try {
+            await deleteInventoryItem(deleteConfirm.id)
+            addToast({ title: 'Item Deleted', message: `${deleteConfirm.name} removed from inventory.`, type: 'info' })
+            fetchInventory()
+        } catch (err) {
+            addToast({ title: 'Delete Failed', message: err.message || 'Could not delete this item.', type: 'error' })
+        } finally {
+            setDeleteConfirm({ open: false, id: null, name: '' })
+        }
     }
 
     const handleRestockTrigger = (item) => {
         setSelectedItem(item)
         setRestockQty('')
+        setRestockCost(String(item.price))
+        setRestockSupplier('')
         setRestockModal(true)
     }
 
-    const handleRestockSave = () => {
-        if (!restockQty || Number(restockQty) <= 0) return
-        setItems(items.map(i => {
-            if (i.id === selectedItem.id) {
-                const finalQty = i.stock + Number(restockQty)
-                const isLow = finalQty < i.threshold
-                const rawVal = Number(i.value.replace(/[^0-9]/g, ''))
-                const unitPrice = rawVal / i.stock
-                const finalValStr = '₹' + Math.round(finalQty * unitPrice).toLocaleString()
-                return { ...i, stock: finalQty, value: finalValStr, status: isLow ? 'Low Stock' : 'In Stock' }
-            }
-            return i
-        }))
-        setRestockModal(false)
-        addToast({ title: 'Stock Restocked', message: `Added ${restockQty} units to ${selectedItem.name}`, type: 'success' })
+    const handleRestockSave = async () => {
+        if (!restockQty || Number(restockQty) <= 0) {
+            addToast({ title: 'Invalid Quantity', message: 'Enter a restock quantity greater than zero.', type: 'error' })
+            return
+        }
+        if (!restockCost || Number(restockCost) <= 0) {
+            addToast({ title: 'Invalid Cost', message: 'Enter the unit purchase cost for this restock.', type: 'error' })
+            return
+        }
+        setIsSaving(true)
+        try {
+            await restockItem(selectedItem.id, { quantity: Number(restockQty), cost: Number(restockCost), supplier: restockSupplier || undefined })
+            addToast({ title: 'Stock Restocked', message: `Added ${restockQty} units to ${selectedItem.name}`, type: 'success' })
+            setRestockModal(false)
+            fetchInventory()
+        } catch (err) {
+            addToast({ title: 'Restock Failed', message: err.message || 'Could not restock this item.', type: 'error' })
+        } finally {
+            setIsSaving(false)
+        }
     }
 
     const columns = [
@@ -101,7 +149,7 @@ export default function InventoryPage() {
             render: (_, r) => {
                 const maxCap = Math.max(r.stock, r.threshold * 2)
                 const pct = Math.min(100, Math.round((r.stock / maxCap) * 100))
-                const barColor = r.status === 'Low Stock' ? 'bg-red-500' : 'bg-emerald-500'
+                const barColor = r.status === 'Low Stock' || r.status === 'Out of Stock' ? 'bg-red-500' : 'bg-emerald-500'
                 return (
                     <div className="space-y-1 text-xs">
                         <span className="font-extrabold text-surface-850">{r.stock} Units</span>
@@ -123,14 +171,24 @@ export default function InventoryPage() {
             key: 'action',
             label: '',
             render: (_, r) => (
-                <Button size="sm" variant="outline" onClick={() => handleRestockTrigger(r)} className="cursor-pointer">
-                    <HiRefresh className="mr-1 w-4 h-4" /> Restock
-                </Button>
+                <div className="flex items-center gap-1.5">
+                    <Button size="sm" variant="outline" onClick={() => handleRestockTrigger(r)} className="cursor-pointer">
+                        <HiRefresh className="mr-1 w-4 h-4" /> Restock
+                    </Button>
+                    <button onClick={() => handleEditTrigger(r)} className="p-1.5 rounded-xl border border-surface-200 hover:bg-surface-100 text-surface-600 transition-colors cursor-pointer" title="Edit">
+                        <HiPencil className="w-4 h-4" />
+                    </button>
+                    <button onClick={() => setDeleteConfirm({ open: true, id: r.id, name: r.name })} className="p-1.5 rounded-xl border border-surface-200 hover:bg-red-50 hover:border-red-200 text-red-500 transition-colors cursor-pointer" title="Delete">
+                        <HiTrash className="w-4 h-4" />
+                    </button>
+                </div>
             )
         },
     ]
 
-    const lowStockAlerts = items.filter(i => i.status === 'Low Stock').length
+    const lowStockAlerts = items.filter(i => i.status === 'Low Stock' || i.status === 'Out of Stock').length
+    const totalAssetValue = items.reduce((sum, i) => sum + (Number(i.value?.replace(/[^0-9.]/g, '')) || 0), 0)
+    const uniqueCategories = new Set(items.map(i => i.category)).size
     const filteredItems = items.filter(item =>
         item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         item.category.toLowerCase().includes(searchQuery.toLowerCase())
@@ -147,12 +205,12 @@ export default function InventoryPage() {
                     </h1>
                     <p className="text-surface-500 text-sm mt-0.5 font-medium">Settle consumables, audit physical equipment, or track vendor levels</p>
                 </div>
-                <Button onClick={() => setModal(true)} className="shadow-lg shadow-primary-500/10 cursor-pointer">
+                <Button onClick={() => { setEditMode(false); setNewItem(EMPTY_ITEM); setModal(true) }} className="shadow-lg shadow-primary-500/10 cursor-pointer">
                     <HiPlus className="w-5 h-5 mr-1" /> Add New Item
                 </Button>
             </div>
 
-            {/* Quick overview summaries */}
+            {/* Quick overview summaries -- all derived from real fetched items, no hardcoded numbers */}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
                 <Card className="p-6 flex flex-col justify-between h-28 hover:shadow-soft transition-all border border-surface-200/60 shadow-soft">
                     <span className="text-xs font-bold text-surface-400 uppercase tracking-wider block">Total Items</span>
@@ -164,11 +222,11 @@ export default function InventoryPage() {
                 </Card>
                 <Card className="p-6 flex flex-col justify-between h-28 hover:shadow-soft transition-all border border-surface-200/60 shadow-soft">
                     <span className="text-xs font-bold text-surface-400 uppercase tracking-wider block">Total Asset Value</span>
-                    <span className="text-3xl font-extrabold text-surface-900 mt-1">₹30,780</span>
+                    <span className="text-3xl font-extrabold text-surface-900 mt-1">₹{totalAssetValue.toLocaleString('en-IN')}</span>
                 </Card>
                 <Card className="p-6 flex flex-col justify-between h-28 hover:shadow-soft transition-all border border-surface-200/60 shadow-soft">
                     <span className="text-xs font-bold text-surface-400 uppercase tracking-wider block">Unique Categories</span>
-                    <span className="text-3xl font-extrabold text-surface-900 mt-1">3</span>
+                    <span className="text-3xl font-extrabold text-surface-900 mt-1">{uniqueCategories}</span>
                 </Card>
             </div>
 
@@ -195,7 +253,9 @@ export default function InventoryPage() {
                 </div>
 
                 {/* Main content: table or card grid */}
-                {viewMode === 'table' ? (
+                {isLoading ? (
+                    <div className="py-16 text-center text-slate-400 text-sm font-semibold">Loading inventory...</div>
+                ) : viewMode === 'table' ? (
                     <div className="p-6">
                         <DataTable columns={columns} data={filteredItems} />
                     </div>
@@ -215,21 +275,33 @@ export default function InventoryPage() {
                                 </div>
                                 <div className="w-full h-1.5 bg-surface-100 rounded-full overflow-hidden mt-1">
                                     <div
-                                        className={`h-full ${item.status === 'Low Stock' ? 'bg-red-500' : 'bg-emerald-500'}`}
+                                        className={`h-full ${item.status === 'In Stock' ? 'bg-emerald-500' : 'bg-red-500'}`}
                                         style={{ width: `${Math.min(100, Math.round((item.stock / Math.max(item.stock, item.threshold * 2)) * 100))}%` }}
                                     />
                                 </div>
-                                <Button size="sm" variant="outline" onClick={() => handleRestockTrigger(item)} className="mt-1 w-full">
-                                    <HiRefresh className="w-3 h-3 mr-1" /> Restock
-                                </Button>
+                                <div className="flex gap-1.5 mt-1">
+                                    <Button size="sm" variant="outline" onClick={() => handleRestockTrigger(item)} className="flex-1">
+                                        <HiRefresh className="w-3 h-3 mr-1" /> Restock
+                                    </Button>
+                                    <button onClick={() => handleEditTrigger(item)} className="p-2 rounded-xl border border-surface-200 hover:bg-surface-100 text-surface-600 cursor-pointer" title="Edit">
+                                        <HiPencil className="w-3.5 h-3.5" />
+                                    </button>
+                                    <button onClick={() => setDeleteConfirm({ open: true, id: item.id, name: item.name })} className="p-2 rounded-xl border border-surface-200 hover:bg-red-50 hover:border-red-200 text-red-500 cursor-pointer" title="Delete">
+                                        <HiTrash className="w-3.5 h-3.5" />
+                                    </button>
+                                </div>
                             </Card>
                         )} />
                     </div>
                 )}
+
+                {!isLoading && filteredItems.length === 0 && (
+                    <div className="py-16 text-center text-slate-400 text-sm font-semibold">No inventory items found.</div>
+                )}
             </div>
 
-            {/* Create Item Modal */}
-            <Modal isOpen={modal} onClose={() => setModal(false)} title="Register Inventory Stock" size="sm">
+            {/* Create/Edit Item Modal */}
+            <Modal isOpen={modal} onClose={() => setModal(false)} title={editMode ? 'Edit Inventory Item' : 'Register Inventory Stock'} size="sm">
                 <div className="space-y-4 animate-in fade-in">
                     <Input
                         label="Item Name"
@@ -253,6 +325,7 @@ export default function InventoryPage() {
                             type="number"
                             placeholder="e.g. 20"
                             value={newItem.stock}
+                            disabled={editMode}
                             onChange={(e) => setNewItem({ ...newItem, stock: e.target.value })}
                         />
                         <Input
@@ -263,6 +336,9 @@ export default function InventoryPage() {
                             onChange={(e) => setNewItem({ ...newItem, price: e.target.value })}
                         />
                     </div>
+                    {editMode && (
+                        <p className="text-[11px] text-slate-400 font-medium -mt-2">Use "Restock" to change quantity -- editing here only updates name, category, price, and threshold.</p>
+                    )}
                     <Input
                         label="Minimum Threshold Alert Limit"
                         type="number"
@@ -271,8 +347,8 @@ export default function InventoryPage() {
                         onChange={(e) => setNewItem({ ...newItem, threshold: e.target.value })}
                     />
                     <div className="flex gap-3 justify-end pt-4 border-t border-surface-100 mt-6 font-semibold">
-                        <Button variant="secondary" onClick={() => setModal(false)}>Cancel</Button>
-                        <Button onClick={handleCreateItem}>Add Item</Button>
+                        <Button variant="secondary" onClick={() => setModal(false)} disabled={isSaving}>Cancel</Button>
+                        <Button onClick={handleCreateItem} disabled={isSaving}>{isSaving ? 'Saving...' : editMode ? 'Save Changes' : 'Add Item'}</Button>
                     </div>
                 </div>
             </Modal>
@@ -292,13 +368,37 @@ export default function InventoryPage() {
                             value={restockQty}
                             onChange={(e) => setRestockQty(e.target.value)}
                         />
+                        <Input
+                            label="Unit Purchase Cost for this Batch (₹)"
+                            type="number"
+                            placeholder="e.g. 150"
+                            value={restockCost}
+                            onChange={(e) => setRestockCost(e.target.value)}
+                        />
+                        <Input
+                            label="Supplier (optional)"
+                            placeholder="e.g. Decathlon Wholesale"
+                            value={restockSupplier}
+                            onChange={(e) => setRestockSupplier(e.target.value)}
+                        />
                         <div className="flex gap-3 justify-end pt-4 border-t border-surface-100 mt-6">
-                            <Button variant="secondary" onClick={() => setRestockModal(false)}>Cancel</Button>
-                            <Button onClick={handleRestockSave} className="bg-emerald-600 hover:bg-emerald-700">Save Stock</Button>
+                            <Button variant="secondary" onClick={() => setRestockModal(false)} disabled={isSaving}>Cancel</Button>
+                            <Button onClick={handleRestockSave} disabled={isSaving} className="bg-emerald-600 hover:bg-emerald-700">{isSaving ? 'Saving...' : 'Save Stock'}</Button>
                         </div>
                     </div>
                 </Modal>
             )}
+
+            {/* Delete Confirm */}
+            <ConfirmDialog
+                isOpen={deleteConfirm.open}
+                onClose={() => setDeleteConfirm({ open: false, id: null, name: '' })}
+                onConfirm={handleDelete}
+                title="Delete Inventory Item"
+                message={`Are you sure you want to delete ${deleteConfirm.name}? This cannot be undone.`}
+                variant="danger"
+                confirmText="Delete"
+            />
         </div>
     )
 }

@@ -1,367 +1,228 @@
-const db = require('../../config/db');
+const prisma = require('../../config/prisma');
+
+const genId = (prefix) => `${prefix}_${Date.now()}_${Math.floor(Math.random() * 100000)}`;
+
+const formatBranchSport = (bs) => ({
+    id: bs.id,
+    _id: bs.id,
+    branchId: bs.branchId,
+    sportId: {
+        id: bs.sport.id,
+        _id: bs.sport.id,
+        name: bs.sport.name,
+        icon: bs.sport.icon,
+        category: bs.sport.category
+    },
+    name: bs.sport.name,
+    icon: bs.sport.icon,
+    price: bs.regularPrice,
+    regularPrice: bs.regularPrice,
+    peakPrice: bs.peakPrice,
+    courts: bs.totalCourts,
+    totalCourts: bs.totalCourts,
+    openingTime: bs.openingTime ? bs.openingTime.substring(0, 5) : '06:00',
+    closingTime: bs.closingTime ? bs.closingTime.substring(0, 5) : '22:00',
+    slotDuration: bs.slotDuration,
+    status: bs.status
+});
 
 /**
- * Get all global master sports
+ * Verifies the requesting user owns the branch (or is Super Admin) before letting
+ * them mutate a branch's sport configuration.
  */
+const assertBranchAccess = async (branchId, user) => {
+    if (!user) return { ok: false, code: 401, message: 'Authentication required.' };
+    if (user.role === 'SUPER_ADMIN') return { ok: true };
+    const branch = await prisma.branch.findUnique({ where: { id: branchId } });
+    if (!branch) return { ok: false, code: 404, message: 'Branch not found.' };
+    if (branch.ownerUserId !== user.id) return { ok: false, code: 403, message: 'Forbidden: you do not manage this branch.' };
+    return { ok: true };
+};
+
 const getMasterSports = async (req, res) => {
     try {
-        const [sports] = await db.query('SELECT * FROM sports');
-        return res.status(200).json({
-            success: true,
-            data: sports
-        });
+        const sports = await prisma.sport.findMany({ orderBy: { name: 'asc' } });
+        return res.status(200).json({ success: true, data: sports });
     } catch (error) {
         console.error('Fetch master sports error:', error);
-        return res.status(500).json({
-            success: false,
-            message: 'Internal Server Error fetching master sports.'
-        });
+        return res.status(500).json({ success: false, message: 'Internal Server Error fetching master sports.' });
     }
 };
 
-/**
- * Get all configured sports for a specific branch
- */
 const getBranchSports = async (req, res) => {
     const { branchId } = req.params;
-
     if (!branchId) {
-        return res.status(400).json({
-            success: false,
-            message: 'branchId path parameter is required.'
-        });
+        return res.status(400).json({ success: false, message: 'branchId path parameter is required.' });
     }
 
     try {
-        const [rows] = await db.query(`
-            SELECT 
-                bs.id,
-                bs.branch_id,
-                bs.sport_id,
-                bs.regular_price,
-                bs.peak_price,
-                bs.total_courts,
-                bs.opening_time,
-                bs.closing_time,
-                bs.slot_duration,
-                bs.status,
-                s.name as sport_name,
-                s.icon as sport_icon,
-                s.category as sport_category
-            FROM branch_sports bs
-            JOIN sports s ON bs.sport_id = s.id
-            WHERE bs.branch_id = ?
-        `, [branchId]);
-
-        // Map database columns to exact frontend UI expected fields
-        const formattedSports = rows.map(r => ({
-            id: r.id,
-            _id: r.id, // compatibility
-            branchId: r.branch_id,
-            sportId: {
-                id: r.sport_id,
-                _id: r.sport_id,
-                name: r.sport_name,
-                icon: r.sport_icon,
-                category: r.sport_category
-            },
-            name: r.sport_name,
-            icon: r.sport_icon,
-            price: r.regular_price,
-            regularPrice: r.regular_price,
-            peakPrice: r.peak_price,
-            courts: r.total_courts,
-            totalCourts: r.total_courts,
-            openingTime: r.opening_time ? r.opening_time.substring(0, 5) : '06:00', // HH:MM
-            closingTime: r.closing_time ? r.closing_time.substring(0, 5) : '22:00',
-            slotDuration: r.slot_duration,
-            status: r.status
-        }));
-
-        return res.status(200).json({
-            success: true,
-            data: formattedSports
+        let rows = await prisma.branchSport.findMany({
+            where: { branchId },
+            include: { sport: true }
         });
+
+        if (rows.length === 0) {
+            const branch = await prisma.branch.findUnique({ where: { id: branchId } });
+            if (branch) {
+                const basePrice = Number(branch.minPriceHourly) || 800;
+                await prisma.branchSport.createMany({
+                    data: [
+                        {
+                            id: genId('bs'),
+                            branchId,
+                            sportId: 'sp_master_02',
+                            regularPrice: basePrice,
+                            peakPrice: basePrice * 1.5,
+                            totalCourts: 1,
+                            openingTime: branch.openingTime || '06:00:00',
+                            closingTime: branch.closingTime || '23:00:00',
+                            slotDuration: 60,
+                            status: 'ACTIVE'
+                        }
+                    ],
+                    skipDuplicates: true
+                });
+
+                rows = await prisma.branchSport.findMany({
+                    where: { branchId },
+                    include: { sport: true }
+                });
+            }
+        }
+
+        return res.status(200).json({ success: true, data: rows.map(formatBranchSport) });
     } catch (error) {
         console.error('Fetch branch sports error:', error);
-        return res.status(500).json({
-            success: false,
-            message: 'Internal Server Error fetching branch sports.'
-        });
+        return res.status(500).json({ success: false, message: 'Internal Server Error fetching branch sports.' });
     }
 };
 
-/**
- * Configure/activate a sport for a branch
- */
 const activateBranchSport = async (req, res) => {
-    const {
-        branchId,
-        sportId,
-        regularPrice,
-        peakPrice,
-        totalCourts,
-        openingTime,
-        closingTime,
-        slotDuration
-    } = req.body;
+    const { branchId, sportId, regularPrice, peakPrice, totalCourts, openingTime, closingTime, slotDuration } = req.body;
 
     if (!branchId || !sportId) {
-        return res.status(400).json({
-            success: false,
-            message: 'branchId and sportId are required.'
-        });
+        return res.status(400).json({ success: false, message: 'branchId and sportId are required.' });
     }
 
     try {
-        // 1. Verify master sport exists
-        const [sports] = await db.query('SELECT * FROM sports WHERE id = ?', [sportId]);
-        if (sports.length === 0) {
-            return res.status(404).json({
-                success: false,
-                message: 'Master sport not found.'
-            });
-        }
-        const sport = sports[0];
+        const access = await assertBranchAccess(branchId, req.user);
+        if (!access.ok) return res.status(access.code).json({ success: false, message: access.message });
 
-        // 2. Check if already activated in branch
-        const [existing] = await db.query('SELECT id FROM branch_sports WHERE branch_id = ? AND sport_id = ?', [branchId, sportId]);
-        if (existing.length > 0) {
-            return res.status(409).json({
-                success: false,
-                message: 'This sport is already active for this branch.'
-            });
+        const sport = await prisma.sport.findUnique({ where: { id: sportId } });
+        if (!sport) {
+            return res.status(404).json({ success: false, message: 'Master sport not found.' });
         }
 
-        // 3. Save Configuration
-        const branchSportId = 'bs_' + Date.now();
-        await db.query(`
-            INSERT INTO branch_sports (
-                id, branch_id, sport_id, regular_price, peak_price, total_courts, opening_time, closing_time, slot_duration, status
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'ACTIVE')
-        `, [
-            branchSportId,
-            branchId,
-            sportId,
-            regularPrice || 1000,
-            peakPrice || 1500,
-            totalCourts || 1,
-            openingTime || '06:00:00',
-            closingTime || '22:00:00',
-            slotDuration || 60
-        ]);
+        const existing = await prisma.branchSport.findUnique({ where: { branchId_sportId: { branchId, sportId } } });
+        if (existing) {
+            return res.status(409).json({ success: false, message: 'This sport is already active for this branch.' });
+        }
 
-        const newSport = {
-            id: branchSportId,
-            _id: branchSportId,
-            branchId,
-            sportId: {
-                id: sport.id,
-                _id: sport.id,
-                name: sport.name,
-                icon: sport.icon
+        const created = await prisma.branchSport.create({
+            data: {
+                id: genId('bs'),
+                branchId,
+                sportId,
+                regularPrice: regularPrice || 1000,
+                peakPrice: peakPrice || 1500,
+                totalCourts: totalCourts || 1,
+                openingTime: openingTime || '06:00:00',
+                closingTime: closingTime || '22:00:00',
+                slotDuration: slotDuration || 60,
+                status: 'ACTIVE'
             },
-            name: sport.name,
-            icon: sport.icon,
-            price: regularPrice || 1000,
-            regularPrice: regularPrice || 1000,
-            peakPrice: peakPrice || 1500,
-            courts: totalCourts || 1,
-            totalCourts: totalCourts || 1,
-            openingTime: openingTime || '06:00',
-            closingTime: closingTime || '22:00',
-            slotDuration: slotDuration || 60,
-            status: 'ACTIVE'
-        };
-
-        return res.status(201).json({
-            success: true,
-            data: newSport,
-            message: 'Sport activated successfully'
+            include: { sport: true }
         });
+
+        return res.status(201).json({ success: true, data: formatBranchSport(created), message: 'Sport activated successfully' });
     } catch (error) {
         console.error('Activate branch sport error:', error);
-        return res.status(500).json({
-            success: false,
-            message: 'Internal Server Error activating branch sport.'
-        });
+        return res.status(500).json({ success: false, message: 'Internal Server Error activating branch sport.' });
     }
 };
 
-/**
- * Update a branch sport configuration
- */
 const updateBranchSport = async (req, res) => {
     const { id } = req.params;
-    const {
-        regularPrice,
-        peakPrice,
-        totalCourts,
-        openingTime,
-        closingTime,
-        slotDuration
-    } = req.body;
+    const { regularPrice, peakPrice, totalCourts, openingTime, closingTime, slotDuration } = req.body;
 
     try {
-        // 1. Verify existence
-        const [existing] = await db.query('SELECT * FROM branch_sports WHERE id = ?', [id]);
-        if (existing.length === 0) {
-            return res.status(404).json({
-                success: false,
-                message: 'Branch sport configuration not found.'
-            });
+        const existing = await prisma.branchSport.findUnique({ where: { id } });
+        if (!existing) {
+            return res.status(404).json({ success: false, message: 'Branch sport configuration not found.' });
         }
 
-        // 2. Update record
-        await db.query(`
-            UPDATE branch_sports 
-            SET 
-                regular_price = COALESCE(?, regular_price),
-                peak_price = COALESCE(?, peak_price),
-                total_courts = COALESCE(?, total_courts),
-                opening_time = COALESCE(?, opening_time),
-                closing_time = COALESCE(?, closing_time),
-                slot_duration = COALESCE(?, slot_duration)
-            WHERE id = ?
-        `, [
-            regularPrice,
-            peakPrice,
-            totalCourts,
-            openingTime,
-            closingTime,
-            slotDuration,
-            id
-        ]);
+        const access = await assertBranchAccess(existing.branchId, req.user);
+        if (!access.ok) return res.status(access.code).json({ success: false, message: access.message });
 
-        // 3. Return updated details
-        const [updatedRows] = await db.query(`
-            SELECT bs.*, s.name, s.icon FROM branch_sports bs
-            JOIN sports s ON bs.sport_id = s.id
-            WHERE bs.id = ?
-        `, [id]);
-        const r = updatedRows[0];
-
-        const updatedSport = {
-            id: r.id,
-            _id: r.id,
-            branchId: r.branch_id,
-            sportId: {
-                id: r.sport_id,
-                _id: r.sport_id,
-                name: r.name,
-                icon: r.icon
+        const updated = await prisma.branchSport.update({
+            where: { id },
+            data: {
+                regularPrice: regularPrice ?? undefined,
+                peakPrice: peakPrice ?? undefined,
+                totalCourts: totalCourts ?? undefined,
+                openingTime: openingTime ?? undefined,
+                closingTime: closingTime ?? undefined,
+                slotDuration: slotDuration ?? undefined
             },
-            name: r.name,
-            icon: r.icon,
-            price: r.regular_price,
-            regularPrice: r.regular_price,
-            peakPrice: r.peak_price,
-            courts: r.total_courts,
-            totalCourts: r.total_courts,
-            openingTime: r.opening_time ? r.opening_time.substring(0, 5) : '06:00',
-            closingTime: r.closing_time ? r.closing_time.substring(0, 5) : '22:00',
-            slotDuration: r.slot_duration,
-            status: r.status
-        };
-
-        return res.status(200).json({
-            success: true,
-            data: updatedSport,
-            message: 'Sport updated successfully'
+            include: { sport: true }
         });
+
+        return res.status(200).json({ success: true, data: formatBranchSport(updated), message: 'Sport updated successfully' });
     } catch (error) {
         console.error('Update branch sport error:', error);
-        return res.status(500).json({
-            success: false,
-            message: 'Internal Server Error updating branch sport.'
-        });
+        return res.status(500).json({ success: false, message: 'Internal Server Error updating branch sport.' });
     }
 };
 
-/**
- * Toggle branch sport availability status
- */
 const changeSportStatus = async (req, res) => {
     const { id } = req.params;
     const { status } = req.body;
 
     if (!status || !['ACTIVE', 'INACTIVE'].includes(status)) {
-        return res.status(400).json({
-            success: false,
-            message: 'Status field must be either ACTIVE or INACTIVE.'
-        });
+        return res.status(400).json({ success: false, message: 'Status field must be either ACTIVE or INACTIVE.' });
     }
 
     try {
-        const [result] = await db.query('UPDATE branch_sports SET status = ? WHERE id = ?', [status, id]);
-        if (result.affectedRows === 0) {
-            return res.status(404).json({
-                success: false,
-                message: 'Branch sport configuration not found.'
-            });
+        const existing = await prisma.branchSport.findUnique({ where: { id } });
+        if (!existing) {
+            return res.status(404).json({ success: false, message: 'Branch sport configuration not found.' });
         }
+        const access = await assertBranchAccess(existing.branchId, req.user);
+        if (!access.ok) return res.status(access.code).json({ success: false, message: access.message });
 
-        return res.status(200).json({
-            success: true,
-            message: `Status updated to ${status}`
-        });
+        await prisma.branchSport.update({ where: { id }, data: { status } });
+        return res.status(200).json({ success: true, message: `Status updated to ${status}` });
     } catch (error) {
         console.error('Toggle status error:', error);
-        return res.status(500).json({
-            success: false,
-            message: 'Internal Server Error updating status.'
-        });
+        return res.status(500).json({ success: false, message: 'Internal Server Error updating status.' });
     }
 };
 
-/**
- * Remove a sport configuration from a branch
- */
 const deleteBranchSport = async (req, res) => {
     const { id } = req.params;
 
     try {
-        const [result] = await db.query('DELETE FROM branch_sports WHERE id = ?', [id]);
-        if (result.affectedRows === 0) {
-            return res.status(404).json({
-                success: false,
-                message: 'Branch sport configuration not found.'
-            });
+        const existing = await prisma.branchSport.findUnique({ where: { id } });
+        if (!existing) {
+            return res.status(404).json({ success: false, message: 'Branch sport configuration not found.' });
         }
+        const access = await assertBranchAccess(existing.branchId, req.user);
+        if (!access.ok) return res.status(access.code).json({ success: false, message: access.message });
 
-        return res.status(200).json({
-            success: true,
-            message: 'Sport removed successfully'
-        });
+        await prisma.branchSport.delete({ where: { id } });
+        return res.status(200).json({ success: true, message: 'Sport removed successfully' });
     } catch (error) {
         console.error('Delete branch sport error:', error);
-        return res.status(500).json({
-            success: false,
-            message: 'Internal Server Error deleting branch sport.'
-        });
+        return res.status(500).json({ success: false, message: 'Internal Server Error deleting branch sport.' });
     }
 };
 
-/**
- * Handle upload image logic
- */
 const uploadSportImage = async (req, res) => {
     if (!req.file) {
-        return res.status(400).json({
-            success: false,
-            message: 'Please upload an image file.'
-        });
+        return res.status(400).json({ success: false, message: 'Please upload an image file.' });
     }
-
-    // Build the public HTTP URL for the uploaded image
     const fileUrl = `/uploads/${req.file.filename}`;
-
-    return res.status(200).json({
-        success: true,
-        message: 'Image uploaded successfully.',
-        url: fileUrl,
-        filename: req.file.filename
-    });
+    return res.status(200).json({ success: true, message: 'Image uploaded successfully.', url: fileUrl, filename: req.file.filename });
 };
 
 module.exports = {

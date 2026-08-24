@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import Card from '../../components/ui/Card'
 import StatCard from '../../components/ui/StatCard'
@@ -20,6 +20,7 @@ import {
 import { useAuth } from '../../context/AuthContext'
 import { useToast } from '../../components/ui/Toast'
 import { getOverview } from '../../services/dashboardService'
+import useRealtime from '../../utils/useRealtime'
 
 const DEFAULT_PEAK_DATA_TODAY = [
     { h: '6 AM', v: 0, count: 0 },
@@ -72,31 +73,31 @@ export default function OwnerDashboard() {
         recentBookings: []
     })
 
-    useEffect(() => {
-        const fetchSummary = async () => {
-            try {
-                const ownerId = user?.id || user?._id || user?.email;
-                const data = await getOverview({ ownerId, email: user?.email });
-                if (data && data.success && data.data) {
-                    setStats(prev => ({
-                        ...prev,
-                        todaysRevenue: Number(data.data.todaysRevenue) || 0,
-                        todaysBookings: Number(data.data.todaysBookings) || 0,
-                        activeMatches: Number(data.data.activeMatches) || 0,
-                        upcomingEvents: Number(data.data.upcomingEvents) || 0,
-                        totalRevenue: Number(data.data.totalRevenue) || 0,
-                        availableSlots: Number(data.data.availableSlots) || 0,
-                        sportsCount: Number(data.data.sportsCount) || 0,
-                        peakData: Array.isArray(data.data.peakData) && data.data.peakData.length > 0 ? data.data.peakData : DEFAULT_PEAK_DATA_TODAY,
-                        recentBookings: Array.isArray(data.data.recentBookings) ? data.data.recentBookings : []
-                    }));
-                }
-            } catch (err) {
-                console.error('Error fetching Owner Dashboard summary:', err);
+    const fetchSummary = useCallback(async () => {
+        try {
+            const ownerId = user?.id || user?._id || user?.email;
+            const data = await getOverview({ ownerId, email: user?.email });
+            if (data && data.success && data.data) {
+                setStats(prev => ({
+                    ...prev,
+                    todaysRevenue: Number(data.data.todaysRevenue) || 0,
+                    todaysBookings: Number(data.data.todaysBookings) || 0,
+                    activeMatches: Number(data.data.activeMatches) || 0,
+                    upcomingEvents: Number(data.data.upcomingEvents) || 0,
+                    totalRevenue: Number(data.data.totalRevenue) || 0,
+                    availableSlots: Number(data.data.availableSlots) || 0,
+                    sportsCount: Number(data.data.sportsCount) || 0,
+                    peakData: Array.isArray(data.data.peakData) && data.data.peakData.length > 0 ? data.data.peakData : DEFAULT_PEAK_DATA_TODAY,
+                    recentBookings: Array.isArray(data.data.recentBookings) ? data.data.recentBookings : []
+                }));
             }
-        };
-        fetchSummary();
+        } catch (err) {
+            console.error('Error fetching Owner Dashboard summary:', err);
+        }
     }, [user]);
+
+    useEffect(() => { fetchSummary() }, [fetchSummary]);
+    useRealtime(['booking:new', 'booking:cancelled', 'payment:pending', 'payment:settled', 'wallet:updated'], () => fetchSummary());
 
     // Close row action dropdown when clicking outside
     useEffect(() => {

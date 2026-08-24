@@ -152,6 +152,7 @@ const LEADERBOARD = [
     { rank: 3, name: 'Box Cricket Night League', teams: 16, revenue: '₹40,000', rating: '4.7 ★', badge: '🥉 Houseful' }
 ]
 
+import api from '../../services/api'
 import { getMasterTournamentMetrics } from '../../services/tournamentStore'
 
 export default function TournamentDashboard({ role = 'owner' }) {
@@ -173,18 +174,16 @@ export default function TournamentDashboard({ role = 'owner' }) {
 
     const fetchLiveStats = async () => {
         try {
-            const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5005/api/v1';
-            const res = await fetch(`${API_URL}/tournaments`)
-            const data = await res.json()
-            if (data.success && Array.isArray(data.data)) {
-                const list = data.data
+            const res = await api.get('/tournaments')
+            if (res && res.success && Array.isArray(res.data)) {
+                const list = res.data
                 setLiveTournamentsList(list)
 
                 const totalT = list.length
                 const pendingA = list.filter(t => (t.status || '').toLowerCase().includes('pending')).length
                 const activeA = list.filter(t => (t.status || '').toLowerCase().includes('approved') || (t.status || '').toLowerCase().includes('active')).length
-                const teamsCount = list.reduce((sum, t) => sum + (Number(t.maximum_teams || t.registrations) || 0), 0)
-                const revenueSum = list.reduce((sum, t) => sum + (Number(t.entry_fee_per_team || t.entryFee) * (Number(t.maximum_teams || t.registrations) || 0)), 0)
+                const teamsCount = list.reduce((sum, t) => sum + (Number(t.maximum_teams || t.maxTeams || t.registrations) || 0), 0)
+                const revenueSum = list.reduce((sum, t) => sum + (Number(t.entry_fee_per_team || t.entryFee || 0) * (Number(t.registrations) || 0)), 0)
 
                 setStats({
                     totalTournaments: totalT,

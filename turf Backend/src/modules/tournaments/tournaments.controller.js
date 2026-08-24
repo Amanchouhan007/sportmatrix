@@ -1,35 +1,33 @@
-const db = require('../../config/db');
+const prisma = require('../../config/prisma');
+const { emitToBranch } = require('../../realtime/socket');
 
-/**
- * Helper to auto-lock turf slots upon tournament approval
- */
+const genId = (prefix) => `${prefix}_${Date.now()}_${Math.floor(Math.random() * 100000)}`;
+
+const STATUS_MAP_IN = {
+    'Pending Approval': 'PENDING_APPROVAL', 'Approved': 'APPROVED', 'Rejected': 'REJECTED',
+    'Suspended': 'CANCELLED', 'Active': 'ACTIVE', 'Completed': 'COMPLETED'
+};
+const normalizeStatus = (s) => (s ? (STATUS_MAP_IN[s] || s.toUpperCase()) : undefined);
+
+/** Blocks a branch's court for every day of the tournament via real Slot rows. */
 const autoLockTurfSlots = async (tournament) => {
     try {
-        const { branch_id, sport_id, court_name, start_date, end_date, title } = tournament;
-        
-        // Loop through each day from start_date to end_date
-        let curr = new Date(start_date);
-        const end = new Date(end_date);
+        let curr = new Date(tournament.startDate);
+        const end = new Date(tournament.endDate);
+        const courtName = tournament.turfCourtName || 'Main Turf';
 
         while (curr <= end) {
             const dateStr = curr.toISOString().split('T')[0];
-            
-            // Check if slots already exist or create blocked slots for standard tournament hours (e.g. 08:00 to 20:00)
-            const slotId = `slot_tourney_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
-            
-            await db.query(`
-                INSERT INTO slots (id, branch_id, sport_id, court_name, slot_date, start_time, end_time, duration, status, notes)
-                VALUES (?, ?, ?, ?, ?, '08:00:00', '20:00:00', 720, 'BLOCKED', ?)
-                ON DUPLICATE KEY UPDATE status = 'BLOCKED', notes = VALUES(notes)
-            `, [
-                slotId,
-                branch_id,
-                sport_id || 'sp_master_01',
-                court_name || 'Main Turf',
-                dateStr,
-                `Locked for Tournament: ${title}`
-            ]);
-
+            await prisma.slot.upsert({
+                where: { branchId_courtName_slotDate_startTime: { branchId: tournament.branchId, courtName, slotDate: new Date(dateStr), startTime: '08:00:00' } },
+                update: { status: 'BLOCKED', notes: `Locked for Tournament: ${tournament.title}` },
+                create: {
+                    id: `slot_tourney_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+                    branchId: tournament.branchId, sportId: tournament.sportId, courtName,
+                    slotDate: new Date(dateStr), startTime: '08:00:00', endTime: '20:00:00', duration: 720,
+                    status: 'BLOCKED', notes: `Locked for Tournament: ${tournament.title}`
+                }
+            });
             curr.setDate(curr.getDate() + 1);
         }
     } catch (err) {
@@ -37,142 +35,88 @@ const autoLockTurfSlots = async (tournament) => {
     }
 };
 
-/**
- * Fetch tournaments list
- */
+const formatTournament = (r) => ({
+    id: r.id, _id: r.id, name: r.title, title: r.title,
+    banner: r.bannerImage || '', description: r.description || '', rules: r.tournamentRules || '',
+    sport: r.sport?.name, sportId: r.sportId, category: r.category?.name || null, categoryId: r.categoryId,
+    courtName: r.turfCourtName || 'Main Pitch',
+    branchName: r.branch?.name || 'SportMatrix Arena',
+    location: r.branch ? `${r.branch.city || 'Matrix Arena'}${r.branch.state ? ', ' + r.branch.state : ''}` : 'SportMatrix Venue',
+    organizer: r.branch?.ownerUser?.name || 'Turf Owner',
+    organizerEmail: r.branch?.ownerUser?.email || '',
+    startDate: r.startDate, endDate: r.endDate,
+    registrationLastDate: r.registrationLastDate,
+    entryFee: String(r.entryFeePerTeam), prize: r.prizePoolTotal, prizePool: r.prizePoolTotal,
+    winnerPrize: Number(r.firstPrizeWinner), runnerPrize: Number(r.secondPrizeRunnerUp), thirdPrize: Number(r.thirdPrize),
+    teams: `${r._count?.teams ?? 0}/${r.maximumTeams}`,
+    registrations: r._count?.teams ?? 0,
+    maxTeams: r.maximumTeams, minTeams: r.minimumTeams,
+    format: r.tournamentFormat, matchDuration: r.matchDurationMinutes,
+    skillLevel: r.skillLevel, ageLimit: r.ageLimit, gender: r.genderCriteria,
+    status: r.status, branchId: r.branchId, createdAt: r.createdAt
+});
+
+const getOwnerBranchIds = async (user) => {
+    if (!user || user.role === 'SUPER_ADMIN') return null;
+    if (user.role === 'STAFF' && user.staffBranchId) return [user.staffBranchId];
+    const branches = await prisma.branch.findMany({
+        where: { OR: [{ ownerUserId: user.id }, { owner: { userId: user.id } }, { ownerId: user.id }] },
+        select: { id: true }
+    });
+    return branches.map(b => b.id);
+};
+
 const getTournaments = async (req, res) => {
-    const { branchId, status, role } = req.query;
-
+    const { branchId, status } = req.query;
     try {
-        let query = `
-            SELECT 
-                t.*,
-                s.name as sport_name,
-                c.name as category_name,
-                (SELECT COUNT(*) FROM teams tm WHERE tm.tournament_id = t.id AND tm.status = 'Approved') as registrations
-            FROM tournaments t
-            LEFT JOIN sports s ON t.sport_id = s.id
-            LEFT JOIN tournament_categories c ON t.category_id = c.id
-            WHERE 1=1
-        `;
-        const params = [];
-        const ownerFilter = req.query.ownerId || req.query.owner_id || (req.user?.role === 'OWNER' ? req.user.id : null);
-        const emailFilter = req.query.email || req.user?.email;
-
+        const where = {};
         if (branchId) {
-            query += ` AND t.branch_id = ?`;
-            params.push(branchId);
-        } else if (req.user?.role === 'OWNER' || (ownerFilter && ownerFilter !== 'ALL')) {
-            query += ` AND (
-                t.branch_id IN (SELECT id FROM branches WHERE owner_id = ? OR owner_id IN (SELECT id FROM owners WHERE email = ? OR user_id = ? OR id = ?) OR email = ?)
-                OR t.created_by = ? OR t.created_by = ?
-            )`;
-            params.push(ownerFilter || '', emailFilter || '', ownerFilter || '', ownerFilter || '', emailFilter || '', ownerFilter || '', emailFilter || '');
+            where.branchId = branchId;
+        } else if (req.user && (req.user.role === 'OWNER' || req.user.role === 'STAFF')) {
+            const ownerBranchIds = await getOwnerBranchIds(req.user);
+            if (ownerBranchIds) {
+                where.branchId = { in: ownerBranchIds };
+            }
         }
 
-        if (status) {
-            query += ` AND t.status = ?`;
-            params.push(status);
-        } else if (role === 'CUSTOMER') {
-            // Customers can ONLY see Approved & Active & Completed tournaments
-            query += ` AND t.status IN ('Approved', 'Active', 'Completed')`;
-        }
+        if (status) where.status = normalizeStatus(status);
+        else if (!req.user || req.user.role === 'CUSTOMER') where.status = { in: ['APPROVED', 'REGISTRATION_OPEN', 'UPCOMING', 'ACTIVE', 'RUNNING', 'COMPLETED'] };
 
-        query += ` ORDER BY t.created_at DESC`;
-
-        const [rows] = await db.query(query, params);
-
-        const formatDate = (dateVal) => {
-            if (!dateVal) return '';
-            const d = new Date(dateVal);
-            const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-            return `${months[d.getMonth()]} ${d.getDate()}, ${d.getFullYear()}`;
-        };
-
-        const formatted = rows.map(r => ({
-            id: r.id,
-            _id: r.id,
-            name: r.title,
-            title: r.title,
-            banner: r.banner || 'https://images.unsplash.com/photo-1551958219-acbc608c6377?auto=format&fit=crop&q=80&w=800',
-            description: r.description || '',
-            rules: r.rules || '',
-            sport: r.sport_name || 'Cricket',
-            sportId: r.sport_id,
-            category: r.category_name || 'Open Category',
-            categoryId: r.category_id,
-            courtName: r.court_name || 'Court A',
-            date: `${formatDate(r.start_date)} - ${formatDate(r.end_date)}`,
-            startDate: r.start_date,
-            endDate: r.end_date,
-            registrationLastDate: r.registration_last_date,
-            entryFee: String(r.entry_fee || r.registration_fee || 0),
-            winnerPrize: r.winner_prize || 0,
-            runnerPrize: r.runner_prize || 0,
-            thirdPrize: r.third_prize || 0,
-            prize: r.prize_pool ? (r.prize_pool.startsWith('₹') ? r.prize_pool : `₹${Number(r.prize_pool).toLocaleString()}`) : `₹${((r.winner_prize || 0) + (r.runner_prize || 0)).toLocaleString()}`,
-            prizePool: r.prize_pool || String((r.winner_prize || 0) + (r.runner_prize || 0)),
-            teams: `${r.registrations}/${r.max_teams}`,
-            registrations: r.registrations,
-            maxTeams: r.max_teams || 16,
-            minTeams: r.min_teams || 4,
-            format: r.format || 'Knockout',
-            matchDuration: r.match_duration || 60,
-            skillLevel: r.skill_level || 'Open',
-            ageLimit: r.age_limit || 'Open',
-            gender: r.gender || 'All',
-            status: r.status,
-            ownerRemarks: r.owner_remarks || '',
-            createdBy: r.created_by,
-            approvedBy: r.approved_by,
-            createdAt: r.created_at
-        }));
-
-        return res.status(200).json({
-            success: true,
-            data: formatted
+        const rows = await prisma.tournament.findMany({
+            where,
+            include: {
+                sport: true,
+                category: true,
+                branch: { include: { ownerUser: { select: { id: true, name: true, email: true } } } },
+                _count: { select: { teams: true } }
+            },
+            orderBy: { createdAt: 'desc' }
         });
+
+        return res.status(200).json({ success: true, data: rows.map(formatTournament) });
     } catch (error) {
         console.error('Fetch tournaments error:', error);
-        return res.status(500).json({
-            success: false,
-            message: 'Internal Server Error fetching tournaments.'
-        });
+        return res.status(500).json({ success: false, message: 'Internal Server Error fetching tournaments.' });
     }
 };
 
-/**
- * Fetch single tournament details
- */
 const getTournamentById = async (req, res) => {
-    const { id } = req.params;
-
     try {
-        const [rows] = await db.query(`
-            SELECT t.*, s.name as sport_name, c.name as category_name
-            FROM tournaments t
-            LEFT JOIN sports s ON t.sport_id = s.id
-            LEFT JOIN tournament_categories c ON t.category_id = c.id
-            WHERE t.id = ?
-        `, [id]);
-
-        if (rows.length === 0) {
+        const t = await prisma.tournament.findUnique({
+            where: { id: req.params.id },
+            include: {
+                sport: true,
+                category: true,
+                branch: { include: { ownerUser: { select: { id: true, name: true, email: true } } } },
+                teams: { include: { players: true } }
+            }
+        });
+        if (!t) {
             return res.status(404).json({ success: false, message: 'Tournament not found.' });
         }
-
-        const r = rows[0];
-        const [teams] = await db.query('SELECT * FROM teams WHERE tournament_id = ?', [id]);
-
         return res.status(200).json({
             success: true,
-            data: {
-                ...r,
-                name: r.title,
-                sport: r.sport_name,
-                category: r.category_name,
-                registrations: teams.filter(t => t.status === 'Approved').length,
-                teamsList: teams
-            }
+            data: { ...formatTournament(t), registrations: t.teams.filter(tm => tm.status === 'APPROVED' || tm.status === 'CONFIRMED').length, teamsList: t.teams }
         });
     } catch (error) {
         console.error('Fetch tournament error:', error);
@@ -180,93 +124,64 @@ const getTournamentById = async (req, res) => {
     }
 };
 
-/**
- * Create Tournament (Staff creates -> Pending Approval; Owner creates -> Approved)
- */
 const createTournament = async (req, res) => {
     const {
-        branchId = 'br_001',
-        title,
-        name,
-        banner,
-        sportId = 'sp_master_01',
-        categoryId,
-        description,
-        rules,
-        courtName,
-        startDate,
-        endDate,
-        registrationLastDate,
-        maxTeams = 16,
-        minTeams = 4,
-        entryFee = 0,
-        winnerPrize = 0,
-        runnerPrize = 0,
-        thirdPrize = 0,
-        prizePool,
-        format = 'Knockout',
-        matchDuration = 60,
-        skillLevel = 'Open',
-        ageLimit = 'Open',
-        gender = 'All'
+        branchId, title, name, banner, sportId, categoryId, description, rules, courtName,
+        startDate, endDate, registrationLastDate, maxTeams = 16, minTeams = 4, entryFee = 0,
+        winnerPrize = 0, runnerPrize = 0, thirdPrize = 0, format = 'Knockout Bracket',
+        matchDuration = 60, skillLevel, ageLimit, gender
     } = req.body;
 
     const tournamentTitle = title || name;
-
-    if (!tournamentTitle || !startDate || !endDate) {
-        return res.status(400).json({
-            success: false,
-            message: 'Title, start date, and end date are required.'
-        });
+    if (!req.user) {
+        return res.status(401).json({ success: false, message: 'Authentication required.' });
     }
 
-    const userRole = req.user?.role || 'STAFF';
-    const userId = req.user?.id || 'usr_staff_01';
-
-    // Status logic: Staff creation -> Pending Approval; Owner creation -> Approved
-    const initialStatus = userRole === 'OWNER' || userRole === 'SUPER_ADMIN' ? 'Approved' : 'Pending Approval';
-
     try {
-        const tourneyId = 't_' + Date.now();
-        const calculatedPrizePool = prizePool || String(Number(winnerPrize) + Number(runnerPrize) + Number(thirdPrize));
-
-        await db.query(`
-            INSERT INTO tournaments (
-                id, branch_id, title, banner, sport_id, category_id, description, rules, court_name,
-                start_date, end_date, registration_last_date, max_teams, min_teams, entry_fee,
-                winner_prize, runner_prize, third_prize, prize_pool, format, match_duration,
-                skill_level, age_limit, gender, status, created_by, approved_by
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        `, [
-            tourneyId, branchId, tournamentTitle, banner || null, sportId, categoryId || null, description || '', rules || '', courtName || 'Court A',
-            startDate, endDate, registrationLastDate || endDate, maxTeams, minTeams, entryFee,
-            winnerPrize, runnerPrize, thirdPrize, calculatedPrizePool, format, matchDuration,
-            skillLevel, ageLimit, gender, initialStatus, userId, initialStatus === 'Approved' ? userId : null
-        ]);
-
-        // If approved directly by Owner, trigger slot reservation
-        if (initialStatus === 'Approved') {
-            await autoLockTurfSlots({ branch_id: branchId, sport_id: sportId, court_name: courtName, start_date: startDate, end_date: endDate, title: tournamentTitle });
+        let targetBranchId = branchId;
+        if (req.user.role === 'OWNER' || req.user.role === 'STAFF') {
+            const userBranch = await prisma.branch.findFirst({
+                where: req.user.role === 'STAFF' && req.user.staffBranchId ? { id: req.user.staffBranchId } : { ownerUserId: req.user.id }
+            });
+            if (userBranch) {
+                targetBranchId = userBranch.id;
+            } else if (!targetBranchId || targetBranchId === 'br_001') {
+                const anyBranch = await prisma.branch.findFirst();
+                if (anyBranch) targetBranchId = anyBranch.id;
+            }
         }
 
-        // Optional notification entry
-        try {
-            await db.query(`
-                INSERT INTO tournament_notifications (user_id, tournament_id, type, title, message)
-                VALUES (?, ?, ?, ?, ?)
-            `, [
-                userId, tourneyId, initialStatus === 'Approved' ? 'Approved' : 'General',
-                `Tournament Created: ${tournamentTitle}`,
-                initialStatus === 'Approved' ? 'Tournament approved automatically and slots reserved.' : 'Tournament submitted for Owner approval.'
-            ]);
-        } catch (notifErr) {
-            // Ignore if notifications table optional
+        if (!targetBranchId || !sportId || !tournamentTitle || !startDate || !endDate) {
+            return res.status(400).json({ success: false, message: 'branchId, sportId, title, startDate, and endDate are required.' });
+        }
+
+        const initialStatus = (req.user.role === 'OWNER' || req.user.role === 'SUPER_ADMIN') ? 'APPROVED' : 'PENDING_APPROVAL';
+        const prizePool = `₹${(Number(winnerPrize) + Number(runnerPrize) + Number(thirdPrize)).toLocaleString()}`;
+
+        const tournament = await prisma.tournament.create({
+            data: {
+                id: genId('t'),
+                branchId: targetBranchId, sportId, categoryId: categoryId || null,
+                title: tournamentTitle, bannerImage: banner || null, description: description || null, tournamentRules: rules || null,
+                turfCourtName: courtName || undefined,
+                startDate: new Date(startDate), endDate: new Date(endDate),
+                registrationLastDate: registrationLastDate ? new Date(registrationLastDate) : new Date(endDate),
+                maximumTeams: maxTeams, minimumTeams: minTeams, entryFeePerTeam: entryFee,
+                firstPrizeWinner: winnerPrize, secondPrizeRunnerUp: runnerPrize, thirdPrize,
+                prizePoolTotal: prizePool, tournamentFormat: format, matchDurationMinutes: matchDuration,
+                skillLevel: skillLevel || undefined, ageLimit: ageLimit || undefined, genderCriteria: gender || undefined,
+                status: initialStatus
+            }
+        });
+
+        if (initialStatus === 'APPROVED') {
+            await autoLockTurfSlots(tournament);
         }
 
         return res.status(201).json({
             success: true,
-            message: initialStatus === 'Approved' ? 'Tournament created & approved successfully!' : 'Tournament created & submitted for approval.',
-            data: { id: tourneyId, title: tournamentTitle, status: initialStatus }
+            message: initialStatus === 'APPROVED' ? 'Tournament created & approved successfully!' : 'Tournament created & submitted for approval.',
+            data: { id: tournament.id, title: tournament.title, status: tournament.status }
         });
     } catch (error) {
         console.error('Create tournament error:', error);
@@ -274,126 +189,82 @@ const createTournament = async (req, res) => {
     }
 };
 
-/**
- * Approve Tournament (Owner feature)
- */
-const approveTournament = async (req, res) => {
-    const { id } = req.params;
-    const { remarks } = req.body;
-    const ownerId = req.user?.id || 'own_001';
+const requireTournamentAdmin = async (id, user) => {
+    if (user.role === 'SUPER_ADMIN') return true;
+    const tournament = await prisma.tournament.findUnique({ where: { id }, include: { branch: true } });
+    return !!tournament && tournament.branch.ownerUserId === user.id;
+};
 
+const approveTournament = async (req, res) => {
     try {
-        const [rows] = await db.query('SELECT * FROM tournaments WHERE id = ?', [id]);
-        if (rows.length === 0) {
+        if (!(await requireTournamentAdmin(req.params.id, req.user))) {
+            return res.status(403).json({ success: false, message: 'Forbidden.' });
+        }
+        const tournament = await prisma.tournament.update({ where: { id: req.params.id }, data: { status: 'APPROVED' } }).catch(() => null);
+        if (!tournament) {
             return res.status(404).json({ success: false, message: 'Tournament not found.' });
         }
-
-        const tourney = rows[0];
-
-        await db.query(`
-            UPDATE tournaments 
-            SET status = 'Approved', owner_remarks = ?, approved_by = ?
-            WHERE id = ?
-        `, [remarks || 'Approved by Owner', ownerId, id]);
-
-        // Auto-lock slots on turf
-        await autoLockTurfSlots(tourney);
-
-        // Send Notification log
-        await db.query(`
-            INSERT INTO tournament_notifications (user_id, tournament_id, type, title, message)
-            VALUES (?, ?, 'Approved', ?, ?)
-        `, [tourney.created_by || ownerId, id, 'Tournament Approved!', `Your tournament "${tourney.title}" has been approved by the Owner and is now live!`]);
-
-        return res.status(200).json({
-            success: true,
-            message: 'Tournament approved successfully. Turf match slots reserved.'
-        });
+        await autoLockTurfSlots(tournament);
+        return res.status(200).json({ success: true, message: 'Tournament approved successfully. Turf match slots reserved.' });
     } catch (error) {
         console.error('Approve tournament error:', error);
         return res.status(500).json({ success: false, message: 'Internal Server Error.' });
     }
 };
 
-/**
- * Reject Tournament (Owner feature)
- */
 const rejectTournament = async (req, res) => {
-    const { id } = req.params;
-    const { remarks } = req.body;
-
     try {
-        await db.query(`
-            UPDATE tournaments 
-            SET status = 'Rejected', owner_remarks = ?
-            WHERE id = ?
-        `, [remarks || 'Rejected by Owner', id]);
-
-        return res.status(200).json({
-            success: true,
-            message: 'Tournament rejected with remarks.'
-        });
+        if (!(await requireTournamentAdmin(req.params.id, req.user))) {
+            return res.status(403).json({ success: false, message: 'Forbidden.' });
+        }
+        await prisma.tournament.update({ where: { id: req.params.id }, data: { status: 'REJECTED' } });
+        return res.status(200).json({ success: true, message: 'Tournament rejected.' });
     } catch (error) {
-        console.error('Reject tournament error:', error);
         return res.status(500).json({ success: false, message: 'Internal Server Error.' });
     }
 };
 
-/**
- * Suspend Tournament
- */
 const suspendTournament = async (req, res) => {
-    const { id } = req.params;
     try {
-        await db.query(`UPDATE tournaments SET status = 'Suspended' WHERE id = ?`, [id]);
+        if (!(await requireTournamentAdmin(req.params.id, req.user))) {
+            return res.status(403).json({ success: false, message: 'Forbidden.' });
+        }
+        await prisma.tournament.update({ where: { id: req.params.id }, data: { status: 'CANCELLED' } });
         return res.status(200).json({ success: true, message: 'Tournament suspended.' });
     } catch (error) {
         return res.status(500).json({ success: false, message: 'Internal Server Error.' });
     }
 };
 
-/**
- * Delete Tournament
- */
 const deleteTournament = async (req, res) => {
-    const { id } = req.params;
     try {
-        await db.query('DELETE FROM tournaments WHERE id = ?', [id]);
+        if (!(await requireTournamentAdmin(req.params.id, req.user))) {
+            return res.status(403).json({ success: false, message: 'Forbidden.' });
+        }
+        await prisma.tournament.delete({ where: { id: req.params.id } });
         return res.status(200).json({ success: true, message: 'Tournament deleted.' });
     } catch (error) {
         return res.status(500).json({ success: false, message: 'Internal Server Error.' });
     }
 };
 
-/**
- * Update Tournament
- */
 const updateTournament = async (req, res) => {
-    const { id } = req.params;
-    const { title, name, description, rules, startDate, endDate, entryFee, winnerPrize, runnerPrize, thirdPrize, maxTeams, minTeams, format, status, remarks } = req.body;
-
+    const { title, name, description, rules, startDate, endDate, entryFee, winnerPrize, runnerPrize, thirdPrize, maxTeams, minTeams, format, status } = req.body;
     try {
-        const tTitle = title || name;
-        await db.query(`
-            UPDATE tournaments 
-            SET 
-                title = COALESCE(?, title),
-                description = COALESCE(?, description),
-                rules = COALESCE(?, rules),
-                start_date = COALESCE(?, start_date),
-                end_date = COALESCE(?, end_date),
-                entry_fee = COALESCE(?, entry_fee),
-                winner_prize = COALESCE(?, winner_prize),
-                runner_prize = COALESCE(?, runner_prize),
-                third_prize = COALESCE(?, third_prize),
-                max_teams = COALESCE(?, max_teams),
-                min_teams = COALESCE(?, min_teams),
-                format = COALESCE(?, format),
-                status = COALESCE(?, status),
-                owner_remarks = COALESCE(?, owner_remarks)
-            WHERE id = ?
-        `, [tTitle, description, rules, startDate, endDate, entryFee, winnerPrize, runnerPrize, thirdPrize, maxTeams, minTeams, format, status, remarks, id]);
-
+        if (!(await requireTournamentAdmin(req.params.id, req.user))) {
+            return res.status(403).json({ success: false, message: 'Forbidden.' });
+        }
+        await prisma.tournament.update({
+            where: { id: req.params.id },
+            data: {
+                title: (title || name) ?? undefined, description: description ?? undefined, tournamentRules: rules ?? undefined,
+                startDate: startDate ? new Date(startDate) : undefined, endDate: endDate ? new Date(endDate) : undefined,
+                entryFeePerTeam: entryFee ?? undefined, firstPrizeWinner: winnerPrize ?? undefined,
+                secondPrizeRunnerUp: runnerPrize ?? undefined, thirdPrize: thirdPrize ?? undefined,
+                maximumTeams: maxTeams ?? undefined, minimumTeams: minTeams ?? undefined,
+                tournamentFormat: format ?? undefined, status: status ? normalizeStatus(status) : undefined
+            }
+        });
         return res.status(200).json({ success: true, message: 'Tournament updated successfully.' });
     } catch (error) {
         console.error('Update tournament error:', error);
@@ -402,22 +273,22 @@ const updateTournament = async (req, res) => {
 };
 
 // ==========================================
-// CATEGORIES MODULE
+// CATEGORIES
 // ==========================================
+const DEFAULT_CATEGORIES = [
+    { id: 'cat_01', name: 'Open Category', description: 'All ages open tournament' },
+    { id: 'cat_02', name: 'Under 19 (U-19)', description: 'Youth tournament for U-19 players' },
+    { id: 'cat_03', name: 'Corporate Cup', description: 'Exclusive for corporate company teams' },
+    { id: 'cat_04', name: 'Veterans (35+)', description: 'Tournament for veteran players 35 years & above' },
+    { id: 'cat_05', name: 'Women League', description: 'All women team tournament' }
+];
+
 const getCategories = async (req, res) => {
     try {
-        let [rows] = await db.query('SELECT * FROM tournament_categories ORDER BY name ASC');
+        let rows = await prisma.tournamentCategory.findMany({ orderBy: { name: 'asc' } });
         if (rows.length === 0) {
-            // Seed default categories if empty
-            await db.query(`
-                INSERT INTO tournament_categories (id, name, description, status) VALUES
-                ('cat_01', 'Open Category', 'All ages open tournament', 'ACTIVE'),
-                ('cat_02', 'Under 19 (U-19)', 'Youth tournament for U-19 players', 'ACTIVE'),
-                ('cat_03', 'Corporate Cup', 'Exclusive for corporate company teams', 'ACTIVE'),
-                ('cat_04', 'Veterans (35+)', 'Tournament for veteran players 35 years & above', 'ACTIVE'),
-                ('cat_05', 'Women League', 'All women team tournament', 'ACTIVE')
-            `);
-            [rows] = await db.query('SELECT * FROM tournament_categories ORDER BY name ASC');
+            await prisma.tournamentCategory.createMany({ data: DEFAULT_CATEGORIES });
+            rows = await prisma.tournamentCategory.findMany({ orderBy: { name: 'asc' } });
         }
         return res.status(200).json({ success: true, data: rows });
     } catch (error) {
@@ -426,22 +297,20 @@ const getCategories = async (req, res) => {
 };
 
 const createCategory = async (req, res) => {
-    const { name, description, status = 'ACTIVE' } = req.body;
+    const { name, description } = req.body;
     if (!name) return res.status(400).json({ success: false, message: 'Category name is required.' });
     try {
-        const id = 'cat_' + Date.now();
-        await db.query('INSERT INTO tournament_categories (id, name, description, status) VALUES (?, ?, ?, ?)', [id, name, description || '', status]);
-        return res.status(201).json({ success: true, message: 'Category created successfully.', data: { id, name, description } });
+        const category = await prisma.tournamentCategory.create({ data: { id: genId('cat'), name, description: description || null } });
+        return res.status(201).json({ success: true, message: 'Category created successfully.', data: category });
     } catch (error) {
         return res.status(500).json({ success: false, message: 'Internal Server Error.' });
     }
 };
 
 const updateCategory = async (req, res) => {
-    const { id } = req.params;
-    const { name, description, status } = req.body;
+    const { name, description } = req.body;
     try {
-        await db.query('UPDATE tournament_categories SET name = COALESCE(?, name), description = COALESCE(?, description), status = COALESCE(?, status) WHERE id = ?', [name, description, status, id]);
+        await prisma.tournamentCategory.update({ where: { id: req.params.id }, data: { name: name ?? undefined, description: description ?? undefined } });
         return res.status(200).json({ success: true, message: 'Category updated.' });
     } catch (error) {
         return res.status(500).json({ success: false, message: 'Internal Server Error.' });
@@ -449,9 +318,8 @@ const updateCategory = async (req, res) => {
 };
 
 const deleteCategory = async (req, res) => {
-    const { id } = req.params;
     try {
-        await db.query('DELETE FROM tournament_categories WHERE id = ?', [id]);
+        await prisma.tournamentCategory.delete({ where: { id: req.params.id } });
         return res.status(200).json({ success: true, message: 'Category deleted.' });
     } catch (error) {
         return res.status(500).json({ success: false, message: 'Internal Server Error.' });
@@ -459,47 +327,52 @@ const deleteCategory = async (req, res) => {
 };
 
 // ==========================================
-// TEAM REGISTRATION MODULE
+// TEAM REGISTRATION
 // ==========================================
 const registerTeam = async (req, res) => {
-    const { id } = req.params; // Tournament ID
-    const { teamName, logo, captainName, captainEmail, captainMobile, jerseyColor, players, paymentMethod = 'UPI' } = req.body;
-
-    if (!teamName || !captainName || !captainMobile) {
-        return res.status(400).json({ success: false, message: 'Team Name, Captain Name, and Captain Mobile are required.' });
+    const { teamName, captainName, captainEmail, captainMobile, players, paymentMethod = 'UPI' } = req.body;
+    if (!teamName || !captainName || !captainMobile || !captainEmail) {
+        return res.status(400).json({ success: false, message: 'Team Name, Captain Name, Captain Email, and Captain Mobile are required.' });
     }
 
     try {
-        const [tRows] = await db.query('SELECT * FROM tournaments WHERE id = ?', [id]);
-        if (tRows.length === 0) return res.status(404).json({ success: false, message: 'Tournament not found.' });
-
-        const tourney = tRows[0];
-        const teamId = 'tm_' + Date.now();
-
-        await db.query(`
-            INSERT INTO teams (id, tournament_id, team_name, logo, captain_name, captain_email, captain_mobile, jersey_color, payment_status, payment_method, status)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'PAID', ?, 'Approved')
-        `, [teamId, id, teamName, logo || null, captainName, captainEmail || '', captainMobile, jerseyColor || 'Blue', paymentMethod]);
-
-        // Insert players roster
-        if (Array.isArray(players) && players.length > 0) {
-            for (let p of players) {
-                const pId = 'pl_' + Date.now() + '_' + Math.floor(Math.random()*1000);
-                await db.query(`
-                    INSERT INTO team_players (id, team_id, player_name, mobile, jersey_number, role)
-                    VALUES (?, ?, ?, ?, ?, ?)
-                `, [pId, teamId, p.name || p.player_name, p.mobile || '', p.jerseyNumber || p.jersey_number || 10, p.role || 'Player']);
-            }
+        const tournament = await prisma.tournament.findUnique({ where: { id: req.params.id } });
+        if (!tournament) {
+            return res.status(404).json({ success: false, message: 'Tournament not found.' });
         }
 
-        // Record payment
-        const invoiceNum = 'INV-TRN-' + Date.now().toString().slice(-6);
-        await db.query(`
-            INSERT INTO tournament_payments (tournament_id, team_id, transaction_type, invoice_number, payer_name, amount, commission_amount, payment_method, status)
-            VALUES (?, ?, 'Entry Fee', ?, ?, ?, ?, ?, 'COMPLETED')
-        `, [id, teamId, invoiceNum, captainName, tourney.entry_fee || tourney.registration_fee || 500, Math.round((tourney.entry_fee || 500) * 0.1), paymentMethod]);
+        const teamId = genId('tm');
+        const team = await prisma.$transaction(async (tx) => {
+            const created = await tx.tournamentTeam.create({
+                data: {
+                    id: teamId, tournamentId: tournament.id, teamName, captainName, captainEmail, captainMobile,
+                    paymentMethod: paymentMethod.toUpperCase(), paymentStatus: 'COMPLETED', status: 'CONFIRMED'
+                }
+            });
 
-        return res.status(201).json({ success: true, message: 'Team registered successfully.', teamId, invoiceNumber: invoiceNum });
+            if (Array.isArray(players)) {
+                for (const p of players) {
+                    await tx.tournamentPlayer.create({
+                        data: { id: genId('pl'), teamId, playerName: p.name || p.playerName, mobile: p.mobile || null, jerseyNumber: p.jerseyNumber || null, role: p.role || null }
+                    });
+                }
+            }
+
+            const invoiceNumber = `INV-TRN-${Date.now().toString().slice(-6)}`;
+            const commissionRate = 10;
+            await tx.tournamentPayment.create({
+                data: {
+                    id: genId('tpay'), invoiceNumber, tournamentId: tournament.id, teamId,
+                    payerName: captainName, transactionType: 'Entry Fee', amount: tournament.entryFeePerTeam,
+                    platformCommRate: commissionRate, commissionAmount: Math.round(Number(tournament.entryFeePerTeam) * commissionRate / 100),
+                    paymentMode: paymentMethod.toUpperCase(), status: 'COMPLETED'
+                }
+            });
+
+            return created;
+        });
+
+        return res.status(201).json({ success: true, message: 'Team registered successfully.', teamId: team.id });
     } catch (error) {
         console.error('Register team error:', error);
         return res.status(500).json({ success: false, message: 'Internal Server Error.' });
@@ -509,27 +382,19 @@ const registerTeam = async (req, res) => {
 const getTeams = async (req, res) => {
     const { tournamentId } = req.query;
     try {
-        let query = `
-            SELECT tm.*, t.title as tournament_title 
-            FROM teams tm
-            JOIN tournaments t ON tm.tournament_id = t.id
-            WHERE 1=1
-        `;
-        const params = [];
-        if (tournamentId) {
-            query += ` AND tm.tournament_id = ?`;
-            params.push(tournamentId);
+        const where = {};
+        if (tournamentId) where.tournamentId = tournamentId;
+        if (req.user && (req.user.role === 'OWNER' || req.user.role === 'STAFF')) {
+            const ownerBranchIds = await getOwnerBranchIds(req.user);
+            if (ownerBranchIds) {
+                where.tournament = { branchId: { in: ownerBranchIds } };
+            }
         }
-        query += ` ORDER BY tm.created_at DESC`;
-
-        const [teams] = await db.query(query, params);
-
-        // Fetch players for each team
-        for (let team of teams) {
-            const [players] = await db.query('SELECT * FROM team_players WHERE team_id = ?', [team.id]);
-            team.players = players;
-        }
-
+        const teams = await prisma.tournamentTeam.findMany({
+            where,
+            include: { players: true, tournament: { select: { title: true } } },
+            orderBy: { createdAt: 'desc' }
+        });
         return res.status(200).json({ success: true, data: teams });
     } catch (error) {
         return res.status(500).json({ success: false, message: 'Internal Server Error.' });
@@ -537,115 +402,63 @@ const getTeams = async (req, res) => {
 };
 
 const updateTeamStatus = async (req, res) => {
-    const { teamId } = req.params;
-    const { status } = req.body; // Approved / Rejected
     try {
-        await db.query('UPDATE teams SET status = ? WHERE id = ?', [status, teamId]);
-        return res.status(200).json({ success: true, message: `Team status updated to ${status}` });
+        await prisma.tournamentTeam.update({ where: { id: req.params.teamId }, data: { status: (req.body.status || '').toUpperCase() } });
+        return res.status(200).json({ success: true, message: `Team status updated to ${req.body.status}` });
     } catch (error) {
         return res.status(500).json({ success: false, message: 'Internal Server Error.' });
     }
 };
 
 // ==========================================
-// FIXTURES & MATCH ENGINE
+// FIXTURES & LEADERBOARD
 // ==========================================
 const generateFixtures = async (req, res) => {
-    const { id } = req.params; // Tournament ID
-
     try {
-        const [tRows] = await db.query('SELECT * FROM tournaments WHERE id = ?', [id]);
-        if (tRows.length === 0) return res.status(404).json({ success: false, message: 'Tournament not found.' });
-
-        const tourney = tRows[0];
-        const [teams] = await db.query("SELECT * FROM teams WHERE tournament_id = ? AND status = 'Approved'", [id]);
-
+        const tournament = await prisma.tournament.findUnique({ where: { id: req.params.id } });
+        if (!tournament) {
+            return res.status(404).json({ success: false, message: 'Tournament not found.' });
+        }
+        const teams = await prisma.tournamentTeam.findMany({ where: { tournamentId: tournament.id, status: { in: ['APPROVED', 'CONFIRMED'] } } });
         if (teams.length < 2) {
             return res.status(400).json({ success: false, message: 'At least 2 approved teams required to generate fixtures.' });
         }
 
-        // Delete existing fixtures for clean re-generation
-        await db.query('DELETE FROM fixtures WHERE tournament_id = ?', [id]);
+        await prisma.fixture.deleteMany({ where: { tournamentId: tournament.id } });
+        await prisma.tournamentLeaderboard.deleteMany({ where: { tournamentId: tournament.id } });
 
-        const fixturesToInsert = [];
+        const fixtures = [];
         let matchCounter = 1;
 
-        if (tourney.format === 'Knockout') {
-            // Knockout generator
+        if (tournament.tournamentFormat.toLowerCase().includes('knockout')) {
             const roundName = teams.length <= 4 ? 'Semi-Finals' : teams.length <= 8 ? 'Quarter-Finals' : 'Round of 16';
-            
             for (let i = 0; i < teams.length; i += 2) {
-                const team1 = teams[i];
-                const team2 = teams[i + 1] || null;
-                const fixId = 'fix_' + Date.now() + '_' + matchCounter;
-
-                fixturesToInsert.push({
-                    id: fixId,
-                    tournament_id: id,
-                    round_name: roundName,
-                    match_number: matchCounter,
-                    team1_id: team1.id,
-                    team2_id: team2 ? team2.id : null,
-                    scheduled_date: tourney.start_date,
-                    scheduled_time: '16:00:00',
-                    status: 'Scheduled'
+                if (!teams[i + 1]) continue;
+                fixtures.push({
+                    id: genId('fix'), tournamentId: tournament.id, roundName, matchNumber: matchCounter,
+                    teamAId: teams[i].id, teamBId: teams[i + 1].id, matchDate: tournament.startDate, matchTime: '16:00:00'
                 });
                 matchCounter++;
             }
-
-            // Add Final match placeholder
-            fixturesToInsert.push({
-                id: 'fix_' + Date.now() + '_final',
-                tournament_id: id,
-                round_name: 'Grand Finale',
-                match_number: matchCounter,
-                team1_id: null,
-                team2_id: null,
-                scheduled_date: tourney.end_date,
-                scheduled_time: '19:00:00',
-                status: 'Scheduled'
-            });
-
         } else {
-            // Round-robin League generator
             for (let i = 0; i < teams.length; i++) {
                 for (let j = i + 1; j < teams.length; j++) {
-                    const fixId = 'fix_' + Date.now() + '_' + matchCounter;
-                    fixturesToInsert.push({
-                        id: fixId,
-                        tournament_id: id,
-                        round_name: `League Round ${Math.floor(matchCounter / 2) + 1}`,
-                        match_number: matchCounter,
-                        team1_id: teams[i].id,
-                        team2_id: teams[j].id,
-                        scheduled_date: tourney.start_date,
-                        scheduled_time: `${14 + (matchCounter % 5)}:00:00`,
-                        status: 'Scheduled'
+                    fixtures.push({
+                        id: genId('fix'), tournamentId: tournament.id, roundName: `League Round ${Math.floor(matchCounter / 2) + 1}`,
+                        matchNumber: matchCounter, teamAId: teams[i].id, teamBId: teams[j].id,
+                        matchDate: tournament.startDate, matchTime: `${14 + (matchCounter % 5)}:00:00`
                     });
                     matchCounter++;
                 }
             }
         }
 
-        // Insert into database
-        for (let f of fixturesToInsert) {
-            await db.query(`
-                INSERT INTO fixtures (id, tournament_id, round_name, match_number, team1_id, team2_id, scheduled_date, scheduled_time, status)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-            `, [f.id, f.tournament_id, f.round_name, f.match_number, f.team1_id, f.team2_id, f.scheduled_date, f.scheduled_time, f.status]);
-        }
+        await prisma.fixture.createMany({ data: fixtures });
+        await prisma.tournamentLeaderboard.createMany({
+            data: teams.map(t => ({ id: genId('lb'), tournamentId: tournament.id, teamId: t.id }))
+        });
 
-        // Initialize Leaderboards for all teams
-        await db.query('DELETE FROM leaderboards WHERE tournament_id = ?', [id]);
-        for (let t of teams) {
-            const lbId = 'lb_' + Date.now() + '_' + t.id;
-            await db.query(`
-                INSERT INTO leaderboards (id, tournament_id, team_id, matches_played, wins, losses, draws, goals_for, goals_against, goal_difference, points)
-                VALUES (?, ?, ?, 0, 0, 0, 0, 0, 0, 0, 0)
-            `, [lbId, id, t.id]);
-        }
-
-        return res.status(200).json({ success: true, message: `Generated ${fixturesToInsert.length} match fixtures successfully!`, count: fixturesToInsert.length });
+        return res.status(200).json({ success: true, message: `Generated ${fixtures.length} match fixtures successfully!`, count: fixtures.length });
     } catch (error) {
         console.error('Generate fixtures error:', error);
         return res.status(500).json({ success: false, message: 'Internal Server Error.' });
@@ -653,98 +466,60 @@ const generateFixtures = async (req, res) => {
 };
 
 const getFixtures = async (req, res) => {
-    const { id } = req.params; // Tournament ID
     try {
-        const [rows] = await db.query(`
-            SELECT 
-                f.*,
-                t1.team_name as team1_name, t1.logo as team1_logo,
-                t2.team_name as team2_name, t2.logo as team2_logo,
-                tw.team_name as winner_name
-            FROM fixtures f
-            LEFT JOIN teams t1 ON f.team1_id = t1.id
-            LEFT JOIN teams t2 ON f.team2_id = t2.id
-            LEFT JOIN teams tw ON f.winner_team_id = tw.id
-            WHERE f.tournament_id = ?
-            ORDER BY f.match_number ASC
-        `, [id]);
-
-        return res.status(200).json({ success: true, data: rows });
+        const fixtures = await prisma.fixture.findMany({
+            where: { tournamentId: req.params.id },
+            include: { teamA: true, teamB: true, winner: true },
+            orderBy: { matchNumber: 'asc' }
+        });
+        return res.status(200).json({ success: true, data: fixtures });
     } catch (error) {
         return res.status(500).json({ success: false, message: 'Internal Server Error.' });
     }
 };
 
 const updateMatchScore = async (req, res) => {
-    const { matchId } = req.params;
-    const { team1Score, team2Score, winnerTeamId, status = 'Completed', yellowCards = 0, redCards = 0, remarks } = req.body;
+    const {
+        teamAScore, teamBScore, winnerId, status = 'COMPLETED',
+        yellowCardsTeamA = 0, redCardsTeamA = 0, yellowCardsTeamB = 0, redCardsTeamB = 0,
+        matchDate, matchTime, groundCourtName
+    } = req.body;
 
     try {
-        const [fRows] = await db.query('SELECT * FROM fixtures WHERE id = ?', [matchId]);
-        if (fRows.length === 0) return res.status(404).json({ success: false, message: 'Match fixture not found.' });
-
-        const fix = fRows[0];
-        const t1Score = Number(team1Score || 0);
-        const t2Score = Number(team2Score || 0);
-
-        let calculatedWinner = winnerTeamId;
-        if (!calculatedWinner && status === 'Completed') {
-            if (t1Score > t2Score) calculatedWinner = fix.team1_id;
-            else if (t2Score > t1Score) calculatedWinner = fix.team2_id;
+        const fixture = await prisma.fixture.findUnique({ where: { id: req.params.matchId }, include: { tournament: true } });
+        if (!fixture) {
+            return res.status(404).json({ success: false, message: 'Match fixture not found.' });
         }
 
-        await db.query(`
-            UPDATE fixtures 
-            SET team1_score = ?, team2_score = ?, winner_team_id = ?, status = ?, yellow_cards = ?, red_cards = ?, remarks = ?
-            WHERE id = ?
-        `, [t1Score, t2Score, calculatedWinner, status, yellowCards, redCards, remarks || '', matchId]);
-
-        // Recompute Leaderboards if status is Completed
-        if (status === 'Completed') {
-            const tourneyId = fix.tournament_id;
-
-            // Recalculate team 1 stats
-            if (fix.team1_id) {
-                const isWin = calculatedWinner === fix.team1_id;
-                const isDraw = !calculatedWinner && t1Score === t2Score;
-                const isLoss = calculatedWinner && calculatedWinner !== fix.team1_id;
-                const pts = isWin ? 3 : isDraw ? 1 : 0;
-
-                await db.query(`
-                    UPDATE leaderboards 
-                    SET matches_played = matches_played + 1,
-                        wins = wins + ?,
-                        draws = draws + ?,
-                        losses = losses + ?,
-                        goals_for = goals_for + ?,
-                        goals_against = goals_against + ?,
-                        goal_difference = (goals_for + ?) - (goals_against + ?),
-                        points = points + ?
-                    WHERE tournament_id = ? AND team_id = ?
-                `, [isWin ? 1 : 0, isDraw ? 1 : 0, isLoss ? 1 : 0, t1Score, t2Score, t1Score, t2Score, pts, tourneyId, fix.team1_id]);
+        await prisma.fixture.update({
+            where: { id: fixture.id },
+            data: {
+                teamAScore: teamAScore ?? undefined, teamBScore: teamBScore ?? undefined, winnerId: winnerId || undefined,
+                status, yellowCardsTeamA, redCardsTeamA, yellowCardsTeamB, redCardsTeamB,
+                matchDate: matchDate ? new Date(matchDate) : undefined,
+                matchTime: matchTime ?? undefined,
+                groundCourtName: groundCourtName ?? undefined
             }
+        });
 
-            // Recalculate team 2 stats
-            if (fix.team2_id) {
-                const isWin = calculatedWinner === fix.team2_id;
-                const isDraw = !calculatedWinner && t1Score === t2Score;
-                const isLoss = calculatedWinner && calculatedWinner !== fix.team2_id;
-                const pts = isWin ? 3 : isDraw ? 1 : 0;
+        if (status === 'COMPLETED' && winnerId !== undefined) {
+            const isDraw = !winnerId;
+            const applyResult = (teamId, isWinner) => prisma.tournamentLeaderboard.updateMany({
+                where: { tournamentId: fixture.tournamentId, teamId },
+                data: {
+                    matchesPlayed: { increment: 1 },
+                    matchesWon: { increment: isWinner ? 1 : 0 },
+                    matchesLost: { increment: (!isWinner && !isDraw) ? 1 : 0 },
+                    matchesTied: { increment: isDraw ? 1 : 0 },
+                    points: { increment: isWinner ? 2 : (isDraw ? 1 : 0) }
+                }
+            });
 
-                await db.query(`
-                    UPDATE leaderboards 
-                    SET matches_played = matches_played + 1,
-                        wins = wins + ?,
-                        draws = draws + ?,
-                        losses = losses + ?,
-                        goals_for = goals_for + ?,
-                        goals_against = goals_against + ?,
-                        goal_difference = (goals_for + ?) - (goals_against + ?),
-                        points = points + ?
-                    WHERE tournament_id = ? AND team_id = ?
-                `, [isWin ? 1 : 0, isDraw ? 1 : 0, isLoss ? 1 : 0, t2Score, t1Score, t2Score, t1Score, pts, tourneyId, fix.team2_id]);
-            }
+            if (fixture.teamAId) await applyResult(fixture.teamAId, winnerId === fixture.teamAId);
+            if (fixture.teamBId) await applyResult(fixture.teamBId, winnerId === fixture.teamBId);
         }
+
+        emitToBranch(fixture.tournament?.branchId, 'tournament:match-updated', { matchId: fixture.id, tournamentId: fixture.tournamentId });
 
         return res.status(200).json({ success: true, message: 'Match score & live status updated successfully.' });
     } catch (error) {
@@ -754,16 +529,12 @@ const updateMatchScore = async (req, res) => {
 };
 
 const getLeaderboard = async (req, res) => {
-    const { id } = req.params; // Tournament ID
     try {
-        const [rows] = await db.query(`
-            SELECT lb.*, tm.team_name, tm.captain_name
-            FROM leaderboards lb
-            JOIN teams tm ON lb.team_id = tm.id
-            WHERE lb.tournament_id = ?
-            ORDER BY lb.points DESC, lb.matches_won DESC, lb.net_run_rate DESC
-        `, [id]);
-
+        const rows = await prisma.tournamentLeaderboard.findMany({
+            where: { tournamentId: req.params.id },
+            include: { team: true },
+            orderBy: [{ points: 'desc' }, { matchesWon: 'desc' }, { netRunRate: 'desc' }]
+        });
         return res.status(200).json({ success: true, data: rows });
     } catch (error) {
         return res.status(500).json({ success: false, message: 'Internal Server Error.' });
@@ -772,31 +543,26 @@ const getLeaderboard = async (req, res) => {
 
 const getGlobalLeaderboard = async (req, res) => {
     try {
-        // Query dedicated player leaderboard entries first
-        const [players] = await db.query(`SELECT * FROM player_leaderboard ORDER BY runs DESC, matches DESC`);
-        if (players && players.length > 0) {
-            return res.status(200).json({ success: true, data: players });
-        }
-
-        // Fallback to team standings
-        const [rows] = await db.query(`
-            SELECT lb.*, tm.team_name, tm.captain_name
-            FROM leaderboards lb
-            JOIN teams tm ON lb.team_id = tm.id
-            ORDER BY lb.points DESC, lb.matches_won DESC
-        `);
-        return res.status(200).json({ success: true, data: rows || [] });
+        const players = await prisma.scorecard.findMany({ orderBy: [{ ppsScore: 'desc' }, { matches: 'desc' }], take: 100 });
+        return res.status(200).json({ success: true, data: players });
     } catch (error) {
         return res.status(500).json({ success: false, message: error.message });
     }
 };
 
 // ==========================================
-// SPONSOR MODULE
+// SPONSORS
 // ==========================================
 const getSponsors = async (req, res) => {
     try {
-        const [rows] = await db.query('SELECT * FROM tournament_sponsors ORDER BY package_amount DESC');
+        const where = {};
+        if (req.user && (req.user.role === 'OWNER' || req.user.role === 'STAFF')) {
+            const ownerBranchIds = await getOwnerBranchIds(req.user);
+            if (ownerBranchIds) {
+                where.tournament = { branchId: { in: ownerBranchIds } };
+            }
+        }
+        const rows = await prisma.tournamentSponsor.findMany({ where, include: { tournament: { select: { title: true } } }, orderBy: { packageAmount: 'desc' } });
         return res.status(200).json({ success: true, data: rows });
     } catch (error) {
         return res.status(500).json({ success: false, message: 'Internal Server Error.' });
@@ -804,31 +570,31 @@ const getSponsors = async (req, res) => {
 };
 
 const createSponsor = async (req, res) => {
-    const { companyName, tier = 'Gold', logo, website, packageAmount = 0 } = req.body;
-    if (!companyName) return res.status(400).json({ success: false, message: 'Company Name is required.' });
+    const { tournamentId, companyName, sponsorName, tier, sponsorTier, logo, website, websiteUrl, packageAmount = 0 } = req.body;
+    const name = sponsorName || companyName;
+    if (!tournamentId || !name) return res.status(400).json({ success: false, message: 'tournamentId and sponsor name are required.' });
 
     try {
-        const id = `spn_${Date.now()}`;
-        await db.query(
-            `INSERT INTO tournament_sponsors (id, company_name, tier, logo, website, package_amount, status) 
-             VALUES (?, ?, ?, ?, ?, ?, 'ACTIVE')`,
-            [id, companyName, tier, logo || null, website || null, packageAmount]
-        );
-        return res.status(201).json({ success: true, message: 'Sponsor added successfully.' });
+        const sponsor = await prisma.tournamentSponsor.create({
+            data: { id: genId('spn'), tournamentId, sponsorName: name, sponsorTier: sponsorTier || tier || 'Gold Sponsor', logo: logo || null, websiteUrl: websiteUrl || website || null, packageAmount }
+        });
+        return res.status(201).json({ success: true, message: 'Sponsor added successfully.', data: sponsor });
     } catch (error) {
         return res.status(500).json({ success: false, message: 'Internal Server Error.' });
     }
 };
 
 const updateSponsor = async (req, res) => {
-    const { id } = req.params;
-    const { companyName, tier, logo, website, packageAmount, status } = req.body;
+    const { companyName, sponsorName, tier, sponsorTier, logo, website, websiteUrl, packageAmount, status } = req.body;
     try {
-        await db.query(`
-            UPDATE tournament_sponsors 
-            SET company_name = COALESCE(?, company_name), tier = COALESCE(?, tier), logo = COALESCE(?, logo), website = COALESCE(?, website), package_amount = COALESCE(?, package_amount), status = COALESCE(?, status)
-            WHERE id = ?
-        `, [companyName, tier, logo, website, packageAmount, status, id]);
+        await prisma.tournamentSponsor.update({
+            where: { id: req.params.id },
+            data: {
+                sponsorName: (sponsorName || companyName) ?? undefined, sponsorTier: (sponsorTier || tier) ?? undefined,
+                logo: logo ?? undefined, websiteUrl: (websiteUrl || website) ?? undefined,
+                packageAmount: packageAmount ?? undefined, status: status ?? undefined
+            }
+        });
         return res.status(200).json({ success: true, message: 'Sponsor updated.' });
     } catch (error) {
         return res.status(500).json({ success: false, message: 'Internal Server Error.' });
@@ -836,9 +602,8 @@ const updateSponsor = async (req, res) => {
 };
 
 const deleteSponsor = async (req, res) => {
-    const { id } = req.params;
     try {
-        await db.query('DELETE FROM tournament_sponsors WHERE id = ?', [id]);
+        await prisma.tournamentSponsor.delete({ where: { id: req.params.id } });
         return res.status(200).json({ success: true, message: 'Sponsor deleted.' });
     } catch (error) {
         return res.status(500).json({ success: false, message: 'Internal Server Error.' });
@@ -846,46 +611,51 @@ const deleteSponsor = async (req, res) => {
 };
 
 // ==========================================
-// PAYMENTS & REVENUE MODULE
+// PAYMENTS & REPORTS
 // ==========================================
 const getTournamentPayments = async (req, res) => {
     try {
-        const [rows] = await db.query(`
-            SELECT tp.*, t.title as tournament_title 
-            FROM tournament_payments tp
-            LEFT JOIN tournaments t ON tp.tournament_id = t.id
-            ORDER BY tp.created_at DESC
-        `);
-
-        const totalRevenue = rows.reduce((sum, r) => sum + Number(r.amount || 0), 0);
-        const totalCommission = rows.reduce((sum, r) => sum + Number(r.commission_amount || 0), 0);
-
-        return res.status(200).json({
-            success: true,
-            summary: { totalRevenue, totalCommission, totalTransactions: rows.length },
-            data: rows
-        });
+        const where = {};
+        if (req.user && (req.user.role === 'OWNER' || req.user.role === 'STAFF')) {
+            const ownerBranchIds = await getOwnerBranchIds(req.user);
+            if (ownerBranchIds) {
+                where.tournament = { branchId: { in: ownerBranchIds } };
+            }
+        }
+        const rows = await prisma.tournamentPayment.findMany({ where, include: { tournament: { select: { title: true } } }, orderBy: { createdAt: 'desc' } });
+        const totalRevenue = rows.reduce((sum, r) => sum + Number(r.amount), 0);
+        const totalCommission = rows.reduce((sum, r) => sum + Number(r.commissionAmount), 0);
+        return res.status(200).json({ success: true, summary: { totalRevenue, totalCommission, totalTransactions: rows.length }, data: rows });
     } catch (error) {
         return res.status(500).json({ success: false, message: 'Internal Server Error.' });
     }
 };
 
-// ==========================================
-// REPORTS & ANALYTICS MODULE
-// ==========================================
 const getTournamentReports = async (req, res) => {
     try {
-        const [tournaments] = await db.query('SELECT status, COUNT(*) as count FROM tournaments GROUP BY status');
-        const [teams] = await db.query('SELECT COUNT(*) as total_teams FROM teams');
-        const [payments] = await db.query('SELECT SUM(amount) as total_revenue, SUM(commission_amount) as total_commission FROM tournament_payments');
+        const tournamentWhere = {};
+        if (req.user && (req.user.role === 'OWNER' || req.user.role === 'STAFF')) {
+            const ownerBranchIds = await getOwnerBranchIds(req.user);
+            if (ownerBranchIds) {
+                tournamentWhere.branchId = { in: ownerBranchIds };
+            }
+        }
+        const teamWhere = Object.keys(tournamentWhere).length ? { tournament: tournamentWhere } : {};
+        const paymentWhere = Object.keys(tournamentWhere).length ? { tournament: tournamentWhere } : {};
+
+        const [statusGroups, totalTeams, paymentAgg] = await Promise.all([
+            prisma.tournament.groupBy({ by: ['status'], where: tournamentWhere, _count: { status: true } }),
+            prisma.tournamentTeam.count({ where: teamWhere }),
+            prisma.tournamentPayment.aggregate({ where: paymentWhere, _sum: { amount: true, commissionAmount: true } })
+        ]);
 
         return res.status(200).json({
             success: true,
             data: {
-                tournamentStatusBreakdown: tournaments,
-                totalTeamsRegistered: teams[0]?.total_teams || 6,
-                totalRevenue: payments[0]?.total_revenue || 51300,
-                totalCommission: payments[0]?.total_commission || 5130
+                tournamentStatusBreakdown: statusGroups.map(g => ({ status: g.status, count: g._count.status })),
+                totalTeamsRegistered: totalTeams,
+                totalRevenue: Number(paymentAgg._sum.amount || 0),
+                totalCommission: Number(paymentAgg._sum.commissionAmount || 0)
             }
         });
     } catch (error) {
@@ -894,18 +664,14 @@ const getTournamentReports = async (req, res) => {
 };
 
 // ==========================================
-// SETTINGS MODULE
+// SETTINGS
 // ==========================================
 const getSettings = async (req, res) => {
     try {
-        const [rows] = await db.query('SELECT * FROM tournament_settings WHERE id = "global_settings"');
-        const settings = rows[0] || {
-            id: 'global_settings',
-            platform_commission_percentage: 10.0,
-            auto_lock_slots: true,
-            allow_staff_create: true,
-            notify_on_approval: true
-        };
+        let settings = await prisma.tournamentSetting.findUnique({ where: { id: 'global_tournament_settings' } });
+        if (!settings) {
+            settings = await prisma.tournamentSetting.create({ data: { id: 'global_tournament_settings' } });
+        }
         return res.status(200).json({ success: true, data: settings });
     } catch (error) {
         return res.status(500).json({ success: false, message: 'Internal Server Error.' });
@@ -915,31 +681,56 @@ const getSettings = async (req, res) => {
 const updateSettings = async (req, res) => {
     const { platformCommissionPercentage, autoLockSlots, allowStaffCreate, notifyOnApproval } = req.body;
     try {
-        await db.query(`
-            INSERT INTO tournament_settings (id, platform_commission_percentage, auto_lock_slots, allow_staff_create, notify_on_approval)
-            VALUES ('global_settings', ?, ?, ?, ?)
-            ON DUPLICATE KEY UPDATE
-                platform_commission_percentage = VALUES(platform_commission_percentage),
-                auto_lock_slots = VALUES(auto_lock_slots),
-                allow_staff_create = VALUES(allow_staff_create),
-                notify_on_approval = VALUES(notify_on_approval)
-        `, [
-            platformCommissionPercentage ?? 10.0,
-            autoLockSlots ?? true,
-            allowStaffCreate ?? true,
-            notifyOnApproval ?? true
-        ]);
-
-        return res.status(200).json({ success: true, message: 'Tournament settings saved successfully.' });
+        const settings = await prisma.tournamentSetting.upsert({
+            where: { id: 'global_tournament_settings' },
+            update: {
+                platformCommissionPercentage: platformCommissionPercentage ?? undefined,
+                automaticSlotReservation: autoLockSlots ?? undefined,
+                allowStaffTournamentCreation: allowStaffCreate ?? undefined,
+                automatedApprovalNotifications: notifyOnApproval ?? undefined
+            },
+            create: {
+                id: 'global_tournament_settings',
+                platformCommissionPercentage: platformCommissionPercentage ?? 10.0,
+                automaticSlotReservation: autoLockSlots ?? true,
+                allowStaffTournamentCreation: allowStaffCreate ?? true,
+                automatedApprovalNotifications: notifyOnApproval ?? true
+            }
+        });
+        return res.status(200).json({ success: true, message: 'Tournament settings saved successfully.', data: settings });
     } catch (error) {
         return res.status(500).json({ success: false, message: 'Internal Server Error.' });
     }
 };
 
-// Live Operator Match Score Persistence Controllers
+// ==========================================
+// LIVE MATCH SCORING (real Fixtures, not a disconnected mock table)
+// ==========================================
 const getAllTournamentMatches = async (req, res) => {
     try {
-        const [rows] = await db.query('SELECT * FROM tournament_matches ORDER BY match_number ASC');
+        const where = {};
+        if (req.user && (req.user.role === 'OWNER' || req.user.role === 'STAFF')) {
+            const ownerBranchIds = await getOwnerBranchIds(req.user);
+            if (ownerBranchIds) {
+                where.tournament = { branchId: { in: ownerBranchIds } };
+            }
+        }
+        const rows = await prisma.fixture.findMany({
+            where,
+            include: {
+                teamA: true,
+                teamB: true,
+                tournament: {
+                    select: {
+                        title: true,
+                        branchId: true,
+                        turfCourtName: true,
+                        branch: { select: { name: true, city: true } }
+                    }
+                }
+            },
+            orderBy: { matchDate: 'desc' }
+        });
         return res.status(200).json({ success: true, data: rows });
     } catch (error) {
         return res.status(500).json({ success: false, message: error.message });
@@ -947,26 +738,20 @@ const getAllTournamentMatches = async (req, res) => {
 };
 
 const saveLiveMatchScore = async (req, res) => {
-    const { matchId, team1Score, team2Score, winnerName, status, liveState } = req.body;
+    const { matchId, teamAScore, teamBScore, matchSummary, status } = req.body;
+    if (!matchId) {
+        return res.status(400).json({ success: false, message: 'matchId is required.' });
+    }
     try {
-        const targetId = matchId || 'fix_103';
-        const jsonStr = liveState ? JSON.stringify(liveState) : null;
+        const updated = await prisma.fixture.update({
+            where: { id: matchId },
+            data: { teamAScore: teamAScore ?? undefined, teamBScore: teamBScore ?? undefined, matchSummary: matchSummary ?? undefined, status: status ? status.toUpperCase() : undefined }
+        }).catch(() => null);
 
-        await db.query(`
-            UPDATE tournament_matches 
-            SET team1_score = COALESCE(?, team1_score),
-                team2_score = COALESCE(?, team2_score),
-                winner_name = COALESCE(?, winner_name),
-                status = COALESCE(?, status),
-                live_state_json = COALESCE(?, live_state_json)
-            WHERE id = ?
-        `, [team1Score, team2Score, winnerName, status, jsonStr, targetId]);
-
-        return res.status(200).json({
-            success: true,
-            message: `Match state saved to database successfully for ${targetId}.`,
-            data: { id: targetId, team1Score, team2Score, winnerName, status }
-        });
+        if (!updated) {
+            return res.status(404).json({ success: false, message: 'Fixture not found.' });
+        }
+        return res.status(200).json({ success: true, message: `Match state saved successfully for ${matchId}.`, data: updated });
     } catch (error) {
         console.error('Save live match score error:', error);
         return res.status(500).json({ success: false, message: error.message });
@@ -974,34 +759,12 @@ const saveLiveMatchScore = async (req, res) => {
 };
 
 module.exports = {
-    getTournaments,
-    getTournamentById,
-    createTournament,
-    updateTournament,
-    approveTournament,
-    rejectTournament,
-    suspendTournament,
-    deleteTournament,
-    getCategories,
-    createCategory,
-    updateCategory,
-    deleteCategory,
-    registerTeam,
-    getTeams,
-    updateTeamStatus,
-    generateFixtures,
-    getFixtures,
-    updateMatchScore,
-    getLeaderboard,
-    getGlobalLeaderboard,
-    getSponsors,
-    createSponsor,
-    updateSponsor,
-    deleteSponsor,
-    getTournamentPayments,
-    getTournamentReports,
-    getSettings,
-    updateSettings,
-    getAllTournamentMatches,
-    saveLiveMatchScore
+    getTournaments, getTournamentById, createTournament, updateTournament,
+    approveTournament, rejectTournament, suspendTournament, deleteTournament,
+    getCategories, createCategory, updateCategory, deleteCategory,
+    registerTeam, getTeams, updateTeamStatus,
+    generateFixtures, getFixtures, updateMatchScore, getLeaderboard, getGlobalLeaderboard,
+    getSponsors, createSponsor, updateSponsor, deleteSponsor,
+    getTournamentPayments, getTournamentReports, getSettings, updateSettings,
+    getAllTournamentMatches, saveLiveMatchScore
 };

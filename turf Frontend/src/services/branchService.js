@@ -6,7 +6,7 @@ import api from './api';
 export const createBranch = async (branchData) => {
     try {
         const response = await api.post('/branches', branchData);
-        return response.data || response;
+        return response;
     } catch (error) {
         throw new Error(error.response?.data?.message || error.message || 'Failed to create branch.');
     }
@@ -18,7 +18,7 @@ export const createBranch = async (branchData) => {
 export const getBranches = async (filters = {}) => {
     try {
         const response = await api.get('/branches', { params: filters });
-        return response.data || response;
+        return response;
     } catch (error) {
         throw new Error(error.response?.data?.message || error.message || 'Failed to list branches.');
     }
@@ -30,7 +30,7 @@ export const getBranches = async (filters = {}) => {
 export const getBranchById = async (id) => {
     try {
         const response = await api.get(`/branches/${id}`);
-        return response.data || response;
+        return response;
     } catch (error) {
         throw new Error(error.response?.data?.message || error.message || 'Failed to fetch branch details.');
     }
@@ -42,7 +42,7 @@ export const getBranchById = async (id) => {
 export const updateBranch = async (id, branchData) => {
     try {
         const response = await api.put(`/branches/${id}`, branchData);
-        return response.data || response;
+        return response;
     } catch (error) {
         throw new Error(error.response?.data?.message || error.message || 'Failed to update branch.');
     }
@@ -54,7 +54,7 @@ export const updateBranch = async (id, branchData) => {
 export const changeBranchStatus = async (id, status) => {
     try {
         const response = await api.patch(`/branches/${id}/status`, { status });
-        return response.data || response;
+        return response;
     } catch (error) {
         throw new Error(error.response?.data?.message || error.message || 'Failed to update branch status.');
     }
@@ -66,7 +66,7 @@ export const changeBranchStatus = async (id, status) => {
 export const deleteBranch = async (id) => {
     try {
         const response = await api.delete(`/branches/${id}`);
-        return response.data || response;
+        return response;
     } catch (error) {
         throw new Error(error.response?.data?.message || error.message || 'Failed to delete branch.');
     }
@@ -78,8 +78,33 @@ export const deleteBranch = async (id) => {
 export const getDashboardStats = async (filters = {}) => {
     try {
         const response = await api.get('/branches/stats', { params: filters });
-        return response.data || response;
+        return response;
     } catch (error) {
         throw new Error(error.response?.data?.message || error.message || 'Failed to fetch dashboard stats.');
+    }
+};
+
+/**
+ * Fetch this branch's owner payout account (UPI/bank/QR) used by the manual
+ * payment gateway provider. Returns null data if not configured yet.
+ */
+export const getPayoutAccount = async (branchId) => {
+    try {
+        const response = await api.get(`/branches/${branchId}/payout-account`);
+        return response;
+    } catch (error) {
+        throw new Error(error.response?.data?.message || error.message || 'Failed to fetch payout account.');
+    }
+};
+
+/**
+ * Create/update this branch's owner payout account.
+ */
+export const updatePayoutAccount = async (branchId, payload) => {
+    try {
+        const response = await api.put(`/branches/${branchId}/payout-account`, payload);
+        return response;
+    } catch (error) {
+        throw new Error(error.response?.data?.message || error.message || 'Failed to save payout account.');
     }
 };

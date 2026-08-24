@@ -10,7 +10,7 @@ const {
     lookupGuestBookingsByPhone
 } = require('./bookings.controller');
 
-const { verifyToken, optionalToken } = require('../../middleware/auth.middleware');
+const { verifyToken, optionalToken, authorizeRoles } = require('../../middleware/auth.middleware');
 
 const router = express.Router();
 
@@ -18,14 +18,14 @@ const router = express.Router();
 router.post('/guest', createGuestBooking);
 router.get('/guest-lookup', lookupGuestBookingsByPhone);
 
-router.get('/summary', optionalToken, getBookingLedgerSummary);
-router.put('/:id/status', optionalToken, updateBookingStatus);
+router.get('/summary', verifyToken, authorizeRoles(['OWNER', 'STAFF', 'SUPER_ADMIN']), getBookingLedgerSummary);
+router.put('/:id/status', verifyToken, authorizeRoles(['OWNER', 'STAFF', 'SUPER_ADMIN']), updateBookingStatus);
 
 router.post('/', optionalToken, createBooking);
-router.post('/:id/cancel', optionalToken, cancelBooking);
-router.get('/upcoming', optionalToken, getUpcomingBookings);
-router.get('/history', optionalToken, getBookingHistory);
-router.get('/', optionalToken, getBookingHistory);
+router.post('/:id/cancel', verifyToken, cancelBooking);
+router.get('/upcoming', verifyToken, getUpcomingBookings);
+router.get('/history', verifyToken, getBookingHistory);
+router.get('/', verifyToken, getBookingHistory);
 
 module.exports = router;
 

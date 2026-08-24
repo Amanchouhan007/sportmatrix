@@ -6,6 +6,8 @@ import Pagination from '../../components/ui/Pagination'
 import CustomDatePicker from '../../components/ui/CustomDatePicker'
 import { useToast } from '../../components/ui/Toast'
 import { getPaymentLogs, getPaymentLogById, getPaymentStats } from '../../services/paymentLogService'
+import { getPendingSettlements, confirmCommission } from '../../services/matchPaymentService'
+import useRealtime from '../../utils/useRealtime'
 import { FiEye, FiSearch, FiFilter, FiX, FiRefreshCw, FiChevronDown, FiCheck } from 'react-icons/fi'
 import { HiCash, HiCreditCard, HiChartBar, HiClock, HiReceiptRefund } from 'react-icons/hi'
 
@@ -119,6 +121,43 @@ export default function PaymentLogs() {
     const [activeDatePreset, setActiveDatePreset] = useState('')
     const [currentPage,   setCurrentPage]   = useState(1)
     const [openDropdown,  setOpenDropdown]  = useState(null)
+
+    // ── Pending commission confirmations (Phase 1: payment gateway abstraction) ──
+    const [pendingCommissions, setPendingCommissions] = useState([])
+    const [isLoadingPendingCommissions, setIsLoadingPendingCommissions] = useState(false)
+    const [confirmingCommissionId, setConfirmingCommissionId] = useState(null)
+
+    const fetchPendingCommissions = useCallback(async () => {
+        setIsLoadingPendingCommissions(true)
+        try {
+            const res = await getPendingSettlements()
+            setPendingCommissions(res.data || [])
+        } catch (err) {
+            // Non-fatal: panel just stays empty
+        } finally {
+            setIsLoadingPendingCommissions(false)
+        }
+    }, [])
+
+    useEffect(() => { fetchPendingCommissions() }, [fetchPendingCommissions])
+
+    // Real-time: refresh the queue as owners confirm receipt or new payments come in.
+    useRealtime(['payment:pending', 'payment:owner-confirmed', 'payment:settled'], () => {
+        fetchPendingCommissions()
+    })
+
+    const handleConfirmCommission = async (paymentId) => {
+        setConfirmingCommissionId(paymentId)
+        try {
+            await confirmCommission(paymentId)
+            addToast({ title: 'Commission Confirmed', message: 'This payment is now fully settled.', type: 'success' })
+            fetchPendingCommissions()
+        } catch (err) {
+            addToast({ title: 'Confirmation Failed', message: err.message || 'Could not confirm commission.', type: 'error' })
+        } finally {
+            setConfirmingCommissionId(null)
+        }
+    }
 
     // ── Build query params ──────────────────────────────────────────────────
     const buildParams = useCallback((page = 1) => {
@@ -308,6 +347,43 @@ export default function PaymentLogs() {
                     <span>Refresh Data</span>
                 </button>
             </div>
+
+            {/* Pending Commission Confirmations -- no live gateway yet, so the
+                platform's commission leg on each booking payment is confirmed
+                manually here (the owner leg is confirmed separately by the venue). */}
+            {(isLoadingPendingCommissions || pendingCommissions.length > 0) && (
+                <div className="rounded-2xl border border-amber-200 bg-white shadow-[0_20px_45px_rgba(0,0,0,0.04)] p-4 sm:p-5 space-y-4">
+                    <div className="flex items-center gap-2">
+                        <HiClock className="w-5 h-5 text-amber-500" />
+                        <h2 className="text-base font-black text-slate-900 tracking-tight">Pending Commission Confirmations</h2>
+                        {pendingCommissions.length > 0 && <Badge variant="warning">{pendingCommissions.length}</Badge>}
+                    </div>
+                    {isLoadingPendingCommissions ? (
+                        <div className="text-center py-6 text-slate-400 text-sm">Loading...</div>
+                    ) : (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                            {pendingCommissions.map(p => (
+                                <div key={p.id} className="border border-amber-200 bg-amber-50/50 rounded-xl p-4 flex items-center justify-between gap-3">
+                                    <div>
+                                        <p className="text-sm font-black text-slate-900">₹{p.commissionAmount.toLocaleString('en-IN')} commission</p>
+                                        <p className="text-[11px] text-slate-500 font-medium">{p.branchName} &middot; {p.payerName} &middot; Match {p.matchId}</p>
+                                        <p className="text-[10px] text-slate-400 font-medium mt-0.5">
+                                            Owner receipt: {p.ownerPayoutStatus === 'CONFIRMED' ? '✓ confirmed' : 'pending'}
+                                        </p>
+                                    </div>
+                                    <button
+                                        onClick={() => handleConfirmCommission(p.id)}
+                                        disabled={confirmingCommissionId === p.id}
+                                        className="shrink-0 h-9 px-3 rounded-xl bg-[#16A34A] hover:bg-emerald-700 text-white font-extrabold text-[11px] shadow-md shadow-emerald-600/20 transition-all cursor-pointer disabled:opacity-50"
+                                    >
+                                        {confirmingCommissionId === p.id ? 'Confirming...' : 'Confirm'}
+                                    </button>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
+            )}
 
             {/* 3 KPI Stat Cards (Responsive, Clean Stacked Layout) */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4.5">

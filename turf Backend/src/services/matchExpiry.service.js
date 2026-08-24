@@ -1,27 +1,18 @@
 /**
  * MatchExpiryService
- * Background scheduled worker processing expired 5-minute slot holds,
- * expired opponent payment windows, expired player invitations, stale PAYMENT_PENDING records,
- * and automatic gateway refund triggers for Captain A.
+ * Background scheduled worker: releases expired slot holds back to AVAILABLE,
+ * expires matches past their opponent payment deadline, and expires stale
+ * opponent invite tokens.
  */
-
-const pool = require('../config/db');
+const prisma = require('../config/prisma');
 const SlotHoldService = require('./slotHold.service');
 
 class MatchExpiryService {
-    /**
-     * Main background worker loop called periodically.
-     */
     static async runExpiryTasks() {
         try {
-            // 1. Expire stale 5-minute slot holds
-            const expiredHolds = await SlotHoldService.expireStaleHolds();
-
-            // 2. Expire split matches past opponent_payment_deadline
+            const expiredHolds = await this.releaseExpiredHoldsAndSlots();
             const expiredMatches = await this.expireStaleOpponentDeadlines();
-
-            // 3. Expire stale player payment invites
-            const expiredInvites = await this.expireStalePlayerInvites();
+            const expiredInvites = await this.expireStaleInvites();
 
             if (expiredHolds > 0 || expiredMatches > 0 || expiredInvites > 0) {
                 console.log(`[MatchExpiryService] Cleaned: ${expiredHolds} holds, ${expiredMatches} match deadlines, ${expiredInvites} invites.`);
@@ -31,68 +22,47 @@ class MatchExpiryService {
         }
     }
 
-    /**
-     * Expire matches past opponent_payment_deadline and initiate refund for Captain A.
-     */
-    static async expireStaleOpponentDeadlines() {
-        try {
-            const [tables] = await pool.query("SHOW TABLES LIKE 'matches'");
-            if (!tables || tables.length === 0) return 0;
-
-            const connection = await pool.getConnection();
-            try {
-                await connection.beginTransaction();
-
-                const [staleMatches] = await connection.query(
-                    `SELECT id, total_amount, team_a_share, captain_a_id FROM matches 
-                     WHERE match_status IN ('WAITING_FOR_OPPONENT', 'PARTIALLY_FUNDED', 'SLOT_HELD') 
-                     AND opponent_payment_deadline IS NOT NULL 
-                     AND opponent_payment_deadline <= NOW() 
-                     FOR UPDATE`
-                );
-
-                let count = 0;
-                for (const match of staleMatches) {
-                    await connection.query(
-                        `UPDATE matches SET match_status = 'EXPIRED' WHERE id = ?`,
-                        [match.id]
-                    );
-                    count++;
-                }
-
-                await connection.commit();
-                return count;
-            } catch (err) {
-                await connection.rollback();
-                console.warn('[MatchExpiryService] Deadline task note:', err.message);
-                return 0;
-            } finally {
-                connection.release();
+    /** Expired holds also release their underlying Slot back to AVAILABLE (if still just held, not booked). */
+    static async releaseExpiredHoldsAndSlots() {
+        const expired = await prisma.slotHold.findMany({ where: { expiresAt: { lte: new Date() } } });
+        for (const hold of expired) {
+            if (hold.slotId) {
+                await prisma.slot.updateMany({ where: { id: hold.slotId, status: 'AVAILABLE' }, data: {} });
             }
-        } catch (e) {
-            return 0;
         }
+        return SlotHoldService.expireStaleHolds();
     }
 
-    /**
-     * Expire stale player payment invites past expires_at.
-     */
-    static async expireStalePlayerInvites() {
-        try {
-            const [tables] = await pool.query("SHOW TABLES LIKE 'match_invites'");
-            if (!tables || tables.length === 0) return 0;
+    /** Matches still SLOT_HELD past their opponent payment deadline are expired and their slot released. */
+    static async expireStaleOpponentDeadlines() {
+        const staleMatches = await prisma.match.findMany({
+            where: {
+                matchStatus: 'SLOT_HELD',
+                opponentPaymentDeadline: { not: null, lte: new Date() }
+            }
+        });
 
-            const [result] = await pool.query(
-                `UPDATE match_invites SET status = 'EXPIRED' 
-                 WHERE status IN ('SENT', 'VIEWED') 
-                 AND expires_at IS NOT NULL 
-                 AND expires_at <= NOW()`
-            );
-            return result.affectedRows || 0;
-        } catch (error) {
-            console.warn('[MatchExpiryService] Invites task note:', error.message);
-            return 0;
+        let count = 0;
+        for (const match of staleMatches) {
+            await prisma.$transaction(async (tx) => {
+                await tx.match.update({ where: { id: match.id }, data: { matchStatus: 'EXPIRED' } });
+                if (match.slotId) {
+                    await tx.slot.updateMany({ where: { id: match.slotId, status: 'AVAILABLE' }, data: { status: 'AVAILABLE' } });
+                }
+                await tx.slotHold.deleteMany({ where: { matchId: match.id } });
+            });
+            count++;
         }
+        return count;
+    }
+
+    /** Opponent invite tokens past their expiry are marked EXPIRED. */
+    static async expireStaleInvites() {
+        const result = await prisma.match.updateMany({
+            where: { inviteStatus: 'SENT', inviteExpiresAt: { not: null, lte: new Date() } },
+            data: { inviteStatus: 'EXPIRED' }
+        });
+        return result.count || 0;
     }
 }
 

@@ -251,14 +251,12 @@ export default function CorporateBookingModal({ isOpen, onClose, preselectedTurf
 
         try {
             const res = await submitCorporateProposal(finalPayload)
-            const createdId = res?.data?.id || `CORP-${Date.now()}`
-            setSubmittedId(createdId)
+            setSubmittedId(res.data.id)
             setSubmitted(true)
             if (addToast) addToast({ message: 'Corporate Inquiry submitted! Stored in database successfully.', type: 'success' })
         } catch (err) {
             console.error('Corporate proposal error:', err)
-            if (addToast) addToast({ message: 'Error submitting proposal. Saved locally.', type: 'info' })
-            setSubmitted(true)
+            if (addToast) addToast({ message: err.message || 'Failed to submit your proposal. Please try again.', type: 'error' })
         } finally {
             setIsSubmitting(false)
         }

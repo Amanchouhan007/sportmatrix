@@ -1,110 +1,196 @@
-const db = require('../../config/db');
+const prisma = require('../../config/prisma');
 
-/**
- * Get Umpire Profile
- */
+const genId = (prefix) => `${prefix}_${Date.now()}_${Math.floor(Math.random() * 100000)}`;
+
+const formatProfile = (p) => ({
+    id: p.id, _id: p.id, userId: p.userId,
+    full_name: p.fullName, license_no: p.licenseNumber,
+    certification_level: p.certificationLevel, officiating_grounds: p.officiatingLocations,
+    upi_id: p.upiId, qr_image: p.qrImageUrl, match_fee: Number(p.dutyFeePerMatch),
+    on_duty_status: p.isOnDuty, rating: Number(p.rating),
+    total_matches_officiated: p.totalMatchesOfficiated
+});
+
+/** Get (or create-on-first-access) the requesting user's real umpire profile. */
 const getUmpireProfile = async (req, res) => {
+    if (!req.user) {
+        return res.status(401).json({ success: false, message: 'Authentication required.' });
+    }
     try {
-        const userId = req.user?.id || req.query.userId || 'ump_default';
-        const [rows] = await db.query('SELECT * FROM umpire_profiles WHERE user_id = ? OR id = ? LIMIT 1', [userId, userId]);
-        
-        if (rows && rows.length > 0) {
-            return res.status(200).json({ success: true, data: rows[0] });
+        let profile = await prisma.umpireProfile.findUnique({ where: { userId: req.user.id } });
+        if (!profile) {
+            profile = await prisma.umpireProfile.create({
+                data: {
+                    id: genId('ump'),
+                    userId: req.user.id,
+                    licenseNumber: `UMP-${req.user.id.slice(-8).toUpperCase()}`,
+                    fullName: req.user.name || 'Umpire',
+                    totalMatchesOfficiated: 0,
+                    totalCertifiedScorecards: 0
+                }
+            });
         }
-
-        // Return empty or default record
-        return res.status(200).json({
-            success: true,
-            data: {
-                id: 'ump_default',
-                full_name: req.user?.name || 'Certified Umpire',
-                license_no: 'UMP-IND-409',
-                certification_level: 'Level-2 Turf Certified',
-                officiating_grounds: 'Spike Turf & Royal Ground (Indore)',
-                upi_id: 'rajesh.umpire@okhdfcbank',
-                qr_mode: 'upi',
-                custom_qr_image: null,
-                on_duty_status: true,
-                match_fee: 300
-            }
-        });
+        return res.status(200).json({ success: true, data: formatProfile(profile) });
     } catch (error) {
         console.error('Error fetching umpire profile:', error);
         return res.status(500).json({ success: false, message: error.message });
     }
 };
 
-/**
- * Update Umpire Profile / QR Config
- */
 const updateUmpireProfile = async (req, res) => {
+    if (!req.user) {
+        return res.status(401).json({ success: false, message: 'Authentication required.' });
+    }
     try {
-        const userId = req.user?.id || 'ump_default';
-        const { full_name, upi_id, qr_mode, custom_qr_image, on_duty_status } = req.body;
+        const { full_name, upi_id, custom_qr_image, on_duty_status } = req.body;
+        const profile = await prisma.umpireProfile.update({
+            where: { userId: req.user.id },
+            data: {
+                fullName: full_name ?? undefined,
+                upiId: upi_id ?? undefined,
+                qrImageUrl: custom_qr_image ?? undefined,
+                isOnDuty: on_duty_status ?? undefined
+            }
+        }).catch(() => null);
 
-        const [existing] = await db.query('SELECT id FROM umpire_profiles WHERE user_id = ? OR id = ?', [userId, userId]);
-        
-        if (existing && existing.length > 0) {
-            await db.query(`
-                UPDATE umpire_profiles
-                SET full_name = COALESCE(?, full_name),
-                    upi_id = COALESCE(?, upi_id),
-                    qr_mode = COALESCE(?, qr_mode),
-                    custom_qr_image = COALESCE(?, custom_qr_image),
-                    on_duty_status = COALESCE(?, on_duty_status)
-                WHERE id = ?
-            `, [full_name, upi_id, qr_mode, custom_qr_image, on_duty_status, existing[0].id]);
-        } else {
-            await db.query(`
-                INSERT INTO umpire_profiles (id, user_id, full_name, upi_id, qr_mode, custom_qr_image, on_duty_status)
-                VALUES (?, ?, ?, ?, ?, ?, ?)
-            `, ['ump_' + Date.now(), userId, full_name || 'Certified Umpire', upi_id || 'rajesh.umpire@okhdfcbank', qr_mode || 'upi', custom_qr_image || null, on_duty_status !== false]);
+        if (!profile) {
+            return res.status(404).json({ success: false, message: 'Umpire profile not found. Call GET /umpire/profile first to create it.' });
         }
-
-        return res.status(200).json({ success: true, message: 'Umpire profile updated successfully' });
+        return res.status(200).json({ success: true, message: 'Umpire profile updated successfully', data: formatProfile(profile) });
     } catch (error) {
         console.error('Error updating umpire profile:', error);
         return res.status(500).json({ success: false, message: error.message });
     }
 };
 
-/**
- * Get Umpire Assigned Matches & Match History
- */
+const formatDuty = (d) => ({
+    id: d.id, matchId: d.matchId, branchId: d.branchId,
+    dutyFee: Number(d.dutyFee), feePaymentStatus: d.feePaymentStatus,
+    tossWinnerTeam: d.tossWinnerTeam, tossElected: d.tossElected,
+    ballByBallFeed: d.ballByBallFeed, currentScoreSummary: d.currentScoreSummary,
+    dutyStatus: d.dutyStatus, certifiedAt: d.certifiedAt,
+    match: d.match ? { id: d.match.id, teamAName: d.match.teamAName, teamBName: d.match.teamBName, matchStatus: d.match.matchStatus } : null
+});
+
 const getUmpireMatches = async (req, res) => {
+    if (!req.user) {
+        return res.status(401).json({ success: false, message: 'Authentication required.' });
+    }
     try {
-        const [rows] = await db.query('SELECT * FROM umpire_matches ORDER BY created_at DESC');
-        return res.status(200).json({ success: true, data: rows || [] });
+        const profile = await prisma.umpireProfile.findUnique({ where: { userId: req.user.id } });
+        const duties = profile
+            ? await prisma.umpireDutyAssignment.findMany({ where: { umpireProfileId: profile.id }, include: { match: true }, orderBy: { createdAt: 'desc' } })
+            : [];
+        return res.status(200).json({ success: true, data: duties.map(formatDuty) });
     } catch (error) {
         console.error('Error fetching umpire matches:', error);
         return res.status(500).json({ success: false, message: error.message });
     }
 };
 
-/**
- * Update Match Score / Ball / Runs / Wickets
- */
-const updateMatchScore = async (req, res) => {
+const findMyDuty = async (req, matchId) => {
+    const profile = await prisma.umpireProfile.findUnique({ where: { userId: req.user.id } });
+    if (!profile) return null;
+    return prisma.umpireDutyAssignment.findFirst({ where: { matchId, umpireProfileId: profile.id } });
+};
+
+/** An umpire self-assigns to an existing real Match that still needs officiating. */
+const registerGroundMatch = async (req, res) => {
+    if (!req.user) {
+        return res.status(401).json({ success: false, message: 'Authentication required.' });
+    }
     try {
-        const { matchId, team1Score, team1Wickets, team1Overs, team2Score, team2Wickets, team2Overs, currentInnings, target, matchStatus } = req.body;
-        
+        const { matchId } = req.body;
+        if (!matchId) {
+            return res.status(400).json({ success: false, message: 'matchId is required.' });
+        }
+
+        const match = await prisma.match.findUnique({ where: { id: matchId } });
+        if (!match) {
+            return res.status(404).json({ success: false, message: 'Match not found.' });
+        }
+        if (match.hasUmpireAssigned) {
+            return res.status(409).json({ success: false, message: 'This match already has an umpire assigned.' });
+        }
+
+        let profile = await prisma.umpireProfile.findUnique({ where: { userId: req.user.id } });
+        if (!profile) {
+            profile = await prisma.umpireProfile.create({
+                data: { id: genId('ump'), userId: req.user.id, licenseNumber: `UMP-${req.user.id.slice(-8).toUpperCase()}`, fullName: req.user.name || 'Umpire' }
+            });
+        }
+
+        const duty = await prisma.$transaction(async (tx) => {
+            const created = await tx.umpireDutyAssignment.create({
+                data: {
+                    id: genId('duty'),
+                    matchId: match.id,
+                    branchId: match.branchId,
+                    umpireProfileId: profile.id,
+                    dutyFee: profile.dutyFeePerMatch,
+                    dutyStatus: 'SCHEDULED'
+                }
+            });
+            await tx.match.update({ where: { id: match.id }, data: { hasUmpireAssigned: true, umpireAddonFee: profile.dutyFeePerMatch } });
+            return created;
+        });
+
+        return res.status(201).json({ success: true, message: 'Assigned to match successfully', data: formatDuty(duty) });
+    } catch (error) {
+        console.error('Error registering ground match:', error);
+        return res.status(500).json({ success: false, message: error.message });
+    }
+};
+
+const recordToss = async (req, res) => {
+    if (!req.user) {
+        return res.status(401).json({ success: false, message: 'Authentication required.' });
+    }
+    try {
+        const { matchId, tossWinner, tossDecision } = req.body;
+        if (!matchId || !tossWinner || !tossDecision) {
+            return res.status(400).json({ success: false, message: 'matchId, tossWinner and tossDecision are required' });
+        }
+
+        const duty = await findMyDuty(req, matchId);
+        if (!duty) {
+            return res.status(404).json({ success: false, message: 'You are not assigned to this match.' });
+        }
+
+        await prisma.umpireDutyAssignment.update({ where: { id: duty.id }, data: { tossWinnerTeam: tossWinner, tossElected: tossDecision, dutyStatus: 'LIVE_NOW' } });
+        return res.status(200).json({ success: true, message: 'Toss recorded successfully' });
+    } catch (error) {
+        console.error('Error recording toss:', error);
+        return res.status(500).json({ success: false, message: error.message });
+    }
+};
+
+const updateMatchScore = async (req, res) => {
+    if (!req.user) {
+        return res.status(401).json({ success: false, message: 'Authentication required.' });
+    }
+    try {
+        const { matchId, currentScoreSummary, ballByBallFeed, topBatsmanName, topBatsmanRuns, topBowlerName, topBowlerWickets } = req.body;
         if (!matchId) {
             return res.status(400).json({ success: false, message: 'matchId is required' });
         }
 
-        await db.query(`
-            UPDATE umpire_matches
-            SET team1_score = COALESCE(?, team1_score),
-                team1_wickets = COALESCE(?, team1_wickets),
-                team1_overs = COALESCE(?, team1_overs),
-                team2_score = COALESCE(?, team2_score),
-                team2_wickets = COALESCE(?, team2_wickets),
-                team2_overs = COALESCE(?, team2_overs),
-                current_innings = COALESCE(?, current_innings),
-                target = COALESCE(?, target),
-                match_status = COALESCE(?, match_status)
-            WHERE id = ? OR match_code = ?
-        `, [team1Score, team1Wickets, team1Overs, team2Score, team2Wickets, team2Overs, currentInnings, target, matchStatus, matchId, matchId]);
+        const duty = await findMyDuty(req, matchId);
+        if (!duty) {
+            return res.status(404).json({ success: false, message: 'You are not assigned to this match.' });
+        }
+
+        await prisma.umpireDutyAssignment.update({
+            where: { id: duty.id },
+            data: {
+                currentScoreSummary: currentScoreSummary ?? undefined,
+                ballByBallFeed: ballByBallFeed ?? undefined,
+                topBatsmanName: topBatsmanName ?? undefined,
+                topBatsmanRuns: topBatsmanRuns ?? undefined,
+                topBowlerName: topBowlerName ?? undefined,
+                topBowlerWickets: topBowlerWickets ?? undefined
+            }
+        });
 
         return res.status(200).json({ success: true, message: 'Match score updated successfully' });
     } catch (error) {
@@ -113,48 +199,26 @@ const updateMatchScore = async (req, res) => {
     }
 };
 
-/**
- * Conduct Toss
- */
-const recordToss = async (req, res) => {
-    try {
-        const { matchId, tossWinner, tossDecision } = req.body;
-        if (!matchId || !tossWinner || !tossDecision) {
-            return res.status(400).json({ success: false, message: 'matchId, tossWinner and tossDecision are required' });
-        }
-
-        await db.query(`
-            UPDATE umpire_matches
-            SET toss_winner = ?,
-                toss_decision = ?,
-                match_status = 'LIVE'
-            WHERE id = ? OR match_code = ?
-        `, [tossWinner, tossDecision, matchId, matchId]);
-
-        return res.status(200).json({ success: true, message: 'Toss recorded successfully' });
-    } catch (error) {
-        console.error('Error recording toss:', error);
-        return res.status(500).json({ success: false, message: error.message });
-    }
-};
-
-/**
- * Complete Match & Official Sign-off
- */
 const completeMatch = async (req, res) => {
+    if (!req.user) {
+        return res.status(401).json({ success: false, message: 'Authentication required.' });
+    }
     try {
-        const { matchId, winnerName } = req.body;
+        const { matchId, winnerTeamSide } = req.body;
         if (!matchId) {
             return res.status(400).json({ success: false, message: 'matchId is required' });
         }
 
-        await db.query(`
-            UPDATE umpire_matches
-            SET match_status = 'COMPLETED',
-                winner_name = ?,
-                officiated_at = CURRENT_TIMESTAMP
-            WHERE id = ? OR match_code = ?
-        `, [winnerName || 'Winner Declared', matchId, matchId]);
+        const duty = await findMyDuty(req, matchId);
+        if (!duty) {
+            return res.status(404).json({ success: false, message: 'You are not assigned to this match.' });
+        }
+
+        await prisma.$transaction(async (tx) => {
+            await tx.umpireDutyAssignment.update({ where: { id: duty.id }, data: { dutyStatus: 'CERTIFIED_COMPLETED', certifiedAt: new Date() } });
+            await tx.match.update({ where: { id: matchId }, data: { matchStatus: 'COMPLETED', winnerTeamSide: winnerTeamSide ?? undefined } });
+            await tx.umpireProfile.update({ where: { id: duty.umpireProfileId }, data: { totalMatchesOfficiated: { increment: 1 } } });
+        });
 
         return res.status(200).json({ success: true, message: 'Match completed and certified successfully' });
     } catch (error) {
@@ -163,80 +227,30 @@ const completeMatch = async (req, res) => {
     }
 };
 
-/**
- * Mark Payment Status
- */
 const updatePaymentStatus = async (req, res) => {
+    if (!req.user) {
+        return res.status(401).json({ success: false, message: 'Authentication required.' });
+    }
     try {
-        const { matchId, paymentStatus, receiptNo } = req.body;
+        const { matchId, paymentStatus } = req.body;
         if (!matchId) {
             return res.status(400).json({ success: false, message: 'matchId is required' });
         }
 
-        const generatedReceipt = receiptNo || `REC-UMP-${Date.now()}`;
+        const duty = await findMyDuty(req, matchId);
+        if (!duty) {
+            return res.status(404).json({ success: false, message: 'You are not assigned to this match.' });
+        }
 
-        await db.query(`
-            UPDATE umpire_matches
-            SET payment_status = ?,
-                receipt_no = ?
-            WHERE id = ? OR match_code = ?
-        `, [paymentStatus || 'RECEIVED', generatedReceipt, matchId, matchId]);
-
-        return res.status(200).json({
-            success: true,
-            message: 'Payment status updated successfully',
-            receiptNo: generatedReceipt
-        });
+        await prisma.umpireDutyAssignment.update({ where: { id: duty.id }, data: { feePaymentStatus: paymentStatus === 'RECEIVED' ? 'RECEIVED' : 'PENDING' } });
+        return res.status(200).json({ success: true, message: 'Payment status updated successfully' });
     } catch (error) {
         console.error('Error updating payment status:', error);
         return res.status(500).json({ success: false, message: error.message });
     }
 };
 
-/**
- * Register Ground Match
- */
-const registerGroundMatch = async (req, res) => {
-    try {
-        const { team1Name, team1Captain, team1Phone, team2Name, team2Captain, team2Phone, venue, scheduledTime, dutyFee, matchType } = req.body;
-
-        if (!team1Name || !team2Name || !venue) {
-            return res.status(400).json({ success: false, message: 'team1Name, team2Name, and venue are required fields' });
-        }
-
-        const matchId = `match_${Date.now()}`;
-        const matchCode = `MTC-IND-${Math.floor(100 + Math.random() * 900)}`;
-
-        await db.query(`
-            INSERT INTO umpire_matches (
-                id, match_code, match_title, match_type, venue, scheduled_time, duty_fee,
-                team1_name, team1_captain, team1_phone, team2_name, team2_captain, team2_phone, match_status
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'UPCOMING')
-        `, [
-            matchId, matchCode, `${team1Name} vs ${team2Name}`, matchType || 'DARE MATCH',
-            venue, scheduledTime || 'Today', dutyFee || 300,
-            team1Name, team1Captain || 'Captain 1', team1Phone || '',
-            team2Name, team2Captain || 'Captain 2', team2Phone || ''
-        ]);
-
-        return res.status(201).json({
-            success: true,
-            message: 'Ground match registered successfully',
-            data: { id: matchId, matchCode }
-        });
-    } catch (error) {
-        console.error('Error registering ground match:', error);
-        return res.status(500).json({ success: false, message: error.message });
-    }
-};
-
 module.exports = {
-    getUmpireProfile,
-    updateUmpireProfile,
-    getUmpireMatches,
-    updateMatchScore,
-    recordToss,
-    completeMatch,
-    updatePaymentStatus,
-    registerGroundMatch
+    getUmpireProfile, updateUmpireProfile, getUmpireMatches,
+    updateMatchScore, recordToss, completeMatch, updatePaymentStatus, registerGroundMatch
 };

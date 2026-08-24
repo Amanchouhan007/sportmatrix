@@ -250,7 +250,250 @@ async function main() {
     },
   });
 
+  // 8. Club Teams & Real Live DARE_TO_PLAY Matches
+  console.log('  ➜ Seeding Club Teams & Live Dare Challenges into Database...');
+  
+  const team1 = await prisma.clubTeam.upsert({
+    where: { id: 'team_ind_01' },
+    update: {},
+    create: {
+      id: 'team_ind_01',
+      branchId: 'br_002',
+      teamName: 'Indore Strikers XI',
+      sport: 'Cricket',
+      rosterCount: 11,
+      rank: '#1 Indore Hub',
+      wins: 14,
+      losses: 2,
+    }
+  });
+
+  const team2 = await prisma.clubTeam.upsert({
+    where: { id: 'team_ind_02' },
+    update: {},
+    create: {
+      id: 'team_ind_02',
+      branchId: 'br_003',
+      teamName: 'Palasia Smashers',
+      sport: 'Cricket',
+      rosterCount: 11,
+      rank: '#2 Indore Central',
+      wins: 12,
+      losses: 3,
+    }
+  });
+
+  const team3 = await prisma.clubTeam.upsert({
+    where: { id: 'team_ind_03' },
+    update: {},
+    create: {
+      id: 'team_ind_03',
+      branchId: 'br_002',
+      teamName: 'Vijay Nagar Royals',
+      sport: 'Cricket',
+      rosterCount: 11,
+      rank: '#1 Vijay Nagar',
+      wins: 9,
+      losses: 4,
+    }
+  });
+
+  const team4 = await prisma.clubTeam.upsert({
+    where: { id: 'team_ind_04' },
+    update: {},
+    create: {
+      id: 'team_ind_04',
+      branchId: 'br_003',
+      teamName: 'Indore Super Kings',
+      sport: 'Cricket',
+      rosterCount: 11,
+      rank: '#3 Indore Premier',
+      wins: 11,
+      losses: 5,
+    }
+  });
+
+  const tomorrow = new Date(today.getTime() + 24 * 60 * 60 * 1000);
+
+  const dareSlot1 = await prisma.slot.upsert({
+    where: { id: 'slot_dare_01' },
+    update: {},
+    create: {
+      id: 'slot_dare_01',
+      branchId: 'br_002',
+      sportId: cricket.id,
+      courtName: 'Cricket Pitch 1',
+      slotDate: today,
+      startTime: '20:30:00',
+      endTime: '21:30:00',
+      duration: 60,
+      regularPrice: 900.00,
+      peakPrice: 1200.00,
+      status: 'BOOKED',
+    }
+  });
+
+  const dareSlot2 = await prisma.slot.upsert({
+    where: { id: 'slot_dare_02' },
+    update: {},
+    create: {
+      id: 'slot_dare_02',
+      branchId: 'br_003',
+      sportId: cricket.id,
+      courtName: 'Main Cricket Arena',
+      slotDate: tomorrow,
+      startTime: '07:00:00',
+      endTime: '08:00:00',
+      duration: 60,
+      regularPrice: 1600.00,
+      peakPrice: 1800.00,
+      status: 'BOOKED',
+    }
+  });
+
+  const dareSlot3 = await prisma.slot.upsert({
+    where: { id: 'slot_dare_03' },
+    update: {},
+    create: {
+      id: 'slot_dare_03',
+      branchId: 'br_002',
+      sportId: cricket.id,
+      courtName: 'Box Court B',
+      slotDate: tomorrow,
+      startTime: '20:00:00',
+      endTime: '21:00:00',
+      duration: 60,
+      regularPrice: 1200.00,
+      peakPrice: 1400.00,
+      status: 'BOOKED',
+    }
+  });
+
+  const dareSlot4 = await prisma.slot.upsert({
+    where: { id: 'slot_dare_04' },
+    update: {},
+    create: {
+      id: 'slot_dare_04',
+      branchId: 'br_003',
+      sportId: cricket.id,
+      courtName: 'Floodlit Arena',
+      slotDate: tomorrow,
+      startTime: '21:00:00',
+      endTime: '22:00:00',
+      duration: 60,
+      regularPrice: 1000.00,
+      peakPrice: 1200.00,
+      status: 'BOOKED',
+    }
+  });
+
+  // Seed DARE_TO_PLAY matches
+  await prisma.match.upsert({
+    where: { id: 'MATCH-DARE-001' },
+    update: {},
+    create: {
+      id: 'MATCH-DARE-001',
+      slotId: dareSlot1.id,
+      branchId: 'br_002',
+      sportId: cricket.id,
+      captainAId: customerUser.id,
+      teamAName: 'Indore Strikers XI',
+      teamBName: 'Open Challenge',
+      paymentMode: 'DARE_TO_PLAY',
+      matchStatus: 'CONFIRMED',
+      totalAmount: 1800.00,
+      teamAShare: 540.00,
+      teamBShare: 540.00,
+      dareStrategy: 'SECURED_PREPAYMENT',
+      teams: {
+        create: [
+          { teamSide: 'TEAM_A', teamName: 'Indore Strikers XI', captainUserId: customerUser.id, captainName: 'Rahul K.', captainPhone: '+91 98765 11111' },
+          { teamSide: 'TEAM_B', teamName: 'Open Challenge', captainName: 'Waiting for Opponent', captainPhone: 'N/A' }
+        ]
+      }
+    }
+  });
+
+  await prisma.match.upsert({
+    where: { id: 'MATCH-DARE-002' },
+    update: {},
+    create: {
+      id: 'MATCH-DARE-002',
+      slotId: dareSlot2.id,
+      branchId: 'br_003',
+      sportId: cricket.id,
+      captainAId: customerUser.id,
+      teamAName: 'Palasia Smashers',
+      teamBName: 'Open Challenge',
+      paymentMode: 'DARE_TO_PLAY',
+      matchStatus: 'CONFIRMED',
+      totalAmount: 3200.00,
+      teamAShare: 960.00,
+      teamBShare: 960.00,
+      dareStrategy: 'SECURED_PREPAYMENT',
+      teams: {
+        create: [
+          { teamSide: 'TEAM_A', teamName: 'Palasia Smashers', captainUserId: customerUser.id, captainName: 'Sameer V.', captainPhone: '+91 98765 22222' },
+          { teamSide: 'TEAM_B', teamName: 'Open Challenge', captainName: 'Waiting for Opponent', captainPhone: 'N/A' }
+        ]
+      }
+    }
+  });
+
+  await prisma.match.upsert({
+    where: { id: 'MATCH-DARE-003' },
+    update: {},
+    create: {
+      id: 'MATCH-DARE-003',
+      slotId: dareSlot3.id,
+      branchId: 'br_002',
+      sportId: cricket.id,
+      captainAId: customerUser.id,
+      teamAName: 'Vijay Nagar Royals',
+      teamBName: 'Open Challenge',
+      paymentMode: 'DARE_TO_PLAY',
+      matchStatus: 'CONFIRMED',
+      totalAmount: 2400.00,
+      teamAShare: 720.00,
+      teamBShare: 720.00,
+      dareStrategy: 'SECURED_PREPAYMENT',
+      teams: {
+        create: [
+          { teamSide: 'TEAM_A', teamName: 'Vijay Nagar Royals', captainUserId: customerUser.id, captainName: 'Karan J.', captainPhone: '+91 98765 33333' },
+          { teamSide: 'TEAM_B', teamName: 'Open Challenge', captainName: 'Waiting for Opponent', captainPhone: 'N/A' }
+        ]
+      }
+    }
+  });
+
+  await prisma.match.upsert({
+    where: { id: 'MATCH-DARE-004' },
+    update: {},
+    create: {
+      id: 'MATCH-DARE-004',
+      slotId: dareSlot4.id,
+      branchId: 'br_003',
+      sportId: cricket.id,
+      captainAId: customerUser.id,
+      teamAName: 'Indore Super Kings',
+      teamBName: 'Open Challenge',
+      paymentMode: 'DARE_TO_PLAY',
+      matchStatus: 'CONFIRMED',
+      totalAmount: 2000.00,
+      teamAShare: 600.00,
+      teamBShare: 600.00,
+      dareStrategy: 'SECURED_PREPAYMENT',
+      teams: {
+        create: [
+          { teamSide: 'TEAM_A', teamName: 'Indore Super Kings', captainUserId: customerUser.id, captainName: 'Amit S.', captainPhone: '+91 98765 44444' },
+          { teamSide: 'TEAM_B', teamName: 'Open Challenge', captainName: 'Waiting for Opponent', captainPhone: 'N/A' }
+        ]
+      }
+    }
+  });
+
   console.log('✅ Prisma Database Seeding Completed Successfully!');
+
 }
 
 main()

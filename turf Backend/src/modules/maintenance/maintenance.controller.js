@@ -1,56 +1,100 @@
-const db = require('../../config/db');
+const prisma = require('../../config/prisma');
+const { emitToBranch } = require('../../realtime/socket');
+
+const genId = () => `mt_${Date.now()}_${Math.floor(Math.random() * 100000)}`;
+
+const formatTask = (t) => ({
+    id: t.id, _id: t.id, branchId: t.branchId,
+    issueDescription: t.issueDescription, turfArea: t.turfArea,
+    assignedSpecialist: t.assignedSpecialist, priority: t.priorityLevel,
+    priorityLevel: t.priorityLevel, targetDeadline: t.targetDeadline,
+    status: t.status, notes: t.notes, createdAt: t.createdAt
+});
+
+const resolveOwnerBranchIds = async (user) => {
+    const branches = await prisma.branch.findMany({ where: { ownerUserId: user.id }, select: { id: true } });
+    return branches.map(b => b.id);
+};
 
 const getTickets = async (req, res) => {
+    if (!req.user) {
+        return res.status(401).json({ success: false, message: 'Authentication required.' });
+    }
     try {
-        const ownerFilter = req.query.ownerId || req.query.owner_id || (req.user?.role === 'OWNER' ? req.user.id : null);
-        const emailFilter = req.query.email || req.user?.email;
+        const { branchId } = req.query;
+        const where = {};
+        if (branchId) where.branchId = branchId;
+        else if (req.user.role !== 'SUPER_ADMIN') where.branchId = { in: await resolveOwnerBranchIds(req.user) };
 
-        let sql = 'SELECT * FROM maintenance_tickets WHERE 1=1';
-        const params = [];
-        if (req.user?.role === 'OWNER' || (ownerFilter && ownerFilter !== 'ALL')) {
-            sql += ' AND (branch_id IN (SELECT id FROM branches WHERE owner_id = ? OR owner_id IN (SELECT id FROM owners WHERE email = ? OR user_id = ? OR id = ?) OR email = ?) OR created_by = ? OR created_by = ?)';
-            params.push(ownerFilter || '', emailFilter || '', ownerFilter || '', ownerFilter || '', emailFilter || '', ownerFilter || '', emailFilter || '');
-        }
-        sql += ' ORDER BY created_at DESC';
-        const [rows] = await db.query(sql, params);
-        return res.status(200).json({ success: true, data: rows });
+        const rows = await prisma.maintenanceTask.findMany({ where, orderBy: { createdAt: 'desc' } });
+        return res.status(200).json({ success: true, data: rows.map(formatTask) });
     } catch (error) {
         return res.status(500).json({ success: false, message: error.message });
     }
+};
+
+const assertBranchAccess = async (branchId, user) => {
+    if (user.role === 'SUPER_ADMIN') return true;
+    const branch = await prisma.branch.findUnique({ where: { id: branchId } });
+    return !!branch && branch.ownerUserId === user.id;
 };
 
 const createTicket = async (req, res) => {
-    const { assetName, category, issueDescription, priority, cost, assignedTo } = req.body;
-    try {
-        const ticketId = `tkt_${Date.now()}`;
-        await db.query(`
-            INSERT INTO maintenance_tickets (id, asset_name, category, issue_description, priority, cost, assigned_to)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
-        `, [
-            ticketId,
-            assetName || 'Equipment Asset',
-            category || 'Equipment',
-            issueDescription || 'Maintenance check required',
-            priority || 'MEDIUM',
-            cost || 0,
-            assignedTo || 'Unassigned'
-        ]);
+    const { branchId, issueDescription, turfArea, priority, assignedTo, targetDeadline } = req.body;
+    if (!branchId || !issueDescription) {
+        return res.status(400).json({ success: false, message: 'branchId and issueDescription are required fields.' });
+    }
 
-        return res.status(201).json({
-            success: true,
-            data: { id: ticketId, assetName, category, issueDescription, priority, cost, assignedTo, status: 'PENDING' }
+    try {
+        if (!(await assertBranchAccess(branchId, req.user))) {
+            return res.status(403).json({ success: false, message: 'Forbidden: you do not manage this branch.' });
+        }
+
+        const task = await prisma.maintenanceTask.create({
+            data: {
+                id: genId(), branchId, issueDescription,
+                turfArea: turfArea || undefined,
+                priorityLevel: priority || 'MEDIUM',
+                assignedSpecialist: assignedTo || undefined,
+                targetDeadline: targetDeadline ? new Date(targetDeadline) : null
+            }
         });
+
+        emitToBranch(branchId, 'maintenance:updated', { taskId: task.id });
+        return res.status(201).json({ success: true, data: formatTask(task) });
     } catch (error) {
         return res.status(500).json({ success: false, message: error.message });
     }
 };
 
+/** Updates status and/or any other ticket field (e.g. reassigning assignedSpecialist), not just status. */
 const updateTicketStatus = async (req, res) => {
     const { id } = req.params;
-    const { status, cost } = req.body;
+    const { status, assignedTo, priority, turfArea, issueDescription, targetDeadline, notes } = req.body;
+
     try {
-        await db.query('UPDATE maintenance_tickets SET status = ?, cost = COALESCE(?, cost) WHERE id = ?', [status, cost, id]);
-        return res.status(200).json({ success: true, message: 'Ticket updated' });
+        const existing = await prisma.maintenanceTask.findUnique({ where: { id } });
+        if (!existing) {
+            return res.status(404).json({ success: false, message: 'Ticket not found.' });
+        }
+        if (!(await assertBranchAccess(existing.branchId, req.user))) {
+            return res.status(403).json({ success: false, message: 'Forbidden: you do not manage this branch.' });
+        }
+
+        const updated = await prisma.maintenanceTask.update({
+            where: { id },
+            data: {
+                status: status ?? undefined,
+                assignedSpecialist: assignedTo ?? undefined,
+                priorityLevel: priority ?? undefined,
+                turfArea: turfArea ?? undefined,
+                issueDescription: issueDescription ?? undefined,
+                targetDeadline: targetDeadline ? new Date(targetDeadline) : undefined,
+                notes: notes ?? undefined
+            }
+        });
+        emitToBranch(updated.branchId, 'maintenance:updated', { taskId: updated.id });
+        return res.status(200).json({ success: true, message: 'Ticket updated', data: formatTask(updated) });
     } catch (error) {
         return res.status(500).json({ success: false, message: error.message });
     }
@@ -59,7 +103,16 @@ const updateTicketStatus = async (req, res) => {
 const deleteTicket = async (req, res) => {
     const { id } = req.params;
     try {
-        await db.query('DELETE FROM maintenance_tickets WHERE id = ?', [id]);
+        const existing = await prisma.maintenanceTask.findUnique({ where: { id } });
+        if (!existing) {
+            return res.status(404).json({ success: false, message: 'Ticket not found.' });
+        }
+        if (!(await assertBranchAccess(existing.branchId, req.user))) {
+            return res.status(403).json({ success: false, message: 'Forbidden: you do not manage this branch.' });
+        }
+
+        await prisma.maintenanceTask.delete({ where: { id } });
+        emitToBranch(existing.branchId, 'maintenance:updated', { taskId: id, deleted: true });
         return res.status(200).json({ success: true, message: 'Ticket deleted' });
     } catch (error) {
         return res.status(500).json({ success: false, message: error.message });

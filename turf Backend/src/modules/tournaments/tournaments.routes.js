@@ -36,25 +36,25 @@ const { verifyToken, optionalToken, authorizeRoles } = require('../../middleware
 
 const router = express.Router();
 
-// Publicly readable endpoints (Customers, Public visitors)
-router.get('/matches/all', getAllTournamentMatches);
-router.post('/matches/save-score', saveLiveMatchScore);
-router.get('/leaderboard/global', getGlobalLeaderboard);
-router.get('/', getTournaments);
-router.get('/categories', getCategories);
-router.get('/sponsors', getSponsors);
-router.get('/payments', getTournamentPayments);
-router.get('/reports', getTournamentReports);
-router.get('/settings', getSettings);
-router.get('/teams', getTeams);
-router.get('/:id', getTournamentById);
-router.get('/:id/fixtures', getFixtures);
-router.get('/:id/leaderboard', getLeaderboard);
-router.post('/:id/register', registerTeam);
+// Publicly readable & Owner-scoped endpoints
+router.get('/matches/all', optionalToken, getAllTournamentMatches);
+router.post('/matches/save-score', optionalToken, saveLiveMatchScore);
+router.get('/leaderboard/global', optionalToken, getGlobalLeaderboard);
+router.get('/', optionalToken, getTournaments);
+router.get('/categories', optionalToken, getCategories);
+router.get('/sponsors', optionalToken, getSponsors);
+router.get('/payments', optionalToken, getTournamentPayments);
+router.get('/reports', optionalToken, getTournamentReports);
+router.get('/settings', optionalToken, getSettings);
+router.get('/teams', optionalToken, getTeams);
+router.get('/:id', optionalToken, getTournamentById);
+router.get('/:id/fixtures', optionalToken, getFixtures);
+router.get('/:id/leaderboard', optionalToken, getLeaderboard);
+router.post('/:id/register', optionalToken, registerTeam);
 
 // Staff & Owner Creation / Editing Endpoints
-router.post('/', optionalToken, createTournament);
-router.put('/:id', optionalToken, updateTournament);
+router.post('/', verifyToken, createTournament);
+router.put('/:id', verifyToken, authorizeRoles(['OWNER', 'STAFF', 'SUPER_ADMIN']), updateTournament);
 
 // Owner-Only Approval & Control Flow Endpoints
 router.post('/:id/approve', verifyToken, authorizeRoles(['OWNER', 'SUPER_ADMIN']), approveTournament);

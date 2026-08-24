@@ -1,494 +1,389 @@
-const db = require('../../config/db');
+const prisma = require('../../config/prisma');
+const { resolveOrCreateSlot } = require('../../services/slotResolution.service');
+const MatchSettlementService = require('../../services/matchSettlement.service');
+const { emitToBranch, emitToUser, emitToSuperAdmins } = require('../../realtime/socket');
+
+const genInvoice = () => `INV-${Date.now().toString().substring(5)}`;
+const genBookingCode = () => `BK-${Date.now().toString().slice(-8)}`;
+
+const formatBooking = (b) => ({
+    booking_id: b.id,
+    id: b.id,
+    bookingCode: b.bookingCode,
+    user_id: b.userId,
+    customer_name: b.customerName,
+    mobile_number: b.mobileNumber,
+    amount: Number(b.amount),
+    duration: b.duration,
+    booking_status: b.status,
+    status: b.status,
+    booked_on: b.createdAt,
+    branch_id: b.slot?.branchId || null,
+    slot_date: b.slot?.slotDate || b.dutyDate,
+    start_time: b.slot?.startTime || b.timeSlot,
+    end_time: b.slot?.endTime || null,
+    court_name: b.slot?.courtName || b.courtName,
+    sport_name: b.slot?.sport?.name || b.sportName,
+    sport_icon: b.slot?.sport?.icon || null,
+    checkInStatus: b.checkInStatus,
+    notes: b.notes || ''
+});
 
 /**
- * Create a new slot booking (Transactional)
+ * Create a real slot booking. Accepts either an already-resolved slotId, or
+ * enough detail (branchId/sportId/courtName/slotDate/startTime/endTime) to
+ * resolve-or-create the real slot atomically.
  */
 const createBooking = async (req, res) => {
-    const { slotId, customerName, mobileNumber, notes, userId } = req.body;
+    const { slotId, branchId, sportId, courtName, slotDate, startTime, endTime, customerName, mobileNumber, notes, paymentMethod } = req.body;
+    const resolvedPaymentMethod = ['UPI', 'CASH', 'CARD', 'WALLET', 'BANK_TRANSFER', 'ONLINE'].includes((paymentMethod || '').toUpperCase())
+        ? paymentMethod.toUpperCase() : 'UPI';
 
-    if (!slotId || !customerName || !mobileNumber) {
-        return res.status(400).json({
-            success: false,
-            message: 'slotId, customerName, and mobileNumber are required fields.'
-        });
+    if (!customerName || !mobileNumber) {
+        return res.status(400).json({ success: false, message: 'customerName and mobileNumber are required fields.' });
+    }
+    if (!slotId && !(branchId && sportId && courtName && slotDate && startTime && endTime)) {
+        return res.status(400).json({ success: false, message: 'Provide either slotId, or branchId/sportId/courtName/slotDate/startTime/endTime.' });
     }
 
-    const connection = await db.getConnection();
     try {
-        await connection.beginTransaction();
-
-        // 1. Lock and retrieve slot details
-        const [slots] = await connection.query(
-            'SELECT * FROM slots WHERE id = ? FOR UPDATE',
-            [slotId]
-        );
-
-        if (slots.length === 0) {
-            await connection.rollback();
-            return res.status(404).json({
-                success: false,
-                message: 'Target slot configuration not found.'
-            });
+        let slot;
+        if (slotId) {
+            slot = await prisma.slot.findUnique({ where: { id: slotId } });
+            if (!slot) {
+                return res.status(404).json({ success: false, message: 'Target slot configuration not found.' });
+            }
+            if (slot.status !== 'AVAILABLE') {
+                return res.status(409).json({ success: false, message: `This slot is no longer available (current status: ${slot.status}).` });
+            }
+        } else {
+            const resolved = await resolveOrCreateSlot({ branchId, sportId, courtName, slotDate, startTime, endTime });
+            if (!resolved.ok) return res.status(resolved.code).json({ success: false, message: resolved.message });
+            slot = resolved.slot;
         }
 
-        const slot = slots[0];
+        const amount = slot.isPeakHour ? Number(slot.peakPrice) : Number(slot.regularPrice);
+        const bookingUserId = req.user ? req.user.id : null;
 
-        if (slot.status !== 'AVAILABLE') {
-            await connection.rollback();
-            return res.status(409).json({
-                success: false,
-                message: `This slot is no longer available (current status: ${slot.status}).`
+        const result = await prisma.$transaction(async (tx) => {
+            const bookedSlot = await tx.slot.update({ where: { id: slot.id, status: 'AVAILABLE' }, data: { status: 'BOOKED' } }).catch(() => null);
+            if (!bookedSlot) throw Object.assign(new Error('Slot was just booked by someone else.'), { code: 'RACE' });
+
+            const booking = await tx.booking.create({
+                data: {
+                    bookingCode: genBookingCode(),
+                    slotId: slot.id,
+                    userId: bookingUserId,
+                    customerName: customerName.trim(),
+                    mobileNumber: mobileNumber.trim(),
+                    amount,
+                    duration: slot.duration,
+                    notes: (notes || '').trim(),
+                    status: 'COMPLETED'
+                }
             });
-        }
 
-        // Calculate amount based on peak time indicator
-        const amount = slot.is_peak_hour ? slot.peak_price : slot.regular_price;
+            await tx.payment.create({
+                data: {
+                    bookingId: booking.id,
+                    userId: bookingUserId,
+                    invoiceNumber: genInvoice(),
+                    customerName: customerName.trim(),
+                    type: 'Booking',
+                    amount,
+                    paymentMethod: resolvedPaymentMethod,
+                    status: 'COMPLETED'
+                }
+            });
 
-        // Stringify details to match frontend slot notes expectations
-        const bookingNotes = JSON.stringify({
-            customerName: customerName.trim(),
-            mobileNumber: mobileNumber.trim(),
-            notes: (notes || '').trim()
+            return booking;
         });
 
-        // 2. Insert into bookings table
-        const bookingUserId = userId || (req.user ? req.user.id : null);
-        const [insertResult] = await connection.query(
-            `INSERT INTO bookings (slot_id, user_id, customer_name, mobile_number, amount, duration, notes, status) 
-             VALUES (?, ?, ?, ?, ?, ?, ?, 'CONFIRMED')`,
-            [slotId, bookingUserId, customerName.trim(), mobileNumber.trim(), amount, slot.duration, (notes || '').trim()]
-        );
-
-        const bookingId = insertResult.insertId;
-
-        // 3. Update slot status and copy booking details
-        await connection.query(
-            'UPDATE slots SET status = "BOOKED", notes = ? WHERE id = ?',
-            [bookingNotes, slotId]
-        );
-
-        // 4. Record Invoice Payment
-        const invoiceNum = `INV-${Date.now().toString().substring(5)}`;
-        await connection.query(
-            `INSERT INTO payments (booking_id, invoice_number, customer_name, amount, payment_method, status)
-             VALUES (?, ?, ?, ?, 'UPI', 'COMPLETED')`,
-            [bookingId, invoiceNum, customerName.trim(), amount]
-        );
-
-        await connection.commit();
+        emitToBranch(slot.branchId, 'booking:new', { bookingId: result.id, bookingCode: result.bookingCode, amount });
+        if (bookingUserId) emitToUser(bookingUserId, 'booking:new', { bookingId: result.id, bookingCode: result.bookingCode });
+        emitToSuperAdmins('booking:new', { bookingId: result.id, bookingCode: result.bookingCode, amount });
 
         return res.status(201).json({
             success: true,
             message: 'Booking successfully registered',
-            data: {
-                bookingId,
-                slotId,
-                amount,
-                duration: slot.duration,
-                customerName,
-                mobileNumber
-            }
+            data: { bookingId: result.id, bookingCode: result.bookingCode, slotId: slot.id, amount, duration: slot.duration, customerName, mobileNumber }
         });
     } catch (error) {
-        await connection.rollback();
+        if (error.code === 'RACE') {
+            return res.status(409).json({ success: false, message: error.message });
+        }
         console.error('Create booking transaction error:', error);
-        return res.status(500).json({
-            success: false,
-            message: 'Internal Server Error placing booking.'
-        });
-    } finally {
-        connection.release();
+        return res.status(500).json({ success: false, message: 'Internal Server Error placing booking.' });
     }
 };
 
 /**
- * Cancel an active booking (Transactional)
+ * Cancel a booking. Payment status moves to REFUNDED and, if the customer has
+ * an account, the amount is credited back to their real Wallet.
  */
 const cancelBooking = async (req, res) => {
-    const { id } = req.params; // Booking ID
+    const id = Number(req.params.id);
 
-    const connection = await db.getConnection();
     try {
-        await connection.beginTransaction();
-
-        // 1. Lock and fetch booking record
-        const [bookings] = await connection.query(
-            'SELECT * FROM bookings WHERE id = ? FOR UPDATE',
-            [id]
-        );
-
-        if (bookings.length === 0) {
-            await connection.rollback();
-            return res.status(404).json({
-                success: false,
-                message: 'Booking record not found.'
-            });
+        const booking = await prisma.booking.findUnique({ where: { id } });
+        if (!booking) {
+            return res.status(404).json({ success: false, message: 'Booking record not found.' });
+        }
+        if (booking.status === 'REFUNDED') {
+            return res.status(400).json({ success: false, message: 'This booking is already cancelled/refunded.' });
         }
 
-        const booking = bookings[0];
-
-        if (booking.status === 'CANCELLED') {
-            await connection.rollback();
-            return res.status(400).json({
-                success: false,
-                message: 'This booking is already cancelled.'
-            });
-        }
-
-        // 2. Set booking status to CANCELLED
-        await connection.query(
-            'UPDATE bookings SET status = "CANCELLED" WHERE id = ?',
-            [id]
-        );
-
-        // 3. Unlock slot back to AVAILABLE
-        await connection.query(
-            'UPDATE slots SET status = "AVAILABLE", notes = "" WHERE id = ?',
-            [booking.slot_id]
-        );
-
-        await connection.commit();
-
-        return res.status(200).json({
-            success: true,
-            message: 'Booking successfully cancelled, slot is now available.'
+        let branchId = null;
+        await prisma.$transaction(async (tx) => {
+            await tx.booking.update({ where: { id }, data: { status: 'REFUNDED' } });
+            if (booking.slotId) {
+                const slot = await tx.slot.update({ where: { id: booking.slotId }, data: { status: 'AVAILABLE' } });
+                branchId = slot.branchId;
+            }
+            if (booking.userId) {
+                await MatchSettlementService.postWalletTransaction(tx, {
+                    userId: booking.userId,
+                    type: 'REFUND',
+                    description: `Refund for cancelled booking #${booking.bookingCode || booking.id}`,
+                    amount: Number(booking.amount)
+                });
+            }
         });
+
+        emitToBranch(branchId, 'booking:cancelled', { bookingId: id });
+        if (booking.userId) emitToUser(booking.userId, 'booking:cancelled', { bookingId: id });
+        emitToSuperAdmins('booking:cancelled', { bookingId: id });
+
+        return res.status(200).json({ success: true, message: 'Booking successfully cancelled, slot is now available.' });
     } catch (error) {
-        await connection.rollback();
         console.error('Cancel booking transaction error:', error);
-        return res.status(500).json({
-            success: false,
-            message: 'Internal Server Error cancelling booking.'
-        });
-    } finally {
-        connection.release();
+        return res.status(500).json({ success: false, message: 'Internal Server Error cancelling booking.' });
     }
 };
 
 /**
- * Get upcoming bookings (Scheduled for today or future dates)
+ * STAFF and OWNER are scoped differently: an Owner's branches are found via
+ * Branch.ownerUserId, but a Staff member's own id never matches that -- their
+ * assigned branch lives on User.staffBranchId instead. Resolves the real
+ * branch-scoping filter for either role rather than silently returning zero
+ * rows for staff accounts.
  */
+const resolveBranchFilterForUser = async (req, branchId) => {
+    if (req.user.role === 'STAFF') {
+        const staffUser = await prisma.user.findUnique({ where: { id: req.user.id }, select: { staffBranchId: true } });
+        return staffUser?.staffBranchId ? { branchId: staffUser.staffBranchId } : { branchId: '__none__' };
+    }
+    return branchId ? { branchId } : { branch: { ownerUserId: req.user.id } };
+};
+
 const getUpcomingBookings = async (req, res) => {
-    const { branchId, userId: queryUserId, userEmail: queryUserEmail } = req.query;
-    const userRole = req.user ? req.user.role : (req.query.role || 'CUSTOMER');
-    const userId = req.user ? req.user.id : queryUserId;
-    const userEmail = req.user ? req.user.email : queryUserEmail;
+    const { branchId } = req.query;
+    if (!req.user) {
+        return res.status(401).json({ success: false, message: 'Authentication required.' });
+    }
 
     try {
-        let sql = `
-            SELECT 
-                b.id as booking_id,
-                b.user_id,
-                b.customer_name,
-                b.mobile_number,
-                b.amount,
-                b.duration,
-                b.notes as booking_notes,
-                b.status as booking_status,
-                b.created_at as booked_on,
-                sl.branch_id,
-                sl.slot_date,
-                sl.start_time,
-                sl.end_time,
-                sl.court_name,
-                s.name as sport_name,
-                s.icon as sport_icon
-            FROM bookings b
-            JOIN slots sl ON b.slot_id = sl.id
-            JOIN sports s ON sl.sport_id = s.id
-            WHERE b.status = 'CONFIRMED' AND sl.slot_date >= CURDATE()
-        `;
-        const params = [];
+        const where = { status: { in: ['COMPLETED', 'HELD'] }, slot: { slotDate: { gte: new Date(new Date().toDateString()) } } };
 
-        // Apply multi-tenant data isolation based on role
-        if (userRole === 'CUSTOMER') {
-            if (userId || userEmail) {
-                sql += ' AND (b.user_id = ? OR b.user_id = ? OR b.customer_name = ? OR b.notes LIKE ?)';
-                params.push(userId || '', userEmail || '', req.user?.name || '', `%${userEmail || userId}%`);
-            } else {
-                // If unauthenticated or no identity provided, isolate completely
-                sql += ' AND 1=0';
-            }
-        } else if (userRole === 'OWNER' || userRole === 'STAFF') {
-            if (branchId) {
-                sql += ' AND sl.branch_id = ?';
-                params.push(branchId);
-            } else if (userId || userEmail) {
-                sql += ` AND (
-                    sl.branch_id IN (SELECT id FROM branches WHERE owner_id = ? OR owner_id IN (SELECT id FROM owners WHERE email = ? OR user_id = ? OR id = ?) OR email = ?)
-                    OR b.notes LIKE ?
-                )`;
-                params.push(userId || '', userEmail || '', userId || '', userId || '', userEmail || '', `%${userEmail || ''}%`);
-            }
+        if (req.user.role === 'CUSTOMER') {
+            where.userId = req.user.id;
+        } else if (req.user.role === 'OWNER' || req.user.role === 'STAFF') {
+            where.slot = { ...where.slot, ...(await resolveBranchFilterForUser(req, branchId)) };
+        } else if (branchId) {
+            where.slot = { ...where.slot, branchId };
         }
-        // SUPER_ADMIN sees all records
 
-        sql += ' ORDER BY sl.slot_date ASC, sl.start_time ASC';
-
-        const [rows] = await db.query(sql, params);
-
-        return res.status(200).json({
-            success: true,
-            data: rows
+        const rows = await prisma.booking.findMany({
+            where,
+            include: { slot: { include: { sport: true } } },
+            orderBy: [{ slot: { slotDate: 'asc' } }]
         });
+
+        return res.status(200).json({ success: true, data: rows.map(formatBooking) });
     } catch (error) {
         console.error('Fetch upcoming bookings error:', error);
-        return res.status(500).json({
-            success: false,
-            message: 'Internal Server Error fetching upcoming bookings.'
-        });
+        return res.status(500).json({ success: false, message: 'Internal Server Error fetching upcoming bookings.' });
     }
 };
 
-/**
- * Get full booking ledger history with role-based data isolation
- */
 const getBookingHistory = async (req, res) => {
-    const { branchId, userId: queryUserId, userEmail: queryUserEmail } = req.query;
-    const userRole = req.user ? req.user.role : (req.query.role || 'CUSTOMER');
-    const userId = req.user ? req.user.id : queryUserId;
-    const userEmail = req.user ? req.user.email : queryUserEmail;
+    const { branchId } = req.query;
+    if (!req.user) {
+        return res.status(401).json({ success: false, message: 'Authentication required.' });
+    }
 
     try {
-        let sql = `
-            SELECT 
-                b.id as booking_id,
-                b.user_id,
-                b.customer_name,
-                b.mobile_number,
-                b.amount,
-                b.duration,
-                b.notes as booking_notes,
-                b.status as booking_status,
-                b.created_at as booked_on,
-                sl.branch_id,
-                sl.slot_date,
-                sl.start_time,
-                sl.end_time,
-                sl.court_name,
-                s.name as sport_name,
-                s.icon as sport_icon
-            FROM bookings b
-            JOIN slots sl ON b.slot_id = sl.id
-            JOIN sports s ON sl.sport_id = s.id
-            WHERE 1=1
-        `;
-        const params = [];
+        const where = {};
 
-        // Apply multi-tenant data isolation based on role
-        if (userRole === 'CUSTOMER') {
-            if (userId || userEmail) {
-                sql += ' AND (b.user_id = ? OR b.user_id = ? OR b.customer_name = ? OR b.notes LIKE ?)';
-                params.push(userId || '', userEmail || '', req.user?.name || '', `%${userEmail || userId}%`);
-            } else {
-                // Return empty if customer has no active token/ID
-                sql += ' AND 1=0';
-            }
-        } else if (userRole === 'OWNER' || userRole === 'STAFF') {
-            if (branchId) {
-                sql += ' AND sl.branch_id = ?';
-                params.push(branchId);
-            } else if (userId || userEmail) {
-                sql += ` AND (
-                    sl.branch_id IN (SELECT id FROM branches WHERE owner_id = ? OR owner_id IN (SELECT id FROM owners WHERE email = ? OR user_id = ? OR id = ?) OR email = ?)
-                    OR b.notes LIKE ?
-                )`;
-                params.push(userId || '', userEmail || '', userId || '', userId || '', userEmail || '', `%${userEmail || ''}%`);
-            }
+        if (req.user.role === 'CUSTOMER') {
+            where.userId = req.user.id;
+        } else if (req.user.role === 'OWNER' || req.user.role === 'STAFF') {
+            where.slot = await resolveBranchFilterForUser(req, branchId);
+        } else if (branchId) {
+            where.slot = { branchId };
         }
-        // SUPER_ADMIN sees all records
 
-        sql += ' ORDER BY sl.slot_date DESC, sl.start_time DESC';
-
-        const [rows] = await db.query(sql, params);
-
-        return res.status(200).json({
-            success: true,
-            data: rows
+        const rows = await prisma.booking.findMany({
+            where,
+            include: { slot: { include: { sport: true } } },
+            orderBy: { createdAt: 'desc' }
         });
+
+        return res.status(200).json({ success: true, data: rows.map(formatBooking) });
     } catch (error) {
         console.error('Fetch booking history error:', error);
-        return res.status(500).json({
-            success: false,
-            message: 'Internal Server Error fetching booking history.'
-        });
+        return res.status(500).json({ success: false, message: 'Internal Server Error fetching booking history.' });
     }
 };
 
-/**
- * Get summary stats for Booking Ledger Manager
- */
 const getBookingLedgerSummary = async (req, res) => {
     try {
-        const [todayRes] = await db.query("SELECT COUNT(*) as count FROM bookings WHERE DATE(created_at) = CURDATE() OR status = 'CONFIRMED'");
-        const [weekRes] = await db.query("SELECT COUNT(*) as count FROM bookings WHERE YEARWEEK(created_at, 1) = YEARWEEK(CURDATE(), 1) OR status = 'CONFIRMED'");
-        const [monthRes] = await db.query("SELECT COUNT(*) as count FROM bookings");
-        const [revenueRes] = await db.query("SELECT COALESCE(SUM(amount), 0) as total FROM bookings WHERE status = 'CONFIRMED'");
+        const now = new Date();
+        const startOfToday = new Date(now.toDateString());
+        const startOfWeek = new Date(startOfToday);
+        startOfWeek.setDate(startOfWeek.getDate() - startOfWeek.getDay());
+        const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+
+        const [todayCount, weekCount, monthCount, revenue] = await Promise.all([
+            prisma.booking.count({ where: { createdAt: { gte: startOfToday } } }),
+            prisma.booking.count({ where: { createdAt: { gte: startOfWeek } } }),
+            prisma.booking.count({ where: { createdAt: { gte: startOfMonth } } }),
+            prisma.booking.aggregate({ where: { status: 'COMPLETED' }, _sum: { amount: true } })
+        ]);
 
         return res.status(200).json({
             success: true,
             data: {
-                todayCount: Math.max(12, todayRes[0]?.count || 0),
-                weekCount: Math.max(64, weekRes[0]?.count || 0),
-                monthCount: Math.max(248, monthRes[0]?.count || 0),
-                totalRevenue: Math.max(184500, Number(revenueRes[0]?.total || 0))
+                todayCount,
+                weekCount,
+                monthCount,
+                totalRevenue: Number(revenue._sum.amount || 0)
             }
         });
     } catch (error) {
         console.error('Fetch booking ledger summary error:', error);
-        return res.status(500).json({
-            success: false,
-            message: 'Internal Server Error fetching booking summary.'
-        });
+        return res.status(500).json({ success: false, message: 'Internal Server Error fetching booking summary.' });
     }
 };
 
 /**
- * Update booking status dynamically (CONFIRMED, PENDING, CANCELLED)
+ * Update a booking's payment/lifecycle status. Booking.status is a PaymentStatus
+ * value (PENDING/COMPLETED/HELD/FAILED/REFUND_PENDING/REFUNDED) -- there is no
+ * separate CONFIRMED/CANCELLED enum on this model.
  */
 const updateBookingStatus = async (req, res) => {
-    const { id } = req.params;
-    const { status } = req.body; // 'Confirmed', 'Pending', 'Cancelled' or 'CONFIRMED', 'PENDING', 'CANCELLED'
+    const id = Number(req.params.id);
+    const { status } = req.body;
 
     const upperStatus = (status || '').toUpperCase();
+    if (!['PENDING', 'COMPLETED', 'HELD', 'FAILED', 'REFUND_PENDING', 'REFUNDED'].includes(upperStatus)) {
+        return res.status(400).json({ success: false, message: 'status must be one of PENDING, COMPLETED, HELD, FAILED, REFUND_PENDING, REFUNDED.' });
+    }
 
     try {
-        const [result] = await db.query('UPDATE bookings SET status = ? WHERE id = ?', [upperStatus, id]);
-        
-        if (upperStatus === 'CANCELLED') {
-            const [rows] = await db.query('SELECT slot_id FROM bookings WHERE id = ?', [id]);
-            if (rows.length > 0 && rows[0].slot_id) {
-                await db.query("UPDATE slots SET status = 'AVAILABLE', notes = '' WHERE id = ?", [rows[0].slot_id]);
-            }
-        } else if (upperStatus === 'CONFIRMED') {
-            const [rows] = await db.query('SELECT slot_id FROM bookings WHERE id = ?', [id]);
-            if (rows.length > 0 && rows[0].slot_id) {
-                await db.query("UPDATE slots SET status = 'BOOKED' WHERE id = ?", [rows[0].slot_id]);
-            }
+        const booking = await prisma.booking.update({ where: { id }, data: { status: upperStatus } }).catch(() => null);
+        if (!booking) {
+            return res.status(404).json({ success: false, message: 'Booking not found.' });
         }
 
-        return res.status(200).json({
-            success: true,
-            message: `Booking ${id} status updated to ${status}`
-        });
+        if (booking.slotId) {
+            const slotStatus = ['REFUNDED', 'FAILED', 'REFUND_PENDING'].includes(upperStatus) ? 'AVAILABLE' : 'BOOKED';
+            await prisma.slot.update({ where: { id: booking.slotId }, data: { status: slotStatus } });
+        }
+
+        return res.status(200).json({ success: true, message: `Booking ${id} status updated to ${upperStatus}` });
     } catch (error) {
         console.error('Update booking status error:', error);
-        return res.status(500).json({
-            success: false,
-            message: 'Internal Server Error updating booking status.'
-        });
+        return res.status(500).json({ success: false, message: 'Internal Server Error updating booking status.' });
     }
 };
 
 /**
- * Guest booking creation (without requiring logged-in session)
+ * Guest booking creation -- still requires a real branch/sport/court/slot, just
+ * without a logged-in session. No fabricated venue name or price is ever used.
  */
 const createGuestBooking = async (req, res) => {
-    const { turfName, customerName, phone, slotDate, slotTime, duration, amount, paymentMode, paymentStatus } = req.body;
+    const { branchId, sportId, courtName, slotDate, startTime, endTime, customerName, phone, notes } = req.body;
 
     if (!customerName || !phone) {
-        return res.status(400).json({
-            success: false,
-            message: 'customerName and phone are required.'
-        });
+        return res.status(400).json({ success: false, message: 'customerName and phone are required.' });
+    }
+    if (!branchId || !sportId || !courtName || !slotDate || !startTime || !endTime) {
+        return res.status(400).json({ success: false, message: 'branchId, sportId, courtName, slotDate, startTime, and endTime are required.' });
     }
 
     try {
-        const id = `GBK-${Date.now()}`;
-        const notesObj = {
-            turfName: turfName || 'Indore Turf Arena',
-            slotDate: slotDate || new Date().toISOString().split('T')[0],
-            slotTime: slotTime || '06:00 PM',
-            paymentMode: paymentMode || 'UPI',
-            paymentStatus: paymentStatus || 'PAID',
-            isGuest: true
-        };
+        const resolved = await resolveOrCreateSlot({ branchId, sportId, courtName, slotDate, startTime, endTime });
+        if (!resolved.ok) return res.status(resolved.code).json({ success: false, message: resolved.message });
+        const slot = resolved.slot;
+        const amount = slot.isPeakHour ? Number(slot.peakPrice) : Number(slot.regularPrice);
 
-        const [result] = await db.query(
-            `INSERT INTO bookings (customer_name, mobile_number, amount, duration, notes, status) 
-             VALUES (?, ?, ?, ?, ?, 'CONFIRMED')`,
-            [customerName.trim(), phone.trim(), amount || 900, duration || 1, JSON.stringify(notesObj)]
-        );
+        const booking = await prisma.$transaction(async (tx) => {
+            const bookedSlot = await tx.slot.update({ where: { id: slot.id, status: 'AVAILABLE' }, data: { status: 'BOOKED' } }).catch(() => null);
+            if (!bookedSlot) throw Object.assign(new Error('Slot was just booked by someone else.'), { code: 'RACE' });
+
+            return tx.booking.create({
+                data: {
+                    bookingCode: genBookingCode(),
+                    slotId: slot.id,
+                    customerName: customerName.trim(),
+                    mobileNumber: phone.trim(),
+                    amount,
+                    duration: slot.duration,
+                    notes: (notes || '').trim(),
+                    status: 'COMPLETED'
+                }
+            });
+        });
 
         return res.status(201).json({
             success: true,
             message: 'Guest booking created successfully',
-            data: {
-                id: `GBK-${result.insertId}`,
-                bookingId: result.insertId,
-                customerName: customerName.trim(),
-                phone: phone.trim(),
-                turfName: turfName || 'Indore Turf Arena',
-                slotDate,
-                slotTime,
-                amount: amount || 900,
-                status: 'CONFIRMED'
-            }
+            data: { id: booking.bookingCode, bookingId: booking.id, customerName: customerName.trim(), phone: phone.trim(), slotDate, slotTime: startTime, amount, status: 'COMPLETED' }
         });
     } catch (error) {
+        if (error.code === 'RACE') {
+            return res.status(409).json({ success: false, message: error.message });
+        }
         console.error('Guest booking error:', error);
-        return res.status(500).json({
-            success: false,
-            message: 'Failed to create guest booking: ' + error.message
-        });
+        return res.status(500).json({ success: false, message: 'Failed to create guest booking: ' + error.message });
     }
 };
 
-/**
- * Lookup guest bookings by phone number
- */
 const lookupGuestBookingsByPhone = async (req, res) => {
     try {
         const { phone } = req.query;
-
         if (!phone) {
-            return res.status(400).json({
-                success: false,
-                message: 'Phone number query parameter is required.'
-            });
+            return res.status(400).json({ success: false, message: 'Phone number query parameter is required.' });
         }
-
         const cleanPhone = phone.replace(/[^0-9]/g, '').slice(-10);
 
-        const [bookings] = await db.query(
-            `SELECT b.*, s.slot_date, s.start_time, s.end_time, s.court_name 
-             FROM bookings b 
-             LEFT JOIN slots s ON b.slot_id = s.id 
-             WHERE b.mobile_number LIKE ? 
-             ORDER BY b.created_at DESC`,
-            [`%${cleanPhone}%`]
-        );
+        const bookings = await prisma.booking.findMany({
+            where: { mobileNumber: { contains: cleanPhone } },
+            include: { slot: { include: { branch: true, sport: true } } },
+            orderBy: { createdAt: 'desc' }
+        });
 
         return res.status(200).json({
             success: true,
             count: bookings.length,
-            data: bookings.map(b => {
-                let parsedNotes = {};
-                try {
-                    parsedNotes = JSON.parse(b.notes || '{}');
-                } catch (e) { }
-
-                return {
-                    id: `BK-${b.id}`,
-                    bookingId: b.id,
-                    customerName: b.customer_name,
-                    phone: b.mobile_number,
-                    amount: b.amount,
-                    duration: b.duration,
-                    status: b.status,
-                    turfName: parsedNotes.turfName || 'Indore Turf Arena',
-                    slotDate: b.slot_date || parsedNotes.slotDate,
-                    slotTime: b.start_time || parsedNotes.slotTime,
-                    createdAt: b.created_at
-                };
-            })
+            data: bookings.map(b => ({
+                id: b.bookingCode || `BK-${b.id}`,
+                bookingId: b.id,
+                customerName: b.customerName,
+                phone: b.mobileNumber,
+                amount: Number(b.amount),
+                duration: b.duration,
+                status: b.status,
+                turfName: b.slot?.branch?.branchName || null,
+                slotDate: b.slot?.slotDate || null,
+                slotTime: b.slot?.startTime || null,
+                createdAt: b.createdAt
+            }))
         });
     } catch (error) {
         console.error('Lookup guest bookings error:', error);
-        return res.status(500).json({
-            success: false,
-            message: 'Failed to lookup guest bookings: ' + error.message
-        });
+        return res.status(500).json({ success: false, message: 'Failed to lookup guest bookings: ' + error.message });
     }
 };
 

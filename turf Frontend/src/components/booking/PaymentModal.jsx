@@ -13,7 +13,6 @@ import {
   HiChevronRight,
   HiChevronLeft,
   HiLockClosed,
-  HiArrowPath,
   HiCheck,
   HiExclamationTriangle,
   HiDevicePhoneMobile,
@@ -69,12 +68,9 @@ export default function PaymentModal({
   // EMI
   const [emiTenure, setEmiTenure] = useState(6);
 
-  // Step 3 Processing & OTP State
-  const [processingStatus, setProcessingStatus] = useState('Connecting to Payment Gateway...');
-  const [showOtpScreen, setShowOtpScreen] = useState(false);
-  const [otpValue, setOtpValue] = useState(['', '', '', '', '', '']);
-  const [otpTimer, setOtpTimer] = useState(120); // 2 min countdown
-  const [isVerifyingOtp, setIsVerifyingOtp] = useState(false);
+  // Step 3 Processing State -- no live gateway yet, so this is an honest
+  // "preparing your booking" transition, not a simulated bank/OTP flow.
+  const [processingStatus, setProcessingStatus] = useState('Preparing your booking details...');
   const [isProcessing, setIsProcessing] = useState(false);
 
   // Error & Validation state
@@ -82,17 +78,6 @@ export default function PaymentModal({
 
   // Generated Transaction Info
   const [txnDetails, setTxnDetails] = useState(null);
-
-  // OTP Countdown timer
-  useEffect(() => {
-    let interval = null;
-    if (showOtpScreen && otpTimer > 0) {
-      interval = setInterval(() => {
-        setOtpTimer((prev) => prev - 1);
-      }, 1000);
-    }
-    return () => clearInterval(interval);
-  }, [showOtpScreen, otpTimer]);
 
   // Saved Payment Methods
   const savedMethods = [
@@ -216,66 +201,42 @@ export default function PaymentModal({
     return Object.keys(errors).length === 0;
   };
 
-  // Proceed to Step 3 (Processing)
+  // Proceed to Step 3 (Processing). No live payment gateway exists yet -- this
+  // step is an honest "preparing your booking" transition, not a simulated
+  // bank/3D-Secure/OTP flow (no OTP is ever actually sent to anyone).
   const handleStartPaymentProcessing = () => {
     if (!validateStep2Form()) return;
 
     setStep(3);
     setIsProcessing(true);
-    setProcessingStatus('Initiating secure transaction with bank server...');
+    setProcessingStatus('Preparing your booking details...');
 
     setTimeout(() => {
-      if (selectedMethod === 'card' || selectedMethod === 'saved_card_1') {
-        setProcessingStatus('Redirecting to 3D Secure OTP verification...');
-        setShowOtpScreen(true);
-        setIsProcessing(false);
-      } else if (selectedMethod === 'upi') {
-        setProcessingStatus('Pushing payment request to your UPI App...');
-        setTimeout(() => {
-          completeSuccessfulPayment();
-        }, 2200);
-      } else {
-        setProcessingStatus('Authorizing payment with provider...');
-        setTimeout(() => {
-          completeSuccessfulPayment();
-        }, 2000);
-      }
-    }, 1500);
+      setProcessingStatus('Locking your slot...');
+      setTimeout(() => {
+        completeSuccessfulPayment();
+      }, 1200);
+    }, 900);
   };
 
-  // OTP Verification
-  const handleVerifyOtp = () => {
-    const code = otpValue.join('');
-    if (code.length < 6) {
-      setFormErrors({ otp: 'Please enter full 6-digit OTP' });
-      return;
-    }
-    setIsVerifyingOtp(true);
-    setTimeout(() => {
-      setIsVerifyingOtp(false);
-      completeSuccessfulPayment();
-    }, 1800);
-  };
-
-  // Final Payment Complete -> Move to Step 4
+  // Marks the payment-details step complete -> Step 4 asks the user to confirm
+  // and lock the slot for real. No transaction has actually been captured yet;
+  // that only happens once handleConfirmBooking() (the real API call) runs.
   const completeSuccessfulPayment = () => {
-    const txnId = `TXN-${Math.floor(10000000 + Math.random() * 90000000)}`;
     setTxnDetails({
-      txnId,
+      reference: `REF-${Math.floor(10000000 + Math.random() * 90000000)}`,
       amount: myPaymentAmount,
       method: getMethodName(selectedMethod),
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
     });
     setStep(4);
     setIsProcessing(false);
-    setShowOtpScreen(false);
   };
 
   // Reset state on modal close
   const handleCloseModal = () => {
     if (step === 3 && isProcessing) return;
     setStep(1);
-    setShowOtpScreen(false);
     onClose();
   };
 
@@ -788,93 +749,21 @@ export default function PaymentModal({
             </div>
           )}
 
-          {/* STEP 3: PROCESSING & 3D SECURE OTP */}
+          {/* STEP 3: PREPARING BOOKING (no live gateway yet -- honest transition, not a simulated bank/OTP flow) */}
           {step === 3 && (
             <div className="py-6 space-y-6 text-center animate-in fade-in duration-150">
-              {showOtpScreen ? (
-                <div className="space-y-5 max-w-md mx-auto text-left bg-slate-50 p-6 rounded-2xl border border-slate-200">
-                  <div className="flex items-center justify-between border-b border-slate-200 pb-3">
-                    <div className="flex items-center gap-2 text-slate-800 font-extrabold text-sm">
-                      <HiShieldCheck className="w-5 h-5 text-emerald-600" />
-                      <span>3D Secure OTP Verification</span>
-                    </div>
-                    <span className="text-xs font-mono text-slate-500">HDFC Bank</span>
-                  </div>
-
-                  <p className="text-xs text-slate-600 leading-relaxed">
-                    Enter the 6-digit verification code sent to your registered mobile number <span className="font-bold text-slate-900">+91 ••••• ••492</span>
-                  </p>
-
-                  <div className="flex items-center justify-center gap-2 py-2">
-                    {[0, 1, 2, 3, 4, 5].map((idx) => (
-                      <input
-                        key={idx}
-                        id={`otp-box-${idx}`}
-                        type="text"
-                        maxLength={1}
-                        value={otpValue[idx] || ''}
-                        onChange={(e) => {
-                          const val = e.target.value.replace(/\D/g, '');
-                          const newOtp = [...otpValue];
-                          newOtp[idx] = val;
-                          setOtpValue(newOtp);
-                          if (val && idx < 5) {
-                            const nextBox = document.getElementById(`otp-box-${idx + 1}`);
-                            if (nextBox) nextBox.focus();
-                          }
-                        }}
-                        className="w-10 h-12 text-center text-lg font-mono font-bold bg-white border border-slate-300 rounded-xl focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500 focus:outline-none"
-                      />
-                    ))}
-                  </div>
-
-                  {formErrors.otp && (
-                    <p className="text-xs text-red-600 font-bold text-center">{formErrors.otp}</p>
-                  )}
-
-                  <div className="flex items-center justify-between text-xs text-slate-500 pt-2">
-                    <span>Resend OTP in: <span className="font-mono font-bold text-slate-800">{Math.floor(otpTimer / 60)}:{String(otpTimer % 60).padStart(2, '0')}</span></span>
-                    <button
-                      type="button"
-                      onClick={() => setOtpTimer(120)}
-                      className="text-emerald-700 font-bold hover:underline cursor-pointer"
-                    >
-                      Resend Code
-                    </button>
-                  </div>
-
-                  <button
-                    type="button"
-                    disabled={isVerifyingOtp}
-                    onClick={handleVerifyOtp}
-                    className="w-full py-3.5 bg-[#10B981] hover:bg-[#059669] text-white font-black text-xs uppercase tracking-wider rounded-xl shadow-md transition cursor-pointer flex items-center justify-center gap-2"
-                  >
-                    {isVerifyingOtp ? (
-                      <>
-                        <HiArrowPath className="w-4 h-4 animate-spin" />
-                        <span>Verifying OTP Code...</span>
-                      </>
-                    ) : (
-                      <span>Submit OTP &amp; Authorize Payment ₹{myPaymentAmount.toLocaleString('en-IN')}</span>
-                    )}
-                  </button>
+              <div className="py-8 space-y-4">
+                <div className="w-16 h-16 mx-auto rounded-full border-4 border-emerald-200 border-t-emerald-600 animate-spin flex items-center justify-center">
+                  <HiShieldCheck className="w-7 h-7 text-emerald-600" />
                 </div>
-              ) : (
-                <div className="py-8 space-y-4">
-                  <div className="w-16 h-16 mx-auto rounded-full border-4 border-emerald-200 border-t-emerald-600 animate-spin flex items-center justify-center">
-                    <HiShieldCheck className="w-7 h-7 text-emerald-600" />
-                  </div>
-                  <h3 className="text-lg font-extrabold text-slate-900 tracking-tight">Processing Payment...</h3>
-                  <p className="text-xs text-slate-500 max-w-xs mx-auto">{processingStatus}</p>
-                  <p className="text-[11px] text-amber-700 font-medium bg-amber-50 py-1.5 px-3 rounded-full inline-block border border-amber-200">
-                    ⚠️ Please do not close or refresh this browser window
-                  </p>
-                </div>
-              )}
+                <h3 className="text-lg font-extrabold text-slate-900 tracking-tight">Preparing Your Booking...</h3>
+                <p className="text-xs text-slate-500 max-w-xs mx-auto">{processingStatus}</p>
+              </div>
             </div>
           )}
 
-          {/* STEP 4: PAYMENT SUCCESS RESULT SCREEN */}
+          {/* STEP 4: READY TO CONFIRM -- no live gateway yet, so nothing has actually
+              been charged; this is a real confirmation prompt, not a fake success screen. */}
           {step === 4 && txnDetails && (
             <div className="py-4 space-y-5 text-center animate-in zoom-in-95 duration-200">
               <div className="w-16 h-16 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto shadow-md">
@@ -882,21 +771,21 @@ export default function PaymentModal({
               </div>
 
               <div>
-                <h3 className="text-xl font-black text-slate-900">Payment Successful!</h3>
-                <p className="text-xs text-slate-500 mt-1">Transaction verified by bank gateway</p>
+                <h3 className="text-xl font-black text-slate-900">Payment Details Ready</h3>
+                <p className="text-xs text-slate-500 mt-1">Confirm below to lock your slot and record this payment</p>
               </div>
 
               <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 text-left space-y-2.5 max-w-md mx-auto">
                 <div className="flex justify-between text-xs">
-                  <span className="text-slate-500 font-medium">Transaction ID:</span>
-                  <span className="font-mono font-bold text-slate-800">{txnDetails.txnId}</span>
+                  <span className="text-slate-500 font-medium">Reference:</span>
+                  <span className="font-mono font-bold text-slate-800">{txnDetails.reference}</span>
                 </div>
                 <div className="flex justify-between text-xs">
-                  <span className="text-slate-500 font-medium">Amount Paid:</span>
+                  <span className="text-slate-500 font-medium">Amount:</span>
                   <span className="font-mono font-black text-emerald-600">₹{txnDetails.amount.toLocaleString('en-IN')}</span>
                 </div>
                 <div className="flex justify-between text-xs">
-                  <span className="text-slate-500 font-medium">Method Used:</span>
+                  <span className="text-slate-500 font-medium">Method Selected:</span>
                   <span className="font-bold text-slate-800">{txnDetails.method}</span>
                 </div>
                 <div className="flex justify-between text-xs pt-1 border-t border-slate-200">

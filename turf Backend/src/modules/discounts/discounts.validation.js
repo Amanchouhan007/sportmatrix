@@ -5,6 +5,7 @@ const validateDiscountOffer = (req, res, next) => {
     const {
         title,
         turfId,
+        branchId,
         discountType,
         discountValue,
         startDate,
@@ -21,26 +22,27 @@ const validateDiscountOffer = (req, res, next) => {
     }
 
     // Turf validation
-    if (!turfId || !turfId.trim()) {
+    if (!(turfId || branchId)) {
         errors.push('Target Turf is required.');
     }
 
-    // Discount Type validation
-    const validTypes = ['Percentage', 'Flat Amount', 'Buy One Get One', 'Free Slot', 'Cashback'];
-    if (!discountType || !validTypes.includes(discountType)) {
+    // Discount Type validation -- matches the real DiscountType enum (PERCENTAGE | FLAT_AMOUNT)
+    const validTypes = ['PERCENTAGE', 'FLAT_AMOUNT'];
+    const normalizedType = (discountType || '').toUpperCase();
+    if (!discountType || !validTypes.includes(normalizedType)) {
         errors.push(`Discount Type must be one of: ${validTypes.join(', ')}`);
     }
 
-    // Discount Value validation
+    // Discount Value validation -- strictly numeric (rs or % only)
     const val = Number(discountValue);
-    if (isNaN(val) || val < 0) {
-        errors.push('Discount Value must be a valid non-negative number.');
-    } else if (discountType === 'Percentage' && val > 100) {
+    if (discountValue === undefined || discountValue === null || isNaN(val) || val <= 0) {
+        errors.push('Discount Value must be a valid numeric number (e.g. 20 for 20% or 300 for ₹300). Text like "free" is not allowed.');
+    } else if (normalizedType === 'PERCENTAGE' && val > 100) {
         errors.push('Percentage discount cannot exceed 100%.');
     }
 
     // Flat Discount check against maximum discount
-    if (discountType === 'Flat Amount' && maximumDiscountAmount) {
+    if (normalizedType === 'FLAT_AMOUNT' && maximumDiscountAmount) {
         const maxVal = Number(maximumDiscountAmount);
         if (!isNaN(maxVal) && maxVal > 0 && val > maxVal) {
             errors.push('Flat discount value cannot exceed Maximum Discount Amount.');

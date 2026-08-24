@@ -16,34 +16,29 @@ const {
     validateUpdatePlan
 } = require('./subscriptions.validation');
 
-const router = express.Router();
+const { verifyToken, authorizeRoles } = require('../../middleware/auth.middleware');
 
-// List all plans
+const router = express.Router();
+const requireAdmin = [verifyToken, authorizeRoles(['SUPER_ADMIN'])];
+
+// List all plans -- public (pricing page)
 router.get('/', getAllPlans);
 
-// Purchase a subscription plan (Creates owner_subscription purchase record)
-router.post('/buy', purchaseSubscription);
-router.post('/purchase', purchaseSubscription);
+// Purchase a subscription plan -- requires an authenticated owner
+router.post('/buy', verifyToken, purchaseSubscription);
+router.post('/purchase', verifyToken, purchaseSubscription);
 
-// Get all subscription purchases
-router.get('/purchases', getSubscriptionPurchases);
+// Get all subscription purchases -- Super Admin only
+router.get('/purchases', ...requireAdmin, getSubscriptionPurchases);
 
-// Get single plan by ID
+// Get single plan by ID -- public
 router.get('/:id', getPlanById);
 
-// Create plan
-router.post('/', validateCreatePlan, createPlan);
-
-// Update plan
-router.put('/:id', validateUpdatePlan, updatePlan);
-
-// Delete plan
-router.delete('/:id', deletePlan);
-
-// Toggle status
-router.patch('/:id/status', toggleStatus);
-
-// Toggle popular
-router.patch('/:id/popular', togglePopular);
+// Plan catalog management -- Super Admin only
+router.post('/', ...requireAdmin, validateCreatePlan, createPlan);
+router.put('/:id', ...requireAdmin, validateUpdatePlan, updatePlan);
+router.delete('/:id', ...requireAdmin, deletePlan);
+router.patch('/:id/status', ...requireAdmin, toggleStatus);
+router.patch('/:id/popular', ...requireAdmin, togglePopular);
 
 module.exports = router;

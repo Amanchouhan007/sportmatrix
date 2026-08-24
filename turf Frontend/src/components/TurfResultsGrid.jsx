@@ -43,14 +43,45 @@ export default function TurfResultsGrid({ turfs, searchValues, recentSearches = 
     const [hoveredTurfId, setHoveredTurfId] = useState(null)
     const [isSortOpen, setIsSortOpen] = useState(false)
 
-    const { location, sport } = searchValues || {}
+    const getTurfHourlyPrice = (t) => {
+        if (!t) return 1000;
+        const val = t.pricePerHour ?? t.price ?? t.price_per_hour ?? t.hourlyRate ?? t.hourly_rate ?? t.minPrice ?? t.startPrice;
+        if (val !== undefined && val !== null && val !== '') {
+            const num = Number(val);
+            if (!isNaN(num) && num > 0) return num;
+        }
+        return 1000;
+    };
+
+    const getTurfRating = (t) => {
+        if (!t) return 0;
+        const val = t.rating ?? t.stars ?? t.avgRating;
+        const num = Number(val);
+        return (!isNaN(num) && num > 0) ? num : 4.5;
+    };
+
+    const getTurfDistance = (t) => {
+        if (!t) return 9999;
+        const val = t.distance;
+        const num = Number(val);
+        return (!isNaN(num) && num >= 0) ? num : 9999;
+    };
 
     /* ── Apply quick filter sort ── */
-    let sortedTurfs = [...turfs]
-    if (activeFilter === 'price-low') sortedTurfs.sort((a, b) => a.price - b.price)
-    else if (activeFilter === 'price-high') sortedTurfs.sort((a, b) => b.price - a.price)
-    else if (activeFilter === 'rating') sortedTurfs.sort((a, b) => b.rating - a.rating)
-    else if (activeFilter === 'available') sortedTurfs = sortedTurfs.filter(t => (slotsByTurf[t.id] || []).some(s => s.status === 'available'))
+    const sortedTurfs = useMemo(() => {
+        if (!Array.isArray(turfs)) return [];
+        let list = [...turfs];
+        if (activeFilter === 'price-low') {
+            list.sort((a, b) => getTurfHourlyPrice(a) - getTurfHourlyPrice(b));
+        } else if (activeFilter === 'price-high') {
+            list.sort((a, b) => getTurfHourlyPrice(b) - getTurfHourlyPrice(a));
+        } else if (activeFilter === 'rating') {
+            list.sort((a, b) => getTurfRating(b) - getTurfRating(a));
+        } else if (activeFilter === 'available') {
+            list = list.filter(t => (slotsByTurf[t.id] || []).some(s => s.status === 'available'));
+        }
+        return list;
+    }, [turfs, activeFilter]);
 
     const statusColor = (status) => {
         if (status === 'available') return 'text-emerald-400 border-emerald-500/20 bg-emerald-500/5'

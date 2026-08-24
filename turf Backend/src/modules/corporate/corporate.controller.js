@@ -1,289 +1,145 @@
-const db = require('../../config/db');
+const prisma = require('../../config/prisma');
 
-// 1. Submit a new Corporate Proposal
+const genId = () => `CORP-${Date.now()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
+const VALID_STATUSES = ['NEW', 'CONTACTED', 'PROPOSAL_SENT', 'NEGOTIATING', 'CONFIRMED', 'REJECTED', 'COMPLETED'];
+
 exports.createCorporateProposal = async (req, res) => {
     try {
-        const {
-            companyName,
-            contactPerson,
-            phone,
-            email,
-            eventType = 'Corporate Tournament',
-            city = 'Indore',
-            estimatedPlayers = '10-20 Players',
-            budget = '₹25,000 - ₹50,000',
-            eventDate,
-            notes
-        } = req.body;
+        const { companyName, contactPerson, phone, email, eventType, city, estimatedPlayers, budget, eventDate, timeSlot, notes } = req.body;
 
-        // Validation: Company name and phone are required
         if (!companyName || !companyName.trim()) {
-            return res.status(400).json({
-                success: false,
-                message: 'Company / Organization Name is required.'
-            });
+            return res.status(400).json({ success: false, message: 'Company / Organization Name is required.' });
         }
-
         if (!phone || !phone.trim()) {
-            return res.status(400).json({
-                success: false,
-                message: 'Mobile Number is required.'
-            });
+            return res.status(400).json({ success: false, message: 'Mobile Number is required.' });
         }
 
-        // Generate unique proposal ID
-        const id = `CORP-${Date.now()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
-        const sanitizedEventDate = eventDate ? new Date(eventDate) : null;
-
-        const query = `
-            INSERT INTO corporate_bookings (
-                id, company_name, contact_person, phone, email,
-                event_type, city, estimated_players, budget, event_date,
-                status, notes
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'NEW', ?)
-        `;
-
-        await db.query(query, [
-            id,
-            companyName.trim(),
-            contactPerson ? contactPerson.trim() : null,
-            phone.trim(),
-            email ? email.trim() : null,
-            eventType || 'Corporate Tournament',
-            city || 'Indore',
-            estimatedPlayers || '10-20 Players',
-            budget || '₹25,000 - ₹50,000',
-            sanitizedEventDate,
-            notes ? notes.trim() : null
-        ]);
-
-        return res.status(201).json({
-            success: true,
-            message: 'Corporate proposal request submitted successfully! An Event Manager will reach out shortly.',
+        const proposal = await prisma.corporateBooking.create({
             data: {
-                id,
+                id: genId(),
                 companyName: companyName.trim(),
                 contactPerson: contactPerson ? contactPerson.trim() : null,
                 phone: phone.trim(),
                 email: email ? email.trim() : null,
-                eventType,
-                city,
-                estimatedPlayers,
-                budget,
+                eventType: eventType || undefined,
+                city: city || undefined,
+                estimatedPlayers: estimatedPlayers || undefined,
+                budget: budget || undefined,
+                eventDate: eventDate ? new Date(eventDate) : null,
+                timeSlot: timeSlot || undefined,
                 status: 'NEW',
-                createdAt: new Date().toISOString()
+                notes: notes ? notes.trim() : null
             }
+        });
+
+        return res.status(201).json({
+            success: true,
+            message: 'Corporate proposal request submitted successfully! An Event Manager will reach out shortly.',
+            data: proposal
         });
     } catch (error) {
         console.error('Error creating corporate proposal:', error);
-        return res.status(500).json({
-            success: false,
-            message: 'Failed to submit corporate proposal. Please try again.',
-            error: error.message
-        });
+        return res.status(500).json({ success: false, message: 'Failed to submit corporate proposal. Please try again.', error: error.message });
     }
 };
 
-// 2. Fetch all Corporate Proposals (for Admin / Owner CRM)
 exports.getAllCorporateProposals = async (req, res) => {
     try {
         const { status, city, search } = req.query;
-        let query = `SELECT * FROM corporate_bookings WHERE 1=1`;
-        const params = [];
-
-        if (status && status !== 'ALL') {
-            query += ` AND status = ?`;
-            params.push(status);
-        }
-
-        if (city && city !== 'ALL') {
-            query += ` AND city = ?`;
-            params.push(city);
-        }
-
+        const where = {};
+        if (status && status !== 'ALL') where.status = status;
+        if (city && city !== 'ALL') where.city = city;
         if (search) {
-            query += ` AND (company_name LIKE ? OR contact_person LIKE ? OR phone LIKE ? OR email LIKE ?)`;
-            const term = `%${search}%`;
-            params.push(term, term, term, term);
+            where.OR = [
+                { companyName: { contains: search } },
+                { contactPerson: { contains: search } },
+                { phone: { contains: search } },
+                { email: { contains: search } }
+            ];
         }
 
-        query += ` ORDER BY created_at DESC`;
-
-        const [proposals] = await db.query(query, params);
-
-        return res.status(200).json({
-            success: true,
-            count: proposals.length,
-            data: proposals
-        });
+        const proposals = await prisma.corporateBooking.findMany({ where, orderBy: { createdAt: 'desc' } });
+        return res.status(200).json({ success: true, count: proposals.length, data: proposals });
     } catch (error) {
         console.error('Error fetching corporate proposals:', error);
-        return res.status(500).json({
-            success: false,
-            message: 'Failed to retrieve corporate proposals.',
-            error: error.message
-        });
+        return res.status(500).json({ success: false, message: 'Failed to retrieve corporate proposals.', error: error.message });
     }
 };
 
-// 3. Get single proposal by ID
 exports.getCorporateProposalById = async (req, res) => {
     try {
-        const { id } = req.params;
-        const [rows] = await db.query(`SELECT * FROM corporate_bookings WHERE id = ?`, [id]);
-
-        if (rows.length === 0) {
-            return res.status(404).json({
-                success: false,
-                message: `Corporate proposal with ID "${id}" not found.`
-            });
+        const proposal = await prisma.corporateBooking.findUnique({ where: { id: req.params.id } });
+        if (!proposal) {
+            return res.status(404).json({ success: false, message: `Corporate proposal with ID "${req.params.id}" not found.` });
         }
-
-        return res.status(200).json({
-            success: true,
-            data: rows[0]
-        });
+        return res.status(200).json({ success: true, data: proposal });
     } catch (error) {
         console.error('Error fetching corporate proposal by ID:', error);
-        return res.status(500).json({
-            success: false,
-            message: 'Failed to fetch corporate proposal details.',
-            error: error.message
-        });
+        return res.status(500).json({ success: false, message: 'Failed to fetch corporate proposal details.', error: error.message });
     }
 };
 
-// 4. Update Proposal Status & Notes
 exports.updateProposalStatus = async (req, res) => {
     try {
-        const { id } = req.params;
         const { status, notes } = req.body;
-
-        const validStatuses = ['NEW', 'CONTACTED', 'QUOTATION_SENT', 'CONVERTED', 'REJECTED'];
-        if (status && !validStatuses.includes(status)) {
-            return res.status(400).json({
-                success: false,
-                message: `Invalid status. Allowed values: ${validStatuses.join(', ')}`
-            });
+        if (status && !VALID_STATUSES.includes(status)) {
+            return res.status(400).json({ success: false, message: `Invalid status. Allowed values: ${VALID_STATUSES.join(', ')}` });
         }
 
-        let updateQuery = `UPDATE corporate_bookings SET `;
-        const updates = [];
-        const params = [];
+        const updated = await prisma.corporateBooking.update({
+            where: { id: req.params.id },
+            data: { status: status ?? undefined, notes: notes !== undefined ? notes : undefined }
+        }).catch(() => null);
 
-        if (status) {
-            updates.push(`status = ?`);
-            params.push(status);
+        if (!updated) {
+            return res.status(404).json({ success: false, message: `Corporate proposal with ID "${req.params.id}" not found.` });
         }
 
-        if (notes !== undefined) {
-            updates.push(`notes = ?`);
-            params.push(notes);
-        }
-
-        if (updates.length === 0) {
-            return res.status(400).json({
-                success: false,
-                message: 'No fields provided to update.'
-            });
-        }
-
-        updateQuery += updates.join(', ') + ` WHERE id = ?`;
-        params.push(id);
-
-        const [result] = await db.query(updateQuery, params);
-
-        if (result.affectedRows === 0) {
-            return res.status(404).json({
-                success: false,
-                message: `Corporate proposal with ID "${id}" not found.`
-            });
-        }
-
-        const [updatedRows] = await db.query(`SELECT * FROM corporate_bookings WHERE id = ?`, [id]);
-
-        return res.status(200).json({
-            success: true,
-            message: 'Corporate proposal status updated successfully.',
-            data: updatedRows[0]
-        });
+        return res.status(200).json({ success: true, message: 'Corporate proposal status updated successfully.', data: updated });
     } catch (error) {
         console.error('Error updating corporate proposal status:', error);
-        return res.status(500).json({
-            success: false,
-            message: 'Failed to update proposal status.',
-            error: error.message
-        });
+        return res.status(500).json({ success: false, message: 'Failed to update proposal status.', error: error.message });
     }
 };
 
-// 5. Submit Official Admin Price Quote for Corporate Proposal
+/** Submits an official admin price quote, stored in the real quoteData JSON field (not string-mangled into notes). */
 exports.updateCorporateQuote = async (req, res) => {
     try {
-        const { id } = req.params;
-        const {
-            quotedPrice,
-            discountAmount,
-            gstAmount,
-            finalTotal,
-            depositRequired,
-            addons,
-            adminNotes,
-            status = 'QUOTATION_SENT'
-        } = req.body;
+        const { quotedPrice, discountAmount, gstAmount, finalTotal, depositRequired, addons, adminNotes, status = 'PROPOSAL_SENT' } = req.body;
 
-        const formattedNotes = `Quote: ₹${finalTotal || quotedPrice} (Base: ₹${quotedPrice}, GST: ₹${gstAmount || 0}) | Addons: ${Array.isArray(addons) ? addons.join(', ') : addons || 'None'} | Terms: ${adminNotes || 'N/A'}`;
+        if (!VALID_STATUSES.includes(status)) {
+            return res.status(400).json({ success: false, message: `Invalid status. Allowed values: ${VALID_STATUSES.join(', ')}` });
+        }
 
-        const updateQuery = `UPDATE corporate_bookings SET status = ?, notes = ? WHERE id = ?`;
-        const [result] = await db.query(updateQuery, [status, formattedNotes, id]);
-
-        return res.status(200).json({
-            success: true,
-            message: 'Official corporate quotation dispatched and saved successfully.',
+        const updated = await prisma.corporateBooking.update({
+            where: { id: req.params.id },
             data: {
-                id,
-                quotedPrice: finalTotal || quotedPrice,
-                discountAmount,
-                gstAmount,
-                depositRequired,
-                addons,
                 status,
-                adminNotes
+                quotedPrice: finalTotal || quotedPrice,
+                quoteData: { quotedPrice, discountAmount, gstAmount, finalTotal, depositRequired, addons, adminNotes }
             }
-        });
+        }).catch(() => null);
+
+        if (!updated) {
+            return res.status(404).json({ success: false, message: `Corporate proposal with ID "${req.params.id}" not found.` });
+        }
+
+        return res.status(200).json({ success: true, message: 'Official corporate quotation dispatched and saved successfully.', data: updated });
     } catch (error) {
         console.error('Error updating corporate quote:', error);
-        return res.status(500).json({
-            success: false,
-            message: 'Failed to update corporate quote.',
-            error: error.message
-        });
+        return res.status(500).json({ success: false, message: 'Failed to update corporate quote.', error: error.message });
     }
 };
 
-// 6. Delete Proposal
 exports.deleteCorporateProposal = async (req, res) => {
     try {
-        const { id } = req.params;
-        const [result] = await db.query(`DELETE FROM corporate_bookings WHERE id = ?`, [id]);
-
-        if (result.affectedRows === 0) {
-            return res.status(404).json({
-                success: false,
-                message: `Corporate proposal with ID "${id}" not found.`
-            });
-        }
-
-        return res.status(200).json({
-            success: true,
-            message: 'Corporate proposal deleted successfully.'
-        });
+        await prisma.corporateBooking.delete({ where: { id: req.params.id } });
+        return res.status(200).json({ success: true, message: 'Corporate proposal deleted successfully.' });
     } catch (error) {
+        if (error.code === 'P2025') {
+            return res.status(404).json({ success: false, message: `Corporate proposal with ID "${req.params.id}" not found.` });
+        }
         console.error('Error deleting corporate proposal:', error);
-        return res.status(500).json({
-            success: false,
-            message: 'Failed to delete corporate proposal.',
-            error: error.message
-        });
+        return res.status(500).json({ success: false, message: 'Failed to delete corporate proposal.', error: error.message });
     }
 };

@@ -11,6 +11,8 @@ import { useToast } from '../../components/ui/Toast'
 import { HiPlus, HiSearch, HiTrash, HiCheck, HiX, HiEye, HiPencil, HiCheckCircle } from 'react-icons/hi'
 import { HiTrophy } from 'react-icons/hi2'
 
+import api from '../../services/api'
+
 const initialTournaments = []
 
 export default function TournamentAllPage({ role = 'owner' }) {
@@ -28,11 +30,11 @@ export default function TournamentAllPage({ role = 'owner' }) {
     useEffect(() => {
         const fetchLiveTournaments = async () => {
             try {
-                const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5005/api/v1';
-                const res = await fetch(`${API_URL}/tournaments`);
-                const data = await res.json();
-                if (data.success && Array.isArray(data.data)) {
-                    setTournaments(data.data);
+                const res = await api.get('/tournaments');
+                if (res && res.success && Array.isArray(res.data)) {
+                    setTournaments(res.data);
+                } else if (Array.isArray(res)) {
+                    setTournaments(res);
                 } else {
                     setTournaments([]);
                 }

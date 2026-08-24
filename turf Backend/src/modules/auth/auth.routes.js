@@ -7,9 +7,11 @@ const {
     updateProfile, 
     changePassword,
     getAllUsers,
-    updateUserStatus
+    updateUserStatus,
+    adminResetUserPassword,
+    deleteUserByAdmin
 } = require('./auth.controller');
-const { verifyToken, optionalToken } = require('../../middleware/auth.middleware');
+const { verifyToken, authorizeRoles } = require('../../middleware/auth.middleware');
 
 const router = express.Router();
 
@@ -19,8 +21,10 @@ router.post('/login', login);
 router.post('/logout', logout);
 
 // Super Admin User Management Routes
-router.get('/users', optionalToken, getAllUsers);
-router.patch('/users/:id/status', optionalToken, updateUserStatus);
+router.get('/users', verifyToken, authorizeRoles(['SUPER_ADMIN']), getAllUsers);
+router.patch('/users/:id/status', verifyToken, authorizeRoles(['SUPER_ADMIN']), updateUserStatus);
+router.post('/users/:id/reset-password', verifyToken, authorizeRoles(['SUPER_ADMIN']), adminResetUserPassword);
+router.delete('/users/:id', verifyToken, authorizeRoles(['SUPER_ADMIN']), deleteUserByAdmin);
 
 // Protected Profile Routes
 router.get('/me', verifyToken, getProfile);

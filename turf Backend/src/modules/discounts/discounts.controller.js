@@ -1,472 +1,363 @@
-const db = require('../../config/db');
+const prisma = require('../../config/prisma');
 
-/**
- * Format DB row to JSON object
- */
-const formatDiscountRow = (row) => {
-    if (!row) return null;
-    return {
-        id: row.id,
-        _id: row.id,
-        ownerId: row.owner_id,
-        turfId: row.turf_id,
-        turfName: row.turf_name || 'Champions Turf Arena',
-        ownerName: row.owner_name || 'Rajesh Sharma',
-        title: row.title,
-        description: row.description || '',
-        discountType: row.discount_type,
-        discountValue: Number(row.discount_value),
-        minimumBookingAmount: Number(row.minimum_booking_amount || 0),
-        maximumDiscountAmount: Number(row.maximum_discount_amount || 0),
-        promoCode: row.promo_code || '',
-        banner: row.banner || '',
-        thumbnail: row.thumbnail || '',
-        applicableSports: typeof row.applicable_sports === 'string' ? JSON.parse(row.applicable_sports || '[]') : (row.applicable_sports || []),
-        applicableDays: typeof row.applicable_days === 'string' ? JSON.parse(row.applicable_days || '[]') : (row.applicable_days || []),
-        slotTypes: typeof row.slot_types === 'string' ? JSON.parse(row.slot_types || '[]') : (row.slot_types || []),
-        startDate: row.start_date ? new Date(row.start_date).toISOString().split('T')[0] : '',
-        endDate: row.end_date ? new Date(row.end_date).toISOString().split('T')[0] : '',
-        startTime: row.start_time || '00:00:00',
-        endTime: row.end_time || '23:59:59',
-        usageLimit: Number(row.usage_limit || 100),
-        usedCount: Number(row.used_count || 0),
-        perUserLimit: Number(row.per_user_limit || 1),
-        firstBookingOnly: Boolean(row.first_booking_only),
-        stackable: Boolean(row.stackable),
-        autoApply: Boolean(row.auto_apply),
-        targetRadius: Number(row.target_radius || 5.0),
-        location: row.location || '',
-        targetCities: typeof row.target_cities === 'string' ? JSON.parse(row.target_cities || '[]') : (row.target_cities || []),
-        gender: row.gender || 'All',
-        ageGroup: row.age_group || 'All Ages',
-        customerType: row.customer_type || 'All Users',
-        estimatedAudience: Number(row.estimated_audience || 5000),
-        status: row.status || 'Active',
-        createdBy: row.created_by || 'SYSTEM',
-        createdAt: row.created_at,
-        updatedAt: row.updated_at
-    };
-};
+const genId = () => `disc_${Date.now()}_${Math.floor(Math.random() * 100000)}`;
 
-/**
- * GET /api/v1/discount-offers
- */
+const formatOffer = (d) => ({
+    id: d.id, _id: d.id,
+    ownerId: d.ownerId, turfId: d.branchId, branchId: d.branchId,
+    turfName: d.branch?.branchName || null,
+    ownerName: d.owner?.fullName || null,
+    title: d.title, description: d.description || '',
+    discountType: d.discountType, discountValue: Number(d.discountValue),
+    minimumBookingAmount: Number(d.minimumBookingAmount), maximumDiscountAmount: Number(d.maximumDiscountAmount),
+    promoCode: d.promoCode || '', banner: d.banner || '', thumbnail: d.thumbnail || '',
+    applicableSports: d.applicableSports || [], applicableDays: d.applicableDays || [], slotTypes: d.applicableSlotTypes || [],
+    startDate: d.startDate?.toISOString().split('T')[0] || '', endDate: d.endDate?.toISOString().split('T')[0] || '',
+    startTime: d.startTime, endTime: d.endTime,
+    usageLimit: d.usageLimit, usedCount: d.usedCount, perUserLimit: d.perUserLimit,
+    firstBookingOnly: d.firstBookingOnly, stackable: d.stackable, autoApply: d.autoApply,
+    targetRadius: Number(d.targetRadiusKm), location: d.locationArea || '',
+    gender: d.genderSegment, ageGroup: d.ageGroup, customerType: d.customerType,
+    estimatedAudience: d.estimatedAudience, status: d.status, createdBy: d.createdBy || '',
+    createdAt: d.createdAt, updatedAt: d.updatedAt
+});
+
+const arrify = (v) => Array.isArray(v) ? v : (v ? [v] : []);
+
 const getDiscountOffers = async (req, res) => {
     try {
         const { search, turfId, status, discountType, page = 1, limit = 10 } = req.query;
+        const and = [{ deletedAt: null }];
 
-        let query = `
-            SELECT d.*, b.branch_name as turf_name, o.full_name as owner_name
-            FROM discount_offers d
-            LEFT JOIN branches b ON d.branch_id = b.id
-            LEFT JOIN owners o ON d.owner_id = o.id
-            WHERE d.deleted_at IS NULL
-        `;
-        const params = [];
+        if (turfId && turfId !== 'ALL') and.push({ branchId: turfId });
+        if (status && status !== 'ALL') and.push({ status: status.toUpperCase() });
+        if (discountType && discountType !== 'ALL') and.push({ discountType: discountType.toUpperCase() });
 
-        if (turfId && turfId !== 'ALL') {
-            query += ` AND d.branch_id = ?`;
-            params.push(turfId);
-        }
-
-        if (status && status !== 'ALL') {
-            query += ` AND d.status = ?`;
-            params.push(status);
-        }
-
-        if (discountType && discountType !== 'ALL') {
-            query += ` AND d.discount_type = ?`;
-            params.push(discountType);
-        }
-
-        const ownerFilter = req.query.ownerId || req.query.owner_id || (req.user?.role === 'OWNER' ? req.user.id : null);
-        const emailFilter = req.query.email || req.user?.email;
-
-        if (req.user?.role === 'OWNER' || (ownerFilter && ownerFilter !== 'ALL')) {
-            query += ` AND (
-                d.owner_id = ? 
-                OR d.owner_id IN (SELECT id FROM owners WHERE email = ? OR user_id = ? OR id = ?)
-                OR d.branch_id IN (SELECT id FROM branches WHERE owner_id = ? OR owner_id IN (SELECT id FROM owners WHERE email = ? OR user_id = ? OR id = ?) OR email = ?)
-            )`;
-            params.push(ownerFilter || '', emailFilter || '', ownerFilter || '', ownerFilter || '', ownerFilter || '', emailFilter || '', ownerFilter || '', ownerFilter || '', emailFilter || '');
+        if (req.user?.role === 'OWNER') {
+            const branches = await prisma.branch.findMany({ where: { ownerUserId: req.user.id }, select: { id: true } });
+            and.push({ branchId: { in: branches.map(b => b.id) } });
         }
 
         if (search) {
-            query += ` AND (LOWER(d.title) LIKE ? OR LOWER(d.promo_code) LIKE ? OR LOWER(b.branch_name) LIKE ?)`;
-            const q = `%${search.toLowerCase().trim()}%`;
-            params.push(q, q, q);
+            and.push({ OR: [{ title: { contains: search } }, { promoCode: { contains: search } }] });
         }
 
-        query += ` ORDER BY d.created_at DESC`;
+        const where = { AND: and };
+        const pageNum = parseInt(page, 10) || 1;
+        const limitNum = parseInt(limit, 10) || 10;
 
-        const [rows] = await db.query(query, params);
-
-        const pageNum = parseInt(page, 10);
-        const limitNum = parseInt(limit, 10);
-        const total = rows.length;
-        const startIndex = (pageNum - 1) * limitNum;
-        const paginatedRows = rows.slice(startIndex, startIndex + limitNum);
-        const formattedOffers = paginatedRows.map(formatDiscountRow);
+        const [total, rows] = await Promise.all([
+            prisma.discountOffer.count({ where }),
+            prisma.discountOffer.findMany({
+                where, include: { branch: true, owner: true },
+                orderBy: { createdAt: 'desc' },
+                skip: (pageNum - 1) * limitNum, take: limitNum
+            })
+        ]);
 
         return res.status(200).json({
             success: true,
-            data: {
-                offers: formattedOffers,
-                pagination: {
-                    total,
-                    page: pageNum,
-                    limit: limitNum,
-                    totalPages: Math.ceil(total / limitNum) || 1
-                }
-            }
+            data: { offers: rows.map(formatOffer), pagination: { total, page: pageNum, limit: limitNum, totalPages: Math.ceil(total / limitNum) || 1 } }
         });
     } catch (error) {
         console.error('Error fetching discount offers:', error);
-        return res.status(500).json({
-            success: false,
-            message: 'Failed to fetch discount offers',
-            error: error.message
-        });
+        return res.status(500).json({ success: false, message: 'Failed to fetch discount offers', error: error.message });
     }
 };
 
-/**
- * GET /api/v1/discount-offers/:id
- */
 const getDiscountOfferById = async (req, res) => {
     try {
-        const { id } = req.params;
-        const [rows] = await db.query(`
-            SELECT d.*, b.branch_name as turf_name, o.full_name as owner_name
-            FROM discount_offers d
-            LEFT JOIN branches b ON d.branch_id = b.id
-            LEFT JOIN owners o ON d.owner_id = o.id
-            WHERE d.id = ? AND d.deleted_at IS NULL
-        `, [id]);
-
-        if (rows.length === 0) {
-            return res.status(404).json({
-                success: false,
-                message: 'Discount offer not found'
-            });
+        const offer = await prisma.discountOffer.findFirst({ where: { id: req.params.id, deletedAt: null }, include: { branch: true, owner: true } });
+        if (!offer) {
+            return res.status(404).json({ success: false, message: 'Discount offer not found' });
         }
-
-        return res.status(200).json({
-            success: true,
-            data: formatDiscountRow(rows[0])
-        });
+        return res.status(200).json({ success: true, data: formatOffer(offer) });
     } catch (error) {
         console.error('Error fetching discount offer by id:', error);
-        return res.status(500).json({
-            success: false,
-            message: 'Failed to fetch discount offer details',
-            error: error.message
-        });
+        return res.status(500).json({ success: false, message: 'Failed to fetch discount offer details', error: error.message });
     }
 };
 
-/**
- * POST /api/v1/discount-offers
- */
+const assertBranchAccess = async (branchId, user) => {
+    if (user.role === 'SUPER_ADMIN') return true;
+    const branch = await prisma.branch.findUnique({ where: { id: branchId } });
+    return !!branch && branch.ownerUserId === user.id;
+};
+
 const createDiscountOffer = async (req, res) => {
     try {
         const {
-            ownerId,
-            turfId,
-            title,
-            description,
-            discountType,
-            discountValue,
-            minimumBookingAmount,
-            maximumDiscountAmount,
-            promoCode,
-            applicableSports,
-            applicableDays,
-            slotTypes,
-            startDate,
-            endDate,
-            startTime = '00:00:00',
-            endTime = '23:59:59',
-            usageLimit = 100,
-            perUserLimit = 1,
-            firstBookingOnly = false,
-            stackable = false,
-            autoApply = false,
-            targetRadius = 5.0,
-            location,
-            targetCities,
-            gender = 'All',
-            ageGroup = 'All Ages',
-            customerType = 'All Users',
-            estimatedAudience = 5000,
-            status = 'Active'
+            turfId, branchId, title, description, discountType, discountValue,
+            minimumBookingAmount, maximumDiscountAmount, promoCode,
+            applicableSports, applicableDays, slotTypes, startDate, endDate,
+            startTime = '00:00:00', endTime = '23:59:59', usageLimit = 200,
+            perUserLimit = 1, firstBookingOnly = false, stackable = false, autoApply = false,
+            targetRadius = 5.0, location, gender = 'All Genders', ageGroup = 'All Ages',
+            customerType = 'All Users', estimatedAudience = 12500, status = 'ACTIVE'
         } = req.body;
 
-        // Process Promo Code uniqueness
+        const resolvedBranchId = branchId || turfId;
+        if (!resolvedBranchId || !title || !discountType || discountValue === undefined || !startDate || !endDate) {
+            return res.status(400).json({ success: false, message: 'branchId, title, discountType, discountValue, startDate, and endDate are required.' });
+        }
+        if (!(await assertBranchAccess(resolvedBranchId, req.user))) {
+            return res.status(403).json({ success: false, message: 'Forbidden: you do not manage this branch.' });
+        }
+
         const code = promoCode ? promoCode.trim().toUpperCase() : null;
         if (code) {
-            const [existing] = await db.query('SELECT id FROM discount_offers WHERE promo_code = ? AND deleted_at IS NULL', [code]);
-            if (existing.length > 0) {
-                return res.status(409).json({
-                    success: false,
-                    message: `Promo Code "${code}" is already in use. Please enter a unique code.`
-                });
+            const existing = await prisma.discountOffer.findFirst({ where: { promoCode: code, deletedAt: null } });
+            if (existing) {
+                return res.status(409).json({ success: false, message: `Promo Code "${code}" is already in use. Please enter a unique code.` });
             }
         }
 
-        // Process File Uploads
-        let banner = '';
-        let thumbnail = '';
-        if (req.files) {
-            if (req.files.banner && req.files.banner[0]) {
-                banner = `/uploads/${req.files.banner[0].filename}`;
-            }
-            if (req.files.thumbnail && req.files.thumbnail[0]) {
-                thumbnail = `/uploads/${req.files.thumbnail[0].filename}`;
-            }
-        }
-        banner = banner || req.body.banner || '';
-        thumbnail = thumbnail || req.body.thumbnail || '';
+        let banner = req.body.banner || '';
+        let thumbnail = req.body.thumbnail || '';
+        if (req.files?.banner?.[0]) banner = `/uploads/${req.files.banner[0].filename}`;
+        if (req.files?.thumbnail?.[0]) thumbnail = `/uploads/${req.files.thumbnail[0].filename}`;
 
-        const discountId = `disc_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
+        const branch = await prisma.branch.findUnique({ where: { id: resolvedBranchId } });
 
-        const sportsJson = JSON.stringify(Array.isArray(applicableSports) ? applicableSports : (applicableSports ? [applicableSports] : []));
-        const daysJson = JSON.stringify(Array.isArray(applicableDays) ? applicableDays : (applicableDays ? [applicableDays] : []));
-        const slotsJson = JSON.stringify(Array.isArray(slotTypes) ? slotTypes : (slotTypes ? [slotTypes] : []));
-        const citiesJson = JSON.stringify(Array.isArray(targetCities) ? targetCities : (targetCities ? [targetCities] : []));
-
-        const insertQuery = `
-            INSERT INTO discount_offers (
-                id, owner_id, turf_id, title, description, discount_type, discount_value,
-                minimum_booking_amount, maximum_discount_amount, promo_code, banner, thumbnail,
-                applicable_sports, applicable_days, slot_types, start_date, end_date, start_time, end_time,
-                usage_limit, used_count, per_user_limit, first_booking_only, stackable, auto_apply,
-                target_radius, location, target_cities, gender, age_group, customer_type,
-                estimated_audience, status, created_by
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        `;
-
-        await db.query(insertQuery, [
-            discountId,
-            ownerId || null,
-            turfId,
-            title.trim(),
-            description || '',
-            discountType,
-            discountValue,
-            minimumBookingAmount || 0,
-            maximumDiscountAmount || 0,
-            code,
-            banner,
-            thumbnail,
-            sportsJson,
-            daysJson,
-            slotsJson,
-            startDate,
-            endDate,
-            startTime,
-            endTime,
-            usageLimit || 100,
-            perUserLimit || 1,
-            firstBookingOnly ? 1 : 0,
-            stackable ? 1 : 0,
-            autoApply ? 1 : 0,
-            targetRadius || 5.0,
-            location || '',
-            citiesJson,
-            gender || 'All',
-            ageGroup || 'All Ages',
-            customerType || 'All Users',
-            estimatedAudience || 5000,
-            status || 'Active',
-            req.user?.id || 'SYSTEM'
-        ]);
-
-        const [created] = await db.query(`
-            SELECT d.*, b.branch_name as turf_name, o.full_name as owner_name
-            FROM discount_offers d
-            LEFT JOIN branches b ON d.branch_id = b.id
-            LEFT JOIN owners o ON d.owner_id = o.id
-            WHERE d.id = ?
-        `, [discountId]);
-
-        return res.status(201).json({
-            success: true,
-            message: 'Discount offer created successfully',
-            data: formatDiscountRow(created[0])
+        const offer = await prisma.discountOffer.create({
+            data: {
+                id: genId(),
+                branchId: resolvedBranchId,
+                ownerId: branch.ownerId,
+                title: title.trim(), description: description || null,
+                discountType: discountType.toUpperCase(), discountValue,
+                minimumBookingAmount: minimumBookingAmount || 0, maximumDiscountAmount: maximumDiscountAmount || 0,
+                promoCode: code, banner, thumbnail,
+                applicableSports: arrify(applicableSports), applicableDays: arrify(applicableDays), applicableSlotTypes: arrify(slotTypes),
+                startDate: new Date(startDate), endDate: new Date(endDate), startTime, endTime,
+                usageLimit, perUserLimit, firstBookingOnly: !!firstBookingOnly, stackable: !!stackable, autoApply: !!autoApply,
+                targetRadiusKm: targetRadius, locationArea: location || null,
+                genderSegment: gender, ageGroup, customerType, estimatedAudience,
+                status: status.toUpperCase(), createdBy: req.user?.id || 'SYSTEM'
+            },
+            include: { branch: true, owner: true }
         });
 
+        return res.status(201).json({ success: true, message: 'Discount offer created successfully', data: formatOffer(offer) });
     } catch (error) {
         console.error('Error creating discount offer:', error);
-        return res.status(500).json({
-            success: false,
-            message: 'Failed to create discount offer',
-            error: error.message
-        });
+        return res.status(500).json({ success: false, message: 'Failed to create discount offer', error: error.message });
     }
 };
 
-/**
- * PUT /api/v1/discount-offers/:id
- */
 const updateDiscountOffer = async (req, res) => {
     try {
-        const { id } = req.params;
-        const [existing] = await db.query('SELECT id FROM discount_offers WHERE id = ? AND deleted_at IS NULL', [id]);
-        if (existing.length === 0) {
+        const existing = await prisma.discountOffer.findFirst({ where: { id: req.params.id, deletedAt: null } });
+        if (!existing) {
             return res.status(404).json({ success: false, message: 'Discount offer not found' });
         }
-
-        const updateData = req.body;
-        const updates = [];
-        const params = [];
-
-        if (updateData.title) { updates.push('title = ?'); params.push(updateData.title.trim()); }
-        if (updateData.description !== undefined) { updates.push('description = ?'); params.push(updateData.description); }
-        if (updateData.discountType) { updates.push('discount_type = ?'); params.push(updateData.discountType); }
-        if (updateData.discountValue !== undefined) { updates.push('discount_value = ?'); params.push(updateData.discountValue); }
-        if (updateData.minimumBookingAmount !== undefined) { updates.push('minimum_booking_amount = ?'); params.push(updateData.minimumBookingAmount); }
-        if (updateData.maximumDiscountAmount !== undefined) { updates.push('maximum_discount_amount = ?'); params.push(updateData.maximumDiscountAmount); }
-        if (updateData.promoCode !== undefined) { updates.push('promo_code = ?'); params.push(updateData.promoCode.trim().toUpperCase()); }
-        if (updateData.startDate) { updates.push('start_date = ?'); params.push(updateData.startDate); }
-        if (updateData.endDate) { updates.push('end_date = ?'); params.push(updateData.endDate); }
-        if (updateData.usageLimit !== undefined) { updates.push('usage_limit = ?'); params.push(updateData.usageLimit); }
-        if (updateData.status) { updates.push('status = ?'); params.push(updateData.status); }
-
-        if (updates.length > 0) {
-            params.push(id);
-            await db.query(`UPDATE discount_offers SET ${updates.join(', ')} WHERE id = ?`, params);
+        if (!(await assertBranchAccess(existing.branchId, req.user))) {
+            return res.status(403).json({ success: false, message: 'Forbidden: you do not manage this branch.' });
         }
 
-        const [updated] = await db.query(`
-            SELECT d.*, b.branch_name as turf_name, o.full_name as owner_name
-            FROM discount_offers d
-            LEFT JOIN branches b ON d.branch_id = b.id
-            LEFT JOIN owners o ON d.owner_id = o.id
-            WHERE d.id = ?
-        `, [id]);
-
-        return res.status(200).json({
-            success: true,
-            message: 'Discount offer updated successfully',
-            data: formatDiscountRow(updated[0])
+        const u = req.body;
+        const updated = await prisma.discountOffer.update({
+            where: { id: req.params.id },
+            data: {
+                title: u.title?.trim() ?? undefined,
+                description: u.description ?? undefined,
+                discountType: u.discountType ? u.discountType.toUpperCase() : undefined,
+                discountValue: u.discountValue ?? undefined,
+                minimumBookingAmount: u.minimumBookingAmount ?? undefined,
+                maximumDiscountAmount: u.maximumDiscountAmount ?? undefined,
+                promoCode: u.promoCode ? u.promoCode.trim().toUpperCase() : undefined,
+                startDate: u.startDate ? new Date(u.startDate) : undefined,
+                endDate: u.endDate ? new Date(u.endDate) : undefined,
+                usageLimit: u.usageLimit ?? undefined,
+                status: u.status ? u.status.toUpperCase() : undefined
+            },
+            include: { branch: true, owner: true }
         });
+
+        return res.status(200).json({ success: true, message: 'Discount offer updated successfully', data: formatOffer(updated) });
     } catch (error) {
         console.error('Error updating discount offer:', error);
-        return res.status(500).json({
-            success: false,
-            message: 'Failed to update discount offer',
-            error: error.message
-        });
+        return res.status(500).json({ success: false, message: 'Failed to update discount offer', error: error.message });
     }
 };
 
-/**
- * DELETE /api/v1/discount-offers/:id
- */
 const deleteDiscountOffer = async (req, res) => {
     try {
-        const { id } = req.params;
-        await db.query('UPDATE discount_offers SET deleted_at = CURRENT_TIMESTAMP WHERE id = ?', [id]);
-        return res.status(200).json({
-            success: true,
-            message: 'Discount offer deleted successfully'
-        });
+        const existing = await prisma.discountOffer.findUnique({ where: { id: req.params.id } });
+        if (!existing) {
+            return res.status(404).json({ success: false, message: 'Discount offer not found' });
+        }
+        if (!(await assertBranchAccess(existing.branchId, req.user))) {
+            return res.status(403).json({ success: false, message: 'Forbidden: you do not manage this branch.' });
+        }
+        await prisma.discountOffer.update({ where: { id: req.params.id }, data: { deletedAt: new Date() } });
+        return res.status(200).json({ success: true, message: 'Discount offer deleted successfully' });
     } catch (error) {
         console.error('Error deleting discount offer:', error);
-        return res.status(500).json({
-            success: false,
-            message: 'Failed to delete discount offer',
-            error: error.message
-        });
+        return res.status(500).json({ success: false, message: 'Failed to delete discount offer', error: error.message });
     }
 };
 
-/**
- * PATCH /api/v1/discount-offers/:id/status
- */
 const changeDiscountStatus = async (req, res) => {
     try {
-        const { id } = req.params;
         const { status } = req.body;
         if (!status) {
             return res.status(400).json({ success: false, message: 'Status is required' });
         }
-
-        await db.query('UPDATE discount_offers SET status = ? WHERE id = ?', [status, id]);
-        return res.status(200).json({
-            success: true,
-            message: `Discount offer status changed to ${status}`
-        });
+        const existing = await prisma.discountOffer.findUnique({ where: { id: req.params.id } });
+        if (!existing) {
+            return res.status(404).json({ success: false, message: 'Discount offer not found' });
+        }
+        if (!(await assertBranchAccess(existing.branchId, req.user))) {
+            return res.status(403).json({ success: false, message: 'Forbidden: you do not manage this branch.' });
+        }
+        await prisma.discountOffer.update({ where: { id: req.params.id }, data: { status: status.toUpperCase() } });
+        return res.status(200).json({ success: true, message: `Discount offer status changed to ${status}` });
     } catch (error) {
         console.error('Error changing discount offer status:', error);
-        return res.status(500).json({
-            success: false,
-            message: 'Failed to update status',
-            error: error.message
-        });
+        return res.status(500).json({ success: false, message: 'Failed to update status', error: error.message });
     }
 };
 
-/**
- * POST /api/v1/discount-offers/:id/duplicate
- */
 const duplicateDiscountOffer = async (req, res) => {
     try {
-        const { id } = req.params;
-        const [rows] = await db.query('SELECT * FROM discount_offers WHERE id = ? AND deleted_at IS NULL', [id]);
-        if (rows.length === 0) {
+        const original = await prisma.discountOffer.findFirst({ where: { id: req.params.id, deletedAt: null } });
+        if (!original) {
             return res.status(404).json({ success: false, message: 'Original discount offer not found' });
         }
+        if (!(await assertBranchAccess(original.branchId, req.user))) {
+            return res.status(403).json({ success: false, message: 'Forbidden: you do not manage this branch.' });
+        }
 
-        const original = rows[0];
-        const newId = `disc_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
-        const newTitle = `${original.title} (Copy)`;
-        const newPromoCode = original.promo_code ? `${original.promo_code}_COPY_${Math.floor(Math.random() * 100)}` : null;
-
-        const insertQuery = `
-            INSERT INTO discount_offers (
-                id, owner_id, turf_id, title, description, discount_type, discount_value,
-                minimum_booking_amount, maximum_discount_amount, promo_code, banner, thumbnail,
-                applicable_sports, applicable_days, slot_types, start_date, end_date, start_time, end_time,
-                usage_limit, used_count, per_user_limit, first_booking_only, stackable, auto_apply,
-                target_radius, location, target_cities, gender, age_group, customer_type,
-                estimated_audience, status, created_by
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Draft', ?)
-        `;
-
-        await db.query(insertQuery, [
-            newId, original.owner_id, original.turf_id, newTitle, original.description,
-            original.discount_type, original.discount_value, original.minimum_booking_amount,
-            original.maximum_discount_amount, newPromoCode, original.banner, original.thumbnail,
-            original.applicable_sports, original.applicable_days, original.slot_types,
-            original.start_date, original.end_date, original.start_time, original.end_time,
-            original.usage_limit, original.per_user_limit, original.first_booking_only,
-            original.stackable, original.auto_apply, original.target_radius, original.location,
-            original.target_cities, original.gender, original.age_group, original.customer_type,
-            original.estimated_audience, req.user?.id || 'SYSTEM'
-        ]);
-
-        const [duplicated] = await db.query(`
-            SELECT d.*, b.branch_name as turf_name, o.full_name as owner_name
-            FROM discount_offers d
-            LEFT JOIN branches b ON d.branch_id = b.id
-            LEFT JOIN owners o ON d.owner_id = o.id
-            WHERE d.id = ?
-        `, [newId]);
-
-        return res.status(201).json({
-            success: true,
-            message: 'Discount offer duplicated successfully',
-            data: formatDiscountRow(duplicated[0])
+        const { id, createdAt, updatedAt, deletedAt, ...rest } = original;
+        const duplicated = await prisma.discountOffer.create({
+            data: {
+                ...rest,
+                id: genId(),
+                title: `${original.title} (Copy)`,
+                promoCode: original.promoCode ? `${original.promoCode}_COPY_${Math.floor(Math.random() * 100)}` : null,
+                usedCount: 0,
+                status: 'DRAFT',
+                createdBy: req.user?.id || 'SYSTEM'
+            },
+            include: { branch: true, owner: true }
         });
+
+        return res.status(201).json({ success: true, message: 'Discount offer duplicated successfully', data: formatOffer(duplicated) });
     } catch (error) {
         console.error('Error duplicating discount offer:', error);
-        return res.status(500).json({
-            success: false,
-            message: 'Failed to duplicate discount offer',
-            error: error.message
+        return res.status(500).json({ success: false, message: 'Failed to duplicate discount offer', error: error.message });
+    }
+};
+
+const validatePromoCode = async (req, res) => {
+    try {
+        const { promoCode, branchId, amount = 0 } = req.body;
+        if (!promoCode || !branchId) {
+            return res.status(400).json({ success: false, message: 'promoCode and branchId are required' });
+        }
+
+        const code = String(promoCode).trim().toUpperCase();
+        const grossAmount = Number(amount) || 0;
+
+        // Real Database Check: Has this user booked any previous matches on the platform?
+        let isFirstMatch = true;
+        let previousCount = 0;
+        if (req.user && req.user.id) {
+            previousCount = await prisma.match.count({
+                where: {
+                    captainAId: req.user.id,
+                    matchStatus: { in: ['CONFIRMED', 'COMPLETED', 'SLOT_HELD'] }
+                }
+            });
+            if (previousCount > 0) {
+                isFirstMatch = false;
+            }
+        }
+
+        // 1. Check in MySQL discount_offer table
+        const offer = await prisma.discountOffer.findFirst({
+            where: {
+                promoCode: code,
+                branchId,
+                status: 'ACTIVE',
+                deletedAt: null
+            }
         });
+
+        if (offer) {
+            if (offer.firstBookingOnly && !isFirstMatch) {
+                return res.status(400).json({
+                    success: false,
+                    message: `Promo code "${code}" is valid for FIRST MATCH only. You have already completed ${previousCount} match booking(s).`
+                });
+            }
+
+            const val = Number(offer.discountValue);
+            let discountAmount = 0;
+            if (offer.discountType === 'PERCENTAGE') {
+                discountAmount = Math.round((grossAmount * val) / 100);
+                if (offer.maximumDiscountAmount && Number(offer.maximumDiscountAmount) > 0) {
+                    discountAmount = Math.min(discountAmount, Number(offer.maximumDiscountAmount));
+                }
+            } else {
+                discountAmount = Math.min(val, grossAmount);
+            }
+            const netAmount = Math.max(0, grossAmount - discountAmount);
+
+            return res.status(200).json({
+                success: true,
+                message: `Promo code "${code}" applied successfully!`,
+                data: {
+                    promoCode: code,
+                    title: offer.title,
+                    discountType: offer.discountType,
+                    discountValue: val,
+                    discountAmount,
+                    netAmount,
+                    isFirstMatch
+                }
+            });
+        }
+
+        // 2. Check branch default couponCode (e.g. CRICKET20 / 20% OFF FIRST MATCH)
+        const branch = await prisma.branch.findUnique({ where: { id: branchId } });
+        const branchCoupon = (branch?.couponCode || 'CRICKET20').trim().toUpperCase();
+
+        if (code === branchCoupon || code === 'CRICKET20') {
+            if (!isFirstMatch) {
+                return res.status(400).json({
+                    success: false,
+                    message: `Promo code "${code}" (20% OFF FIRST MATCH) is valid for FIRST MATCH only. You have already completed ${previousCount} match booking(s).`
+                });
+            }
+
+            const discountPercent = 20;
+            const discountAmount = Math.round((grossAmount * discountPercent) / 100);
+            const netAmount = Math.max(0, grossAmount - discountAmount);
+
+            return res.status(200).json({
+                success: true,
+                message: `Promo code "${code}" applied successfully! (20% OFF FIRST MATCH)`,
+                data: {
+                    promoCode: code,
+                    title: branch?.discountOffer || '20% OFF FIRST MATCH',
+                    discountType: 'PERCENTAGE',
+                    discountValue: 20,
+                    discountAmount,
+                    netAmount,
+                    isFirstMatch: true
+                }
+            });
+        }
+
+        return res.status(400).json({
+            success: false,
+            message: `Invalid or expired promo code "${code}" for this turf.`
+        });
+    } catch (error) {
+        console.error('Error validating promo code:', error);
+        return res.status(500).json({ success: false, message: 'Failed to validate promo code', error: error.message });
     }
 };
 
@@ -477,5 +368,6 @@ module.exports = {
     updateDiscountOffer,
     deleteDiscountOffer,
     changeDiscountStatus,
-    duplicateDiscountOffer
+    duplicateDiscountOffer,
+    validatePromoCode
 };

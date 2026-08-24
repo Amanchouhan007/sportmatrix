@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import Badge from '../../components/ui/Badge'
 import Button from '../../components/ui/Button'
 import Modal from '../../components/ui/Modal'
@@ -7,18 +7,17 @@ import Select from '../../components/ui/Select'
 import { useToast } from '../../components/ui/Toast'
 import { HiOutlineClock, HiPlus, HiPencil, HiTrash, HiCheckCircle, HiBan, HiUsers } from 'react-icons/hi'
 import ConfirmDialog from '../../components/ui/ConfirmDialog'
+import { getStaff, createStaff, updateStaff, deleteStaff } from '../../services/staffService'
+import { getBranches } from '../../services/branchService'
 
-const initialStaff = [
-    { id: 1, name: 'Ravi Kumar',   email: 'ravi@email.com',   role: 'Manager',    phone: '+91 98765 43210', shift: 'Morning',  status: 'Active'   },
-    { id: 2, name: 'Suresh Patil', email: 'suresh@email.com', role: 'Technician', phone: '+91 98765 43211', shift: 'Full Day', status: 'Active'   },
-    { id: 3, name: 'Anita Desai',  email: 'anita@email.com',  role: 'Cashier',    phone: '+91 98765 43212', shift: 'Evening',  status: 'Active'   },
-    { id: 4, name: 'Deepak Joshi', email: 'deepak@email.com', role: 'Manager',    phone: '+91 98765 43213', shift: 'Night',    status: 'Inactive' },
-]
+const ROLE_TO_BACKEND = { Staff: 'GROUND_STAFF', Umpire: 'UMPIRE' }
+const ROLE_FROM_BACKEND = { BRANCH_MANAGER: 'Staff', CASHIER: 'Staff', TECHNICIAN: 'Staff', GROUND_STAFF: 'Staff', UMPIRE: 'Umpire' }
+const SHIFT_TO_BACKEND = { Morning: 'MORNING_SHIFT', Evening: 'EVENING_SHIFT', Night: 'NIGHT_SHIFT', 'Full Day': 'FULL_DAY_SHIFT' }
+const SHIFT_FROM_BACKEND = { MORNING_SHIFT: 'Morning', EVENING_SHIFT: 'Evening', NIGHT_SHIFT: 'Night', FULL_DAY_SHIFT: 'Full Day' }
 
 const ROLE_STYLES = {
-    Manager:    { bg: 'bg-emerald-50', text: 'text-emerald-700', border: 'border-emerald-200' },
-    Technician: { bg: 'bg-amber-50',   text: 'text-amber-700',   border: 'border-amber-200'   },
-    Cashier:    { bg: 'bg-sky-50',     text: 'text-sky-700',     border: 'border-sky-200'     },
+    Staff:  { bg: 'bg-emerald-50', text: 'text-emerald-700', border: 'border-emerald-200' },
+    Umpire: { bg: 'bg-amber-50',   text: 'text-amber-800',   border: 'border-amber-300'   },
 }
 
 const SHIFT_COLORS = {
@@ -36,54 +35,125 @@ const AVATAR_COLORS = [
 ]
 
 function getInitials(name) {
-    return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
+    return (name || '?').split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
 }
+
+const EMPTY_FORM = { name: '', email: '', phone: '', role: 'Staff', shift: 'Morning', password: '', dutyFee: 300 }
 
 export default function StaffManagement() {
     const { addToast } = useToast()
-    const [staff, setStaff] = useState(initialStaff)
+    const [staff, setStaff] = useState([])
+    const [isLoading, setIsLoading] = useState(true)
+    const [myBranchId, setMyBranchId] = useState(null)
     const [modal, setModal] = useState(false)
     const [editMode, setEditMode] = useState(false)
+    const [isSaving, setIsSaving] = useState(false)
     const [deleteConfirm, setDeleteConfirm] = useState({ open: false, id: null, name: '' })
 
-    const [currentStaff, setCurrentStaff] = useState({
-        name: '', email: '', phone: '', role: 'Manager', shift: 'Morning', status: 'Active'
-    })
+    const [currentStaff, setCurrentStaff] = useState(EMPTY_FORM)
 
-    const handleSaveStaff = () => {
-        if (!currentStaff.name || !currentStaff.email || !currentStaff.phone) return
-        if (editMode) {
-            setStaff(staff.map(s => s.id === currentStaff.id ? { ...currentStaff } : s))
-        } else {
-            setStaff([...staff, { ...currentStaff, id: Date.now() }])
+    const fetchStaff = useCallback(async () => {
+        setIsLoading(true)
+        try {
+            const res = await getStaff()
+            setStaff((res.data || []).map(s => ({
+                id: s.id,
+                name: s.fullName,
+                email: s.email,
+                phone: s.phone,
+                role: ROLE_FROM_BACKEND[s.role] || s.role,
+                shift: SHIFT_FROM_BACKEND[s.shiftSlot] || s.shiftSlot,
+                status: s.status,
+                hasLogin: s.hasLogin,
+                dutyFee: s.dutyFee || 300
+            })))
+        } catch (err) {
+            addToast({ title: 'Load Failed', message: err.message || 'Failed to load staff roster.', type: 'error' })
+        } finally {
+            setIsLoading(false)
         }
-        setModal(false)
-        setEditMode(false)
-        setCurrentStaff({ name: '', email: '', phone: '', role: 'Manager', shift: 'Morning', status: 'Active' })
-        addToast({ title: 'Staff Saved', message: 'Roster details successfully updated', type: 'success' })
+    }, [addToast])
+
+    useEffect(() => { fetchStaff() }, [fetchStaff])
+
+    useEffect(() => {
+        getBranches().then(res => {
+            const branch = (res?.data || res || [])[0]
+            if (branch) setMyBranchId(branch.id)
+        }).catch(() => {})
+    }, [])
+
+    const handleSaveStaff = async () => {
+        if (!currentStaff.name || !currentStaff.email || !currentStaff.phone) {
+            addToast({ title: 'Validation Error', message: 'Name, email, and phone are required.', type: 'error' })
+            return
+        }
+
+        setIsSaving(true)
+        try {
+            if (editMode) {
+                await updateStaff(currentStaff.id, {
+                    name: currentStaff.name, email: currentStaff.email, phone: currentStaff.phone,
+                    role: ROLE_TO_BACKEND[currentStaff.role], shift: SHIFT_TO_BACKEND[currentStaff.shift],
+                    dutyFee: currentStaff.dutyFee || 300,
+                    password: currentStaff.password ? currentStaff.password.trim() : undefined
+                })
+                addToast({ title: 'Staff Updated', message: 'Roster details and password successfully updated.', type: 'success' })
+            } else {
+                if (!myBranchId) {
+                    addToast({ title: 'No Branch Found', message: 'No branch is linked to this account yet.', type: 'error' })
+                    return
+                }
+                const res = await createStaff({
+                    branchId: myBranchId, name: currentStaff.name, email: currentStaff.email, phone: currentStaff.phone,
+                    role: ROLE_TO_BACKEND[currentStaff.role], shift: SHIFT_TO_BACKEND[currentStaff.shift],
+                    password: currentStaff.password || undefined,
+                    dutyFee: currentStaff.dutyFee || 300
+                })
+                addToast({
+                    title: 'Staff Account Created',
+                    message: `${currentStaff.name} can now log in. Temporary password: ${res.data.temporaryPassword}`,
+                    type: 'success'
+                })
+            }
+            setModal(false)
+            setEditMode(false)
+            setCurrentStaff(EMPTY_FORM)
+            fetchStaff()
+        } catch (err) {
+            addToast({ title: 'Save Failed', message: err.message || 'Could not save this staff member.', type: 'error' })
+        } finally {
+            setIsSaving(false)
+        }
     }
 
-    const handleToggleStatus = (id) => {
-        setStaff(staff.map(s => {
-            if (s.id === id) {
-                const finalStatus = s.status === 'Active' ? 'Inactive' : 'Active'
-                return { ...s, status: finalStatus }
-            }
-            return s
-        }))
-        addToast({ title: 'Status Toggle', message: 'Employee availability toggled', type: 'info' })
+    const handleToggleStatus = async (member) => {
+        const nextStatus = member.status === 'Active' ? 'Inactive' : 'Active'
+        try {
+            await updateStaff(member.id, { status: nextStatus })
+            addToast({ title: 'Status Updated', message: `${member.name} is now ${nextStatus}. Their login access ${nextStatus === 'Active' ? 'is restored' : 'has been suspended'}.`, type: 'info' })
+            fetchStaff()
+        } catch (err) {
+            addToast({ title: 'Update Failed', message: err.message || 'Could not update status.', type: 'error' })
+        }
     }
 
     const handleEdit = (employee) => {
-        setCurrentStaff(employee)
+        setCurrentStaff({ ...employee, password: '' })
         setEditMode(true)
         setModal(true)
     }
 
-    const handleRemove = () => {
-        setStaff(staff.filter(s => s.id !== deleteConfirm.id))
-        setDeleteConfirm({ open: false, id: null, name: '' })
-        addToast({ title: 'Staff Deleted', message: 'Employee details deleted from database records', type: 'info' })
+    const handleRemove = async () => {
+        try {
+            await deleteStaff(deleteConfirm.id)
+            addToast({ title: 'Staff Removed', message: 'Employee removed and login access suspended.', type: 'info' })
+            fetchStaff()
+        } catch (err) {
+            addToast({ title: 'Removal Failed', message: err.message || 'Could not remove this staff member.', type: 'error' })
+        } finally {
+            setDeleteConfirm({ open: false, id: null, name: '' })
+        }
     }
 
     return (
@@ -100,7 +170,7 @@ export default function StaffManagement() {
                     </p>
                 </div>
                 <button
-                    onClick={() => { setEditMode(false); setModal(true) }}
+                    onClick={() => { setEditMode(false); setCurrentStaff(EMPTY_FORM); setModal(true) }}
                     className="inline-flex items-center gap-2 px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white text-sm font-bold rounded-2xl shadow-md shadow-emerald-600/20 transition-all cursor-pointer whitespace-nowrap"
                 >
                     <HiPlus className="w-4 h-4" />
@@ -133,7 +203,9 @@ export default function StaffManagement() {
                     ))}
                 </div>
 
-                {/* Rows */}
+                {isLoading ? (
+                    <div className="py-16 text-center text-slate-400 text-sm font-semibold">Loading staff roster...</div>
+                ) : (
                 <div className="divide-y divide-surface-100">
                     {staff.map((member, idx) => {
                         const role  = ROLE_STYLES[member.role]  || ROLE_STYLES.Manager
@@ -190,7 +262,7 @@ export default function StaffManagement() {
                                             <HiPencil className="w-3.5 h-3.5" /> Edit
                                         </button>
                                         <button
-                                            onClick={() => handleToggleStatus(member.id)}
+                                            onClick={() => handleToggleStatus(member)}
                                             title={member.status === 'Active' ? 'Deactivate' : 'Activate'}
                                             className={`p-1.5 rounded-xl border transition-colors cursor-pointer ${
                                                 member.status === 'Active'
@@ -253,7 +325,7 @@ export default function StaffManagement() {
                                             <HiPencil className="w-3.5 h-3.5" /> Edit
                                         </button>
                                         <button
-                                            onClick={() => handleToggleStatus(member.id)}
+                                            onClick={() => handleToggleStatus(member)}
                                             className={`flex-1 inline-flex items-center justify-center gap-1 py-2 text-xs font-bold rounded-xl border transition-colors cursor-pointer ${
                                                 member.status === 'Active'
                                                     ? 'border-red-200 bg-red-50 text-red-600 hover:bg-red-100'
@@ -278,9 +350,10 @@ export default function StaffManagement() {
                         )
                     })}
                 </div>
+                )}
 
                 {/* Empty State */}
-                {staff.length === 0 && (
+                {!isLoading && staff.length === 0 && (
                     <div className="flex flex-col items-center justify-center gap-3 py-16 text-center">
                         <div className="w-14 h-14 rounded-2xl bg-surface-100 flex items-center justify-center">
                             <HiUsers className="w-7 h-7 text-surface-400" />
@@ -305,6 +378,7 @@ export default function StaffManagement() {
                             label="Email Address"
                             placeholder="staff@email.com"
                             value={currentStaff.email}
+                            disabled={editMode}
                             onChange={(e) => setCurrentStaff({ ...currentStaff, email: e.target.value })}
                         />
                         <Input
@@ -317,12 +391,11 @@ export default function StaffManagement() {
                     <div className="grid grid-cols-2 gap-4">
                         <Select
                             label="Assigned Operation Role"
-                            value={currentStaff.role}
+                            value={currentStaff.role === 'Umpire' ? 'Umpire' : 'Staff'}
                             onChange={(e) => setCurrentStaff({ ...currentStaff, role: e.target.value })}
                             options={[
-                                { value: 'Manager',    label: 'Branch Manager' },
-                                { value: 'Cashier',    label: 'Billing Cashier' },
-                                { value: 'Technician', label: 'Technical Inspector' },
+                                { value: 'Staff',  label: 'Staff' },
+                                { value: 'Umpire', label: 'Umpire' },
                             ]}
                         />
                         <Select
@@ -337,10 +410,31 @@ export default function StaffManagement() {
                             ]}
                         />
                     </div>
+                    {currentStaff.role === 'Umpire' && (
+                        <Input
+                            label="Umpire Match Duty Fee (₹)"
+                            type="number"
+                            placeholder="e.g. 300 or 450"
+                            value={currentStaff.dutyFee || 300}
+                            onChange={(e) => setCurrentStaff({ ...currentStaff, dutyFee: e.target.value })}
+                        />
+                    )}
+                    <Input
+                        label={editMode ? "Reset / New Password (optional)" : "Login Password (optional)"}
+                        type="text"
+                        placeholder={editMode ? "Enter new password to change/reset" : "Leave blank to auto-generate password"}
+                        value={currentStaff.password || ''}
+                        onChange={(e) => setCurrentStaff({ ...currentStaff, password: e.target.value })}
+                    />
+                    <p className="text-[11px] text-slate-400 font-medium -mt-2">
+                        {editMode 
+                            ? "Type a new password here to reset this staff member / umpire's login credentials." 
+                            : "This creates a real login account scoped to your branch. You'll be shown the password to share with them."}
+                    </p>
                     <div className="flex gap-3 justify-end pt-4 border-t border-surface-100 mt-6 font-semibold">
-                        <Button variant="secondary" onClick={() => setModal(false)}>Cancel</Button>
-                        <Button onClick={handleSaveStaff}>
-                            {editMode ? 'Save Payout' : 'Add Staff'}
+                        <Button variant="secondary" onClick={() => setModal(false)} disabled={isSaving}>Cancel</Button>
+                        <Button onClick={handleSaveStaff} disabled={isSaving}>
+                            {isSaving ? 'Saving...' : editMode ? 'Save Changes' : 'Add Staff'}
                         </Button>
                     </div>
                 </div>
@@ -359,4 +453,3 @@ export default function StaffManagement() {
         </div>
     )
 }
-

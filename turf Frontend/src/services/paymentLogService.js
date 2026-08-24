@@ -86,9 +86,11 @@ export const getPaymentLogById = async (id) => {
  */
 export const getMatchPaymentsAdminOverview = async () => {
     try {
-        const response = await api.get('/match-payments/admin/overview', { timeout: 1500 });
-        if (response.data && response.data.success) {
-            return response.data;
+        // api.js's response interceptor already unwraps to the JSON body ({success, data}) --
+        // `response` here IS that body, not an axios response wrapper around it.
+        const response = await api.get('/match-payments/admin/overview');
+        if (response && response.success) {
+            return response;
         }
         return { success: false };
     } catch (error) {

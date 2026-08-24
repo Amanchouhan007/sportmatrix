@@ -6,37 +6,27 @@ const {
     updateBranch,
     changeBranchStatus,
     deleteBranch,
-    getDashboardStats
+    getDashboardStats,
+    getPayoutAccount,
+    upsertPayoutAccount
 } = require('./branches.controller');
-
-const { verifyToken, authorizeRoles } = require('../../middleware/auth.middleware');
+const { verifyToken, optionalToken, authorizeRoles } = require('../../middleware/auth.middleware');
 
 const router = express.Router();
 
-const optionalAuth = (req, res, next) => {
-    const authHeader = req.headers['authorization'];
-    const token = authHeader && authHeader.split(' ')[1];
-    if (!token) {
-        req.user = null;
-        return next();
-    }
-    return verifyToken(req, res, (err) => {
-        if (err || res.statusCode >= 400) {
-            req.user = null;
-            return next();
-        }
-        return next();
-    });
-};
+// Branch management API -- public / owner scoped access
+router.get('/stats', optionalToken, getDashboardStats);
+router.get('/', optionalToken, getBranches);
+router.get('/:id', optionalToken, getBranchById);
 
-router.get('/stats', optionalAuth, getDashboardStats);
-router.get('/', optionalAuth, getBranches);
-router.get('/:id', optionalAuth, getBranchById);
+router.post('/', createBranch);
+router.put('/:id', updateBranch);
+router.patch('/:id/status', changeBranchStatus);
+router.delete('/:id', deleteBranch);
 
-// Owner / Super Admin restrict routes
-router.post('/', optionalAuth, createBranch);
-router.put('/:id', optionalAuth, updateBranch);
-router.patch('/:id/status', optionalAuth, changeBranchStatus);
-router.delete('/:id', optionalAuth, deleteBranch);
+// Owner payout account (UPI/bank/QR) used by the manual payment gateway provider -- always auth-gated
+router.get('/:id/payout-account', verifyToken, authorizeRoles(['OWNER', 'SUPER_ADMIN']), getPayoutAccount);
+router.put('/:id/payout-account', verifyToken, authorizeRoles(['OWNER', 'SUPER_ADMIN']), upsertPayoutAccount);
 
 module.exports = router;
+

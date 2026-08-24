@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import DataTable from '../../components/ui/DataTable'
 import Badge from '../../components/ui/Badge'
 import Button from '../../components/ui/Button'
@@ -9,13 +9,24 @@ import CustomDatePicker from '../../components/ui/CustomDatePicker'
 import Card from '../../components/ui/Card'
 import { useToast } from '../../components/ui/Toast'
 import { HiExclamation, HiPlus, HiRefresh } from 'react-icons/hi'
+import { getMaintenanceTickets, createMaintenanceTicket, updateMaintenanceTicket } from '../../services/maintenanceService'
+import { getBranches } from '../../services/branchService'
+import useRealtime from '../../utils/useRealtime'
 
-const initialTasks = []
+const PRIORITY_TO_BACKEND = { Urgent: 'URGENT', High: 'HIGH', Medium: 'MEDIUM', Low: 'LOW' }
+const PRIORITY_FROM_BACKEND = { URGENT: 'Urgent', HIGH: 'High', MEDIUM: 'Medium', LOW: 'Low' }
+const STATUS_TO_BACKEND = { Open: 'OPEN', Scheduled: 'SCHEDULED', 'In Progress': 'IN_PROGRESS', Completed: 'COMPLETED' }
+const STATUS_FROM_BACKEND = { OPEN: 'Open', SCHEDULED: 'Scheduled', IN_PROGRESS: 'In Progress', COMPLETED: 'Completed' }
+
+const EMPTY_TASK = { task: 'Turf A', area: 'Turf A', assignee: '', priority: 'Medium', due: '' }
 
 export default function MaintenancePage() {
     const { addToast } = useToast()
     const [tasks, setTasks] = useState([])
+    const [isLoading, setIsLoading] = useState(true)
+    const [myBranchId, setMyBranchId] = useState(null)
     const [modal, setModal] = useState(false)
+    const [isSaving, setIsSaving] = useState(false)
 
     // Status update drawer
     const [updateModal, setUpdateModal] = useState(false)
@@ -23,52 +34,63 @@ export default function MaintenancePage() {
     const [selectedStatus, setSelectedStatus] = useState('In Progress')
 
     // Create task form state
-    const [newTask, setNewTask] = useState({
-        task: '',
-        area: 'Turf A',
-        assignee: '',
-        priority: 'Medium',
-        due: ''
-    })
+    const [newTask, setNewTask] = useState({ task: '', area: 'Turf A', assignee: '', priority: 'Medium', due: '' })
+
+    const fetchMaintenance = useCallback(async () => {
+        setIsLoading(true)
+        try {
+            const res = await getMaintenanceTickets()
+            setTasks((res.data || []).map(t => ({
+                id: t.id,
+                task: t.issueDescription,
+                area: t.turfArea,
+                assignee: t.assignedSpecialist,
+                priority: PRIORITY_FROM_BACKEND[t.priorityLevel] || t.priorityLevel,
+                due: t.targetDeadline ? new Date(t.targetDeadline).toLocaleDateString('en-IN') : '',
+                status: STATUS_FROM_BACKEND[t.status] || t.status
+            })))
+        } catch (err) {
+            addToast({ title: 'Load Failed', message: err.message || 'Failed to load maintenance tasks.', type: 'error' })
+        } finally {
+            setIsLoading(false)
+        }
+    }, [addToast])
+
+    useEffect(() => { fetchMaintenance() }, [fetchMaintenance])
+    useRealtime(['maintenance:updated'], () => fetchMaintenance())
 
     useEffect(() => {
-        const fetchMaintenance = async () => {
-            try {
-                const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5005/api/v1';
-                const res = await fetch(`${API_URL}/maintenance`);
-                const data = await res.json();
-                if (data.success && Array.isArray(data.data)) {
-                    setTasks(data.data);
-                } else {
-                    setTasks([]);
-                }
-            } catch (e) {
-                console.error('Error fetching maintenance tasks:', e);
-                setTasks([]);
-            }
-        };
-        fetchMaintenance();
-    }, []);
+        getBranches().then(res => {
+            const branch = (res?.data || res || [])[0]
+            if (branch) setMyBranchId(branch.id)
+        }).catch(() => {})
+    }, [])
 
-    const handleCreateTask = () => {
+    const handleCreateTask = async () => {
         if (!newTask.task || !newTask.assignee || !newTask.due) {
             addToast({ title: 'Missing Parameter', message: 'Ensure description, assignee and due date are specified', type: 'error' })
             return
         }
+        if (!myBranchId) {
+            addToast({ title: 'No Branch Found', message: 'No branch is linked to this account yet.', type: 'error' })
+            return
+        }
 
-        const nextId = `MT-00${tasks.length + 1}`
-        setTasks([...tasks, {
-            id: nextId,
-            task: newTask.task,
-            area: newTask.area,
-            assignee: newTask.assignee,
-            priority: newTask.priority,
-            due: newTask.due,
-            status: 'Open'
-        }])
-
-        setModal(false)
-        addToast({ title: 'Task Registered', message: 'New mechanical inspection log registered', type: 'success' })
+        setIsSaving(true)
+        try {
+            await createMaintenanceTicket({
+                branchId: myBranchId, issueDescription: newTask.task, turfArea: newTask.area,
+                assignedTo: newTask.assignee, priority: PRIORITY_TO_BACKEND[newTask.priority], targetDeadline: newTask.due
+            })
+            addToast({ title: 'Task Registered', message: 'New mechanical inspection log registered', type: 'success' })
+            setModal(false)
+            setNewTask(EMPTY_TASK)
+            fetchMaintenance()
+        } catch (err) {
+            addToast({ title: 'Save Failed', message: err.message || 'Could not create this task.', type: 'error' })
+        } finally {
+            setIsSaving(false)
+        }
     }
 
     const handleUpdateTrigger = (task) => {
@@ -77,10 +99,18 @@ export default function MaintenancePage() {
         setUpdateModal(true)
     }
 
-    const handleUpdateSave = () => {
-        setTasks(tasks.map(t => t.id === selectedTask.id ? { ...t, status: selectedStatus } : t))
-        setUpdateModal(false)
-        addToast({ title: 'Task Updated', message: `Maintenance status set to ${selectedStatus}`, type: 'success' })
+    const handleUpdateSave = async () => {
+        setIsSaving(true)
+        try {
+            await updateMaintenanceTicket(selectedTask.id, { status: STATUS_TO_BACKEND[selectedStatus] })
+            addToast({ title: 'Task Updated', message: `Maintenance status set to ${selectedStatus}`, type: 'success' })
+            setUpdateModal(false)
+            fetchMaintenance()
+        } catch (err) {
+            addToast({ title: 'Update Failed', message: err.message || 'Could not update this task.', type: 'error' })
+        } finally {
+            setIsSaving(false)
+        }
     }
 
     const columns = [
@@ -97,7 +127,7 @@ export default function MaintenancePage() {
                 </Badge>
             )
         },
-        { key: 'due', label: 'Target Payout' },
+        { key: 'due', label: 'Target Deadline' },
         {
             key: 'status',
             label: 'Inspected Status',
@@ -128,7 +158,7 @@ export default function MaintenancePage() {
                     </h1>
                     <p className="text-surface-500 text-sm mt-0.5 font-medium">Verify court repaints, audit broken lighting rigs, and configure technician logs</p>
                 </div>
-                <Button onClick={() => setModal(true)} className="shadow-lg shadow-primary-500/10 cursor-pointer">
+                <Button onClick={() => { setNewTask(EMPTY_TASK); setModal(true) }} className="shadow-lg shadow-primary-500/10 cursor-pointer">
                     <HiPlus className="w-5 h-5 mr-1" /> Add Task
                 </Button>
             </div>
@@ -148,7 +178,11 @@ export default function MaintenancePage() {
 
             {/* Tasks Ledger Table */}
             <Card className="p-6">
-                <DataTable columns={columns} data={tasks} />
+                {isLoading ? (
+                    <div className="py-10 text-center text-slate-400 text-sm font-semibold">Loading maintenance tasks...</div>
+                ) : (
+                    <DataTable columns={columns} data={tasks} />
+                )}
             </Card>
 
             {/* Create Task modal */}
@@ -201,8 +235,8 @@ export default function MaintenancePage() {
                     </div>
 
                     <div className="flex gap-3 justify-end pt-4 border-t border-surface-100 mt-6 font-semibold">
-                        <Button variant="secondary" onClick={() => setModal(false)}>Cancel</Button>
-                        <Button onClick={handleCreateTask}>Register Log</Button>
+                        <Button variant="secondary" onClick={() => setModal(false)} disabled={isSaving}>Cancel</Button>
+                        <Button onClick={handleCreateTask} disabled={isSaving}>{isSaving ? 'Saving...' : 'Register Log'}</Button>
                     </div>
                 </div>
             </Modal>
@@ -227,8 +261,8 @@ export default function MaintenancePage() {
                             ]}
                         />
                         <div className="flex gap-3 justify-end pt-4 border-t border-surface-100 mt-6 font-semibold">
-                            <Button variant="secondary" onClick={() => setUpdateModal(false)}>Cancel</Button>
-                            <Button onClick={handleUpdateSave} className="bg-emerald-600 hover:bg-emerald-700">Save Payout</Button>
+                            <Button variant="secondary" onClick={() => setUpdateModal(false)} disabled={isSaving}>Cancel</Button>
+                            <Button onClick={handleUpdateSave} disabled={isSaving} className="bg-emerald-600 hover:bg-emerald-700">{isSaving ? 'Saving...' : 'Save Status'}</Button>
                         </div>
                     </div>
                 </Modal>

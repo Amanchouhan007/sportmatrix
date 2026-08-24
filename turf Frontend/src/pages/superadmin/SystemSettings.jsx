@@ -3,7 +3,10 @@ import { useToast } from '../../components/ui/Toast'
 import { useAuth } from '../../context/AuthContext'
 import { getProfile, updateProfile as apiUpdateProfile, changePassword as apiChangePassword } from '../../services/authService'
 import { getCommissionSettings, updateCommissionSettings } from '../../services/commissionService'
-import { FiEdit2, FiSave, FiX, FiPercent, FiTrendingUp, FiUser, FiShield, FiUpload, FiSliders, FiEye, FiEyeOff } from 'react-icons/fi'
+import { getBranches, getPayoutAccount, updatePayoutAccount } from '../../services/branchService'
+import { getPaymentGatewaySettings, updatePaymentGatewaySettings } from '../../services/paymentGatewayService'
+import { getApi, putApi } from '../../services/api'
+import { FiEdit2, FiSave, FiX, FiPercent, FiTrendingUp, FiUser, FiShield, FiUpload, FiSliders, FiEye, FiEyeOff, FiCreditCard, FiSettings, FiMail } from 'react-icons/fi'
 
 // ─── Custom Reusable Form Input Component ──────────────────────────────────────
 const FormInput = ({ label, id, type = 'text', placeholder, value, onChange, disabled, required }) => {
@@ -87,6 +90,142 @@ export default function SystemSettings() {
     const [isSavingProfile, setIsSavingProfile] = useState(false)
     const [isSavingPassword, setIsSavingPassword] = useState(false)
 
+    // ─── Owner Payout Account States (Phase 1: payment gateway abstraction) ────
+    const [myBranchId, setMyBranchId] = useState(null)
+    const [payoutAccount, setPayoutAccount] = useState({ accountType: 'UPI', upiId: '', bankAccountHolder: '', bankAccountNumber: '', bankIfsc: '', bankName: '', qrCodeImageUrl: '', isActive: true })
+    const [isLoadingPayout, setIsLoadingPayout] = useState(false)
+    const [isSavingPayout, setIsSavingPayout] = useState(false)
+
+    // ─── Super Admin Payment Gateway States ────────────────────────────────────
+    const [gatewaySettings, setGatewaySettings] = useState(null)
+    const [gatewayForm, setGatewayForm] = useState({ activeProvider: 'MANUAL', razorpayKeyId: '', razorpayKeySecret: '' })
+    const [isLoadingGateway, setIsLoadingGateway] = useState(false)
+    const [isSavingGateway, setIsSavingGateway] = useState(false)
+
+    // ─── Super Admin Website Contact Info States ──────────────────────────────
+    const [contactForm, setContactForm] = useState({
+        addressLine1: '2341/E, Sudama Nagar',
+        cityStateCountry: 'Indore, M.P., India',
+        email: 'info@kiaantechnology.com',
+        phone: '+91 97521 00980',
+        weekdayHours: 'MON-FRI: 09:00 AM - 07:00 PM IST',
+        weekendHours: 'SAT: 10:00 AM - 04:00 PM IST',
+        poweredBy: 'Powered by Kiaan Technology'
+    })
+    const [isSavingContact, setIsSavingContact] = useState(false)
+
+    const fetchContactSettings = useCallback(async () => {
+        try {
+            const res = await getApi('/settings/contact-info')
+            if (res?.success && res.data) {
+                setContactForm(res.data)
+            }
+        } catch (e) {}
+    }, [])
+
+    const handleSaveContactSettings = async () => {
+        setIsSavingContact(true)
+        try {
+            const res = await putApi('/settings/contact-info', contactForm)
+            if (res?.success) {
+                addToast({ title: 'Contact Settings Saved', message: 'Website Contact Info updated live across platform!', type: 'success' })
+            } else {
+                addToast({ title: 'Save Failed', message: res?.message || 'Could not save contact settings.', type: 'danger' })
+            }
+        } catch (err) {
+            addToast({ title: 'Error', message: err.message || 'Failed to update contact info.', type: 'danger' })
+        } finally {
+            setIsSavingContact(false)
+        }
+    }
+
+    const fetchPayoutAccount = useCallback(async () => {
+        setIsLoadingPayout(true)
+        try {
+            const branchesRes = await getBranches()
+            const branch = (branchesRes?.data || branchesRes || [])[0]
+            if (!branch) {
+                addToast({ title: 'No Branch Found', message: 'No branch is linked to this account yet.', type: 'error' })
+                return
+            }
+            setMyBranchId(branch.id)
+            const res = await getPayoutAccount(branch.id)
+            if (res?.data) {
+                setPayoutAccount({
+                    accountType: res.data.accountType || 'UPI',
+                    upiId: res.data.upiId || '',
+                    bankAccountHolder: res.data.bankAccountHolder || '',
+                    bankAccountNumber: res.data.bankAccountNumber || '',
+                    bankIfsc: res.data.bankIfsc || '',
+                    bankName: res.data.bankName || '',
+                    qrCodeImageUrl: res.data.qrCodeImageUrl || '',
+                    isActive: res.data.isActive !== undefined ? res.data.isActive : true
+                })
+            }
+        } catch (err) {
+            addToast({ title: 'Load Failed', message: err.message || 'Failed to load payout account.', type: 'error' })
+        } finally {
+            setIsLoadingPayout(false)
+        }
+    }, [addToast])
+
+    const handleSavePayoutAccount = async () => {
+        if (!myBranchId) return
+        setIsSavingPayout(true)
+        try {
+            const res = await updatePayoutAccount(myBranchId, payoutAccount)
+            if (res && res.success) {
+                addToast({ title: 'Payout Account Saved', message: 'Customers will now see this account/QR at checkout.', type: 'success' })
+            }
+        } catch (err) {
+            addToast({ title: 'Save Failed', message: err.message || 'Failed to save payout account.', type: 'error' })
+        } finally {
+            setIsSavingPayout(false)
+        }
+    }
+
+    const handleQrImageChange = (e) => {
+        const file = e.target.files[0]
+        if (file) {
+            const reader = new FileReader()
+            reader.onloadend = () => setPayoutAccount(prev => ({ ...prev, qrCodeImageUrl: reader.result }))
+            reader.readAsDataURL(file)
+        }
+    }
+
+    const fetchGatewaySettings = useCallback(async () => {
+        setIsLoadingGateway(true)
+        try {
+            const res = await getPaymentGatewaySettings()
+            if (res?.data) {
+                setGatewaySettings(res.data)
+                setGatewayForm({ activeProvider: res.data.activeProvider, razorpayKeyId: res.data.razorpayKeyId || '', razorpayKeySecret: '' })
+            }
+        } catch (err) {
+            addToast({ title: 'Load Failed', message: err.message || 'Failed to load payment gateway settings.', type: 'error' })
+        } finally {
+            setIsLoadingGateway(false)
+        }
+    }, [addToast])
+
+    const handleSaveGatewaySettings = async () => {
+        setIsSavingGateway(true)
+        try {
+            const payload = { activeProvider: gatewayForm.activeProvider }
+            if (gatewayForm.razorpayKeyId) payload.razorpayKeyId = gatewayForm.razorpayKeyId
+            if (gatewayForm.razorpayKeySecret) payload.razorpayKeySecret = gatewayForm.razorpayKeySecret
+            const res = await updatePaymentGatewaySettings(payload)
+            if (res && res.success) {
+                addToast({ title: 'Gateway Updated', message: res.message || 'Payment gateway settings saved.', type: 'success' })
+                fetchGatewaySettings()
+            }
+        } catch (err) {
+            addToast({ title: 'Save Failed', message: err.message || 'Failed to save payment gateway settings.', type: 'error' })
+        } finally {
+            setIsSavingGateway(false)
+        }
+    }
+
     // ─── Fetch commission settings from backend ─────────────────────────────────
     const fetchCommissionSettings = useCallback(async () => {
         setIsLoadingCommission(true)
@@ -116,8 +255,13 @@ export default function SystemSettings() {
             fetchProfile()
         } else if (activeTab === 'commission') {
             fetchCommissionSettings()
+        } else if (activeTab === 'payout') {
+            fetchPayoutAccount()
+        } else if (activeTab === 'gateway') {
+            fetchGatewaySettings()
+            fetchContactSettings()
         }
-    }, [activeTab, fetchCommissionSettings])
+    }, [activeTab, fetchCommissionSettings, fetchPayoutAccount, fetchGatewaySettings, fetchContactSettings])
 
     // ─── Profile Fetch ──────────────────────────────────────────────────────────
     const fetchProfile = async () => {
@@ -350,6 +494,45 @@ export default function SystemSettings() {
                     >
                         <FiPercent className={`w-4 h-4 ${activeTab === 'commission' ? 'text-[#16A34A]' : 'text-slate-400'}`} />
                         <span>Commission Rates</span>
+                    </button>
+                )}
+                {isSuperAdmin && (
+                    <button
+                        onClick={() => setActiveTab('gateway')}
+                        className={`px-5 py-2.5 rounded-xl text-xs font-extrabold tracking-wider uppercase transition-all duration-200 flex items-center gap-2 cursor-pointer ${
+                            activeTab === 'gateway'
+                                ? 'bg-white text-[#16A34A] shadow-xs border border-slate-200/80 scale-[1.01]'
+                                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/50'
+                        }`}
+                    >
+                        <FiSettings className={`w-4 h-4 ${activeTab === 'gateway' ? 'text-[#16A34A]' : 'text-slate-400'}`} />
+                        <span>Payment Gateway</span>
+                    </button>
+                )}
+                {isSuperAdmin && (
+                    <button
+                        onClick={() => setActiveTab('contact')}
+                        className={`px-5 py-2.5 rounded-xl text-xs font-extrabold tracking-wider uppercase transition-all duration-200 flex items-center gap-2 cursor-pointer ${
+                            activeTab === 'contact'
+                                ? 'bg-white text-[#16A34A] shadow-xs border border-slate-200/80 scale-[1.01]'
+                                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/50'
+                        }`}
+                    >
+                        <FiMail className={`w-4 h-4 ${activeTab === 'contact' ? 'text-[#16A34A]' : 'text-slate-400'}`} />
+                        <span>Contact & Website Info</span>
+                    </button>
+                )}
+                {!isSuperAdmin && (
+                    <button
+                        onClick={() => setActiveTab('payout')}
+                        className={`px-5 py-2.5 rounded-xl text-xs font-extrabold tracking-wider uppercase transition-all duration-200 flex items-center gap-2 cursor-pointer ${
+                            activeTab === 'payout'
+                                ? 'bg-white text-[#16A34A] shadow-xs border border-slate-200/80 scale-[1.01]'
+                                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/50'
+                        }`}
+                    >
+                        <FiCreditCard className={`w-4 h-4 ${activeTab === 'payout' ? 'text-[#16A34A]' : 'text-slate-400'}`} />
+                        <span>Payout Account</span>
                     </button>
                 )}
             </div>
@@ -677,6 +860,186 @@ export default function SystemSettings() {
                                 </button>
                             </div>
                         )}
+                    </div>
+                </div>
+            )}
+
+            {/* ── 5. Tab 3: Owner Payout Account (UPI/Bank/QR) ── */}
+            {activeTab === 'payout' && (
+                <div className="space-y-6 pb-8 animate-fade-in duration-200 max-w-2xl">
+                    <div className="bg-white rounded-[20px] border border-slate-200/80 shadow-[0_10px_30px_rgba(0,0,0,0.03)] p-6 sm:p-7 space-y-6">
+                        <div className="flex items-center gap-3 pb-4 border-b border-slate-100">
+                            <div className="w-8 h-8 rounded-xl bg-emerald-50 text-[#16A34A] flex items-center justify-center">
+                                <FiCreditCard className="w-4 h-4" />
+                            </div>
+                            <div>
+                                <h2 className="text-base font-black text-slate-900 tracking-tight">Payout Account</h2>
+                                <p className="text-xs text-slate-500 font-medium mt-0.5">No live payment gateway is connected yet -- customers pay this account/QR directly at checkout.</p>
+                            </div>
+                        </div>
+
+                        {isLoadingPayout ? (
+                            <div className="animate-pulse space-y-4">
+                                <div className="h-11 bg-slate-100 rounded-xl" />
+                                <div className="h-11 bg-slate-100 rounded-xl" />
+                            </div>
+                        ) : (
+                            <div className="space-y-4">
+                                <div className="space-y-1.5">
+                                    <label className="block text-xs font-bold text-slate-700 uppercase tracking-wide">Payout Method</label>
+                                    <div className="grid grid-cols-1 gap-2 max-w-xs">
+                                        <button
+                                            type="button"
+                                            className="h-10 rounded-xl text-[11px] font-extrabold uppercase tracking-wide border bg-[#16A34A] text-white border-[#16A34A] shadow-md shadow-emerald-600/20 flex items-center justify-center gap-2 cursor-default"
+                                        >
+                                            <span>QR Code Payment</span>
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <FormInput 
+                                    label="UPI ID (for Direct QR Payments)" 
+                                    placeholder="yourvenue@upi" 
+                                    value={payoutAccount.upiId || ''} 
+                                    onChange={e => setPayoutAccount({ ...payoutAccount, upiId: e.target.value, accountType: 'QR_CODE' })} 
+                                    required 
+                                />
+
+                                <div className="space-y-2">
+                                    <label className="block text-xs font-bold text-slate-700 uppercase tracking-wide">Payment QR Code Image</label>
+                                    {payoutAccount.qrCodeImageUrl && (
+                                        <div className="p-3 bg-slate-50 rounded-2xl border border-slate-200 inline-block">
+                                            <img src={payoutAccount.qrCodeImageUrl} alt="Payment QR" className="w-36 h-36 object-contain rounded-xl bg-white p-1" />
+                                        </div>
+                                    )}
+                                    <div>
+                                        <label className="inline-flex items-center gap-2 h-10 px-4 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-bold text-xs cursor-pointer shadow-sm">
+                                            <FiUpload className="w-3.5 h-3.5 text-[#16A34A]" />
+                                            <span>{payoutAccount.qrCodeImageUrl ? 'Change QR Image' : 'Upload QR Image'}</span>
+                                            <input type="file" accept="image/*" onChange={handleQrImageChange} className="hidden" />
+                                        </label>
+                                    </div>
+                                </div>
+
+                                <div className="pt-3 flex justify-end">
+                                    <button
+                                        onClick={handleSavePayoutAccount}
+                                        disabled={isSavingPayout}
+                                        className="h-11 px-6 rounded-xl bg-[#16A34A] hover:bg-emerald-700 text-white font-extrabold text-xs shadow-md shadow-emerald-600/20 hover:-translate-y-0.5 transition-all cursor-pointer flex items-center gap-2 disabled:opacity-50 min-w-[150px] justify-center"
+                                    >
+                                        {isSavingPayout ? <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" /> : <FiSave className="w-3.5 h-3.5" />}
+                                        <span>{isSavingPayout ? 'Saving...' : 'Save Payout Account'}</span>
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            )}
+
+            {/* ── 6. Tab 4: Super Admin Payment Gateway ── */}
+            {activeTab === 'gateway' && (
+                <div className="space-y-6 pb-8 animate-fade-in duration-200 max-w-2xl">
+                    <div className="bg-white rounded-[20px] border border-slate-200/80 shadow-[0_10px_30px_rgba(0,0,0,0.03)] p-6 sm:p-7 space-y-6">
+                        <div className="flex items-center gap-3 pb-4 border-b border-slate-100">
+                            <div className="w-8 h-8 rounded-xl bg-emerald-50 text-[#16A34A] flex items-center justify-center">
+                                <FiSettings className="w-4 h-4" />
+                            </div>
+                            <div>
+                                <h2 className="text-base font-black text-slate-900 tracking-tight">Payment Gateway</h2>
+                                <p className="text-xs text-slate-500 font-medium mt-0.5">Manual mode (owner QR/UPI + dual confirmation) is active by default. Add real gateway keys here to go live later -- no other changes needed.</p>
+                            </div>
+                        </div>
+
+                        {isLoadingGateway ? (
+                            <div className="animate-pulse space-y-4">
+                                <div className="h-11 bg-slate-100 rounded-xl" />
+                            </div>
+                        ) : (
+                            <div className="space-y-4">
+                                <div className="space-y-1.5">
+                                    <label className="block text-xs font-bold text-slate-700 uppercase tracking-wide">Active Provider</label>
+                                    <div className="grid grid-cols-3 gap-2">
+                                        {['MANUAL', 'RAZORPAY_ROUTE', 'STRIPE_CONNECT'].map(p => (
+                                            <button
+                                                key={p}
+                                                type="button"
+                                                onClick={() => setGatewayForm(prev => ({ ...prev, activeProvider: p }))}
+                                                className={`h-10 rounded-xl text-[11px] font-extrabold uppercase tracking-wide transition-all cursor-pointer border ${gatewayForm.activeProvider === p ? 'bg-[#16A34A] text-white border-[#16A34A] shadow-md shadow-emerald-600/20' : 'bg-white text-slate-600 border-slate-200 hover:border-slate-300'}`}
+                                            >
+                                                {p === 'RAZORPAY_ROUTE' ? 'Razorpay Route' : p === 'STRIPE_CONNECT' ? 'Stripe Connect' : 'Manual'}
+                                            </button>
+                                        ))}
+                                    </div>
+                                    {gatewayForm.activeProvider !== 'MANUAL' && (
+                                        <p className="text-[11px] text-amber-700 font-semibold bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 mt-2">
+                                            ⚠️ This provider is a scaffold and requires real API keys below before it will work -- until then, payments through it will fail with a clear "not configured" error rather than silently succeeding.
+                                        </p>
+                                    )}
+                                </div>
+
+                                {gatewayForm.activeProvider === 'RAZORPAY_ROUTE' && (
+                                    <div className="space-y-4">
+                                        <FormInput label="Razorpay Key ID" placeholder="rzp_live_xxxxxxxx" value={gatewayForm.razorpayKeyId} onChange={e => setGatewayForm({ ...gatewayForm, razorpayKeyId: e.target.value })} />
+                                        <FormInput label="Razorpay Key Secret" type="password" placeholder={gatewaySettings?.razorpayKeySecret || 'Leave blank to keep existing secret'} value={gatewayForm.razorpayKeySecret} onChange={e => setGatewayForm({ ...gatewayForm, razorpayKeySecret: e.target.value })} />
+                                    </div>
+                                )}
+
+                                <div className="pt-3 flex justify-end">
+                                    <button
+                                        onClick={handleSaveGatewaySettings}
+                                        disabled={isSavingGateway}
+                                        className="h-11 px-6 rounded-xl bg-[#16A34A] hover:bg-emerald-700 text-white font-extrabold text-xs shadow-md shadow-emerald-600/20 hover:-translate-y-0.5 transition-all cursor-pointer flex items-center gap-2 disabled:opacity-50 min-w-[150px] justify-center"
+                                    >
+                                        {isSavingGateway ? <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" /> : <FiSave className="w-3.5 h-3.5" />}
+                                        <span>{isSavingGateway ? 'Saving...' : 'Save Gateway Settings'}</span>
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            )}
+
+            {/* ── 7. Tab 5: Super Admin Website Contact & Company Info ── */}
+            {activeTab === 'contact' && (
+                <div className="space-y-6 pb-8 animate-fade-in duration-200 max-w-3xl">
+                    <div className="bg-white rounded-[20px] border border-slate-200/80 shadow-[0_10px_30px_rgba(0,0,0,0.03)] p-6 sm:p-7 space-y-6">
+                        <div className="flex items-center gap-3 pb-4 border-b border-slate-100">
+                            <div className="w-8 h-8 rounded-xl bg-emerald-50 text-[#16A34A] flex items-center justify-center font-black">
+                                📍
+                            </div>
+                            <div>
+                                <h2 className="text-base font-black text-slate-900 tracking-tight">Website Contact & Company Details</h2>
+                                <p className="text-xs text-slate-500 font-medium mt-0.5">Super Admin can edit platform address, hotline phone, inquiry email, and operating hours live across the website.</p>
+                            </div>
+                        </div>
+
+                        <div className="space-y-4">
+                            <div className="grid sm:grid-cols-2 gap-4">
+                                <FormInput label="Headquarters Address (Line 1)" placeholder="e.g. 2341/E, Sudama Nagar" value={contactForm.addressLine1} onChange={e => setContactForm({ ...contactForm, addressLine1: e.target.value })} />
+                                <FormInput label="City, State & Country" placeholder="e.g. Indore, M.P., India" value={contactForm.cityStateCountry} onChange={e => setContactForm({ ...contactForm, cityStateCountry: e.target.value })} />
+                            </div>
+                            <div className="grid sm:grid-cols-2 gap-4">
+                                <FormInput label="Inquiry Email Address" placeholder="e.g. info@kiaantechnology.com" value={contactForm.email} onChange={e => setContactForm({ ...contactForm, email: e.target.value })} />
+                                <FormInput label="Direct Phone Hotline" placeholder="e.g. +91 97521 00980" value={contactForm.phone} onChange={e => setContactForm({ ...contactForm, phone: e.target.value })} />
+                            </div>
+                            <div className="grid sm:grid-cols-2 gap-4">
+                                <FormInput label="Weekday Operating Hours" placeholder="e.g. MON-FRI: 09:00 AM - 07:00 PM IST" value={contactForm.weekdayHours} onChange={e => setContactForm({ ...contactForm, weekdayHours: e.target.value })} />
+                                <FormInput label="Weekend Operating Hours" placeholder="e.g. SAT: 10:00 AM - 04:00 PM IST" value={contactForm.weekendHours} onChange={e => setContactForm({ ...contactForm, weekendHours: e.target.value })} />
+                            </div>
+
+                            <div className="pt-3 flex justify-end">
+                                <button
+                                    onClick={handleSaveContactSettings}
+                                    disabled={isSavingContact}
+                                    className="h-11 px-6 rounded-xl bg-[#16A34A] hover:bg-emerald-700 text-white font-extrabold text-xs shadow-md shadow-emerald-600/20 hover:-translate-y-0.5 transition-all cursor-pointer flex items-center gap-2 disabled:opacity-50 min-w-[170px] justify-center"
+                                >
+                                    {isSavingContact ? <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" /> : <FiSave className="w-3.5 h-3.5" />}
+                                    <span>{isSavingContact ? 'Saving...' : 'Save Contact Settings'}</span>
+                                </button>
+                            </div>
+                        </div>
                     </div>
                 </div>
             )}

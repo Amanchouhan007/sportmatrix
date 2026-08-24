@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import DataTable from '../../components/ui/DataTable'
 import Button from '../../components/ui/Button'
 import Badge from '../../components/ui/Badge'
@@ -8,62 +8,143 @@ import Input from '../../components/ui/Input'
 import Select from '../../components/ui/Select'
 import { useToast } from '../../components/ui/Toast'
 import { HiPlus, HiStar, HiExternalLink, HiPencil, HiTrash } from 'react-icons/hi'
+import { getSponsors, createSponsor, updateSponsor, deleteSponsor, getPublicTournaments } from '../../services/tournamentService'
+import { uploadMedia } from '../../services/uploadService'
 
-const mockSponsors = [
-    { id: 'spn_01', companyName: 'RedBull Energy', tier: 'Platinum', logo: 'https://images.unsplash.com/photo-1543163521-1bf539c55dd2?auto=format&fit=crop&q=80&w=100', website: 'https://redbull.com', packageAmount: 50000, status: 'ACTIVE' },
-    { id: 'spn_02', companyName: 'Nike Sports India', tier: 'Gold', logo: 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?auto=format&fit=crop&q=80&w=100', website: 'https://nike.com', packageAmount: 30000, status: 'ACTIVE' },
-    { id: 'spn_03', companyName: 'Decathlon Arena', tier: 'Silver', logo: 'https://images.unsplash.com/photo-1517649763962-0c623266010b?auto=format&fit=crop&q=80&w=100', website: 'https://decathlon.in', packageAmount: 15000, status: 'ACTIVE' },
-    { id: 'spn_04', companyName: 'Local Fitness Zone', tier: 'Bronze', logo: 'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?auto=format&fit=crop&q=80&w=100', website: 'https://localfitness.com', packageAmount: 5000, status: 'ACTIVE' },
+const TIER_OPTIONS = [
+    { value: 'Bronze Sponsor', label: 'Bronze Sponsor' },
+    { value: 'Silver Sponsor', label: 'Silver Sponsor' },
+    { value: 'Gold Sponsor', label: 'Gold Sponsor' },
+    { value: 'Platinum Sponsor', label: 'Platinum Title Sponsor' },
 ]
+
+const EMPTY_FORM = { tournamentId: '', companyName: '', tier: 'Gold Sponsor', logo: '', website: '', packageAmount: '10000' }
 
 export default function TournamentSponsorsPage({ role = 'owner' }) {
     const { addToast } = useToast()
-    const [sponsors, setSponsors] = useState(mockSponsors)
+    const [sponsors, setSponsors] = useState([])
+    const [tournaments, setTournaments] = useState([])
+    const [isLoading, setIsLoading] = useState(true)
+    const [isSaving, setIsSaving] = useState(false)
+    const [isUploadingLogo, setIsUploadingLogo] = useState(false)
     const [modal, setModal] = useState({ open: false, mode: 'create', data: null })
+    const [form, setForm] = useState(EMPTY_FORM)
 
-    const [form, setForm] = useState({
-        companyName: '',
-        tier: 'Gold',
-        logo: '',
-        website: '',
-        packageAmount: '10000'
-    })
+    const fetchData = useCallback(async () => {
+        setIsLoading(true)
+        try {
+            const [sponsorRes, tournamentRes] = await Promise.all([
+                getSponsors(),
+                getPublicTournaments({})
+            ])
+            setSponsors(sponsorRes.data || [])
+            setTournaments(tournamentRes.data || [])
+        } catch (err) {
+            addToast({ title: 'Load Failed', message: err.message || 'Failed to load sponsors.', type: 'error' })
+        } finally {
+            setIsLoading(false)
+        }
+    }, [addToast])
 
-    const handleSave = () => {
-        if (!form.companyName) {
+    useEffect(() => { fetchData() }, [fetchData])
+
+    const openCreate = () => {
+        setForm({ ...EMPTY_FORM, tournamentId: tournaments[0]?.id || tournaments[0]?._id || '' })
+        setModal({ open: true, mode: 'create', data: null })
+    }
+
+    const openEdit = (sponsor) => {
+        setForm({
+            tournamentId: sponsor.tournamentId,
+            companyName: sponsor.sponsorName,
+            tier: sponsor.sponsorTier,
+            logo: sponsor.logo || '',
+            website: sponsor.websiteUrl || '',
+            packageAmount: String(sponsor.packageAmount)
+        })
+        setModal({ open: true, mode: 'edit', data: sponsor })
+    }
+
+    const handleLogoUpload = async (e) => {
+        const file = e.target.files[0]
+        if (!file) return
+        setIsUploadingLogo(true)
+        try {
+            const { url } = await uploadMedia(file)
+            setForm(prev => ({ ...prev, logo: url }))
+        } catch (err) {
+            addToast({ title: 'Upload Failed', message: err.message || 'Could not upload logo.', type: 'error' })
+        } finally {
+            setIsUploadingLogo(false)
+        }
+    }
+
+    const handleSave = async () => {
+        if (!form.companyName.trim()) {
             addToast({ title: 'Validation Error', message: 'Company Name is required.', type: 'error' })
             return
         }
-
-        if (modal.mode === 'create') {
-            const newSponsor = {
-                id: 'spn_' + Date.now(),
-                companyName: form.companyName,
-                tier: form.tier,
-                logo: form.logo || 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?auto=format&fit=crop&q=80&w=100',
-                website: form.website,
-                packageAmount: Number(form.packageAmount),
-                status: 'ACTIVE'
-            }
-            setSponsors([...sponsors, newSponsor])
-            addToast({ title: 'Sponsor Added!', message: `${form.companyName} added as ${form.tier} sponsor.`, type: 'success' })
+        if (!form.tournamentId) {
+            addToast({ title: 'Validation Error', message: 'Please select a tournament.', type: 'error' })
+            return
         }
 
-        setModal({ open: false, mode: 'create', data: null })
+        const payload = {
+            tournamentId: form.tournamentId,
+            sponsorName: form.companyName.trim(),
+            sponsorTier: form.tier,
+            logo: form.logo || null,
+            websiteUrl: form.website || null,
+            packageAmount: Number(form.packageAmount) || 0
+        }
+
+        setIsSaving(true)
+        try {
+            if (modal.mode === 'edit' && modal.data) {
+                await updateSponsor(modal.data.id, payload)
+                addToast({ title: 'Sponsor Updated', message: `${form.companyName} updated.`, type: 'success' })
+            } else {
+                await createSponsor(payload)
+                addToast({ title: 'Sponsor Added', message: `${form.companyName} added as ${form.tier}.`, type: 'success' })
+            }
+            setModal({ open: false, mode: 'create', data: null })
+            fetchData()
+        } catch (err) {
+            addToast({ title: 'Save Failed', message: err.message || 'Could not save this sponsor.', type: 'error' })
+        } finally {
+            setIsSaving(false)
+        }
+    }
+
+    const handleDelete = async (sponsor) => {
+        if (!window.confirm(`Remove sponsor "${sponsor.sponsorName}"?`)) return
+        try {
+            await deleteSponsor(sponsor.id)
+            addToast({ title: 'Sponsor Removed', message: `${sponsor.sponsorName} removed.`, type: 'info' })
+            fetchData()
+        } catch (err) {
+            addToast({ title: 'Delete Failed', message: err.message || 'Could not remove this sponsor.', type: 'error' })
+        }
     }
 
     const columns = [
         {
-            key: 'companyName',
+            key: 'sponsorName',
             label: 'Sponsor Company',
             render: (_, r) => (
                 <div className="flex items-center gap-3">
-                    <img src={r.logo} alt={r.companyName} className="w-9 h-9 rounded-xl object-cover border border-surface-200" />
+                    {r.logo ? (
+                        <img src={r.logo} alt={r.sponsorName} className="w-9 h-9 rounded-xl object-cover border border-surface-200" />
+                    ) : (
+                        <div className="w-9 h-9 rounded-xl bg-surface-100 border border-surface-200 flex items-center justify-center text-surface-400 text-xs font-black">
+                            {r.sponsorName?.[0]?.toUpperCase()}
+                        </div>
+                    )}
                     <div>
-                        <div className="font-extrabold text-surface-900">{r.companyName}</div>
-                        {r.website && (
-                            <a href={r.website} target="_blank" rel="noreferrer" className="text-[11px] text-primary-600 font-bold flex items-center gap-1 hover:underline">
-                                {r.website} <HiExternalLink className="w-3 h-3" />
+                        <div className="font-extrabold text-surface-900">{r.sponsorName}</div>
+                        {r.websiteUrl && (
+                            <a href={r.websiteUrl} target="_blank" rel="noreferrer" className="text-[11px] text-primary-600 font-bold flex items-center gap-1 hover:underline">
+                                {r.websiteUrl} <HiExternalLink className="w-3 h-3" />
                             </a>
                         )}
                     </div>
@@ -71,18 +152,32 @@ export default function TournamentSponsorsPage({ role = 'owner' }) {
             )
         },
         {
-            key: 'tier',
+            key: 'sponsorTier',
             label: 'Sponsor Tier',
             render: v => {
                 let color = 'default'
-                if (v === 'Platinum') color = 'primary'
-                else if (v === 'Gold') color = 'warning'
-                else if (v === 'Silver') color = 'secondary'
-                return <Badge variant={color}>{v} Sponsor</Badge>
+                if (v?.startsWith('Platinum')) color = 'primary'
+                else if (v?.startsWith('Gold')) color = 'warning'
+                else if (v?.startsWith('Silver')) color = 'secondary'
+                return <Badge variant={color}>{v}</Badge>
             }
         },
-        { key: 'packageAmount', label: 'Package Amount', render: v => <span className="font-extrabold text-surface-900">₹{v.toLocaleString()}</span> },
-        { key: 'status', label: 'Status', render: v => <Badge variant="success" dot>{v}</Badge> },
+        { key: 'packageAmount', label: 'Package Amount', render: v => <span className="font-extrabold text-surface-900">₹{Number(v).toLocaleString('en-IN')}</span> },
+        { key: 'status', label: 'Status', render: v => <Badge variant={v === 'ACTIVE' ? 'success' : 'default'} dot>{v}</Badge> },
+        ...(role === 'owner' ? [{
+            key: 'action',
+            label: 'Action',
+            render: (_, r) => (
+                <div className="flex items-center gap-2">
+                    <button onClick={() => openEdit(r)} className="p-2 rounded-xl bg-blue-50 hover:bg-blue-100 text-blue-600 transition-colors cursor-pointer" title="Edit">
+                        <HiPencil className="w-4 h-4" />
+                    </button>
+                    <button onClick={() => handleDelete(r)} className="p-2 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-600 transition-colors cursor-pointer" title="Remove">
+                        <HiTrash className="w-4 h-4" />
+                    </button>
+                </div>
+            )
+        }] : [])
     ]
 
     return (
@@ -96,7 +191,7 @@ export default function TournamentSponsorsPage({ role = 'owner' }) {
                     <p className="text-surface-500 text-sm mt-0.5 font-medium">Manage corporate sponsorship tiers (Bronze, Silver, Gold, Platinum) and logos</p>
                 </div>
                 {role === 'owner' && (
-                    <Button onClick={() => setModal({ open: true, mode: 'create', data: null })}>
+                    <Button onClick={openCreate} disabled={tournaments.length === 0}>
                         <HiPlus className="w-5 h-5 mr-1" /> Add Sponsor
                     </Button>
                 )}
@@ -104,12 +199,25 @@ export default function TournamentSponsorsPage({ role = 'owner' }) {
 
             {/* Datatable */}
             <Card className="p-6">
-                <DataTable columns={columns} data={sponsors} />
+                {isLoading ? (
+                    <div className="py-10 text-center text-slate-400 text-sm font-semibold">Loading sponsors...</div>
+                ) : sponsors.length === 0 ? (
+                    <div className="py-10 text-center text-slate-400 text-sm font-semibold">No sponsors added yet.</div>
+                ) : (
+                    <DataTable columns={columns} data={sponsors} />
+                )}
             </Card>
 
             {/* Modal */}
-            <Modal isOpen={modal.open} onClose={() => setModal({ open: false, mode: 'create', data: null })} title="Add Tournament Sponsor" size="md">
+            <Modal isOpen={modal.open} onClose={() => setModal({ open: false, mode: 'create', data: null })} title={modal.mode === 'edit' ? 'Edit Sponsor' : 'Add Tournament Sponsor'} size="md">
                 <div className="space-y-4">
+                    <Select
+                        label="Tournament *"
+                        value={form.tournamentId}
+                        onChange={(e) => setForm({ ...form, tournamentId: e.target.value })}
+                        options={tournaments.map(t => ({ value: t.id || t._id, label: t.title || t.name }))}
+                    />
+
                     <Input
                         label="Company Name *"
                         placeholder="e.g. RedBull Energy"
@@ -122,12 +230,7 @@ export default function TournamentSponsorsPage({ role = 'owner' }) {
                             label="Sponsorship Tier"
                             value={form.tier}
                             onChange={(e) => setForm({ ...form, tier: e.target.value })}
-                            options={[
-                                { value: 'Bronze', label: 'Bronze Sponsor' },
-                                { value: 'Silver', label: 'Silver Sponsor' },
-                                { value: 'Gold', label: 'Gold Sponsor' },
-                                { value: 'Platinum', label: 'Platinum Title Sponsor' },
-                            ]}
+                            options={TIER_OPTIONS}
                         />
                         <Input
                             label="Package Amount (₹)"
@@ -145,16 +248,24 @@ export default function TournamentSponsorsPage({ role = 'owner' }) {
                         onChange={(e) => setForm({ ...form, website: e.target.value })}
                     />
 
-                    <Input
-                        label="Sponsor Logo Image URL"
-                        placeholder="https://..."
-                        value={form.logo}
-                        onChange={(e) => setForm({ ...form, logo: e.target.value })}
-                    />
+                    <div>
+                        <label className="block text-[10px] font-black uppercase tracking-wider text-slate-500 mb-1.5">Sponsor Logo</label>
+                        <input
+                            type="file"
+                            accept="image/*"
+                            disabled={isUploadingLogo}
+                            onChange={handleLogoUpload}
+                            className="block w-full text-xs text-surface-500 file:mr-3 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-extrabold file:bg-emerald-50 file:text-emerald-700 hover:file:bg-emerald-100 cursor-pointer"
+                        />
+                        {isUploadingLogo && <p className="text-[11px] text-surface-400 font-semibold mt-1">Uploading...</p>}
+                        {form.logo && (
+                            <img src={form.logo} alt="Logo preview" className="w-16 h-16 rounded-xl object-cover border border-surface-200 mt-2" />
+                        )}
+                    </div>
 
                     <div className="flex gap-3 justify-end pt-4 border-t border-surface-100">
-                        <Button variant="secondary" onClick={() => setModal({ open: false, mode: 'create', data: null })}>Cancel</Button>
-                        <Button onClick={handleSave}>Save Sponsor</Button>
+                        <Button variant="secondary" onClick={() => setModal({ open: false, mode: 'create', data: null })} disabled={isSaving}>Cancel</Button>
+                        <Button onClick={handleSave} disabled={isSaving}>{isSaving ? 'Saving...' : 'Save Sponsor'}</Button>
                     </div>
                 </div>
             </Modal>

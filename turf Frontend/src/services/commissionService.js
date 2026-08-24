@@ -1,62 +1,28 @@
 import api from './api';
 
-/**
- * Fetch global platform commission settings
- */
+/** Fetch global platform commission settings. */
 export const getCommissionSettings = async () => {
-    try {
-        const res = await api.get('/settings/commission');
-        const resData = res?.data !== undefined ? res.data : res;
-        if (resData && (resData.success || resData.defaultRate || resData.data)) {
-            return resData.data ? resData : { success: true, data: resData };
-        }
-        if (res && res.success) return res;
-    } catch (error) {
-        console.warn('Backend GET /settings/commission note:', error.message);
+    const res = await api.get('/settings/commission');
+    if (!res || res.success === false) {
+        throw new Error(res?.message || 'Failed to fetch commission settings.');
     }
-
-    return {
-        success: true,
-        data: {
-            defaultRate: 5.0,
-            maxRate: 15.0,
-            status: 'ACTIVE',
-            sportsRates: [
-                { sportName: 'Cricket', commissionRate: 5.0 },
-                { sportName: 'Football', commissionRate: 5.0 },
-                { sportName: 'Badminton', commissionRate: 4.0 },
-                { sportName: 'Tennis', commissionRate: 4.5 }
-            ]
-        }
-    };
+    return res;
 };
 
-/**
- * Update global platform commission settings
- */
+/** Update global platform commission settings. */
 export const updateCommissionSettings = async (payload) => {
-    try {
-        const res = await api.put('/settings/commission', payload);
-        const resData = res?.data !== undefined ? res.data : res;
-        return resData || { success: true, message: 'Commission settings updated successfully' };
-    } catch (error) {
-        console.error('Backend PUT /settings/commission error:', error.message);
-        throw error;
+    const res = await api.put('/settings/commission', payload);
+    if (!res || res.success === false) {
+        throw new Error(res?.message || 'Failed to update commission settings.');
     }
+    return res;
 };
 
-/**
- * Change commission status
- */
+/** Change commission status. */
 export const changeCommissionStatus = async (status) => {
-    try {
-        const res = await api.put('/settings/commission', { status });
-        const resData = res?.data !== undefined ? res.data : res;
-        return resData || { success: true, message: `Commission status updated to ${status}` };
-    } catch (error) {
-        return {
-            success: true,
-            message: `Commission status updated to ${status}`
-        };
+    const res = await api.put('/settings/commission', { status });
+    if (!res || res.success === false) {
+        throw new Error(res?.message || 'Failed to update commission status.');
     }
+    return res;
 };

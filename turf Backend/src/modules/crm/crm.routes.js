@@ -1,9 +1,9 @@
 const express = require('express');
 const { getLeads, createLead, deleteLead, broadcastOffer } = require('./crm.controller');
-const { optionalToken } = require('../../middleware/auth.middleware');
+const { verifyToken, authorizeRoles } = require('../../middleware/auth.middleware');
 
 const router = express.Router();
-router.use(optionalToken);
+router.use(verifyToken, authorizeRoles(['OWNER', 'STAFF', 'SUPER_ADMIN']));
 
 router.get('/leads', getLeads);
 router.post('/leads', createLead);

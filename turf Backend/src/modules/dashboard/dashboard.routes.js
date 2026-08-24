@@ -6,22 +6,15 @@ const {
     getTopBranches,
     getRecentActivities
 } = require('./dashboard.controller');
+const { verifyToken, authorizeRoles } = require('../../middleware/auth.middleware');
 
 const router = express.Router();
+router.use(verifyToken, authorizeRoles(['OWNER', 'STAFF', 'SUPER_ADMIN']));
 
-// Summary stats
 router.get('/summary', getDashboardSummary);
-
-// Revenue growth timeline
 router.get('/revenue-growth', getRevenueGrowth);
-
-// Commission earnings growth timeline
 router.get('/commission-growth', getCommissionGrowth);
-
-// Top branches stats
 router.get('/top-branches', getTopBranches);
-
-// Recent audit activities
 router.get('/recent-activities', getRecentActivities);
 
 module.exports = router;

@@ -1,134 +1,85 @@
 import api from './api';
 
-/**
- * Fetch all advertisements
- * @param {Object} params - { status, type }
- */
+// Note: api.js's response interceptor already unwraps to the JSON body
+// ({success, data, message}) -- every `res` below IS that body directly.
+
+/** Fetch all advertisements. */
 export const getAds = async (params = {}) => {
-    try {
-        const res = await api.get('/ads', { params });
-        const resData = res?.data !== undefined ? res.data : res;
-        if (resData && resData.success !== false) {
-            return {
-                success: true,
-                data: resData.data || (Array.isArray(resData) ? resData : [])
-            };
-        }
-    } catch (error) {
-        console.warn('Backend GET /ads failed:', error.message);
+    const res = await api.get('/ads', { params });
+    if (!res || res.success === false) {
+        throw new Error(res?.message || 'Failed to fetch advertisements.');
     }
-    return { success: true, data: [] };
+    return { success: true, data: res.data || [] };
 };
 
-/**
- * Create a new advertisement campaign
- */
+/** Create a new advertisement campaign. */
 export const createAd = async (adData) => {
-    try {
-        const res = await api.post('/ads', adData);
-        return res?.data || res;
-    } catch (error) {
-        console.warn('Backend POST /ads failed:', error.message);
-        throw error;
+    const res = await api.post('/ads', adData);
+    if (!res || res.success === false) {
+        throw new Error(res?.message || 'Failed to create advertisement.');
     }
+    return res;
 };
 
-/**
- * Update advertisement status (PENDING / APPROVED / ACTIVE / REJECTED / EXPIRED)
- */
+/** Update advertisement status (PENDING / APPROVED / ACTIVE / REJECTED / EXPIRED). */
 export const updateAdStatus = async (id, status) => {
-    try {
-        const res = await api.patch(`/ads/${id}/status`, { status });
-        return res?.data || { success: true };
-    } catch (error) {
-        console.warn(`Backend PATCH /ads/${id}/status failed:`, error.message);
-        return { success: true, message: 'Status updated locally' };
+    const res = await api.patch(`/ads/${id}/status`, { status });
+    if (!res || res.success === false) {
+        throw new Error(res?.message || 'Failed to update advertisement status.');
     }
+    return res;
 };
 
-/**
- * Update advertisement content (name, budget, dates etc.)
- */
+/** Update advertisement content (name, budget, dates etc.). */
 export const updateAd = async (id, adData) => {
-    try {
-        const res = await api.put(`/ads/${id}`, adData);
-        return res?.data || { success: true };
-    } catch (error) {
-        console.warn(`Backend PUT /ads/${id} failed:`, error.message);
-        return { success: true, message: 'Ad updated locally' };
+    const res = await api.put(`/ads/${id}`, adData);
+    if (!res || res.success === false) {
+        throw new Error(res?.message || 'Failed to update advertisement.');
     }
+    return res;
 };
 
-/**
- * Delete an advertisement
- */
+/** Delete an advertisement. */
 export const deleteAd = async (id) => {
-    try {
-        const res = await api.delete(`/ads/${id}`);
-        return res?.data || { success: true };
-    } catch (error) {
-        console.warn(`Backend DELETE /ads/${id} failed:`, error.message);
-        return { success: true, message: 'Ad deleted locally' };
+    const res = await api.delete(`/ads/${id}`);
+    if (!res || res.success === false) {
+        throw new Error(res?.message || 'Failed to delete advertisement.');
     }
+    return res;
 };
 
-/**
- * Fetch advertisement analytics
- */
+/** Fetch advertisement analytics. */
 export const getAdAnalytics = async (params = {}) => {
-    try {
-        const res = await api.get('/ads/analytics', { params });
-        const resData = res?.data !== undefined ? res.data : res;
-        if (resData && resData.success !== false) {
-            return resData;
-        }
-    } catch (error) {
-        console.warn('Backend GET /ads/analytics failed:', error.message);
+    const res = await api.get('/ads/analytics', { params });
+    if (!res || res.success === false) {
+        throw new Error(res?.message || 'Failed to fetch advertisement analytics.');
     }
-    return { success: true, data: {} };
+    return res;
 };
 
-/**
- * Fetch advertisement payment invoices
- */
+/** Fetch advertisement payment invoices. */
 export const getAdPayments = async (params = {}) => {
-    try {
-        const res = await api.get('/ads/payments', { params });
-        const resData = res?.data !== undefined ? res.data : res;
-        if (resData && resData.success !== false) {
-            return resData;
-        }
-    } catch (error) {
-        console.warn('Backend GET /ads/payments failed:', error.message);
+    const res = await api.get('/ads/payments', { params });
+    if (!res || res.success === false) {
+        throw new Error(res?.message || 'Failed to fetch advertisement payments.');
     }
-    return { success: true, data: [] };
+    return res;
 };
 
-/**
- * Fetch ad commission records
- */
+/** Fetch ad commission records. */
 export const getAdCommissions = async (params = {}) => {
-    try {
-        const res = await api.get('/ads/commissions', { params });
-        const resData = res?.data !== undefined ? res.data : res;
-        if (resData && resData.success !== false) {
-            return resData;
-        }
-    } catch (error) {
-        console.warn('Backend GET /ads/commissions failed:', error.message);
+    const res = await api.get('/ads/commissions', { params });
+    if (!res || res.success === false) {
+        throw new Error(res?.message || 'Failed to fetch ad commissions.');
     }
-    return { success: true, data: [] };
+    return res;
 };
 
-/**
- * Mark an ad commission as paid
- */
+/** Mark an ad commission as paid. */
 export const markCommissionPaid = async (bookingId) => {
-    try {
-        const res = await api.patch(`/ads/commissions/${bookingId}/pay`);
-        return res?.data || { success: true };
-    } catch (error) {
-        console.warn(`Backend PATCH /ads/commissions/${bookingId}/pay failed:`, error.message);
-        return { success: true, message: 'Commission marked paid locally' };
+    const res = await api.patch(`/ads/commissions/${bookingId}/pay`);
+    if (!res || res.success === false) {
+        throw new Error(res?.message || 'Failed to mark commission as paid.');
     }
+    return res;
 };

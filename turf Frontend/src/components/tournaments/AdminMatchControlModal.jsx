@@ -1,43 +1,42 @@
 import { useState, useEffect } from 'react'
 import Modal from '../ui/Modal'
 import Input from '../ui/Input'
-import Button from '../ui/Button'
-import { HiUser, HiClock, HiCalendar, HiShieldCheck, HiRefresh } from 'react-icons/hi'
+import Badge from '../ui/Badge'
+import { HiCalendar } from 'react-icons/hi'
 import { HiTrophy } from 'react-icons/hi2'
 
-export default function AdminMatchControlModal({ isOpen, onClose, matchData, roundName, onSaveMatch }) {
-    const [team1Name, setTeam1Name] = useState('')
+export default function AdminMatchControlModal({ isOpen, onClose, matchData, roundName, onSaveMatch, isSaving }) {
     const [team1Score, setTeam1Score] = useState(0)
-    const [team2Name, setTeam2Name] = useState('')
     const [team2Score, setTeam2Score] = useState(0)
     const [winnerSeed, setWinnerSeed] = useState(null)
     const [status, setStatus] = useState('Scheduled')
-    const [matchDate, setMatchDate] = useState('2026-08-25')
-    const [slotTime, setSlotTime] = useState('06:00 PM - 08:00 PM')
-    const [umpireName, setUmpireName] = useState('Sunil Gavaskar (BCCI Level 2)')
+    const [matchDate, setMatchDate] = useState('')
+    const [slotTime, setSlotTime] = useState('')
+    const [groundCourtName, setGroundCourtName] = useState('')
 
     useEffect(() => {
         if (matchData && matchData.teams) {
             const t1 = matchData.teams[0] || {}
             const t2 = matchData.teams[1] || {}
 
-            setTeam1Name(t1.name || 'TBD')
-            setTeam1Score(t1.score && typeof t1.score === 'number' ? t1.score : 0)
-            setTeam2Name(t2.name || 'TBD')
-            setTeam2Score(t2.score && typeof t2.score === 'number' ? t2.score : 0)
+            setTeam1Score(Number(t1.score) || 0)
+            setTeam2Score(Number(t2.score) || 0)
 
             if (t1.winner) setWinnerSeed(t1.seed)
             else if (t2.winner) setWinnerSeed(t2.seed)
             else setWinnerSeed(null)
 
             setStatus(matchData.status || (t1.winner || t2.winner ? 'Completed' : 'Scheduled'))
-            setMatchDate(matchData.date || '2026-08-25')
-            setSlotTime(matchData.time || '06:00 PM - 08:00 PM')
-            setUmpireName(matchData.umpire || 'Sunil Gavaskar (BCCI Level 2)')
+            setMatchDate(matchData.date || '')
+            setSlotTime(matchData.time || '')
+            setGroundCourtName(matchData.groundCourtName || '')
         }
     }, [matchData])
 
     if (!matchData) return null
+
+    const team1Name = matchData.teams[0]?.name || 'TBD'
+    const team2Name = matchData.teams[1]?.name || 'TBD'
 
     const handleSave = () => {
         const t1ScoreNum = Number(team1Score) || 0
@@ -62,17 +61,15 @@ export default function AdminMatchControlModal({ isOpen, onClose, matchData, rou
             status: status,
             date: matchDate,
             time: slotTime,
-            umpire: umpireName,
+            groundCourtName,
             teams: [
                 {
                     ...matchData.teams[0],
-                    name: team1Name,
                     score: t1ScoreNum,
                     winner: isT1Winner
                 },
                 {
                     ...matchData.teams[1],
-                    name: team2Name,
                     score: t2ScoreNum,
                     winner: isT2Winner
                 }
@@ -80,7 +77,6 @@ export default function AdminMatchControlModal({ isOpen, onClose, matchData, rou
         }
 
         onSaveMatch(updatedMatch)
-        onClose()
     }
 
     return (
@@ -115,14 +111,9 @@ export default function AdminMatchControlModal({ isOpen, onClose, matchData, rou
                         {/* Team 1 Card */}
                         <div className="p-3.5 bg-white rounded-xl border-2 border-slate-200 space-y-2 shadow-2xs">
                             <div className="flex items-center justify-between">
-                                <label className="text-xs font-extrabold text-slate-900 block">Team 1 Name</label>
+                                <label className="text-xs font-extrabold text-slate-900 block">{team1Name}</label>
                                 <span className="text-[10px] font-mono font-bold text-slate-400">Seed #{matchData.teams?.[0]?.seed || 1}</span>
                             </div>
-                            <Input
-                                value={team1Name}
-                                onChange={(e) => setTeam1Name(e.target.value)}
-                                placeholder="Team 1 Name"
-                            />
                             <div>
                                 <label className="text-[11px] font-bold text-slate-600 block mb-1">Score / Runs / Goals</label>
                                 <Input
@@ -137,14 +128,9 @@ export default function AdminMatchControlModal({ isOpen, onClose, matchData, rou
                         {/* Team 2 Card */}
                         <div className="p-3.5 bg-white rounded-xl border-2 border-slate-200 space-y-2 shadow-2xs">
                             <div className="flex items-center justify-between">
-                                <label className="text-xs font-extrabold text-slate-900 block">Team 2 Name</label>
+                                <label className="text-xs font-extrabold text-slate-900 block">{team2Name}</label>
                                 <span className="text-[10px] font-mono font-bold text-slate-400">Seed #{matchData.teams?.[1]?.seed || 2}</span>
                             </div>
-                            <Input
-                                value={team2Name}
-                                onChange={(e) => setTeam2Name(e.target.value)}
-                                placeholder="Team 2 Name"
-                            />
                             <div>
                                 <label className="text-[11px] font-bold text-slate-600 block mb-1">Score / Runs / Goals</label>
                                 <Input
@@ -158,11 +144,11 @@ export default function AdminMatchControlModal({ isOpen, onClose, matchData, rou
                     </div>
                 </div>
 
-                {/* Match Scheduling & Umpire Controls */}
+                {/* Match Scheduling */}
                 <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200 space-y-3">
                     <h4 className="font-black text-slate-900 text-xs uppercase tracking-wider flex items-center gap-1.5 border-b border-slate-200 pb-2">
-                        <HiCalendar className="text-emerald-600 w-4 h-4" /> 
-                        <span>Match Scheduling & Official Umpire</span>
+                        <HiCalendar className="text-emerald-600 w-4 h-4" />
+                        <span>Match Scheduling</span>
                     </h4>
 
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -175,11 +161,11 @@ export default function AdminMatchControlModal({ isOpen, onClose, matchData, rou
                             />
                         </div>
                         <div>
-                            <label className="text-[11px] font-bold text-slate-700 block mb-1">Turf Slot Time</label>
+                            <label className="text-[11px] font-bold text-slate-700 block mb-1">Match Time</label>
                             <Input
                                 value={slotTime}
                                 onChange={(e) => setSlotTime(e.target.value)}
-                                placeholder="06:00 PM - 08:00 PM"
+                                placeholder="16:00"
                             />
                         </div>
                         <div>
@@ -192,23 +178,18 @@ export default function AdminMatchControlModal({ isOpen, onClose, matchData, rou
                                 <option value="Scheduled">Scheduled</option>
                                 <option value="Live">Live 🔴</option>
                                 <option value="Completed">Completed 🟢</option>
-                                <option value="Cancelled">Cancelled 🔴</option>
+                                <option value="Cancelled">Abandoned 🔴</option>
                             </select>
                         </div>
                     </div>
 
                     <div>
-                        <label className="text-[11px] font-bold text-slate-700 block mb-1">Official Certified Umpire / Referee</label>
-                        <select
-                            value={umpireName}
-                            onChange={(e) => setUmpireName(e.target.value)}
-                            className="w-full h-[42px] px-3 rounded-xl border border-slate-300 text-xs font-semibold text-slate-800 bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500 shadow-2xs"
-                        >
-                            <option value="Sunil Gavaskar (BCCI Level 2)">Sunil Gavaskar (BCCI Level 2 Umpire)</option>
-                            <option value="K. Parthasarathy (MPCA State Panel)">K. Parthasarathy (MPCA State Panel Referee)</option>
-                            <option value="Rakesh Varma (Turf Pro Referee)">Rakesh Varma (Turf Pro Senior Umpire)</option>
-                            <option value="Unassigned">Unassigned (Assign Later)</option>
-                        </select>
+                        <label className="text-[11px] font-bold text-slate-700 block mb-1">Ground / Court Name</label>
+                        <Input
+                            value={groundCourtName}
+                            onChange={(e) => setGroundCourtName(e.target.value)}
+                            placeholder="Ground 1 - Main Turf"
+                        />
                     </div>
                 </div>
 
@@ -217,16 +198,18 @@ export default function AdminMatchControlModal({ isOpen, onClose, matchData, rou
                     <button
                         type="button"
                         onClick={onClose}
-                        className="px-5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl transition-all cursor-pointer"
+                        disabled={isSaving}
+                        className="px-5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl transition-all cursor-pointer disabled:opacity-50"
                     >
                         Cancel
                     </button>
                     <button
                         type="button"
                         onClick={handleSave}
-                        className="px-5 py-2.5 bg-gradient-to-r from-emerald-600 to-green-600 hover:from-emerald-700 hover:to-green-700 text-white text-xs font-extrabold rounded-xl transition-all cursor-pointer shadow-md flex items-center gap-2 transform hover:-translate-y-0.5"
+                        disabled={isSaving}
+                        className="px-5 py-2.5 bg-gradient-to-r from-emerald-600 to-green-600 hover:from-emerald-700 hover:to-green-700 text-white text-xs font-extrabold rounded-xl transition-all cursor-pointer shadow-md flex items-center gap-2 transform hover:-translate-y-0.5 disabled:opacity-60"
                     >
-                        <span>💾 Save & Update Playoff Bracket</span>
+                        <span>{isSaving ? 'Saving...' : '💾 Save & Update Playoff Bracket'}</span>
                     </button>
                 </div>
             </div>

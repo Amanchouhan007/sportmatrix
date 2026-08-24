@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useCallback } from 'react'
 import { HiCheck, HiExclamation, HiShieldCheck, HiStar, HiClock, HiFilter, HiSearch, HiUsers, HiUser } from 'react-icons/hi'
 import { HiTrophy } from 'react-icons/hi2'
 import Card from '../../components/ui/Card'
@@ -6,109 +6,8 @@ import Badge from '../../components/ui/Badge'
 import { useToast } from '../../components/ui/Toast'
 import { useAuth } from '../../context/AuthContext'
 import MatchScoreVerificationModal from '../../components/booking/MatchScoreVerificationModal'
-
-const initialMockMatches = [
-    {
-        id: 'MTC-98432',
-        customerId: 'cust_101',
-        customerName: 'Rahul Sharma',
-        team1Name: 'Vijay Nagar Blasters (You)',
-        team1Score: 148,
-        team1Wickets: 4,
-        team1Overs: '16.0',
-        team2Name: 'Palasia Super Strikers',
-        team2Score: 136,
-        team2Wickets: 7,
-        team2Overs: '16.0',
-        winnerName: 'Vijay Nagar Blasters (You)',
-        tournament: 'Indore Elite Turf League 2026',
-        venue: 'Indore Turf Arena, Vijay Nagar (Court A)',
-        date: '12 Aug 2026',
-        time: '6:00 PM - 7:30 PM',
-        sport: 'Cricket 16-Over',
-        hasVerifiedUmpire: true,
-        umpireName: 'Sunil Gavaskar (Level 2 Certified Umpire)',
-        verificationTier: 'Tier 2',
-        verificationStatus: 'Pending', // Pending | Verified | Disputed
-        hoursRemaining: 36,
-        mvp: 'Rahul Sharma (58 Runs off 32 balls)',
-        ppsScore: 84.5
-    },
-    {
-        id: 'MTC-97210',
-        customerId: 'cust_101',
-        customerName: 'Rahul Sharma',
-        team1Name: 'Vijay Nagar Blasters (You)',
-        team1Score: 162,
-        team1Wickets: 3,
-        team1Overs: '15.0',
-        team2Name: 'Bhawarkua Royal Kings',
-        team2Score: 160,
-        team2Wickets: 9,
-        team2Overs: '15.0',
-        winnerName: 'Vijay Nagar Blasters (You)',
-        tournament: 'Indore Captains Friendly Cup',
-        venue: 'Champion Turf Ground, Bhawarkua',
-        date: '08 Aug 2026',
-        time: '8:00 PM - 9:30 PM',
-        sport: 'Cricket 15-Over',
-        hasVerifiedUmpire: false,
-        verificationTier: 'Tier 1',
-        verificationStatus: 'Verified',
-        mvp: 'Aman Varma (72 Runs & 2 Wkts)',
-        ppsScore: 92.0
-    },
-    {
-        id: 'MTC-96104',
-        customerId: 'cust_101',
-        customerName: 'Rahul Sharma',
-        team1Name: 'Annapurna Titans',
-        team1Score: 180,
-        team1Wickets: 6,
-        team1Overs: '20.0',
-        team2Name: 'Vijay Nagar Blasters (You)',
-        team2Score: 175,
-        team2Wickets: 8,
-        team2Overs: '20.0',
-        winnerName: 'Annapurna Titans',
-        tournament: 'Super Corridor Champions Trophy 2026',
-        venue: 'Skyline Sports Hub, Super Corridor',
-        date: '01 Aug 2026',
-        time: '7:00 PM - 10:00 PM',
-        sport: 'Cricket 20-Over',
-        hasVerifiedUmpire: true,
-        umpireName: 'K. Parthasarathy (MPCA Panel)',
-        verificationTier: 'Tier 3',
-        verificationStatus: 'Verified',
-        mvp: 'Karan Malhotra (85 Runs)',
-        ppsScore: 110.2
-    },
-    {
-        id: 'MTC-95089',
-        customerId: 'cust_101',
-        customerName: 'Rahul Sharma',
-        team1Name: 'Vijay Nagar Blasters (You)',
-        team1Score: 115,
-        team1Wickets: 8,
-        team1Overs: '12.0',
-        team2Name: 'Rau Smashers Club',
-        team2Score: 118,
-        team2Wickets: 3,
-        team2Overs: '10.2',
-        winnerName: 'Rau Smashers Club',
-        tournament: 'Casual Evening Scrimmage',
-        venue: 'GreenField Turf, Rau',
-        date: '24 Jul 2026',
-        time: '6:00 PM - 7:00 PM',
-        sport: 'Cricket 12-Over',
-        hasVerifiedUmpire: false,
-        verificationTier: 'Tier 1',
-        verificationStatus: 'Disputed',
-        disputeReason: 'Overcount discrepancy in the 9th over reported by Captain.',
-        mvp: 'Rohit Sen (42 Runs)',
-        ppsScore: 45.0
-    }
-]
+import { getMyMatches, submitMatchScore, raiseMatchDispute } from '../../services/matchPaymentService'
+import useRealtime from '../../utils/useRealtime'
 
 export default function CustomerMatches() {
     const { addToast } = useToast()
@@ -129,65 +28,72 @@ export default function CustomerMatches() {
         }
     }, [user])
 
-    const [matches, setMatches] = useState(() => {
-        const saved = localStorage.getItem('customer_matches_records')
-        return saved ? JSON.parse(saved) : initialMockMatches
-    })
+    const [matches, setMatches] = useState([])
+    const [isLoading, setIsLoading] = useState(true)
     const [activeFilter, setActiveFilter] = useState('all') // 'all' | 'pending' | 'verified' | 'disputed'
     const [selectedMatchForModal, setSelectedMatchForModal] = useState(null)
     const [searchQuery, setSearchQuery] = useState('')
 
-    useEffect(() => {
-        localStorage.setItem('customer_matches_records', JSON.stringify(matches))
-    }, [matches])
+    const fetchMatches = useCallback(async () => {
+        setIsLoading(true)
+        try {
+            const res = await getMyMatches()
+            setMatches(res.data || [])
+        } catch (err) {
+            addToast({ title: 'Load Failed', message: err.message || 'Failed to load your matches.', type: 'error' })
+        } finally {
+            setIsLoading(false)
+        }
+    }, [addToast])
 
-    const handleApproveMatch = (matchId, tier) => {
-        setMatches(prev => prev.map(m => {
-            if (m.id === matchId) {
-                return {
-                    ...m,
-                    verificationStatus: 'Verified',
-                    verificationTier: tier || m.verificationTier,
-                    verifiedAt: new Date().toISOString()
-                }
-            }
-            return m
-        }))
+    useEffect(() => { fetchMatches() }, [fetchMatches])
+    useRealtime(['booking:new', 'match:opponent-joined', 'payment:settled'], () => fetchMatches())
+
+    const handleApproveMatch = async (matchId) => {
+        const match = matches.find(m => m.id === matchId)
+        if (!match) return
+        try {
+            await submitMatchScore(matchId, match.team1Score, match.team2Score)
+            addToast({ title: 'Scorecard Confirmed', message: 'Your confirmation has been recorded.', type: 'success' })
+            fetchMatches()
+        } catch (err) {
+            addToast({ title: 'Confirmation Failed', message: err.message || 'Could not confirm this scorecard.', type: 'error' })
+        } finally {
+            setSelectedMatchForModal(null)
+        }
     }
 
-    const handleDisputeMatch = (matchId, reason) => {
-        setMatches(prev => prev.map(m => {
-            if (m.id === matchId) {
-                return {
-                    ...m,
-                    verificationStatus: 'Disputed',
-                    disputeReason: reason,
-                    disputedAt: new Date().toISOString()
-                }
-            }
-            return m
-        }))
+    const handleDisputeMatch = async (matchId, reason) => {
+        try {
+            await raiseMatchDispute(matchId, reason || 'Disputed by captain from the app.')
+            addToast({ title: 'Dispute Raised', message: 'Sent to Super Admin for review.', type: 'info' })
+            fetchMatches()
+        } catch (err) {
+            addToast({ title: 'Dispute Failed', message: err.message || 'Could not raise this dispute.', type: 'error' })
+        } finally {
+            setSelectedMatchForModal(null)
+        }
     }
 
-    // Filter matches so ONLY records belonging to the current customer/team are shown
-    const customerMatchesOnly = useMemo(() => {
-        const customerName = activeCustomerProfile.fullName.toLowerCase()
-        const teamName = (activeCustomerProfile.teamName || '').toLowerCase()
-
-        return matches.filter(m => {
-            // Check if customer ID or customer name/team matches
-            if (m.customerName && m.customerName.toLowerCase().includes(customerName)) return true
-            if (m.team1Name && m.team1Name.toLowerCase().includes('(you)')) return true
-            if (m.team2Name && m.team2Name.toLowerCase().includes('(you)')) return true
-            if (teamName && (m.team1Name.toLowerCase().includes(teamName) || m.team2Name.toLowerCase().includes(teamName))) return true
-            return true
-        })
-    }, [matches, activeCustomerProfile])
+    // Every row returned by /my-matches already belongs to this customer (captain of either side).
+    const customerMatchesOnly = matches
 
     // Counts for customer's own matches
     const pendingMatches = customerMatchesOnly.filter(m => m.verificationStatus === 'Pending')
     const verifiedMatches = customerMatchesOnly.filter(m => m.verificationStatus === 'Verified')
     const disputedMatches = customerMatchesOnly.filter(m => m.verificationStatus === 'Disputed')
+
+    // Real win/loss tally derived from which side this customer captained and the real winnerName.
+    const { wins, losses } = useMemo(() => {
+        let w = 0, l = 0
+        customerMatchesOnly.forEach(m => {
+            if (!m.winnerName) return
+            const myTeamName = m.isCaptainA ? m.team1Name : m.team2Name
+            if (m.winnerName === myTeamName) w++
+            else l++
+        })
+        return { wins: w, losses: l }
+    }, [customerMatchesOnly])
 
     const filteredMatches = customerMatchesOnly.filter(m => {
         if (activeFilter === 'pending') return m.verificationStatus === 'Pending'
@@ -308,7 +214,7 @@ export default function CustomerMatches() {
                 <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-xs">
                     <div className="text-[10px] font-black uppercase text-slate-400 tracking-wider">My Total Matches</div>
                     <div className="text-2xl font-black text-slate-900 mt-1 font-mono">{customerMatchesOnly.length}</div>
-                    <div className="text-[11px] text-emerald-600 font-bold mt-0.5">3 Wins · 1 Loss</div>
+                    <div className="text-[11px] text-emerald-600 font-bold mt-0.5">{wins} Wins · {losses} Losses</div>
                 </div>
 
                 <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-xs">
@@ -324,9 +230,9 @@ export default function CustomerMatches() {
                 </div>
 
                 <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-xs">
-                    <div className="text-[10px] font-black uppercase text-purple-600 tracking-wider">My PPS Score</div>
-                    <div className="text-2xl font-black text-purple-700 mt-1 font-mono">88.6</div>
-                    <div className="text-[11px] text-purple-800 font-bold mt-0.5">Rank #4 in Indore</div>
+                    <div className="text-[10px] font-black uppercase text-purple-600 tracking-wider">Disputed Matches</div>
+                    <div className="text-2xl font-black text-purple-700 mt-1 font-mono">{disputedMatches.length}</div>
+                    <div className="text-[11px] text-purple-800 font-bold mt-0.5">Awaiting admin review</div>
                 </div>
             </div>
 
@@ -380,8 +286,12 @@ export default function CustomerMatches() {
                             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-3">
                                 <div className="flex items-center gap-2.5 flex-wrap">
                                     <span className="text-xs font-mono font-bold text-slate-400">#{m.id}</span>
-                                    <span className="text-slate-300">•</span>
-                                    <span className="text-xs font-bold text-slate-700">{m.tournament}</span>
+                                    {m.tournament && (
+                                        <>
+                                            <span className="text-slate-300">•</span>
+                                            <span className="text-xs font-bold text-slate-700">{m.tournament}</span>
+                                        </>
+                                    )}
                                     <span className="text-slate-300">•</span>
                                     <span className="text-xs text-slate-500 font-medium">{m.sport}</span>
                                 </div>
@@ -401,11 +311,10 @@ export default function CustomerMatches() {
                                             </div>
                                             <div>
                                                 <div className="text-sm font-black text-slate-900">{m.team1Name}</div>
-                                                <div className="text-[10px] font-mono text-slate-400">Overs: {m.team1Overs}</div>
                                             </div>
                                         </div>
                                         <div className="text-right">
-                                            <span className="text-xl font-black font-mono text-slate-900">{m.team1Score}/{m.team1Wickets}</span>
+                                            <span className="text-xl font-black font-mono text-slate-900">{m.team1Score ?? '—'}</span>
                                         </div>
                                     </div>
 
@@ -418,11 +327,10 @@ export default function CustomerMatches() {
                                             </div>
                                             <div>
                                                 <div className="text-sm font-black text-slate-900">{m.team2Name}</div>
-                                                <div className="text-[10px] font-mono text-slate-400">Overs: {m.team2Overs}</div>
                                             </div>
                                         </div>
                                         <div className="text-right">
-                                            <span className="text-xl font-black font-mono text-slate-900">{m.team2Score}/{m.team2Wickets}</span>
+                                            <span className="text-xl font-black font-mono text-slate-900">{m.team2Score ?? '—'}</span>
                                         </div>
                                     </div>
                                 </div>
@@ -437,10 +345,6 @@ export default function CustomerMatches() {
                                         <div className="flex items-center justify-between text-slate-600 font-medium">
                                             <span>📅 Schedule:</span>
                                             <strong className="text-slate-900 font-bold">{m.date} · {m.time.split('-')[0]}</strong>
-                                        </div>
-                                        <div className="flex items-center justify-between text-slate-600 font-medium">
-                                            <span>⭐ MVP:</span>
-                                            <strong className="text-emerald-700 font-black">{m.mvp}</strong>
                                         </div>
                                         {m.umpireName && (
                                             <div className="flex items-center justify-between text-slate-600 font-medium pt-1 border-t border-slate-200">

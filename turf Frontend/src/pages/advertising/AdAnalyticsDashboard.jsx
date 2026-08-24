@@ -1,26 +1,23 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import {
-    ResponsiveContainer, AreaChart, Area, BarChart, Bar, LineChart, Line, XAxis, YAxis, Tooltip, CartesianGrid, Legend
+    ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid, Legend
 } from 'recharts'
-import { 
-    FiTrendingUp, 
-    FiCheckCircle, 
-    FiDollarSign, 
-    FiTag, 
-    FiActivity, 
-    FiMousePointer, 
-    FiShoppingBag, 
+import {
+    FiTrendingUp,
+    FiCheckCircle,
+    FiDollarSign,
+    FiTag,
+    FiActivity,
+    FiMousePointer,
+    FiShoppingBag,
     FiBarChart2,
     FiCalendar,
     FiChevronDown,
     FiCheck
 } from 'react-icons/fi'
-
-const MONTHLY_REVENUE_DATA = []
-const AD_PERFORMANCE_DATA = []
-const BOOKING_TREND_DATA = []
-const CLICK_VS_BOOKING_DATA = []
+import { useToast } from '../../components/ui/Toast'
+import { getAdAnalytics } from '../../services/adsService'
 
 const TIMEFRAME_OPTIONS = [
     { value: '7d', label: 'Last 7 Days' },
@@ -33,8 +30,10 @@ export default function AdAnalyticsDashboard() {
     const navigate = useNavigate()
     const location = useLocation()
     const basePath = location.pathname.startsWith('/super-admin') ? '/super-admin' : location.pathname.startsWith('/staff') ? '/staff' : '/admin'
+    const { addToast } = useToast()
     const [timeframe, setTimeframe] = useState('30d')
     const [isTimeframeOpen, setIsTimeframeOpen] = useState(false)
+    const [isLoading, setIsLoading] = useState(true)
 
     const [stats, setStats] = useState({
         totalAds: 0,
@@ -42,37 +41,46 @@ export default function AdAnalyticsDashboard() {
         totalRevenue: 0,
         commission: 0,
         adBookings: 0,
-        conversionRate: '0.0%'
+        conversionRate: 0
     })
+    const [campaigns, setCampaigns] = useState([])
 
     useEffect(() => {
         const fetchAnalyticsData = async () => {
+            setIsLoading(true)
             try {
-                const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5005/api/v1';
-                const res = await fetch(`${API_URL}/ads/analytics`);
-                const data = await res.json();
-
-                if (data.success && data.data) {
-                    const { totalAds, activeAds, totalRevenue, adBookings } = data.data;
-                    const comm = Math.round((totalRevenue || 0) * 0.12);
-                    const conv = totalAds > 0 ? ((adBookings / (totalAds * 10)) * 100).toFixed(1) + '%' : '0.0%';
-
-                    setStats({
-                        totalAds: Number(totalAds || 0),
-                        activeAds: Number(activeAds || 0),
-                        totalRevenue: Number(totalRevenue || 0),
-                        commission: comm,
-                        adBookings: Number(adBookings || 0),
-                        conversionRate: conv
-                    });
-                }
-            } catch (e) {
-                console.warn('Error syncing ad analytics:', e);
+                const res = await getAdAnalytics()
+                const d = res.data || {}
+                setStats({
+                    totalAds: Number(d.totalAds || 0),
+                    activeAds: Number(d.activeAds || 0),
+                    totalRevenue: Number(d.totalRevenue || 0),
+                    commission: Number(d.totalCommission || 0),
+                    adBookings: Number(d.adBookings || 0),
+                    conversionRate: Number(d.conversionRate || 0)
+                })
+                setCampaigns(Array.isArray(d.campaignsRaw) ? d.campaignsRaw : [])
+            } catch (err) {
+                addToast({ title: 'Load Failed', message: err.message || 'Failed to load ad analytics.', type: 'error' })
+            } finally {
+                setIsLoading(false)
             }
-        };
+        }
+        fetchAnalyticsData()
+    }, [addToast])
 
-        fetchAnalyticsData();
-    }, []);
+    // Real per-campaign-type aggregation -- no fabricated time-series, since the
+    // backend doesn't track daily/monthly buckets for ad performance yet.
+    const byType = Object.values(campaigns.reduce((acc, c) => {
+        if (!acc[c.type]) acc[c.type] = { type: c.type, bookings: 0, revenue: 0 }
+        acc[c.type].bookings += c.bookings
+        acc[c.type].revenue += c.revenue
+        return acc
+    }, {}))
+
+    const revenueByCampaign = campaigns.map(c => ({ name: c.name, revenue: c.revenue, commission: c.commissionPaid }))
+    const clicksVsBookings = campaigns.map(c => ({ name: c.name, clicks: c.clicks, bookings: c.bookings }))
+    const budgetUtilization = campaigns.map(c => ({ name: c.name, spent: c.budgetSpent, total: c.budgetTotal }))
 
     return (
         <div className="space-y-6 animate-in fade-in duration-300">
@@ -91,48 +99,6 @@ export default function AdAnalyticsDashboard() {
                                 Deep-dive metrics into ad campaigns, conversion rates, and revenue performance
                             </p>
                         </div>
-                    </div>
-
-                    {/* Date Filter Controls Popover */}
-                    <div className="relative inline-block">
-                        <button
-                            type="button"
-                            onClick={() => setIsTimeframeOpen(!isTimeframeOpen)}
-                            className="h-11 px-4 bg-white hover:bg-slate-50 rounded-xl border border-slate-200/90 shadow-2xs hover:border-slate-300 transition-all cursor-pointer flex items-center gap-2 font-extrabold text-xs text-slate-800 outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
-                        >
-                            <FiCalendar className="w-4 h-4 text-emerald-600" />
-                            <span>{TIMEFRAME_OPTIONS.find(o => o.value === timeframe)?.label || 'Last 30 Days'}</span>
-                            <FiChevronDown className={`w-4 h-4 text-slate-400 transition-transform duration-200 ${isTimeframeOpen ? 'rotate-180 text-emerald-600' : ''}`} />
-                        </button>
-
-                        {isTimeframeOpen && (
-                            <>
-                                <div className="fixed inset-0 z-40" onClick={() => setIsTimeframeOpen(false)} />
-                                <div className="absolute top-full right-0 mt-2 z-50 w-44 bg-white/95 backdrop-blur-md rounded-2xl border border-slate-200/90 shadow-[0_15px_35px_rgba(0,0,0,0.1)] p-1.5 space-y-0.5 animate-in fade-in slide-in-from-top-2 duration-150">
-                                    {TIMEFRAME_OPTIONS.map(opt => {
-                                        const isSelected = timeframe === opt.value
-                                        return (
-                                            <button
-                                                key={opt.value}
-                                                type="button"
-                                                onClick={() => {
-                                                    setTimeframe(opt.value)
-                                                    setIsTimeframeOpen(false)
-                                                }}
-                                                className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-extrabold transition-colors ${
-                                                    isSelected 
-                                                        ? 'bg-emerald-50 text-emerald-700 font-black' 
-                                                        : 'text-slate-700 hover:bg-slate-100 hover:text-slate-900'
-                                                }`}
-                                            >
-                                                <span>{opt.label}</span>
-                                                {isSelected && <FiCheck className="w-3.5 h-3.5 text-emerald-600 shrink-0" />}
-                                            </button>
-                                        )
-                                    })}
-                                </div>
-                            </>
-                        )}
                     </div>
                 </div>
 
@@ -169,6 +135,10 @@ export default function AdAnalyticsDashboard() {
                 </div>
             </div>
 
+            {isLoading ? (
+                <div className="py-16 text-center text-slate-400 text-sm font-semibold bg-white rounded-3xl border border-slate-200/80">Loading analytics...</div>
+            ) : (
+            <>
             {/* KPI Cards Grid */}
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
                 {/* Total Ads */}
@@ -211,7 +181,7 @@ export default function AdAnalyticsDashboard() {
                     </div>
                 </div>
 
-                {/* Commission */}
+                {/* Commission -- real sum of AdCommission.commissionPaid per ad, not a guessed flat rate */}
                 <div className="bg-white rounded-2xl border border-slate-200/80 p-4 sm:p-5 relative overflow-hidden shadow-[0_4px_20px_rgba(0,0,0,0.03)] hover:shadow-[0_10px_30px_rgba(0,0,0,0.06)] hover:-translate-y-1 transition-all duration-300 group">
                     <div className="absolute top-0 left-0 right-0 h-1 bg-amber-500 transition-all duration-300 group-hover:h-1.5" />
                     <div className="space-y-2">
@@ -219,7 +189,7 @@ export default function AdAnalyticsDashboard() {
                             <FiTrendingUp className="text-amber-500 shrink-0" /> Commission
                         </p>
                         <p className="text-2xl sm:text-3xl font-black text-amber-600 tracking-tight leading-none">₹{stats.commission.toLocaleString('en-IN')}</p>
-                        <p className="text-[11px] font-medium text-slate-500 truncate">12.0% platform fee</p>
+                        <p className="text-[11px] font-medium text-slate-500 truncate">Paid to date</p>
                     </div>
                 </div>
 
@@ -237,109 +207,65 @@ export default function AdAnalyticsDashboard() {
                     </div>
                 </div>
 
-                {/* Conversion */}
+                {/* Conversion -- real bookings/clicks ratio, not a hardcoded literal */}
                 <div className="bg-white rounded-2xl border border-slate-200/80 p-4 sm:p-5 relative overflow-hidden shadow-[0_4px_20px_rgba(0,0,0,0.03)] hover:shadow-[0_10px_30px_rgba(0,0,0,0.06)] hover:-translate-y-1 transition-all duration-300 group">
                     <div className="absolute top-0 left-0 right-0 h-1 bg-cyan-500 transition-all duration-300 group-hover:h-1.5" />
                     <div className="space-y-2">
                         <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest flex items-center gap-1.5 truncate">
                             <FiActivity className="text-cyan-600 shrink-0" /> Conversion
                         </p>
-                        <p className="text-2xl sm:text-3xl font-black text-cyan-600 tracking-tight leading-none">12.8%</p>
-                        <p className="text-[11px] font-extrabold text-emerald-600 bg-emerald-50 border border-emerald-200/60 px-2 py-0.5 rounded-md inline-block">
-                            High conversion
-                        </p>
+                        <p className="text-2xl sm:text-3xl font-black text-cyan-600 tracking-tight leading-none">{stats.conversionRate}%</p>
+                        <p className="text-[11px] font-medium text-slate-500 truncate">Bookings / Clicks</p>
                     </div>
                 </div>
             </div>
 
+            {campaigns.length === 0 ? (
+                <div className="bg-white rounded-[20px] border border-slate-200/80 p-10 text-center text-slate-400 text-sm font-semibold">
+                    No advertisement campaigns yet -- charts will populate once campaigns have real activity.
+                </div>
+            ) : (
+            <>
             {/* Charts Section - Row 1 */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                {/* Chart 1: Monthly Revenue & Commission */}
+                {/* Chart 1: Revenue & Commission by Campaign */}
                 <div className="bg-white rounded-[20px] border border-slate-200/80 p-5 sm:p-6 shadow-[0_4px_20px_rgba(0,0,0,0.03)] space-y-4">
                     <div className="flex items-center gap-2.5 pb-2 border-b border-slate-100">
                         <div className="w-8 h-8 rounded-xl bg-emerald-50 text-[#10B981] flex items-center justify-center text-base">
                             <FiDollarSign />
                         </div>
-                        <div>
-                            <h3 className="font-extrabold text-slate-900 text-sm sm:text-base tracking-tight">
-                                Monthly Revenue & Platform Commission
-                            </h3>
-                        </div>
+                        <h3 className="font-extrabold text-slate-900 text-sm sm:text-base tracking-tight">Revenue &amp; Commission by Campaign</h3>
                     </div>
                     <div className="h-64 pt-2">
                         <ResponsiveContainer width="100%" height={240} minWidth={0}>
-                            <AreaChart data={MONTHLY_REVENUE_DATA} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                                <defs>
-                                    <linearGradient id="colorRev" x1="0" y1="0" x2="0" y2="1">
-                                        <stop offset="5%" stopColor="#10B981" stopOpacity={0.35} />
-                                        <stop offset="95%" stopColor="#10B981" stopOpacity={0} />
-                                    </linearGradient>
-                                    <linearGradient id="colorComm" x1="0" y1="0" x2="0" y2="1">
-                                        <stop offset="5%" stopColor="#0EA5E9" stopOpacity={0.35} />
-                                        <stop offset="95%" stopColor="#0EA5E9" stopOpacity={0} />
-                                    </linearGradient>
-                                </defs>
+                            <BarChart data={revenueByCampaign} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                                 <CartesianGrid strokeDasharray="3 3" stroke="#F1F5F9" vertical={false} />
-                                <XAxis dataKey="month" stroke="#64748B" tick={{ fontSize: 11, fontWeight: '600' }} axisLine={false} tickLine={false} />
+                                <XAxis dataKey="name" stroke="#64748B" tick={{ fontSize: 10, fontWeight: '600' }} axisLine={false} tickLine={false} />
                                 <YAxis stroke="#64748B" tick={{ fontSize: 11, fontWeight: '600' }} axisLine={false} tickLine={false} />
-                                <Tooltip
-                                    cursor={{ stroke: '#10B981', strokeWidth: 1, strokeDasharray: '4 4' }}
-                                    content={({ active, payload }) => {
-                                        if (active && payload && payload.length) {
-                                            const data = payload[0].payload
-                                            return (
-                                                <div className="bg-slate-900/95 text-white p-3 rounded-xl shadow-xl text-xs font-semibold space-y-1 backdrop-blur-md border border-slate-700/60">
-                                                    <p className="font-extrabold text-slate-300">{data.month}</p>
-                                                    <p className="text-emerald-400 font-black">Revenue: ₹{data.revenue.toLocaleString()}</p>
-                                                    <p className="text-sky-400 font-bold">Commission: ₹{data.commission.toLocaleString()}</p>
-                                                </div>
-                                            )
-                                        }
-                                        return null
-                                    }}
-                                />
+                                <Tooltip cursor={{ fill: 'rgba(16, 185, 129, 0.06)' }} contentStyle={{ background: '#0f172a', border: 'none', borderRadius: '12px', color: '#fff', fontSize: '12px' }} />
                                 <Legend wrapperStyle={{ fontSize: '11px', fontWeight: '700', paddingTop: '10px' }} />
-                                <Area type="monotone" dataKey="revenue" name="Total Ad Revenue (₹)" stroke="#10B981" strokeWidth={2.5} fillOpacity={1} fill="url(#colorRev)" />
-                                <Area type="monotone" dataKey="commission" name="Commission (₹)" stroke="#0EA5E9" strokeWidth={2.5} fillOpacity={1} fill="url(#colorComm)" />
-                            </AreaChart>
+                                <Bar dataKey="revenue" name="Revenue (₹)" fill="#10B981" radius={[6, 6, 0, 0]} barSize={28} />
+                                <Bar dataKey="commission" name="Commission Paid (₹)" fill="#0EA5E9" radius={[6, 6, 0, 0]} barSize={28} />
+                            </BarChart>
                         </ResponsiveContainer>
                     </div>
                 </div>
 
-                {/* Chart 2: Advertisement Performance */}
+                {/* Chart 2: Performance by Advertisement Type */}
                 <div className="bg-white rounded-[20px] border border-slate-200/80 p-5 sm:p-6 shadow-[0_4px_20px_rgba(0,0,0,0.03)] space-y-4">
                     <div className="flex items-center gap-2.5 pb-2 border-b border-slate-100">
                         <div className="w-8 h-8 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center text-base">
                             <FiTag />
                         </div>
-                        <div>
-                            <h3 className="font-extrabold text-slate-900 text-sm sm:text-base tracking-tight">
-                                Performance by Advertisement Type
-                            </h3>
-                        </div>
+                        <h3 className="font-extrabold text-slate-900 text-sm sm:text-base tracking-tight">Performance by Advertisement Type</h3>
                     </div>
                     <div className="h-64 pt-2">
                         <ResponsiveContainer width="100%" height={240} minWidth={0}>
-                            <BarChart data={AD_PERFORMANCE_DATA} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                            <BarChart data={byType} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                                 <CartesianGrid strokeDasharray="3 3" stroke="#F1F5F9" vertical={false} />
                                 <XAxis dataKey="type" stroke="#64748B" tick={{ fontSize: 11, fontWeight: '600' }} axisLine={false} tickLine={false} />
                                 <YAxis stroke="#64748B" tick={{ fontSize: 11, fontWeight: '600' }} axisLine={false} tickLine={false} />
-                                <Tooltip
-                                    cursor={{ fill: 'rgba(14, 165, 233, 0.06)' }}
-                                    content={({ active, payload }) => {
-                                        if (active && payload && payload.length) {
-                                            const data = payload[0].payload
-                                            return (
-                                                <div className="bg-slate-900/95 text-white p-3 rounded-xl shadow-xl text-xs font-semibold space-y-1 backdrop-blur-md border border-slate-700/60">
-                                                    <p className="font-extrabold text-slate-300">{data.type}</p>
-                                                    <p className="text-sky-400 font-black">Bookings: {data.bookings}</p>
-                                                    <p className="text-emerald-400 font-bold">Revenue: ₹{data.revenue.toLocaleString()}</p>
-                                                </div>
-                                            )
-                                        }
-                                        return null
-                                    }}
-                                />
+                                <Tooltip cursor={{ fill: 'rgba(14, 165, 233, 0.06)' }} contentStyle={{ background: '#0f172a', border: 'none', borderRadius: '12px', color: '#fff', fontSize: '12px' }} />
                                 <Legend wrapperStyle={{ fontSize: '11px', fontWeight: '700', paddingTop: '10px' }} />
                                 <Bar dataKey="bookings" name="Bookings Generated" fill="#0EA5E9" radius={[6, 6, 0, 0]} barSize={36} />
                             </BarChart>
@@ -350,87 +276,56 @@ export default function AdAnalyticsDashboard() {
 
             {/* Charts Section - Row 2 */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                {/* Chart 3: Booking Trend */}
-                <div className="bg-white rounded-[20px] border border-slate-200/80 p-5 sm:p-6 shadow-[0_4px_20px_rgba(0,0,0,0.03)] space-y-4">
-                    <div className="flex items-center gap-2.5 pb-2 border-b border-slate-100">
-                        <div className="w-8 h-8 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center text-base">
-                            <FiTrendingUp />
-                        </div>
-                        <div>
-                            <h3 className="font-extrabold text-slate-900 text-sm sm:text-base tracking-tight">
-                                Weekly Ad Booking Growth
-                            </h3>
-                        </div>
-                    </div>
-                    <div className="h-64 pt-2">
-                        <ResponsiveContainer width="100%" height={240} minWidth={0}>
-                            <LineChart data={BOOKING_TREND_DATA} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                                <CartesianGrid strokeDasharray="3 3" stroke="#F1F5F9" vertical={false} />
-                                <XAxis dataKey="week" stroke="#64748B" tick={{ fontSize: 11, fontWeight: '600' }} axisLine={false} tickLine={false} />
-                                <YAxis stroke="#64748B" tick={{ fontSize: 11, fontWeight: '600' }} axisLine={false} tickLine={false} />
-                                <Tooltip
-                                    content={({ active, payload }) => {
-                                        if (active && payload && payload.length) {
-                                            const data = payload[0].payload
-                                            return (
-                                                <div className="bg-slate-900/95 text-white p-3 rounded-xl shadow-xl text-xs font-semibold space-y-1 backdrop-blur-md border border-slate-700/60">
-                                                    <p className="font-extrabold text-slate-300">{data.week}</p>
-                                                    <p className="text-purple-400 font-black">Bookings: {data.bookings}</p>
-                                                </div>
-                                            )
-                                        }
-                                        return null
-                                    }}
-                                />
-                                <Legend wrapperStyle={{ fontSize: '11px', fontWeight: '700', paddingTop: '10px' }} />
-                                <Line type="monotone" dataKey="bookings" name="Weekly Bookings" stroke="#A855F7" strokeWidth={3} dot={{ r: 5, fill: '#A855F7', strokeWidth: 2, stroke: '#FFFFFF' }} activeDot={{ r: 7 }} />
-                            </LineChart>
-                        </ResponsiveContainer>
-                    </div>
-                </div>
-
-                {/* Chart 4: Click vs Booking */}
+                {/* Chart 3: Clicks vs Bookings by Campaign */}
                 <div className="bg-white rounded-[20px] border border-slate-200/80 p-5 sm:p-6 shadow-[0_4px_20px_rgba(0,0,0,0.03)] space-y-4">
                     <div className="flex items-center gap-2.5 pb-2 border-b border-slate-100">
                         <div className="w-8 h-8 rounded-xl bg-cyan-50 text-cyan-600 flex items-center justify-center text-base">
                             <FiMousePointer />
                         </div>
-                        <div>
-                            <h3 className="font-extrabold text-slate-900 text-sm sm:text-base tracking-tight">
-                                Daily Clicks vs Final Bookings
-                            </h3>
-                        </div>
+                        <h3 className="font-extrabold text-slate-900 text-sm sm:text-base tracking-tight">Clicks vs Bookings by Campaign</h3>
                     </div>
                     <div className="h-64 pt-2">
                         <ResponsiveContainer width="100%" height={240} minWidth={0}>
-                            <BarChart data={CLICK_VS_BOOKING_DATA} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                            <BarChart data={clicksVsBookings} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                                 <CartesianGrid strokeDasharray="3 3" stroke="#F1F5F9" vertical={false} />
-                                <XAxis dataKey="day" stroke="#64748B" tick={{ fontSize: 11, fontWeight: '600' }} axisLine={false} tickLine={false} />
+                                <XAxis dataKey="name" stroke="#64748B" tick={{ fontSize: 10, fontWeight: '600' }} axisLine={false} tickLine={false} />
                                 <YAxis stroke="#64748B" tick={{ fontSize: 11, fontWeight: '600' }} axisLine={false} tickLine={false} />
-                                <Tooltip
-                                    cursor={{ fill: 'rgba(56, 189, 248, 0.06)' }}
-                                    content={({ active, payload }) => {
-                                        if (active && payload && payload.length) {
-                                            const data = payload[0].payload
-                                            return (
-                                                <div className="bg-slate-900/95 text-white p-3 rounded-xl shadow-xl text-xs font-semibold space-y-1 backdrop-blur-md border border-slate-700/60">
-                                                    <p className="font-extrabold text-slate-300">{data.day}</p>
-                                                    <p className="text-sky-400 font-black">Clicks: {data.clicks.toLocaleString()}</p>
-                                                    <p className="text-emerald-400 font-black">Bookings: {data.bookings}</p>
-                                                </div>
-                                            )
-                                        }
-                                        return null
-                                    }}
-                                />
+                                <Tooltip cursor={{ fill: 'rgba(56, 189, 248, 0.06)' }} contentStyle={{ background: '#0f172a', border: 'none', borderRadius: '12px', color: '#fff', fontSize: '12px' }} />
                                 <Legend wrapperStyle={{ fontSize: '11px', fontWeight: '700', paddingTop: '10px' }} />
-                                <Bar dataKey="clicks" name="Banner Clicks" fill="#38BDF8" radius={[6, 6, 0, 0]} barSize={24} />
+                                <Bar dataKey="clicks" name="Clicks" fill="#38BDF8" radius={[6, 6, 0, 0]} barSize={24} />
                                 <Bar dataKey="bookings" name="Confirmed Bookings" fill="#10B981" radius={[6, 6, 0, 0]} barSize={24} />
                             </BarChart>
                         </ResponsiveContainer>
                     </div>
                 </div>
+
+                {/* Chart 4: Budget Utilization by Campaign */}
+                <div className="bg-white rounded-[20px] border border-slate-200/80 p-5 sm:p-6 shadow-[0_4px_20px_rgba(0,0,0,0.03)] space-y-4">
+                    <div className="flex items-center gap-2.5 pb-2 border-b border-slate-100">
+                        <div className="w-8 h-8 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center text-base">
+                            <FiTrendingUp />
+                        </div>
+                        <h3 className="font-extrabold text-slate-900 text-sm sm:text-base tracking-tight">Budget Utilization by Campaign</h3>
+                    </div>
+                    <div className="h-64 pt-2">
+                        <ResponsiveContainer width="100%" height={240} minWidth={0}>
+                            <BarChart data={budgetUtilization} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                                <CartesianGrid strokeDasharray="3 3" stroke="#F1F5F9" vertical={false} />
+                                <XAxis dataKey="name" stroke="#64748B" tick={{ fontSize: 10, fontWeight: '600' }} axisLine={false} tickLine={false} />
+                                <YAxis stroke="#64748B" tick={{ fontSize: 11, fontWeight: '600' }} axisLine={false} tickLine={false} />
+                                <Tooltip cursor={{ fill: 'rgba(168, 85, 247, 0.06)' }} contentStyle={{ background: '#0f172a', border: 'none', borderRadius: '12px', color: '#fff', fontSize: '12px' }} />
+                                <Legend wrapperStyle={{ fontSize: '11px', fontWeight: '700', paddingTop: '10px' }} />
+                                <Bar dataKey="spent" name="Spent (₹)" fill="#A855F7" radius={[6, 6, 0, 0]} barSize={24} />
+                                <Bar dataKey="total" name="Total Budget (₹)" fill="#E9D5FF" radius={[6, 6, 0, 0]} barSize={24} />
+                            </BarChart>
+                        </ResponsiveContainer>
+                    </div>
+                </div>
             </div>
+            </>
+            )}
+            </>
+            )}
         </div>
     )
 }

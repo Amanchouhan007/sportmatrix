@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 
 const footerLinks = {
@@ -10,6 +11,25 @@ const footerLinks = {
 
 export default function Footer() {
     const navigate = useNavigate()
+    const [info, setInfo] = useState({
+        addressLine1: '2341/E, Sudama Nagar',
+        cityStateCountry: 'Indore, M.P.',
+        email: 'info@kiaantechnology.com',
+        phone: '+91-97521 00980',
+        poweredBy: 'Powered by Kiaan Technology'
+    })
+
+    useEffect(() => {
+        const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5005/api/v1';
+        fetch(`${API_URL}/settings/contact-info`)
+            .then(res => res.json())
+            .then(data => {
+                if (data?.success && data?.data) {
+                    setInfo(data.data)
+                }
+            })
+            .catch(() => {})
+    }, [])
     
     const scrollTo = (id) => {
         document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' })
@@ -66,12 +86,12 @@ export default function Footer() {
                     ))}
                 </div>
 
-                <div className="mt-16 pt-8 border-t border-[#E5E7EB] flex flex-col sm:flex-row items-center justify-between gap-4">
-                    <p className="text-sm font-semibold text-[#6B7280]">
-                        © {new Date().getFullYear()} SportMatrix. All rights reserved.
+                <div className="mt-16 pt-8 border-t border-[#E5E7EB] flex flex-col sm:flex-row items-center justify-between gap-4 text-xs font-semibold text-[#6B7280]">
+                    <p>
+                        © {new Date().getFullYear()} SportMatrix. All rights reserved. <span className="font-extrabold text-slate-800">{info.poweredBy || 'Powered by Kiaan Technology'}</span>
                     </p>
-                    <p className="text-sm font-semibold text-[#6B7280]">
-                        Sports Business Operating System
+                    <p>
+                        📍 {info.addressLine1}, {info.cityStateCountry} | 📞 {info.phone} | ✉️ {info.email}
                     </p>
                 </div>
             </div>

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import ChartCard from '../../components/ui/ChartCard'
 import HeatmapGrid from '../../components/ui/HeatmapGrid'
 import Button from '../../components/ui/Button'
@@ -6,84 +6,55 @@ import Badge from '../../components/ui/Badge'
 import { useToast } from '../../components/ui/Toast'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line } from 'recharts'
 import { HiDownload, HiChartBar, HiTrendingUp, HiCalendar } from 'react-icons/hi'
-
-const revenueData = [
-    { m: 'Mon', v: 8200 }, 
-    { m: 'Tue', v: 6800 }, 
-    { m: 'Wed', v: 9400 }, 
-    { m: 'Thu', v: 7600 }, 
-    { m: 'Fri', v: 11200 }, 
-    { m: 'Sat', v: 15800 }, 
-    { m: 'Sun', v: 14600 }
-]
-
-const sportData = [
-    { name: 'Cricket', value: 40 }, 
-    { name: 'Football', value: 25 }, 
-    { name: 'Football', value: 20 }, 
-    { name: 'Cricket', value: 10 }, 
-    { name: 'Esports', value: 5 }
-]
+import api from '../../services/api'
+import { getSportsReport, getOccupancyHeatmap } from '../../services/reportsService'
 
 const COLORS = ['#10b981', '#6366f1', '#f59e0b', '#ef4444', '#a855f7']
-
-const bookingTrend = [
-    { m: 'W1', v: 120 }, 
-    { m: 'W2', v: 145 }, 
-    { m: 'W3', v: 132 }, 
-    { m: 'W4', v: 168 }, 
-    { m: 'W5', v: 155 }, 
-    { m: 'W6', v: 190 }
-]
-
-const heatmapData = [
-    [20, 45, 60, 40, 30, 80, 90, 85, 60, 40], 
-    [30, 50, 55, 45, 35, 75, 95, 88, 55, 35], 
-    [25, 40, 50, 38, 28, 70, 85, 80, 50, 30],
-    [35, 55, 65, 48, 40, 85, 98, 92, 65, 45], 
-    [40, 60, 70, 55, 50, 90, 100, 95, 70, 50], 
-    [45, 65, 75, 60, 55, 92, 98, 90, 65, 45], 
-    [30, 50, 60, 42, 35, 82, 90, 85, 55, 38],
-]
-
-const xLabels = ['6AM', '7AM', '8AM', '9AM', '10AM', '4PM', '5PM', '6PM', '7PM', '8PM']
-const yLabels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
-
-import { useState, useEffect } from 'react'
 
 export default function ReportsPage() {
     const { addToast } = useToast()
     const [dateRange, setDateRange] = useState('This Week')
     const [revenueData, setRevenueData] = useState([])
     const [bookingTrend, setBookingTrend] = useState([])
+    const [sportData, setSportData] = useState([])
+    const [heatmapData, setHeatmapData] = useState([])
+    const [heatmapLabels, setHeatmapLabels] = useState({ xLabels: [], yLabels: [] })
 
-    useEffect(() => {
-        const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5005/api/v1';
-        fetch(`${API_URL}/billing/history`)
-            .then(r => r.json())
+    const loadReports = useCallback(() => {
+        api.get('/billing/history')
             .then(res => {
-                if (res.success && Array.isArray(res.data) && res.data.length > 0) {
+                if (res && res.success && Array.isArray(res.data) && res.data.length > 0) {
                     const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
                     const dayMap = { Sun: 0, Mon: 0, Tue: 0, Wed: 0, Thu: 0, Fri: 0, Sat: 0 };
+                    // Real weekly buckets from the actual payment dates, not a fabricated growth pattern.
+                    const weekMap = {};
                     res.data.forEach(b => {
-                        const d = b.created_at || b.date ? new Date(b.created_at || b.date) : new Date();
-                        const dayName = days[d.getDay()];
-                        dayMap[dayName] = (dayMap[dayName] || 0) + (Number(b.amount) || 0);
+                        const d = b.createdAt || b.created_at || b.date ? new Date(b.createdAt || b.created_at || b.date) : new Date();
+                        dayMap[days[d.getDay()]] = (dayMap[days[d.getDay()]] || 0) + (Number(b.amount) || 0);
+                        const weekKey = `${d.getFullYear()}-W${Math.ceil((((d - new Date(d.getFullYear(), 0, 1)) / 86400000) + new Date(d.getFullYear(), 0, 1).getDay() + 1) / 7)}`;
+                        weekMap[weekKey] = (weekMap[weekKey] || 0) + 1;
                     });
-                    const formatted = Object.keys(dayMap).map(m => ({ m, v: dayMap[m] }));
-                    setRevenueData(formatted);
-                    setBookingTrend([
-                        { m: 'W1', v: res.data.length },
-                        { m: 'W2', v: res.data.length + 2 },
-                        { m: 'W3', v: res.data.length + 5 }
-                    ]);
+                    setRevenueData(Object.keys(dayMap).map(m => ({ m, v: dayMap[m] })));
+                    setBookingTrend(Object.keys(weekMap).sort().slice(-6).map((wk, i) => ({ m: `W${i + 1}`, v: weekMap[wk] })));
+                } else {
+                    setRevenueData([]);
+                    setBookingTrend([]);
                 }
             })
-            .catch(() => {
-                setRevenueData([]);
-                setBookingTrend([]);
-            });
-    }, []);
+            .catch(() => { setRevenueData([]); setBookingTrend([]); });
+
+        getSportsReport().then(rows => {
+            const total = rows.reduce((s, r) => s + r.bookingsCount, 0);
+            setSportData(total > 0 ? rows.map(r => ({ name: r.name, value: Math.round((r.bookingsCount / total) * 100) })) : []);
+        });
+
+        getOccupancyHeatmap().then(({ data, xLabels, yLabels }) => {
+            setHeatmapData(data || []);
+            setHeatmapLabels({ xLabels: xLabels || [], yLabels: yLabels || [] });
+        });
+    }, [])
+
+    useEffect(() => { loadReports() }, [loadReports, dateRange]);
 
     const handleExport = (format) => {
         addToast({ title: 'Export Started', message: `Downloading ledger report in ${format} format...`, type: 'success' })
@@ -122,7 +93,7 @@ export default function ReportsPage() {
                         </button>
                     ))}
                 </div>
-                <Badge variant="primary">Updated 2m ago</Badge>
+                <Button variant="outline" size="sm" onClick={loadReports} className="cursor-pointer">Refresh</Button>
             </div>
 
             {/* Recharts grids */}
@@ -203,7 +174,11 @@ export default function ReportsPage() {
                     <p className="text-surface-500 text-xs mt-0.5">Average slot occupancy percentage grouped by weekdays and active hours</p>
                 </div>
                 <div className="overflow-x-auto pb-4">
-                    <HeatmapGrid data={heatmapData} xLabels={xLabels} yLabels={yLabels} />
+                    {heatmapData.length > 0 ? (
+                        <HeatmapGrid data={heatmapData} xLabels={heatmapLabels.xLabels} yLabels={heatmapLabels.yLabels} />
+                    ) : (
+                        <div className="py-8 text-center text-slate-400 text-sm font-semibold">No slot data yet to compute occupancy.</div>
+                    )}
                 </div>
             </div>
         </div>

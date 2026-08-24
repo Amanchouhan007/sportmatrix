@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import WalletCard from '../../components/ui/WalletCard'
 
 import Badge from '../../components/ui/Badge'
@@ -8,8 +8,10 @@ import Modal from '../../components/ui/Modal'
 import Input from '../../components/ui/Input'
 import Select from '../../components/ui/Select'
 import { useToast } from '../../components/ui/Toast'
-import { HiCreditCard, HiCash, HiTrendingUp, HiArrowDown, HiCheckCircle } from 'react-icons/hi'
+import { HiCreditCard, HiCash, HiTrendingUp, HiArrowDown, HiCheckCircle, HiClock } from 'react-icons/hi'
 import api from '../../services/api'
+import { getPendingSettlements, confirmOwnerReceipt } from '../../services/matchPaymentService'
+import useRealtime from '../../utils/useRealtime'
 
 export default function WalletPage() {
   const { addToast } = useToast()
@@ -20,64 +22,120 @@ export default function WalletPage() {
   const [details, setDetails] = useState({ upi: '', bank: '', ifsc: '' })
   const [transactionsList, setTransactionsList] = useState([])
   const [balance, setBalance] = useState(0)
+  const [totalCommissionPaid, setTotalCommissionPaid] = useState(0)
+  const [lockedEscrow, setLockedEscrow] = useState(0)
+  const [pendingSettlements, setPendingSettlements] = useState([])
+  const [isLoadingPending, setIsLoadingPending] = useState(false)
+  const [confirmingId, setConfirmingId] = useState(null)
+  const [isWithdrawing, setIsWithdrawing] = useState(false)
 
-  useEffect(() => {
+  const fetchWalletData = useCallback(() => {
     api.get('/wallet/me')
       .then(res => {
-        if (res.data && res.data.success && res.data.data) {
-          setBalance(res.data.data.balance || 0)
-          if (Array.isArray(res.data.data.transactions)) {
-            const mapped = res.data.data.transactions.map(t => ({
-              id: t.id || `TXN-${t.id}`,
-              type: t.type || 'Booking',
-              amount: `+₹${t.amount || 0}`,
-              commission: `-₹${Math.round((t.amount || 0) * 0.08)}`,
-              net: `₹${Math.round((t.amount || 0) * 0.92)}`,
-              date: t.date ? t.date.split('T')[0] : 'Today',
-              status: t.status || 'Completed'
-            }))
-            setTransactionsList(mapped)
-          }
+        if (res && res.success && res.data) {
+          setBalance(res.data.balance || 0)
+          setTotalCommissionPaid(res.data.totalCommissionPaid || 0)
+          setLockedEscrow(res.data.locked || 0)
         }
       })
-      .catch(() => {
-        api.get('/billing/history')
-          .then(res => {
-            if (res.data && res.data.success && Array.isArray(res.data.data)) {
-              const total = res.data.data.reduce((s, b) => s + Number(b.amount || 0), 0)
-              setBalance(total)
-              const mapped = res.data.data.map(b => ({
-                id: b.id || b.paymentId || `TXN-${b.id}`,
-                type: b.type || 'Booking',
-                amount: `+₹${b.amount || 0}`,
-                commission: `-₹${Math.round((b.amount || 0) * 0.08)}`,
-                net: `₹${Math.round((b.amount || 0) * 0.92)}`,
-                date: b.date ? b.date.split('T')[0] : 'Today',
-                status: b.status === 'CONFIRMED' || b.status === 'COMPLETED' ? 'Completed' : 'Pending'
-              }))
-              setTransactionsList(mapped)
-            }
-          })
-          .catch(() => {
-            setTransactionsList([])
-          })
+      .catch(() => {})
+
+    api.get('/wallet/transactions')
+      .then(res => {
+        if (res && res.success && Array.isArray(res.data)) {
+          const mapped = res.data.map(t => ({
+            id: t.id || `TXN-${t._id}`,
+            type: t.type || 'Booking',
+            amount: `+₹${(t.grossAmount || 0).toLocaleString('en-IN')}`,
+            rawAmount: t.amount,
+            commission: `-₹${Math.abs(t.platformCommission || 0).toLocaleString('en-IN')}`,
+            net: `₹${(t.settledNet || 0).toLocaleString('en-IN')}`,
+            date: t.date || 'Today',
+            rawDate: t.rawDate,
+            status: t.status || 'Completed'
+          }))
+          setTransactionsList(mapped)
+        }
       })
+      .catch(() => setTransactionsList([]))
   }, [])
 
-  const handleWithdrawTrigger = () => {
+  useEffect(() => { fetchWalletData() }, [fetchWalletData])
+
+  const fetchPendingSettlements = useCallback(async () => {
+    setIsLoadingPending(true)
+    try {
+      const res = await getPendingSettlements()
+      setPendingSettlements(res.data || [])
+    } catch (err) {
+      // Non-fatal: pending settlements panel just stays empty
+    } finally {
+      setIsLoadingPending(false)
+    }
+  }, [])
+
+  useEffect(() => { fetchPendingSettlements() }, [fetchPendingSettlements])
+
+  // Real-time: refresh when a payment enters/leaves the pending queue or the wallet changes.
+  useRealtime(['payment:pending', 'payment:settled', 'payment:commission-confirmed', 'wallet:updated'], () => {
+    fetchPendingSettlements()
+    fetchWalletData()
+  })
+
+  const handleConfirmReceipt = async (paymentId) => {
+    setConfirmingId(paymentId)
+    try {
+      await confirmOwnerReceipt(paymentId)
+      addToast({ title: 'Receipt Confirmed', message: 'This payment leg is confirmed. It completes once the platform confirms its commission.', type: 'success' })
+      fetchPendingSettlements()
+    } catch (err) {
+      addToast({ title: 'Confirmation Failed', message: err.message || 'Could not confirm receipt.', type: 'error' })
+    } finally {
+      setConfirmingId(null)
+    }
+  }
+
+  // This month's settled revenue, derived from already-fetched real transactions (no hardcoded figure).
+  const thisMonthNet = transactionsList
+    .filter(t => t.rawDate && new Date(t.rawDate).getMonth() === new Date().getMonth() && new Date(t.rawDate).getFullYear() === new Date().getFullYear() && (t.rawAmount || 0) > 0)
+    .reduce((sum, t) => sum + Number(t.net.replace(/[₹,]/g, '') || 0), 0)
+
+  const handleWithdrawTrigger = async () => {
     if (!withdrawAmount || Number(withdrawAmount) <= 0) {
       addToast({ title: 'Invalid Amount', message: 'Please specify withdrawal amount first', type: 'error' })
       return
     }
-
-    if (Number(withdrawAmount) > 124500) {
-      addToast({ title: 'Insufficient Funds', message: 'Withdrawal request exceeds current settled limit', type: 'error' })
+    if (Number(withdrawAmount) > balance) {
+      addToast({ title: 'Insufficient Funds', message: 'Withdrawal request exceeds current settled balance', type: 'error' })
+      return
+    }
+    if (payoutMethod === 'UPI' && !details.upi) {
+      addToast({ title: 'UPI ID Required', message: 'Please enter your UPI ID.', type: 'error' })
+      return
+    }
+    if (payoutMethod === 'Bank' && (!details.bank || !details.ifsc)) {
+      addToast({ title: 'Bank Details Required', message: 'Please enter account number and IFSC.', type: 'error' })
       return
     }
 
-    setWithdrawModal(false)
-    setSuccessModal(true)
-    addToast({ title: 'Payout Initiated', message: `Withdrawal of ₹${withdrawAmount} successfully submitted`, type: 'success' })
+    setIsWithdrawing(true)
+    try {
+      const res = await api.post('/wallet/withdraw', {
+        amount: Number(withdrawAmount),
+        payoutMethod,
+        upiId: details.upi,
+        bankAccountNumber: details.bank,
+        bankIfsc: details.ifsc
+      })
+      if (!res || res.success === false) throw new Error(res?.message || 'Withdrawal request failed.')
+      setWithdrawModal(false)
+      setSuccessModal(true)
+      fetchWalletData()
+    } catch (err) {
+      addToast({ title: 'Withdrawal Failed', message: err.message || 'Could not submit withdrawal request.', type: 'error' })
+    } finally {
+      setIsWithdrawing(false)
+    }
   }
 
   return (
@@ -104,7 +162,7 @@ export default function WalletPage() {
           <div className="flex justify-between items-start">
             <div>
               <span className="text-[10px] font-black tracking-widest text-emerald-400 uppercase">SportMatrix Platinum Business</span>
-              <h4 className="text-2xl sm:text-3xl font-extrabold tracking-tight mt-1">₹1,24,500</h4>
+              <h4 className="text-2xl sm:text-3xl font-extrabold tracking-tight mt-1">₹{balance.toLocaleString('en-IN')}</h4>
             </div>
             <span className="text-2xl font-black italic text-emerald-500">SM</span>
           </div>
@@ -113,7 +171,7 @@ export default function WalletPage() {
             <p className="tracking-widest text-surface-400">**** **** **** 8848</p>
             <div className="flex justify-between text-[10px] text-surface-400 uppercase pt-2">
               <span>Admin Controller</span>
-              <span>Locked Escrow: ₹5,000</span>
+              <span>Locked Escrow: ₹{lockedEscrow.toLocaleString('en-IN')}</span>
             </div>
           </div>
         </div>
@@ -122,9 +180,9 @@ export default function WalletPage() {
         <div className="bg-white rounded-2xl sm:rounded-3xl border border-surface-200/60 p-5 sm:p-6 shadow-soft flex flex-col justify-between h-52 sm:h-56">
           <div className="space-y-2">
             <span className="text-xs font-bold text-surface-400 uppercase tracking-wider block">Total Commission Paid</span>
-            <h3 className="text-2xl sm:text-3xl font-extrabold text-surface-900">₹28,640</h3>
+            <h3 className="text-2xl sm:text-3xl font-extrabold text-surface-900">₹{totalCommissionPaid.toLocaleString('en-IN')}</h3>
             <span className="inline-flex items-center gap-1 text-xs font-bold text-surface-450 mt-1">
-              8% flat platform commission rate
+              Debited from wallet as bookings settle
             </span>
           </div>
           <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-amber-100 flex items-center justify-center text-amber-600 shadow-md">
@@ -135,10 +193,10 @@ export default function WalletPage() {
         {/* Revenue stats */}
         <div className="bg-white rounded-2xl sm:rounded-3xl border border-surface-200/60 p-5 sm:p-6 shadow-soft flex flex-col justify-between h-52 sm:h-56">
           <div className="space-y-2">
-            <span className="text-xs font-bold text-surface-400 uppercase tracking-wider block">This Month Revenue</span>
-            <h3 className="text-2xl sm:text-3xl font-extrabold text-surface-900">₹52,400</h3>
-            <span className="inline-flex items-center gap-1 text-xs font-bold text-emerald-500 mt-1">
-              <HiTrendingUp /> ↑ +18% vs last month
+            <span className="text-xs font-bold text-surface-400 uppercase tracking-wider block">This Month Settled Revenue</span>
+            <h3 className="text-2xl sm:text-3xl font-extrabold text-surface-900">₹{thisMonthNet.toLocaleString('en-IN')}</h3>
+            <span className="inline-flex items-center gap-1 text-xs font-bold text-slate-400 mt-1">
+              <HiTrendingUp /> Net of platform commission
             </span>
           </div>
           <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-emerald-100 flex items-center justify-center text-emerald-600 shadow-md">
@@ -146,6 +204,41 @@ export default function WalletPage() {
           </div>
         </div>
       </div>
+
+      {/* Pending Payment Confirmations (Phase 1: payment gateway abstraction) --
+          no live gateway yet, so the owner confirms receipt of each booking
+          payment before it counts as settled. */}
+      {(isLoadingPending || pendingSettlements.length > 0) && (
+        <div className="bg-white rounded-2xl sm:rounded-3xl border border-amber-200 p-4 sm:p-6 shadow-soft space-y-4">
+          <div className="flex items-center gap-2 border-b border-amber-100 pb-3">
+            <HiClock className="w-5 h-5 text-amber-500" />
+            <h2 className="text-base sm:text-lg font-black text-surface-900 tracking-tight">Pending Payment Confirmations</h2>
+            {pendingSettlements.length > 0 && <Badge variant="warning">{pendingSettlements.length}</Badge>}
+          </div>
+          {isLoadingPending ? (
+            <div className="text-center py-6 text-slate-400 text-sm">Loading...</div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {pendingSettlements.map(p => (
+                <div key={p.id} className="border border-amber-200 bg-amber-50/50 rounded-xl p-4 flex items-center justify-between gap-3">
+                  <div>
+                    <p className="text-sm font-black text-slate-900">₹{p.amount.toLocaleString('en-IN')}</p>
+                    <p className="text-[11px] text-slate-500 font-medium">{p.payerName} &middot; {p.teamSide} &middot; Match {p.matchId}</p>
+                  </div>
+                  <Button
+                    size="sm"
+                    onClick={() => handleConfirmReceipt(p.id)}
+                    disabled={confirmingId === p.id}
+                    className="shrink-0 cursor-pointer"
+                  >
+                    {confirmingId === p.id ? 'Confirming...' : 'Confirm Receipt'}
+                  </Button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Ledger Table */}
       <div className="bg-white rounded-2xl sm:rounded-3xl border border-surface-200/60 p-4 sm:p-6 shadow-soft space-y-4">
@@ -232,8 +325,8 @@ export default function WalletPage() {
           )}
 
           <div className="flex gap-3 justify-end pt-4 border-t border-surface-100 mt-6">
-            <Button variant="secondary" onClick={() => setWithdrawModal(false)}>Cancel</Button>
-            <Button onClick={handleWithdrawTrigger}>Request Withdrawal</Button>
+            <Button variant="secondary" onClick={() => setWithdrawModal(false)} disabled={isWithdrawing}>Cancel</Button>
+            <Button onClick={handleWithdrawTrigger} disabled={isWithdrawing}>{isWithdrawing ? 'Submitting...' : 'Request Withdrawal'}</Button>
           </div>
         </div>
       </Modal>
@@ -247,7 +340,7 @@ export default function WalletPage() {
             </div>
             <div>
               <h3 className="text-lg font-black text-surface-900 tracking-tight">Withdrawal Requested!</h3>
-              <p className="text-surface-500 text-xs mt-1">Funds of <span className="font-extrabold text-surface-850">₹{withdrawAmount}</span> will be processed and settled within 4-6 business hours.</p>
+              <p className="text-surface-500 text-xs mt-1">Funds of <span className="font-extrabold text-surface-850">₹{withdrawAmount}</span> are now held pending manual settlement to your {payoutMethod} account.</p>
             </div>
             <Button onClick={() => setSuccessModal(false)} fullWidth className="mt-4 cursor-pointer">
               Understood

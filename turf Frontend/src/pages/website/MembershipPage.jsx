@@ -34,7 +34,7 @@ import {
 } from 'react-icons/hi2'
 import { useToast } from '../../components/ui/Toast'
 import { useAuth } from '../../context/AuthContext'
-import { getAllPlans, defaultFallbackPlans, purchaseSubscription } from '../../services/subscriptionPlanService'
+import { getAllPlans, purchaseSubscription } from '../../services/subscriptionPlanService'
 import { createOwner } from '../../services/ownerService'
 
 export default function MembershipPage() {

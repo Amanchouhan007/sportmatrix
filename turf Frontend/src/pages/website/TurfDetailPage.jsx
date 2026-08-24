@@ -21,6 +21,8 @@ import SlotGrid from '../../components/ui/SlotGrid'
 import { useToast } from '../../components/ui/Toast'
 import { useAuth } from '../../context/AuthContext'
 import { getBranchById } from '../../services/branchService'
+import { getBranchSports } from '../../services/sportsService'
+import api from '../../services/api'
 import TurfHeroGallery from '../../components/turf-detail/TurfHeroGallery'
 import TurfHeaderInfo from '../../components/turf-detail/TurfHeaderInfo'
 import TurfDirectionsMap from '../../components/turf-detail/TurfDirectionsMap'
@@ -140,12 +142,22 @@ const generateMonthDates = (year, month) => {
     return list
 }
 
-const generateSlotsForDate = (hourlyPrice = 1200, selectedDateObj = null, turfId = 16) => {
-    const times = [
-        '06:00', '07:00', '08:00', '09:00', '10:00', '11:00',
-        '12:00', '13:00', '14:00', '15:00', '16:00', '17:00',
-        '18:00', '19:00', '20:00', '21:00', '22:00'
-    ]
+const generateSlotsForDate = (hourlyPrice = 1200, selectedDateObj = null, turfId = 16, openingTime = '06:00', closingTime = '23:00') => {
+    let startH = parseInt(String(openingTime).split(':')[0], 10) || 6;
+    let endH = parseInt(String(closingTime).split(':')[0], 10) || 23;
+    if (endH === 0) endH = 24; // Handle midnight 00:00
+    if (endH <= startH) endH = 24;
+
+    const times = [];
+    for (let h = startH; h < endH; h++) {
+        const hh = String(h % 24).padStart(2, '0');
+        times.push(`${hh}:00`);
+    }
+    if (times.length === 0) {
+        for (let h = 6; h <= 23; h++) {
+            times.push(`${String(h).padStart(2, '0')}:00`);
+        }
+    }
 
     const dateNum = selectedDateObj?.dateNum || 19
     const dayShort = (selectedDateObj?.dayShort || 'Sun').toUpperCase()
@@ -155,8 +167,16 @@ const generateSlotsForDate = (hourlyPrice = 1200, selectedDateObj = null, turfId
 
     const now = new Date()
     const currentHour = now.getHours()
-    const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
-    const isToday = selectedDateObj?.isToday || selectedDateObj?.dayShort === 'TODAY' || fullDate === todayStr
+    const todayYear = now.getFullYear()
+    const todayMonth = now.getMonth()
+    const todayDateNum = now.getDate()
+    const todayStr = `${todayYear}-${String(todayMonth + 1).padStart(2, '0')}-${String(todayDateNum).padStart(2, '0')}`
+    const isToday = Boolean(
+        selectedDateObj?.isToday ||
+        (selectedDateObj?.dayShort && String(selectedDateObj.dayShort).toUpperCase() === 'TODAY') ||
+        fullDate === todayStr ||
+        (selectedDateObj?.dateNum === todayDateNum && selectedDateObj?.monthIndex === todayMonth && (selectedDateObj?.year === todayYear || !selectedDateObj?.year))
+    );
 
     return times.map((t, i) => {
         const slotHour = parseInt(t.split(':')[0], 10)
@@ -241,6 +261,8 @@ export default function TurfDetailPage() {
     const [bookingSuccessModal, setBookingSuccessModal] = useState(false)
     const [deploymentDetails, setDeploymentDetails] = useState(null)
     const [liveBranch, setLiveBranch] = useState(null)
+    const [lastPaymentStatus, setLastPaymentStatus] = useState('COMPLETED')
+    const [lastPayoutDestination, setLastPayoutDestination] = useState(null)
     const toastContext = useToast()
     const addToast = toastContext?.addToast
 
@@ -286,6 +308,8 @@ export default function TurfDetailPage() {
                 image: firstImg || '/images/turf1.png',
                 sports: parsedSports,
                 amenities: parsedAmenities,
+                openingTime: liveBranch.openingTime || '06:00',
+                closingTime: liveBranch.closingTime || '23:00',
                 discountOffer: liveBranch.discountOffer || liveBranch.discount_offer || '20% OFF FIRST MATCH',
                 couponCode: liveBranch.couponCode || liveBranch.coupon_code || 'CRICKET20',
                 lat: Number(liveBranch.latitude || 22.7244),
@@ -325,11 +349,16 @@ export default function TurfDetailPage() {
         name: activeTurf.name,
         location: activeTurf.location,
         rating: activeTurf.rating,
-        sports: (activeTurf.sports || ['Cricket']).map(s => ({
-            name: s,
-            price: activeTurf.price,
-            peakPrice: activeTurf.price + 400
-        })),
+        sports: (activeTurf.sports && activeTurf.sports.length > 0 ? activeTurf.sports : ['Cricket']).map(s => {
+            const sName = typeof s === 'string' ? s : (s?.name || 'Cricket');
+            const sPrice = typeof s === 'object' && s?.regularPrice ? Number(s.regularPrice) : activeTurf.price;
+            const sPeak = typeof s === 'object' && s?.peakPrice ? Number(s.peakPrice) : (sPrice + 400);
+            return {
+                name: sName,
+                price: sPrice,
+                peakPrice: sPeak
+            };
+        }),
         amenities: (activeTurf.amenities && activeTurf.amenities.length > 0) ? activeTurf.amenities : defaultTurfData.amenities,
         media: customMediaList.length > 0 ? customMediaList : initialMedia,
         coordinates: { lat: activeTurf.lat, lng: activeTurf.lng }
@@ -430,8 +459,25 @@ export default function TurfDetailPage() {
 
     // Generate dynamic date-specific slots whenever activeTurf or selectedDateObj changes
     const slots = useMemo(() => {
-        return generateSlotsForDate(activeTurf.price, selectedDateObj, activeTurf.id);
-    }, [activeTurf.price, selectedDateObj, activeTurf.id]);
+        return generateSlotsForDate(
+            activeTurf.price,
+            selectedDateObj,
+            activeTurf.id,
+            activeTurf.openingTime || '06:00',
+            activeTurf.closingTime || '23:00'
+        );
+    }, [activeTurf.price, selectedDateObj, activeTurf.id, activeTurf.openingTime, activeTurf.closingTime]);
+
+    useEffect(() => {
+        if (dateStripRef.current) {
+            setTimeout(() => {
+                const activeEl = dateStripRef.current?.querySelector('[data-selected="true"]') || dateStripRef.current?.querySelector('[data-istoday="true"]');
+                if (activeEl) {
+                    activeEl.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+                }
+            }, 100);
+        }
+    }, [selectedDateObj, currentMonthDates]);
 
     const handlePrevMonth = () => {
         const now = new Date();
@@ -626,96 +672,105 @@ export default function TurfDetailPage() {
         if (addToast) addToast(`Added ${newMember.name} to roster!`, 'info');
     };
 
+    // Real, honest booking confirmation -- no fabricated booking ID or fake
+    // success. Logged-in captains go through the same authenticated
+    // match-payments engine SlotBookingPage uses; guests go through the real
+    // public guest-booking endpoint. Any failure surfaces to the user and does
+    // NOT advance to the success step or write a "Confirmed" record anywhere.
     const handleConfirmAndDeploy = async () => {
         setIsDeploying(true);
-        const generatedBookingId = `BMT-${selectedDateObj.dateNum}${selectedDateObj.monthShort.toUpperCase()}-${Math.floor(10000 + Math.random() * 90000)}`;
-        setBookingId(generatedBookingId);
+
+        const slotDate = selectedDateObj.fullDateString;
+        const startHour = parseInt(currentSlot?.time || '18') || 18;
+        const startTime = currentSlot?.time && currentSlot.time.includes(':') ? currentSlot.time : `${startHour}:00:00`;
+        const endTime = `${startHour + duration}:00:00`;
+        const DEFAULT_COURT_NAME = 'Court 1';
 
         try {
-            // 1. Create Match & 5-minute Slot Hold in MySQL
-            const apiBase = import.meta.env.VITE_API_URL || 'http://localhost:5005/api/v1';
-            const createRes = await fetch(`${apiBase}/match-payments/create`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    turfId: `turf_${turfData.id}`,
-                    slotId: `slot_${turfData.id}_${selectedDateObj.fullDateString.replace(/-/g, '')}`,
-                    sportId: 'Turf Match',
-                    captainName,
-                    captainPhone,
+            const branchSportsRes = await getBranchSports(turfData.id);
+            const branchSports = branchSportsRes?.data || [];
+            const matchedSport = branchSports.find(bs => (bs.sportId?.name || bs.sportName || '').toLowerCase() === (selectedSport || '').toLowerCase()) || branchSports[0];
+            const sportId = matchedSport?.sportId?.id || matchedSport?.sportId;
+
+            if (!sportId) {
+                throw new Error('This venue has no active sport configuration yet. Please contact the venue or try another turf.');
+            }
+
+            let resultBookingId;
+            let paymentStatus = 'COMPLETED';
+            let payoutDestination = null;
+
+            if (user) {
+                const created = await api.post('/match-payments/create', {
+                    branchId: turfData.id,
+                    sportId,
+                    courtName: DEFAULT_COURT_NAME,
+                    captainName: captainName || user.name,
+                    captainPhone: captainPhone || user.mobile || '',
                     teamAName,
                     teamBName: hasOpponentTeam ? teamBName : 'Open Challenge',
                     paymentMode: paymentMode.toUpperCase().replace(/-/g, '_'),
                     durationHours: duration,
-                    slotDate: selectedDateObj.fullDateString,
-                    startTime: currentSlot?.time || '18:00:00',
-                    endTime: `${(parseInt(currentSlot?.time || '18') || 18) + duration}:00:00`,
-                    captainShareInput: myShare,
-                    hasOpponentTeam
-                })
-            });
-            const createData = await createRes.json();
-
-            if (createData.success && createData.data?.matchId) {
-                // 2. Verify Payment & Generate Token
-                const verifyRes = await fetch(`${apiBase}/match-payments/verify`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        matchId: createData.data.matchId,
-                        holdId: createData.data.holdId,
-                        gatewayOrderId: `order_${Date.now()}`,
-                        gatewayPaymentId: `pay_${Date.now()}`,
-                        idempotencyKey: `idemp_${Date.now()}`
-                    })
+                    slotDate, startTime, endTime,
                 });
-                const verifyData = await verifyRes.json();
-                if (verifyData.data?.matchId) {
-                    setBookingId(verifyData.data.matchId);
-                }
-            }
+                if (!created?.success) throw new Error(created?.message || 'Could not lock this slot.');
 
-            if (user) {
-                // Logged-in Customer Booking -> Save in customer_bookings for this specific logged-in user
+                const verified = await api.post('/match-payments/verify', {
+                    matchId: created.data.matchId,
+                    holdId: created.data.holdId,
+                    paymentMethod: 'UPI',
+                });
+                if (!verified?.success) throw new Error(verified?.message || 'Payment could not be verified.');
+
+                resultBookingId = created.data.matchId;
+                paymentStatus = verified.data.paymentStatus || 'PENDING';
+                payoutDestination = verified.data.payoutDestination;
+
                 const existing = JSON.parse(localStorage.getItem('customer_bookings') || '[]');
-                const currentUserId = user.id || (user.email ? `usr_${user.email}` : `usr_cust_${Date.now()}`);
-                const currentUserEmail = user.email;
-                const currentCustomerName = user.name || captainName || 'Customer';
-                const currentCustomerPhone = user.phone || user.mobile || captainPhone || '';
-
                 const newEntry = {
-                    id: generatedBookingId,
-                    userId: currentUserId,
-                    userEmail: currentUserEmail,
-                    customerName: currentCustomerName,
-                    customerPhone: currentCustomerPhone,
-                    turfId: `turf_${turfData.id}`,
+                    id: resultBookingId,
+                    userId: user.id || (user.email ? `usr_${user.email}` : `usr_cust_${Date.now()}`),
+                    userEmail: user.email,
+                    customerName: user.name || captainName || 'Customer',
+                    customerPhone: user.phone || user.mobile || captainPhone || '',
+                    turfId: turfData.id,
                     venueId: turfData.id,
                     venue: `${turfData.name}, ${turfData.location}`,
                     sport: selectedSport || 'Turf Match',
-                    date: selectedDateObj.fullDateString,
-                    time: currentSlot?.time || '6:00 PM',
+                    date: slotDate,
+                    time: currentSlot?.time || startTime,
                     amount: `₹${myShare.toLocaleString('en-IN')}`,
-                    status: 'Confirmed',
+                    status: paymentStatus === 'COMPLETED' ? 'Confirmed' : 'Pending Payment Confirmation',
                     isGuest: false,
                     createdAt: new Date().toISOString()
                 };
                 localStorage.setItem('customer_bookings', JSON.stringify([newEntry, ...existing]));
             } else {
-                // Unauthenticated Guest Booking -> Save in guest_bookings ONLY (Never attach to customer_bookings or customer@gmail.com)
+                const guestRes = await api.post('/bookings/guest', {
+                    branchId: turfData.id,
+                    sportId,
+                    courtName: DEFAULT_COURT_NAME,
+                    slotDate, startTime, endTime,
+                    customerName: captainName || 'Guest User',
+                    phone: captainPhone || '',
+                });
+                if (!guestRes?.success) throw new Error(guestRes?.message || 'Could not complete this guest booking.');
+
+                resultBookingId = guestRes.data.id;
+
                 const existingGuest = JSON.parse(localStorage.getItem('guest_bookings') || '[]');
                 const guestEntry = {
-                    id: generatedBookingId,
+                    id: resultBookingId,
                     guestId: `guest_${Date.now()}`,
                     customerName: captainName || 'Guest User',
                     customerPhone: captainPhone || '',
                     userEmail: 'guest@sportmatrix.com',
-                    turfId: `turf_${turfData.id}`,
+                    turfId: turfData.id,
                     venueId: turfData.id,
                     venue: `${turfData.name}, ${turfData.location}`,
                     sport: selectedSport || 'Turf Match',
-                    date: selectedDateObj.fullDateString,
-                    time: currentSlot?.time || '6:00 PM',
+                    date: slotDate,
+                    time: currentSlot?.time || startTime,
                     amount: `₹${myShare.toLocaleString('en-IN')}`,
                     status: 'Confirmed',
                     isGuest: true,
@@ -723,13 +778,21 @@ export default function TurfDetailPage() {
                 };
                 localStorage.setItem('guest_bookings', JSON.stringify([guestEntry, ...existingGuest]));
             }
+
+            setBookingId(resultBookingId);
+            setLastPaymentStatus(paymentStatus);
+            setLastPayoutDestination(payoutDestination);
+            setBookingStep(4);
+            if (addToast) addToast(
+                paymentStatus === 'COMPLETED' ? 'Match booked successfully!' : 'Slot locked! Complete payment to the venue to confirm.',
+                'success'
+            );
         } catch (e) {
             console.error('Match payment engine API error:', e);
+            if (addToast) addToast(e.message || 'Booking failed. The slot may no longer be available.', 'error');
+        } finally {
+            setIsDeploying(false);
         }
-
-        setIsDeploying(false);
-        setBookingStep(4);
-        if (addToast) addToast('Match booked successfully!', 'success');
     };
 
     const turfNameLower = (turfData.name || '').toLowerCase()
@@ -1197,6 +1260,8 @@ export default function TurfDetailPage() {
                                                             <button
                                                                 key={d.id}
                                                                 type="button"
+                                                                data-istoday={d.isToday}
+                                                                data-selected={isSel}
                                                                 disabled={isPast}
                                                                 onClick={() => !isPast && handleDateSelect(d)}
                                                                 title={isPast ? `${d.formattedLabel} (Unavailable)` : d.formattedLabel}
@@ -1242,6 +1307,22 @@ export default function TurfDetailPage() {
 
                                         {/* Slot Grid */}
                                         <div>
+                                            {selectedDateObj?.isPast && (
+                                                <div className="bg-amber-50 border border-amber-200 text-amber-900 rounded-2xl p-3.5 text-xs font-bold flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 mb-4 shadow-2xs">
+                                                    <span>📅 <strong>{selectedDateObj.formattedLabel}</strong> is a past date. Showing archived slot history.</span>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => {
+                                                            const todayDate = currentMonthDates.find(d => d.isToday) || currentMonthDates.find(d => !d.isPast)
+                                                            if (todayDate) handleDateSelect(todayDate)
+                                                        }}
+                                                        className="bg-[#10B981] hover:bg-emerald-600 text-white font-extrabold px-3.5 py-1.5 rounded-xl cursor-pointer shrink-0 shadow-xs transition-colors"
+                                                    >
+                                                        Jump to Today's Available Slots ⚡
+                                                    </button>
+                                                </div>
+                                            )}
+
                                             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 mb-4">
                                                 <label className="text-[11px] sm:text-xs font-black tracking-wider text-slate-600 uppercase">AVAILABLE SLOTS — {selectedDateObj.formattedLabel}</label>
                                                 <div className="flex flex-wrap items-center gap-3 sm:gap-4 text-[10px] sm:text-xs uppercase tracking-wider font-extrabold">
@@ -1289,7 +1370,7 @@ export default function TurfDetailPage() {
                                                             className={`py-3.5 px-3 rounded-[22px] text-center flex flex-col items-center justify-center gap-1 min-h-[76px] transition-all duration-200 ${isSlotInSelectedRange
                                                                     ? 'bg-[#10B981] text-white border-2 border-[#059669] shadow-lg shadow-emerald-500/20 scale-[1.02] cursor-pointer'
                                                                     : isBooked
-                                                                        ? 'bg-[#F8FAFC] text-slate-300 border border-slate-100 opacity-75 cursor-not-allowed'
+                                                                        ? 'bg-slate-100 text-slate-500 border border-slate-200 opacity-90 cursor-not-allowed'
                                                                         : isMaintenance
                                                                             ? 'bg-[#FEFCE8] text-[#854D0E] border-2 border-[#FDE047] cursor-not-allowed'
                                                                             : isStaffUnavail
@@ -1902,8 +1983,22 @@ export default function TurfDetailPage() {
                                             </div>
                                             <div className="flex justify-between border-b border-[#E5E7EB] pb-2">
                                                 <span className="text-[#6B7280]">Your share</span>
-                                                <span className="text-[#16A34A] font-black">₹{myShare.toLocaleString('en-IN')} [✓ Paid]</span>
+                                                <span className={`font-black ${lastPaymentStatus === 'COMPLETED' ? 'text-[#16A34A]' : 'text-amber-600'}`}>
+                                                    ₹{myShare.toLocaleString('en-IN')} {lastPaymentStatus === 'COMPLETED' ? '[✓ Paid]' : '[⏳ Pending Confirmation]'}
+                                                </span>
                                             </div>
+                                            {lastPaymentStatus !== 'COMPLETED' && lastPayoutDestination?.configured && (
+                                                <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-[11px] text-amber-900 space-y-1">
+                                                    <p className="font-bold">Pay directly to the venue to confirm:</p>
+                                                    {lastPayoutDestination.accountType === 'UPI' && <p className="font-mono font-black">{lastPayoutDestination.upiId}</p>}
+                                                    {lastPayoutDestination.accountType === 'BANK_ACCOUNT' && (
+                                                        <p className="font-mono">{lastPayoutDestination.bankAccountNumber} &middot; {lastPayoutDestination.bankIfsc}</p>
+                                                    )}
+                                                </div>
+                                            )}
+                                            {lastPaymentStatus !== 'COMPLETED' && !lastPayoutDestination?.configured && (
+                                                <p className="text-[11px] text-amber-700 font-semibold">{lastPayoutDestination?.message || 'This venue has not added a payout account yet. Confirm payment details with the venue directly.'}</p>
+                                            )}
                                             <div className="flex justify-between border-b border-[#E5E7EB] pb-2">
                                                 <span className="text-[#6B7280]">Opponent share</span>
                                                 <span className="font-bold text-[#111827]">

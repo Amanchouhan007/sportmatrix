@@ -1,441 +1,326 @@
-const db = require('../../config/db');
+const prisma = require('../../config/prisma');
 
-/**
- * Get overview dashboard stats reports
- */
 const getOverviewReport = async (req, res) => {
     try {
-        // Revenue calculations (Booking Payments + Subscription Plan Revenue)
-        const [revenueRes] = await db.query(`SELECT COALESCE(SUM(amount), 0) as total FROM payments WHERE status = 'COMPLETED'`);
-        const [monthlyRevRes] = await db.query(`SELECT COALESCE(SUM(amount), 0) as total FROM payments WHERE status = 'COMPLETED' AND MONTH(created_at) = MONTH(CURRENT_DATE()) AND YEAR(created_at) = YEAR(CURRENT_DATE())`);
-        const [yearlyRevRes] = await db.query(`SELECT COALESCE(SUM(amount), 0) as total FROM payments WHERE status = 'COMPLETED' AND YEAR(created_at) = YEAR(CURRENT_DATE())`);
+        const now = new Date();
+        const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+        const startOfPrevMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+        const startOfYear = new Date(now.getFullYear(), 0, 1);
+        const startOfToday = new Date(now.toDateString());
 
-        let subPlanRev = 0;
-        try {
-            const [branchPlanRes] = await db.query(`
-                SELECT COALESCE(SUM(sp.monthly_price), 0) as total
-                FROM branches b
-                LEFT JOIN subscription_plans sp ON (b.subscription_plan_id = sp.id OR LOWER(b.subscription_plan_id) = LOWER(sp.plan_name))
-                WHERE b.status = 'ACTIVE'
-            `);
-            const [ownerSubRes] = await db.query(`SELECT COALESCE(SUM(amount), 0) as total FROM owner_subscriptions WHERE payment_status = 'COMPLETED'`);
-            subPlanRev = Math.max(Number(branchPlanRes[0]?.total || 0), Number(ownerSubRes[0]?.total || 0));
-        } catch (e) {}
+        const [
+            totalRevAgg, monthlyRevAgg, prevMonthlyRevAgg, yearlyRevAgg,
+            activeBranches, subPlans,
+            totalBookings, todayBookings, monthlyBookings, cancelledBookings,
+            totalOwners, totalStaff, totalCustomers, newRegistrations,
+            totalBranches, inactiveBranches, suspendedBranches
+        ] = await Promise.all([
+            prisma.payment.aggregate({ where: { status: 'COMPLETED' }, _sum: { amount: true } }),
+            prisma.payment.aggregate({ where: { status: 'COMPLETED', createdAt: { gte: startOfMonth } }, _sum: { amount: true } }),
+            prisma.payment.aggregate({ where: { status: 'COMPLETED', createdAt: { gte: startOfPrevMonth, lt: startOfMonth } }, _sum: { amount: true } }),
+            prisma.payment.aggregate({ where: { status: 'COMPLETED', createdAt: { gte: startOfYear } }, _sum: { amount: true } }),
+            prisma.branch.findMany({ where: { status: 'ACTIVE' }, include: { subscriptionPlan: true } }),
+            prisma.subscriptionPlan.findMany(),
+            prisma.booking.count(),
+            prisma.booking.count({ where: { createdAt: { gte: startOfToday } } }),
+            prisma.booking.count({ where: { createdAt: { gte: startOfMonth } } }),
+            prisma.booking.count({ where: { status: 'REFUNDED' } }),
+            prisma.owner.count(),
+            prisma.user.count({ where: { role: 'STAFF' } }),
+            prisma.user.count({ where: { role: 'CUSTOMER' } }),
+            prisma.user.count({ where: { createdAt: { gte: startOfMonth } } }),
+            prisma.branch.count(),
+            prisma.branch.count({ where: { status: 'INACTIVE' } }),
+            prisma.branch.count({ where: { status: 'SUSPENDED' } })
+        ]);
 
-        const totalRevenue = Number(revenueRes[0]?.total || 0) + subPlanRev;
-        const monthlyRevenue = Number(monthlyRevRes[0]?.total || 0) + subPlanRev;
-        const yearlyRevenue = Number(yearlyRevRes[0]?.total || 0) + subPlanRev;
-
-        // Bookings calculations
-        const [totalBookingsRes] = await db.query(`SELECT COUNT(*) as total FROM bookings`);
-        const [todayBookingsRes] = await db.query(`SELECT COUNT(*) as total FROM bookings WHERE DATE(created_at) = CURDATE()`);
-        const [monthlyBookingsRes] = await db.query(`SELECT COUNT(*) as total FROM bookings WHERE MONTH(created_at) = MONTH(CURRENT_DATE()) AND YEAR(created_at) = YEAR(CURRENT_DATE())`);
-        const [cancelledBookingsRes] = await db.query(`SELECT COUNT(*) as total FROM bookings WHERE status = 'CANCELLED'`);
-
-        const totalBookings = Number(totalBookingsRes[0]?.total || 0);
-        const todayBookings = Number(todayBookingsRes[0]?.total || 0);
-        const monthlyBookings = Number(monthlyBookingsRes[0]?.total || 0);
-        const cancelledBookings = Number(cancelledBookingsRes[0]?.total || 0);
-
-        // User role breakdowns (Registered Owners / Admins)
-        const [ownersRes] = await db.query(`SELECT COUNT(*) as total FROM owners`);
-        const [staffRes] = await db.query(`SELECT COUNT(*) as total FROM users WHERE role = 'STAFF'`);
-        const [customersRes] = await db.query(`SELECT COUNT(*) as total FROM users WHERE role = 'CUSTOMER'`);
-        const [newRegsRes] = await db.query(`SELECT COUNT(*) as total FROM users WHERE MONTH(created_at) = MONTH(CURRENT_DATE()) AND YEAR(created_at) = YEAR(CURRENT_DATE())`);
-
-        const totalOwners = Number(ownersRes[0]?.total || 0);
-        const totalStaff = Number(staffRes[0]?.total || 0);
-        const totalCustomers = Number(customersRes[0]?.total || 0);
-        const newRegistrations = Number(newRegsRes[0]?.total || 0);
-
-        // Turfs / Branches calculations
-        const [totalBranchesRes] = await db.query(`SELECT COUNT(*) as total FROM branches`);
-        const [activeBranchesRes] = await db.query(`SELECT COUNT(*) as total FROM branches WHERE status = 'ACTIVE'`);
-        const [inactiveBranchesRes] = await db.query(`SELECT COUNT(*) as total FROM branches WHERE status = 'INACTIVE'`);
-        const [suspendedBranchesRes] = await db.query(`SELECT COUNT(*) as total FROM branches WHERE status = 'SUSPENDED'`);
-
-        const totalBranches = Number(totalBranchesRes[0]?.total || 0);
-        const activeBranches = Number(activeBranchesRes[0]?.total || 0);
-        const inactiveBranches = Number(inactiveBranchesRes[0]?.total || 0);
-        const suspendedBranches = Number(suspendedBranchesRes[0]?.total || 0);
+        const subPlanRev = activeBranches.reduce((sum, b) => sum + Number(b.subscriptionPlan?.monthlyPrice || 0), 0);
+        const monthlyRevenue = Number(monthlyRevAgg._sum.amount || 0) + subPlanRev;
+        const prevMonthlyRevenue = Number(prevMonthlyRevAgg._sum.amount || 0);
+        const revenueGrowthPercentage = prevMonthlyRevenue > 0
+            ? Math.round(((monthlyRevenue - prevMonthlyRevenue) / prevMonthlyRevenue) * 1000) / 10
+            : (monthlyRevenue > 0 ? 100 : 0);
 
         return res.status(200).json({
             success: true,
             data: {
-                totalRevenue,
+                totalRevenue: Number(totalRevAgg._sum.amount || 0) + subPlanRev,
                 monthlyRevenue,
-                yearlyRevenue,
-                revenueGrowthPercentage: 0,
-                totalBookings,
-                todayBookings,
-                monthlyBookings,
-                cancelledBookings,
-                totalOwners,
-                totalStaff,
-                totalCustomers,
-                newRegistrations,
-                totalBranches,
-                activeBranches,
-                suspendedBranches,
-                inactiveBranches
+                yearlyRevenue: Number(yearlyRevAgg._sum.amount || 0) + subPlanRev,
+                revenueGrowthPercentage,
+                totalBookings, todayBookings, monthlyBookings, cancelledBookings,
+                totalOwners, totalStaff, totalCustomers, newRegistrations,
+                totalBranches, activeBranches: activeBranches.length, inactiveBranches, suspendedBranches
             }
         });
     } catch (error) {
         console.error('Fetch overview report error:', error);
-        return res.status(500).json({
-            success: false,
-            message: 'Internal Server Error compiling overview report: ' + error.message
-        });
+        return res.status(500).json({ success: false, message: 'Internal Server Error compiling overview report: ' + error.message });
     }
 };
 
-/**
- * Get monthly revenue analytics
- */
+const groupByMonth = (rows, valueFn) => {
+    const byMonth = {};
+    const order = [];
+    for (const r of rows) {
+        const m = r.createdAt.toLocaleString('en-US', { month: 'short' });
+        if (!(m in byMonth)) { byMonth[m] = 0; order.push(m); }
+        byMonth[m] += valueFn(r);
+    }
+    return order.map(m => ({ month: m, value: byMonth[m] }));
+};
+
 const getRevenueReport = async (req, res) => {
     try {
-        const [rows] = await db.query(`
-            SELECT 
-                DATE_FORMAT(created_at, '%b') as Month, 
-                COALESCE(SUM(amount), 0) as Revenue 
-            FROM payments
-            WHERE status = 'COMPLETED' AND created_at >= NOW() - INTERVAL 6 MONTH
-            GROUP BY DATE_FORMAT(created_at, '%b'), MONTH(created_at)
-            ORDER BY MONTH(created_at) ASC
-        `);
-
-        const formattedRows = rows.map(r => ({
-            Month: r.Month,
-            Revenue: Number(r.Revenue || 0),
-            month: r.Month,
-            revenue: Number(r.Revenue || 0),
-            label: r.Month,
-            v: Number(r.Revenue || 0),
-            m: r.Month
-        }));
+        const sixMonthsAgo = new Date(); sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+        const payments = await prisma.payment.findMany({ where: { status: 'COMPLETED', createdAt: { gte: sixMonthsAgo } }, select: { amount: true, createdAt: true }, orderBy: { createdAt: 'asc' } });
+        const grouped = groupByMonth(payments, r => Number(r.amount));
 
         return res.status(200).json({
             success: true,
-            data: formattedRows
+            data: grouped.map(g => ({ Month: g.month, Revenue: g.value, month: g.month, revenue: g.value, label: g.month, v: g.value, m: g.month }))
         });
     } catch (error) {
         console.error('Fetch revenue report error:', error);
-        return res.status(500).json({
-            success: false,
-            message: 'Internal Server Error compiling revenue report: ' + error.message
-        });
+        return res.status(500).json({ success: false, message: 'Internal Server Error compiling revenue report: ' + error.message });
     }
 };
 
-/**
- * Get monthly bookings analytics
- */
 const getBookingReport = async (req, res) => {
     try {
-        const [rows] = await db.query(`
-            SELECT 
-                DATE_FORMAT(created_at, '%b') as month, 
-                SUM(CASE WHEN status = 'CONFIRMED' THEN 1 ELSE 0 END) as completed, 
-                SUM(CASE WHEN status = 'CANCELLED' THEN 1 ELSE 0 END) as cancelled 
-            FROM bookings
-            WHERE created_at >= NOW() - INTERVAL 6 MONTH
-            GROUP BY DATE_FORMAT(created_at, '%b'), MONTH(created_at)
-            ORDER BY MONTH(created_at) ASC
-        `);
+        const sixMonthsAgo = new Date(); sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+        const bookings = await prisma.booking.findMany({ where: { createdAt: { gte: sixMonthsAgo } }, select: { status: true, createdAt: true }, orderBy: { createdAt: 'asc' } });
 
-        const formatted = rows.map(r => ({
-            month: r.month,
-            completed: Number(r.completed || 0),
-            cancelled: Number(r.cancelled || 0)
-        }));
+        const byMonth = {};
+        const order = [];
+        for (const b of bookings) {
+            const m = b.createdAt.toLocaleString('en-US', { month: 'short' });
+            if (!(m in byMonth)) { byMonth[m] = { completed: 0, cancelled: 0 }; order.push(m); }
+            if (b.status === 'COMPLETED') byMonth[m].completed++;
+            if (b.status === 'REFUNDED') byMonth[m].cancelled++;
+        }
 
-        return res.status(200).json({
-            success: true,
-            data: formatted
-        });
+        return res.status(200).json({ success: true, data: order.map(m => ({ month: m, ...byMonth[m] })) });
     } catch (error) {
         console.error('Fetch bookings report error:', error);
-        return res.status(500).json({
-            success: false,
-            message: 'Internal Server Error compiling bookings report: ' + error.message
-        });
+        return res.status(500).json({ success: false, message: 'Internal Server Error compiling bookings report: ' + error.message });
     }
 };
 
-/**
- * Get User Analytics Growth by Role from DB
- */
 const getUserAnalyticsReport = async (req, res) => {
     try {
-        const [rows] = await db.query(`
-            SELECT 
-                DATE_FORMAT(created_at, '%b') as label,
-                SUM(CASE WHEN role = 'OWNER' THEN 1 ELSE 0 END) as OWNER,
-                SUM(CASE WHEN role = 'STAFF' THEN 1 ELSE 0 END) as STAFF,
-                SUM(CASE WHEN role = 'CUSTOMER' THEN 1 ELSE 0 END) as CUSTOMER,
-                COUNT(*) as total
-            FROM users
-            GROUP BY DATE_FORMAT(created_at, '%b'), MONTH(created_at)
-            ORDER BY MONTH(created_at) ASC
-        `);
-
-        const formatted = rows.map(r => ({
-            label: r.label,
-            OWNER: Number(r.OWNER || 0),
-            STAFF: Number(r.STAFF || 0),
-            CUSTOMER: Number(r.CUSTOMER || 0),
-            total: Number(r.total || 0)
-        }));
-
-        return res.status(200).json({
-            success: true,
-            data: formatted
-        });
+        const users = await prisma.user.findMany({ select: { role: true, createdAt: true }, orderBy: { createdAt: 'asc' } });
+        const byMonth = {};
+        const order = [];
+        for (const u of users) {
+            const m = u.createdAt.toLocaleString('en-US', { month: 'short' });
+            if (!(m in byMonth)) { byMonth[m] = { OWNER: 0, STAFF: 0, CUSTOMER: 0, total: 0 }; order.push(m); }
+            if (byMonth[m][u.role] !== undefined) byMonth[m][u.role]++;
+            byMonth[m].total++;
+        }
+        return res.status(200).json({ success: true, data: order.map(m => ({ label: m, ...byMonth[m] })) });
     } catch (error) {
         console.error('User analytics error:', error);
-        return res.status(500).json({
-            success: false,
-            message: 'Error compiling user analytics: ' + error.message
-        });
+        return res.status(500).json({ success: false, message: 'Error compiling user analytics: ' + error.message });
     }
 };
 
-/**
- * Get Subscription Analytics Breakdown from DB
- */
 const getSubscriptionAnalyticsReport = async (req, res) => {
     try {
-        const [plans] = await db.query(`
-            SELECT 
-                sp.plan_name as planName,
-                sp.monthly_price as price,
-                COUNT(b.id) as count
-            FROM subscription_plans sp
-            INNER JOIN branches b ON (b.status = 'ACTIVE' AND (b.subscription_plan_id = sp.id OR LOWER(b.subscription_plan_id) = LOWER(sp.plan_name)))
-            GROUP BY sp.id, sp.plan_name, sp.monthly_price
-            HAVING count > 0
-            ORDER BY count DESC
-        `);
-
-        const formatted = plans.map(p => ({
-            planName: p.planName,
-            price: Number(p.price || 0),
-            count: Number(p.count || 0),
-            totalUsers: Number(p.count || 0),
-            revenue: Number(p.price || 0) * Number(p.count || 0),
-            name: p.planName,
-            value: Number(p.count || 0)
-        }));
-
-        return res.status(200).json({
-            success: true,
-            data: formatted
-        });
+        const branches = await prisma.branch.findMany({ where: { status: 'ACTIVE' }, include: { subscriptionPlan: true } });
+        const byPlan = {};
+        for (const b of branches) {
+            if (!b.subscriptionPlan) continue;
+            const key = b.subscriptionPlan.id;
+            if (!byPlan[key]) byPlan[key] = { planName: b.subscriptionPlan.planName, price: Number(b.subscriptionPlan.monthlyPrice), count: 0 };
+            byPlan[key].count++;
+        }
+        const data = Object.values(byPlan).sort((a, b) => b.count - a.count)
+            .map(p => ({ ...p, totalUsers: p.count, revenue: p.price * p.count, name: p.planName, value: p.count }));
+        return res.status(200).json({ success: true, data });
     } catch (error) {
         console.error('Subscription analytics error:', error);
-        return res.status(500).json({
-            success: false,
-            message: 'Error compiling subscription analytics: ' + error.message
-        });
+        return res.status(500).json({ success: false, message: 'Error compiling subscription analytics: ' + error.message });
     }
 };
 
-/**
- * Get Top Venue Owners from DB
- */
 const getTopOwnersReport = async (req, res) => {
     try {
-        const [owners] = await db.query(`
-            SELECT 
-                o.id as _id,
-                o.id as id,
-                o.full_name as fullName,
-                o.full_name as ownerName,
-                COUNT(br.id) as branchesCount,
-                COUNT(br.id) as branches,
-                COALESCE(SUM(b.amount), 0) as revenue
-            FROM owners o
-            LEFT JOIN branches br ON br.owner_id = o.id
-            LEFT JOIN slots s ON s.branch_id = br.id
-            LEFT JOIN bookings b ON b.slot_id = s.id
-            GROUP BY o.id, o.full_name
-            ORDER BY revenue DESC
-        `);
-
-        return res.status(200).json({
-            success: true,
-            data: owners.map(o => ({
-                _id: o._id,
-                id: o.id,
-                fullName: o.fullName || 'Venue Owner',
-                ownerName: o.ownerName || 'Venue Owner',
-                branchesCount: Number(o.branchesCount || 0),
-                branches: Number(o.branches || 0),
-                revenue: Number(o.revenue || 0)
-            }))
-        });
+        const owners = await prisma.owner.findMany({ include: { branches: { include: { slots: { include: { bookings: true } } } } } });
+        const data = owners.map(o => {
+            const revenue = o.branches.reduce((sum, br) => sum + br.slots.reduce((s2, sl) => s2 + sl.bookings.filter(bk => bk.status === 'COMPLETED').reduce((s3, bk) => s3 + Number(bk.amount), 0), 0), 0);
+            return { _id: o.id, id: o.id, fullName: o.fullName, ownerName: o.fullName, branchesCount: o.branches.length, branches: o.branches.length, revenue };
+        }).sort((a, b) => b.revenue - a.revenue);
+        return res.status(200).json({ success: true, data });
     } catch (error) {
         console.error('Top owners error:', error);
-        return res.status(500).json({
-            success: false,
-            message: 'Error compiling top owners: ' + error.message
-        });
+        return res.status(500).json({ success: false, message: 'Error compiling top owners: ' + error.message });
     }
 };
 
-/**
- * Get Top Branches from DB
- */
 const getTopBranchesReport = async (req, res) => {
     try {
-        const [rows] = await db.query(`
-            SELECT 
-                br.id as _id,
-                br.id as id,
-                br.branch_name as branchName,
-                br.city as city,
-                COALESCE(o.full_name, 'Turf Owner') as ownerName,
-                COUNT(b.id) as bookingsCount,
-                COUNT(b.id) as bookings,
-                COALESCE(SUM(b.amount), 0) as revenue
-            FROM branches br
-            LEFT JOIN owners o ON br.owner_id = o.id
-            LEFT JOIN slots s ON s.branch_id = br.id
-            LEFT JOIN bookings b ON b.slot_id = s.id
-            GROUP BY br.id, br.branch_name, br.city, o.full_name
-            ORDER BY revenue DESC
-            LIMIT 5
-        `);
-
-        return res.status(200).json({
-            success: true,
-            data: rows || []
+        const branches = await prisma.branch.findMany({
+            include: { owner: true, slots: { include: { bookings: true } } }
         });
+        const data = branches.map(br => {
+            const bookings = br.slots.flatMap(s => s.bookings).filter(bk => bk.status === 'COMPLETED');
+            return {
+                _id: br.id, id: br.id, branchName: br.branchName, city: br.city,
+                ownerName: br.owner?.fullName || null,
+                bookingsCount: bookings.length, bookings: bookings.length,
+                revenue: bookings.reduce((sum, bk) => sum + Number(bk.amount), 0)
+            };
+        }).sort((a, b) => b.revenue - a.revenue).slice(0, 5);
+        return res.status(200).json({ success: true, data });
     } catch (error) {
         console.error('Top branches error:', error);
-        return res.status(500).json({
-            success: false,
-            message: 'Error compiling top branches: ' + error.message
-        });
+        return res.status(500).json({ success: false, message: 'Error compiling top branches: ' + error.message });
+    }
+};
+
+/** Owners see only their own branches' sport popularity; Super Admin sees the whole platform. */
+const getSportsReport = async (req, res) => {
+    try {
+        const isOwnerScoped = req.user?.role === 'OWNER';
+        const bookingWhere = isOwnerScoped
+            ? { status: 'COMPLETED', slot: { branch: { ownerUserId: req.user.id } } }
+            : { status: 'COMPLETED' };
+
+        const [sports, bookings] = await Promise.all([
+            prisma.sport.findMany(),
+            prisma.booking.findMany({ where: bookingWhere, select: { sportName: true, amount: true } })
+        ]);
+
+        const data = sports.map(sp => {
+            const matched = bookings.filter(b => b.sportName === sp.name);
+            return { sport: sp.name, name: sp.name, bookingsCount: matched.length, bookings: matched.length, revenue: matched.reduce((sum, b) => sum + Number(b.amount), 0) };
+        }).filter(s => s.bookingsCount > 0);
+
+        return res.status(200).json({ success: true, data });
+    } catch (error) {
+        console.error('Fetch sports report error:', error);
+        return res.status(500).json({ success: false, message: 'Internal Server Error compiling sports report: ' + error.message });
     }
 };
 
 /**
- * Get Sports Popularity Reports from DB
+ * GET /api/v1/reports/occupancy-heatmap
+ * Real weekday x hour-bucket occupancy percentage, computed from Slot rows
+ * (BOOKED / total slots resolved for that weekday+hour). Owners see only their
+ * own branches; Super Admin sees the whole platform. Returns an empty grid
+ * (all zeros) rather than a fabricated pattern when there is no slot data yet.
  */
-const getSportsReport = async (req, res) => {
-    try {
-        const [rows] = await db.query(`
-            SELECT 
-                sp.name as sport,
-                sp.name as name,
-                COUNT(b.id) as bookingsCount,
-                COUNT(b.id) as bookings,
-                COALESCE(SUM(b.amount), 0) as revenue
-            FROM sports sp
-            LEFT JOIN bookings b ON b.sport_name = sp.name
-            GROUP BY sp.id, sp.name
-        `);
+const HEATMAP_HOURS = [6, 7, 8, 9, 10, 16, 17, 18, 19, 20];
+const HEATMAP_DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
-        return res.status(200).json({
-            success: true,
-            data: rows.map(r => ({
-                sport: r.sport,
-                name: r.name,
-                bookingsCount: Number(r.bookingsCount || 0),
-                bookings: Number(r.bookings || 0),
-                revenue: Number(r.revenue || 0)
-            }))
-        });
+const getOccupancyHeatmap = async (req, res) => {
+    try {
+        const isOwnerScoped = req.user?.role === 'OWNER';
+        const slotWhere = isOwnerScoped ? { branch: { ownerUserId: req.user.id } } : {};
+
+        const slots = await prisma.slot.findMany({ where: slotWhere, select: { slotDate: true, startTime: true, status: true } });
+
+        // dayIndex 0=Mon..6=Sun to match HEATMAP_DAYS; JS getDay() is 0=Sun..6=Sat.
+        const counts = HEATMAP_DAYS.map(() => HEATMAP_HOURS.map(() => ({ total: 0, booked: 0 })));
+
+        for (const s of slots) {
+            const jsDay = new Date(s.slotDate).getDay();
+            const dayIdx = jsDay === 0 ? 6 : jsDay - 1;
+            const hour = Number((s.startTime || '0:00').split(':')[0]);
+            const hourIdx = HEATMAP_HOURS.indexOf(hour);
+            if (hourIdx === -1) continue;
+            counts[dayIdx][hourIdx].total++;
+            if (s.status === 'BOOKED' || s.status === 'COMPLETED') counts[dayIdx][hourIdx].booked++;
+        }
+
+        const data = counts.map(row => row.map(c => c.total > 0 ? Math.round((c.booked / c.total) * 100) : 0));
+
+        return res.status(200).json({ success: true, data, xLabels: HEATMAP_HOURS.map(h => `${h % 12 === 0 ? 12 : h % 12}${h < 12 ? 'AM' : 'PM'}`), yLabels: HEATMAP_DAYS });
     } catch (error) {
-        console.error('Fetch sports report error:', error);
-        return res.status(500).json({
-            success: false,
-            message: 'Internal Server Error compiling sports report: ' + error.message
-        });
+        console.error('Fetch occupancy heatmap error:', error);
+        return res.status(500).json({ success: false, message: 'Internal Server Error compiling occupancy heatmap: ' + error.message });
     }
 };
 
 const getDailyReport = async (req, res) => {
-    return res.status(200).json({ success: true, data: [] });
+    try {
+        const isOwnerScoped = req.user?.role === 'OWNER';
+        const thirtyDaysAgo = new Date(); thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+        const where = { status: 'COMPLETED', createdAt: { gte: thirtyDaysAgo } };
+        if (isOwnerScoped) where.booking = { slot: { branch: { ownerUserId: req.user.id } } };
+
+        const payments = await prisma.payment.findMany({ where, select: { amount: true, createdAt: true }, orderBy: { createdAt: 'asc' } });
+        const byDay = {};
+        const order = [];
+        for (const p of payments) {
+            const d = p.createdAt.toLocaleDateString('en-IN', { day: '2-digit', month: 'short' });
+            if (!(d in byDay)) { byDay[d] = 0; order.push(d); }
+            byDay[d] += Number(p.amount);
+        }
+        return res.status(200).json({ success: true, data: order.map(d => ({ day: d, label: d, value: byDay[d], v: byDay[d] })) });
+    } catch (error) {
+        console.error('Fetch daily report error:', error);
+        return res.status(500).json({ success: false, message: 'Internal Server Error compiling daily report: ' + error.message });
+    }
 };
 
 const getMonthlyReport = async (req, res) => {
-    return res.status(200).json({ success: true, data: [] });
+    try {
+        const isOwnerScoped = req.user?.role === 'OWNER';
+        const twelveMonthsAgo = new Date(); twelveMonthsAgo.setMonth(twelveMonthsAgo.getMonth() - 12);
+        const where = { status: 'COMPLETED', createdAt: { gte: twelveMonthsAgo } };
+        if (isOwnerScoped) where.booking = { slot: { branch: { ownerUserId: req.user.id } } };
+
+        const payments = await prisma.payment.findMany({ where, select: { amount: true, createdAt: true }, orderBy: { createdAt: 'asc' } });
+        const grouped = groupByMonth(payments, r => Number(r.amount));
+        return res.status(200).json({ success: true, data: grouped.map(g => ({ month: g.month, label: g.month, value: g.value, v: g.value })) });
+    } catch (error) {
+        console.error('Fetch monthly report error:', error);
+        return res.status(500).json({ success: false, message: 'Internal Server Error compiling monthly report: ' + error.message });
+    }
 };
 
-/**
- * Export report as CSV or summary text
- * GET /api/v1/reports/export?format=csv&type=general&range=LAST_30_DAYS
- */
 const exportReport = async (req, res) => {
     const { format = 'csv', type = 'general', range = 'LAST_30_DAYS' } = req.query;
-
     try {
-        // Fetch overview data to build the export
-        const [branchesRes] = await db.query(`SELECT COUNT(*) as total FROM branches WHERE status = 'ACTIVE'`);
-        const [revenueRes] = await db.query(`SELECT COALESCE(SUM(amount), 0) as total FROM payments WHERE status = 'COMPLETED'`);
-        const [bookingsRes] = await db.query(`SELECT COUNT(*) as total FROM bookings`);
-        const [ownersRes] = await db.query(`SELECT COUNT(*) as total FROM owners`);
-
-        const totalBranches = Number(branchesRes[0]?.total || 0);
-        const totalRevenue = Number(revenueRes[0]?.total || 0);
-        const totalBookings = Number(bookingsRes[0]?.total || 0);
-        const totalOwners = Number(ownersRes[0]?.total || 0);
+        const [totalBranches, revAgg, totalBookings, totalOwners] = await Promise.all([
+            prisma.branch.count({ where: { status: 'ACTIVE' } }),
+            prisma.payment.aggregate({ where: { status: 'COMPLETED' }, _sum: { amount: true } }),
+            prisma.booking.count(),
+            prisma.owner.count()
+        ]);
+        const totalRevenue = Number(revAgg._sum.amount || 0);
 
         if (format === 'csv') {
             const csv = [
-                `SportMatrix Platform Report`,
-                `Generated: ${new Date().toLocaleString('en-IN')}`,
-                `Range: ${range}`,
-                `Report Type: ${type.toUpperCase()}`,
-                ``,
-                `Metric,Value`,
-                `Active Branches,${totalBranches}`,
+                `SportMatrix Platform Report`, `Generated: ${new Date().toLocaleString('en-IN')}`,
+                `Range: ${range}`, `Report Type: ${type.toUpperCase()}`, ``,
+                `Metric,Value`, `Active Branches,${totalBranches}`,
                 `Total Revenue,₹${totalRevenue.toLocaleString('en-IN')}`,
-                `Total Bookings,${totalBookings}`,
-                `Registered Owners,${totalOwners}`
+                `Total Bookings,${totalBookings}`, `Registered Owners,${totalOwners}`
             ].join('\n');
-
             res.setHeader('Content-Type', 'text/csv');
             res.setHeader('Content-Disposition', `attachment; filename="sportmatrix_report_${Date.now()}.csv"`);
             return res.send(csv);
         }
 
-        // PDF (text blob fallback)
         const content = [
-            `SportMatrix Platform Report`,
-            `Generated: ${new Date().toLocaleString('en-IN')}`,
-            `Range: ${range}`,
-            ``,
-            `Active Branches: ${totalBranches}`,
-            `Total Revenue: ₹${totalRevenue.toLocaleString('en-IN')}`,
-            `Total Bookings: ${totalBookings}`,
-            `Registered Owners: ${totalOwners}`
+            `SportMatrix Platform Report`, `Generated: ${new Date().toLocaleString('en-IN')}`, `Range: ${range}`, ``,
+            `Active Branches: ${totalBranches}`, `Total Revenue: ₹${totalRevenue.toLocaleString('en-IN')}`,
+            `Total Bookings: ${totalBookings}`, `Registered Owners: ${totalOwners}`
         ].join('\n');
-
         res.setHeader('Content-Type', 'application/octet-stream');
         res.setHeader('Content-Disposition', `attachment; filename="sportmatrix_report_${Date.now()}.txt"`);
         return res.send(content);
     } catch (error) {
         console.error('Export report error:', error);
-        return res.status(500).json({
-            success: false,
-            message: 'Error generating export: ' + error.message
-        });
+        return res.status(500).json({ success: false, message: 'Error generating export: ' + error.message });
     }
 };
 
 module.exports = {
-    getOverviewReport,
-    getRevenueReport,
-    getBookingReport,
-    getUserAnalyticsReport,
-    getSubscriptionAnalyticsReport,
-    getTopOwnersReport,
-    getTopBranchesReport,
-    getSportsReport,
-    getDailyReport,
-    getMonthlyReport,
-    exportReport
+    getOverviewReport, getRevenueReport, getBookingReport, getUserAnalyticsReport,
+    getSubscriptionAnalyticsReport, getTopOwnersReport, getTopBranchesReport, getSportsReport,
+    getOccupancyHeatmap, getDailyReport, getMonthlyReport, exportReport
 };

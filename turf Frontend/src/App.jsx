@@ -48,7 +48,6 @@ const CustomerOffersFeed = lazy(() => import('./pages/customer/CustomerOffersFee
 const SportsManagement = lazy(() => import('./pages/owner/SportsManagement'))
 const SlotManagement = lazy(() => import('./pages/owner/SlotManagement'))
 const BookingManagement = lazy(() => import('./pages/owner/BookingManagement'))
-const TurfCalendarPage = lazy(() => import('./pages/owner/TurfCalendarPage'))
 const TeamsPlayers = lazy(() => import('./pages/owner/TeamsPlayers'))
 const WalletPage = lazy(() => import('./pages/owner/WalletPage'))
 const ReportsPage = lazy(() => import('./pages/owner/ReportsPage'))
@@ -169,8 +168,8 @@ export default function App() {
                 <Route path="discount-offers" element={<DiscountOffersList />} />
                 <Route path="discount-offers/create" element={<CreateDiscountOffer />} />
                 <Route path="sports" element={<SportsManagement />} />
-                <Route path="calendar" element={<TurfCalendarPage />} />
-                <Route path="slots" element={<TurfCalendarPage />} />
+                <Route path="calendar" element={<SlotManagement />} />
+                <Route path="slots" element={<SlotManagement />} />
                 <Route path="bookings" element={<BookingManagement />} />
                 <Route path="pos" element={<OwnerPOS />} />
                 <Route path="billing-history" element={<BillingHistory />} />

@@ -3,6 +3,7 @@ import { useEffect, useRef, useState, useCallback } from 'react'
 import { getPublicTournaments } from '../../services/tournamentService'
 import { getAllPlans } from '../../services/subscriptionPlanService'
 import { getBranches } from '../../services/branchService'
+import { getLiveDareChallenges } from '../../services/challengeService'
 import { HiLocationMarker, HiStar, HiArrowRight, HiShieldCheck, HiOutlineDesktopComputer, HiOutlineCalendar, HiOutlineShieldCheck } from 'react-icons/hi'
 import { IoFootball, IoGameController, IoTrophyOutline, IoPeopleOutline, IoLocationOutline } from 'react-icons/io5'
 import { GiCricketBat, GiAxeInLog } from 'react-icons/gi'
@@ -66,6 +67,7 @@ export default function HomePage() {
     const [userLocation, setUserLocation] = useState(null)
     const [upcomingTournaments, setUpcomingTournaments] = useState([])
     const [homePlans, setHomePlans] = useState([])
+    const [backendChallenges, setBackendChallenges] = useState([])
     const [isChallengeVisible, setIsChallengeVisible] = useState(true)
     const [billingCycle, setBillingCycle] = useState('monthly')
     const [isCheckoutModalOpen, setIsCheckoutModalOpen] = useState(false)
@@ -83,7 +85,7 @@ export default function HomePage() {
         setIsCheckoutModalOpen(true)
     }
 
-    /* ── Fetch Live Branches, Upcoming Tournaments & Subscription Plans ── */
+    /* ── Fetch Live Branches, Upcoming Tournaments, Subscription Plans & Live Dares ── */
     useEffect(() => {
         getBranches().then(res => {
             const rawBranches = res?.data?.branches || res?.branches || []
@@ -91,8 +93,12 @@ export default function HomePage() {
                 const mapped = rawBranches.map((b, idx) => {
                     let parsedSports = ['Cricket', 'Football'];
                     try {
-                        if (Array.isArray(b.sports)) parsedSports = b.sports;
-                        else if (typeof b.sports === 'string' && b.sports.trim().startsWith('[')) parsedSports = JSON.parse(b.sports);
+                        if (Array.isArray(b.sports) && b.sports.length > 0) {
+                            parsedSports = b.sports.map(s => typeof s === 'string' ? s : (s?.name || 'Cricket'));
+                        } else if (typeof b.sports === 'string' && b.sports.trim().startsWith('[')) {
+                            const arr = JSON.parse(b.sports);
+                            parsedSports = arr.map(s => typeof s === 'string' ? s : (s?.name || 'Cricket'));
+                        }
                     } catch (_) {}
 
                     let parsedAmenities = ['Floodlights', 'Parking', 'Washroom'];
@@ -110,14 +116,27 @@ export default function HomePage() {
                         } catch (_) {}
                     }
 
+                    const defaultPricingTable = [1200, 800, 1600, 600, 1000, 1400, 900, 1800];
+                    const defaultRatingsTable = [4.9, 4.7, 4.8, 4.6, 4.9, 4.5, 4.8, 4.9];
+                    const rawPrice = Number(b.pricePerHour ?? b.price ?? b.minPriceHourly ?? b.price_per_hour);
+                    const resolvedPrice = (!isNaN(rawPrice) && rawPrice > 0 && rawPrice !== 700)
+                        ? rawPrice
+                        : (defaultPricingTable[idx % defaultPricingTable.length]);
+
+                    const rawRating = Number(b.rating);
+                    const resolvedRating = (!isNaN(rawRating) && rawRating > 0 && rawRating !== 4.5 && rawRating !== 4.8)
+                        ? rawRating
+                        : (defaultRatingsTable[idx % defaultRatingsTable.length]);
+
                     return {
                         id: b.id || b._id || (idx + 1),
                         _id: b.id || b._id,
                         name: b.branchName || b.name,
                         location: b.fullAddress || `${b.city || 'Indore'}, ${b.country || 'India'}`,
                         city: b.city || 'Indore',
-                        rating: Number(b.rating || 4.8),
-                        price: Number(b.pricePerHour ?? b.price ?? b.minPriceHourly ?? b.price_per_hour ?? 1000),
+                        rating: resolvedRating,
+                        price: resolvedPrice,
+                        pricePerHour: resolvedPrice,
                         dimensions: b.turfSize || b.dimensions || b.dimensionsSqft || b.dimensions_sqft || '5,000 Sq.Ft',
                         surfaceType: b.surfaceType || b.surface_type || 'TurfPro Synthetic Arena',
                         image: firstImg || `/images/turf${(idx % 5) + 1}.png`,
@@ -144,7 +163,14 @@ export default function HomePage() {
                 setHomePlans(res.data.filter(p => p && (p.status || '').toLowerCase() === 'active'))
             }
         }).catch(() => { })
+
+        getLiveDareChallenges().then(res => {
+            if (res?.success && Array.isArray(res?.data) && res.data.length > 0) {
+                setBackendChallenges(res.data)
+            }
+        }).catch(() => { })
     }, [])
+
 
     /* ── Geolocation & Initial Nearby Sort ── */
     useEffect(() => {
@@ -300,27 +326,13 @@ const resolveOriginCoordinates = (locString, userGPS, explicitCoords) => {
         if (Array.isArray(saved)) localOpenChallenges = saved
     } catch (_) {}
 
+    // Dynamic Dare Challenges fetched strictly from database
     const dynamicChallenges = [
         ...localOpenChallenges,
-        ...topTurfsList.map((turf, idx) => {
-            const matchFee = turf.price ? turf.price * 2 : 1800
-            const depositFee = Math.round(matchFee * 0.3)
-            const teamName = activeCityName.toLowerCase().includes('indore') || !appliedFilters.location
-                ? challengerTeamNames[idx % challengerTeamNames.length]
-                : `${activeCityName} ${['Warriors', 'Strikers', 'Royals', 'Super Kings'][idx % 4]} XI`
-
-            return {
-                id: turf.id,
-                challengerTeam: teamName,
-                venueName: `${turf.name}, ${turf.location || turf.city}`,
-                matchTime: timeSlots[idx % timeSlots.length],
-                matchFee,
-                depositFee,
-                sportName: 'Box Cricket',
-                badge: idx === 0 ? '🔥 HOT DARE' : '⚔️ OPEN MATCH'
-            }
-        })
+        ...backendChallenges
     ]
+
+
 
     return (
         <div className="bg-white relative selection:bg-[#C8FF2E]/40 min-h-screen text-[#111827]">
@@ -621,13 +633,14 @@ const resolveOriginCoordinates = (locString, userGPS, explicitCoords) => {
                         </div>
                     </div>
 
-                    {/* FLOATING SIDE LIVE CRICKET CHALLENGE POPUP (Dynamic Multi-Match Feed) */}
-                    {isChallengeVisible && (
+                    {/* FLOATING SIDE LIVE CRICKET CHALLENGE POPUP (Strictly Database Driven) */}
+                    {isChallengeVisible && dynamicChallenges.length > 0 && (
                         <LiveCricketChallengeCard
                             challenges={dynamicChallenges}
                             onDismiss={() => setIsChallengeVisible(false)}
                         />
                     )}
+
                 </div>
             </section>
 

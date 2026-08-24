@@ -1,28 +1,5 @@
 import api from './api';
 
-// Initial Seed Discount Offers Data (No mock data, real MySQL only)
-const initialMockDiscounts = [];
-
-// Persistent local storage cache helpers
-const getLocalDiscounts = () => {
-    try {
-        localStorage.removeItem('sports_discounts_data');
-    } catch (e) {
-        console.error('Error reading discounts from localStorage:', e);
-    }
-    return initialMockDiscounts;
-};
-
-const saveLocalDiscounts = (data) => {
-    try {
-        localStorage.setItem('sports_discounts_data', JSON.stringify(data));
-    } catch (e) {
-        console.error('Error saving discounts to localStorage:', e);
-    }
-};
-
-let discountsState = getLocalDiscounts();
-
 /**
  * Format backend discount object for UI rendering
  */
@@ -34,9 +11,9 @@ const mapDiscountResponse = (d) => {
         title: d.title || d.name || '',
         description: d.description || '',
         turfId: d.turfId || d.turf_id || '',
-        turfName: d.turfName || d.turf_name || 'Indore Strikers Arena',
+        turfName: d.turfName || d.turf_name || '',
         ownerId: d.ownerId || d.owner_id || '',
-        ownerName: d.ownerName || d.owner_name || 'Turf Owner',
+        ownerName: d.ownerName || d.owner_name || '',
         discountType: d.discountType || d.discount_type || 'Percentage',
         discountValue: Number(d.discountValue ?? d.discount_value ?? 0),
         minimumBookingAmount: Number(d.minimumBookingAmount ?? d.minimum_booking_amount ?? 0),
@@ -68,234 +45,80 @@ const mapDiscountResponse = (d) => {
     };
 };
 
-/**
- * GET All Discount Offers
- */
+// Note: api.js's response interceptor already unwraps to the JSON body
+// ({success, data, message}) -- every `response` below IS that body directly.
+
+/** GET all discount offers. */
 export const getDiscountOffers = async (filters = {}) => {
-    try {
-        const response = await api.get('/discount-offers', { params: filters });
-        if (response.data && response.data.success) {
-            const rawOffers = response.data.data.offers || [];
-            const mappedOffers = rawOffers.map(mapDiscountResponse);
-            return {
-                success: true,
-                data: {
-                    offers: mappedOffers,
-                    pagination: response.data.data.pagination || {
-                        total: mappedOffers.length,
-                        page: Number(filters.page || 1),
-                        limit: Number(filters.limit || 10),
-                        totalPages: Math.ceil(mappedOffers.length / Number(filters.limit || 10)) || 1
-                    }
-                }
-            };
-        }
-    } catch (err) {
-        console.warn('Backend GET /discount-offers offline, using local persistent storage fallback.', err.message);
+    const response = await api.get('/discount-offers', { params: filters });
+    if (!response || response.success === false) {
+        throw new Error(response?.message || 'Failed to fetch discount offers.');
     }
-
-    discountsState = getLocalDiscounts();
-    let filtered = [...discountsState];
-
-    if (filters.status && filters.status !== 'ALL') {
-        filtered = filtered.filter(d => d.status === filters.status);
-    }
-    if (filters.discountType && filters.discountType !== 'ALL') {
-        filtered = filtered.filter(d => d.discountType === filters.discountType);
-    }
-    if (filters.turfId && filters.turfId !== 'ALL') {
-        filtered = filtered.filter(d => d.turfId === filters.turfId);
-    }
-    if (filters.search) {
-        const q = filters.search.toLowerCase();
-        filtered = filtered.filter(d =>
-            (d.title && d.title.toLowerCase().includes(q)) ||
-            (d.promoCode && d.promoCode.toLowerCase().includes(q)) ||
-            (d.turfName && d.turfName.toLowerCase().includes(q)) ||
-            (d.ownerName && d.ownerName.toLowerCase().includes(q))
-        );
-    }
-
-    const page = parseInt(filters.page || 1, 10);
-    const limit = parseInt(filters.limit || 10, 10);
-    const total = filtered.length;
-    const startIndex = (page - 1) * limit;
-    const paginatedOffers = filtered.slice(startIndex, startIndex + limit);
-
+    const rawOffers = response.data?.offers || [];
     return {
         success: true,
         data: {
-            offers: paginatedOffers,
-            pagination: {
-                total,
-                page,
-                limit,
-                totalPages: Math.ceil(total / limit) || 1
+            offers: rawOffers.map(mapDiscountResponse),
+            pagination: response.data?.pagination || {
+                total: rawOffers.length,
+                page: Number(filters.page || 1),
+                limit: Number(filters.limit || 10),
+                totalPages: Math.ceil(rawOffers.length / Number(filters.limit || 10)) || 1
             }
         }
     };
 };
 
-/**
- * GET Single Discount Offer by ID
- */
+/** GET a single discount offer by ID. */
 export const getDiscountOfferById = async (id) => {
-    try {
-        const response = await api.get(`/discount-offers/${id}`);
-        if (response.data && response.data.success) {
-            return {
-                success: true,
-                data: mapDiscountResponse(response.data.data)
-            };
-        }
-    } catch (err) {
-        console.warn(`Backend GET /discount-offers/${id} failed, using local fallback.`, err.message);
+    const response = await api.get(`/discount-offers/${id}`);
+    if (!response || response.success === false) {
+        throw new Error(response?.message || 'Failed to fetch discount offer.');
     }
-
-    discountsState = getLocalDiscounts();
-    const found = discountsState.find(d => d._id === id || d.id === id) || discountsState[0];
-    return { success: true, data: mapDiscountResponse(found) };
+    return { success: true, data: mapDiscountResponse(response.data) };
 };
 
-/**
- * POST Create Discount Offer
- */
+/** POST create a new discount offer. */
 export const createDiscountOffer = async (offerData) => {
-    try {
-        const response = await api.post('/discount-offers', offerData);
-        if (response.data && response.data.success) {
-            const created = mapDiscountResponse(response.data.data);
-            discountsState.unshift(created);
-            saveLocalDiscounts(discountsState);
-            return {
-                success: true,
-                data: created,
-                message: response.data.message || 'Discount offer created successfully'
-            };
-        }
-    } catch (err) {
-        const errMsg = err.response?.data?.message || err.message || 'Failed to create discount offer';
-        if (err.response && err.response.status < 500) {
-            throw new Error(errMsg);
-        }
-        console.warn('Backend POST /discount-offers failed, saving to local persistent storage:', errMsg);
+    const response = await api.post('/discount-offers', offerData);
+    if (!response || response.success === false) {
+        throw new Error(response?.message || 'Failed to create discount offer.');
     }
-
-    discountsState = getLocalDiscounts();
-    const newOffer = {
-        _id: 'disc_' + Date.now(),
-        id: 'disc_' + Date.now(),
-        usedCount: 0,
-        status: offerData.status || 'Active',
-        turfName: offerData.turfId === 'turf-2' ? 'SkyLine Football Turf (Pune)' : (offerData.turfId === 'turf-3' ? 'Velocity Sports Hub (Bangalore)' : 'Champions Turf Arena (Mumbai)'),
-        ownerName: offerData.ownerName || 'Rajesh Sharma',
-        ...offerData
-    };
-    discountsState.unshift(newOffer);
-    saveLocalDiscounts(discountsState);
-    return { success: true, data: newOffer, message: 'Discount offer created successfully' };
+    return { success: true, data: mapDiscountResponse(response.data), message: response.message || 'Discount offer created successfully' };
 };
 
-/**
- * PUT Update Discount Offer
- */
+/** PUT update an existing discount offer. */
 export const updateDiscountOffer = async (id, offerData) => {
-    try {
-        const response = await api.put(`/discount-offers/${id}`, offerData);
-        if (response.data && response.data.success) {
-            const updated = mapDiscountResponse(response.data.data);
-            discountsState = discountsState.map(d => (d._id === id || d.id === id) ? updated : d);
-            saveLocalDiscounts(discountsState);
-            return {
-                success: true,
-                data: updated,
-                message: response.data.message || 'Discount offer updated successfully'
-            };
-        }
-    } catch (err) {
-        const errMsg = err.response?.data?.message || err.message || 'Failed to update discount offer';
-        if (err.response && err.response.status < 500) {
-            throw new Error(errMsg);
-        }
+    const response = await api.put(`/discount-offers/${id}`, offerData);
+    if (!response || response.success === false) {
+        throw new Error(response?.message || 'Failed to update discount offer.');
     }
-
-    discountsState = getLocalDiscounts();
-    discountsState = discountsState.map(d => (d._id === id || d.id === id) ? { ...d, ...offerData } : d);
-    saveLocalDiscounts(discountsState);
-    const updated = discountsState.find(d => d._id === id || d.id === id);
-    return { success: true, data: updated, message: 'Discount offer updated successfully' };
+    return { success: true, data: mapDiscountResponse(response.data), message: response.message || 'Discount offer updated successfully' };
 };
 
-/**
- * PATCH Change Discount Offer Status
- */
+/** PATCH change a discount offer's status. */
 export const changeDiscountStatus = async (id, status) => {
-    try {
-        const response = await api.patch(`/discount-offers/${id}/status`, { status });
-        if (response.data && response.data.success) {
-            discountsState = discountsState.map(d => (d._id === id || d.id === id) ? { ...d, status } : d);
-            saveLocalDiscounts(discountsState);
-            return { success: true, message: response.data.message || `Discount offer status updated to ${status}` };
-        }
-    } catch (err) {
-        console.warn(`Backend PATCH /discount-offers/${id}/status failed, toggling in local fallback.`, err.message);
+    const response = await api.patch(`/discount-offers/${id}/status`, { status });
+    if (!response || response.success === false) {
+        throw new Error(response?.message || 'Failed to update discount offer status.');
     }
-
-    discountsState = getLocalDiscounts();
-    discountsState = discountsState.map(d => (d._id === id || d.id === id) ? { ...d, status } : d);
-    saveLocalDiscounts(discountsState);
-    return { success: true, message: `Discount offer status updated to ${status}` };
+    return { success: true, message: response.message || `Discount offer status updated to ${status}` };
 };
 
-/**
- * POST Duplicate Discount Offer
- */
+/** POST duplicate a discount offer. */
 export const duplicateDiscountOffer = async (id) => {
-    try {
-        const response = await api.post(`/discount-offers/${id}/duplicate`);
-        if (response.data && response.data.success) {
-            const duplicated = mapDiscountResponse(response.data.data);
-            discountsState.unshift(duplicated);
-            saveLocalDiscounts(discountsState);
-            return { success: true, data: duplicated, message: 'Discount offer duplicated successfully' };
-        }
-    } catch (err) {
-        console.warn(`Backend POST /discount-offers/${id}/duplicate failed, using local fallback.`, err.message);
+    const response = await api.post(`/discount-offers/${id}/duplicate`);
+    if (!response || response.success === false) {
+        throw new Error(response?.message || 'Failed to duplicate discount offer.');
     }
-
-    discountsState = getLocalDiscounts();
-    const original = discountsState.find(d => d._id === id || d.id === id) || discountsState[0];
-    const duplicated = {
-        ...original,
-        _id: 'disc_' + Date.now(),
-        id: 'disc_' + Date.now(),
-        title: `${original.title} (Copy)`,
-        promoCode: original.promoCode ? `${original.promoCode}_COPY` : '',
-        usedCount: 0,
-        status: 'Draft'
-    };
-    discountsState.unshift(duplicated);
-    saveLocalDiscounts(discountsState);
-    return { success: true, data: duplicated, message: 'Discount offer duplicated successfully' };
+    return { success: true, data: mapDiscountResponse(response.data), message: response.message || 'Discount offer duplicated successfully' };
 };
 
-/**
- * DELETE Discount Offer
- */
+/** DELETE a discount offer. */
 export const deleteDiscountOffer = async (id) => {
-    try {
-        const response = await api.delete(`/discount-offers/${id}`);
-        if (response.data && response.data.success) {
-            discountsState = discountsState.filter(d => d._id !== id && d.id !== id);
-            saveLocalDiscounts(discountsState);
-            return { success: true, message: response.data.message || 'Discount offer deleted successfully' };
-        }
-    } catch (err) {
-        console.warn(`Backend DELETE /discount-offers/${id} failed, deleting in local fallback.`, err.message);
+    const response = await api.delete(`/discount-offers/${id}`);
+    if (!response || response.success === false) {
+        throw new Error(response?.message || 'Failed to delete discount offer.');
     }
-
-    discountsState = getLocalDiscounts();
-    discountsState = discountsState.filter(d => d._id !== id && d.id !== id);
-    saveLocalDiscounts(discountsState);
-    return { success: true, message: 'Discount offer deleted successfully' };
+    return { success: true, message: response.message || 'Discount offer deleted successfully' };
 };

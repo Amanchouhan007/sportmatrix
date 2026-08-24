@@ -1,8 +1,10 @@
-const db = require('../../config/db');
+const prisma = require('../../config/prisma');
 const bcrypt = require('bcryptjs');
 const fs = require('fs');
 const path = require('path');
 const { sendTurfAdminCredentialsEmail } = require('../../services/email.service');
+
+const genId = (prefix) => `${prefix}_${Date.now()}_${Math.floor(Math.random() * 100000)}`;
 
 /**
  * Save base64 image string to disk in public/uploads directory
@@ -17,7 +19,7 @@ const saveBase64Image = (base64String, prefix = 'owner_profile') => {
 
         const ext = matches[1] === 'jpeg' ? 'jpg' : matches[1];
         const dataBuffer = Buffer.from(matches[2], 'base64');
-        
+
         const uploadsDir = path.join(__dirname, '../../../public/uploads');
         if (!fs.existsSync(uploadsDir)) {
             fs.mkdirSync(uploadsDir, { recursive: true });
@@ -34,42 +36,43 @@ const saveBase64Image = (base64String, prefix = 'owner_profile') => {
     }
 };
 
-/**
- * Format owner database row into clean JSON object (excluding password_hash)
- */
-const formatOwner = (r) => {
-    if (!r) return null;
+const formatOwner = (o) => {
+    if (!o) return null;
     return {
-        id: r.id,
-        _id: r.id,
-        fullName: r.full_name,
-        email: r.email,
-        mobile: r.mobile,
-        alternateMobile: r.alternate_mobile || '',
-        status: r.status,
-        businessName: r.business_name || '',
-        businessType: r.business_type || '',
-        gstNumber: r.gst_number || '',
-        panNumber: r.pan_number || '',
-        country: r.country || 'India',
-        state: r.state || '',
-        city: r.city || '',
-        zipCode: r.zip_code || '',
-        fullAddress: r.full_address || '',
-        profileImage: r.profile_image || '',
-        createdBy: r.created_by || '',
-        updatedBy: r.updated_by || '',
-        createdAt: r.created_at,
-        updatedAt: r.updated_at
+        id: o.id,
+        _id: o.id,
+        userId: o.userId,
+        fullName: o.fullName,
+        email: o.email,
+        mobile: o.mobile,
+        alternateMobile: o.alternateMobile || '',
+        status: o.status,
+        businessName: o.businessName || '',
+        businessType: o.businessType || '',
+        gstNumber: o.gstNumber || '',
+        panNumber: o.panNumber || '',
+        country: o.country || 'India',
+        state: o.state || '',
+        city: o.city || '',
+        zipCode: o.zipCode || '',
+        fullAddress: o.fullAddress || '',
+        profileImage: o.profileImage || '',
+        activePlanId: o.activePlanId || '',
+        totalCommissionEarned: o.totalCommissionEarned,
+        totalRevenueGenerated: o.totalRevenueGenerated,
+        createdBy: o.createdBy || '',
+        updatedBy: o.updatedBy || '',
+        createdAt: o.createdAt,
+        updatedAt: o.updatedAt
     };
 };
 
 /**
  * POST /api/v1/owners
- * Register a new Owner
+ * Register a new Owner (creates a linked User row for authentication + an Owner
+ * business profile + a first Branch for the new owner in a single transaction).
  */
 const createOwner = async (req, res) => {
-    const conn = await db.getConnection();
     try {
         const {
             fullName,
@@ -86,28 +89,25 @@ const createOwner = async (req, res) => {
             state,
             city,
             zipCode,
-            fullAddress = req.body.fullAddress || req.body.address,
-            createdBy
+            planId
         } = req.body;
+        const fullAddress = req.body.fullAddress || req.body.address;
 
-        const normalizedEmail = email ? email.toLowerCase().trim() : '';
-        const normalizedMobile = mobile ? mobile.trim() : '';
+        const normalizedEmail = email.toLowerCase().trim();
+        const normalizedMobile = mobile.trim();
 
-        // 1. Check if email or mobile already exists
-        const [existing] = await conn.query('SELECT * FROM owners WHERE (email IS NOT NULL AND LOWER(email) = ?) OR (mobile IS NOT NULL AND mobile = ?) LIMIT 1', [normalizedEmail, normalizedMobile]);
-        if (existing.length > 0) {
-            conn.release();
-            const existingOwner = formatOwner(existing[0]);
+        const existing = await prisma.owner.findFirst({
+            where: { OR: [{ email: normalizedEmail }, { mobile: normalizedMobile }] }
+        });
+        if (existing) {
             return res.status(200).json({
                 success: true,
                 message: 'Owner already registered. Using existing owner account.',
-                data: existingOwner,
-                owner: existingOwner,
-                id: existingOwner.id
+                data: formatOwner(existing),
+                id: existing.id
             });
         }
 
-        // 3. Process Profile Image upload if provided
         let profileImage = '';
         if (req.file) {
             profileImage = `/uploads/${req.file.filename}`;
@@ -115,96 +115,72 @@ const createOwner = async (req, res) => {
             profileImage = saveBase64Image(req.body.profileImage, 'owner');
         }
 
-        // 4. Hash password securely
-        const rawPassword = (password && password.trim()) ? password.trim() : 'password123';
+        const rawPassword = (password && password.trim()) ? password.trim() : 'Owner@12345';
         const passwordHash = await bcrypt.hash(rawPassword, 10);
 
-        // 5. Generate unique IDs
-        const userId = `usr_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
-        const ownerId = `own_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
-
-        // 6. Execute Transaction
-        await conn.beginTransaction();
-
-        // Sync into users table for authentication access
-        try {
-            await conn.query(
-                `INSERT INTO users (id, name, email, password_hash, role, mobile, avatar, status) 
-                 VALUES (?, ?, ?, ?, 'OWNER', ?, ?, ?)
-                 ON DUPLICATE KEY UPDATE name = VALUES(name), password_hash = VALUES(password_hash), mobile = VALUES(mobile), status = VALUES(status)`,
-                [userId, fullName.trim(), normalizedEmail, passwordHash, normalizedMobile, profileImage || null, status]
-            );
-        } catch (uErr) {
-            console.warn('Sync to users table skipped:', uErr.message);
-        }
-
-        const insertQuery = `
-            INSERT INTO owners (
-                id, user_id, full_name, email, mobile, alternate_mobile, status,
-                business_name, business_type, gst_number, pan_number,
-                country, state, city, zip_code, full_address, profile_image,
-                created_by, updated_by
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        `;
-
-        await conn.query(insertQuery, [
-            ownerId,
-            userId,
-            fullName.trim(),
-            normalizedEmail,
-            normalizedMobile,
-            alternateMobile ? alternateMobile.trim() : null,
-            status,
-            businessName ? businessName.trim() : null,
-            businessType ? businessType.trim() : null,
-            gstNumber ? gstNumber.trim() : null,
-            panNumber ? panNumber.trim() : null,
-            country ? country.trim() : 'India',
-            state ? state.trim() : null,
-            city ? city.trim() : null,
-            zipCode ? zipCode.trim() : null,
-            fullAddress ? fullAddress.trim() : null,
-            profileImage || null,
-            createdBy || req.user?.id || 'SYSTEM',
-            createdBy || req.user?.id || 'SYSTEM'
-        ]);
-
-        // Auto-create corresponding Turf Branch for SuperAdmin / Website visibility
-        const branchId = `br_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
+        const ownerId = genId('own');
+        const branchId = genId('br');
         const branchCode = `BR-${Math.floor(1000 + Math.random() * 9000)}`;
         const turfBranchName = (businessName && businessName.trim()) ? businessName.trim() : `${fullName.trim()}'s Turf Arena`;
 
-        try {
-            await conn.query(`
-                INSERT INTO branches (
-                    id, branch_name, branch_code, owner_id, subscription_plan_id,
-                    city, zip_code, full_address, email, mobile, status
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            `, [
-                branchId,
-                turfBranchName,
-                branchCode,
-                ownerId,
-                req.body.planId || 'plan_starter',
-                city ? city.trim() : 'Indore',
-                zipCode ? zipCode.trim() : '452001',
-                fullAddress ? fullAddress.trim() : 'Indore, MP',
-                normalizedEmail,
-                normalizedMobile,
-                'ACTIVE'
-            ]);
-        } catch (bErr) {
-            console.warn('Branch auto-creation note:', bErr.message);
-        }
+        const owner = await prisma.$transaction(async (tx) => {
+            const createdOwner = await tx.owner.create({
+                data: {
+                    id: ownerId,
+                    fullName: fullName.trim(),
+                    email: normalizedEmail,
+                    mobile: normalizedMobile,
+                    alternateMobile: alternateMobile ? alternateMobile.trim() : null,
+                    status,
+                    businessName: businessName ? businessName.trim() : turfBranchName,
+                    businessType: businessType ? businessType.trim() : undefined,
+                    gstNumber: gstNumber ? gstNumber.trim() : null,
+                    panNumber: panNumber ? panNumber.trim() : null,
+                    country: country ? country.trim() : 'India',
+                    state: state ? state.trim() : null,
+                    city: city ? city.trim() : null,
+                    zipCode: zipCode ? zipCode.trim() : null,
+                    fullAddress: fullAddress ? fullAddress.trim() : null,
+                    profileImage: profileImage || null,
+                    subscriptionPlan: { connect: { id: planId || 'plan_starter' } },
+                    createdBy: req.user?.id || 'SYSTEM',
+                    updatedBy: req.user?.id || 'SYSTEM',
+                    user: {
+                        create: {
+                            id: genId('usr'),
+                            name: fullName.trim(),
+                            email: normalizedEmail,
+                            passwordHash,
+                            role: 'OWNER',
+                            mobile: normalizedMobile,
+                            alternateMobile: alternateMobile ? alternateMobile.trim() : null,
+                            avatar: profileImage || null,
+                            status
+                        }
+                    }
+                }
+            });
 
-        await conn.commit();
-        conn.release();
+            await tx.branch.create({
+                data: {
+                    id: branchId,
+                    branchName: turfBranchName,
+                    branchCode,
+                    ownerId: createdOwner.id,
+                    ownerUserId: createdOwner.userId,
+                    subscriptionPlanId: planId || 'plan_starter',
+                    city: city ? city.trim() : null,
+                    zipCode: zipCode ? zipCode.trim() : null,
+                    fullAddress: fullAddress ? fullAddress.trim() : null,
+                    email: normalizedEmail,
+                    mobile: normalizedMobile,
+                    status: 'ACTIVE'
+                }
+            });
 
-        // 7. Fetch newly inserted owner
-        const [rows] = await db.query('SELECT * FROM owners WHERE id = ?', [ownerId]);
-        const createdOwner = formatOwner(rows[0]);
+            return createdOwner;
+        });
 
-        // 8. Trigger Brevo Email Dispatcher (Asynchronous plugin)
         sendTurfAdminCredentialsEmail({
             recipientEmail: normalizedEmail,
             recipientName: fullName,
@@ -216,18 +192,11 @@ const createOwner = async (req, res) => {
         return res.status(201).json({
             success: true,
             message: 'Owner registered successfully',
-            data: createdOwner
+            data: formatOwner(owner)
         });
-
     } catch (error) {
-        await conn.rollback();
-        conn.release();
         console.error('Error creating owner:', error);
-        return res.status(500).json({
-            success: false,
-            message: 'Failed to register owner',
-            error: error.message
-        });
+        return res.status(500).json({ success: false, message: 'Failed to register owner', error: error.message });
     }
 };
 
@@ -239,66 +208,35 @@ const getOwners = async (req, res) => {
     try {
         const { status, search, page = 1, limit = 10 } = req.query;
 
-        let baseSql = `
-            FROM users u
-            LEFT JOIN owners o ON (o.user_id = u.id OR o.email = u.email)
-            WHERE (u.role IN ('OWNER', 'ADMIN') OR o.id IS NOT NULL)
-        `;
-        const params = [];
-
-        if (status && status !== 'ALL') {
-            baseSql += ' AND (o.status = ? OR u.status = ?)';
-            params.push(status, status);
-        }
-
+        const where = {};
+        if (status && status !== 'ALL') where.status = status;
         if (search) {
-            baseSql += ' AND (o.full_name LIKE ? OR u.name LIKE ? OR o.email LIKE ? OR u.email LIKE ? OR o.mobile LIKE ? OR u.mobile LIKE ? OR o.business_name LIKE ? OR o.city LIKE ?)';
-            const q = `%${search}%`;
-            params.push(q, q, q, q, q, q, q, q);
+            where.OR = [
+                { fullName: { contains: search } },
+                { email: { contains: search } },
+                { mobile: { contains: search } },
+                { businessName: { contains: search } },
+                { city: { contains: search } }
+            ];
         }
-
-        const [countRows] = await db.query(`SELECT COUNT(DISTINCT u.id) as count ${baseSql}`, params);
-        const count = countRows[0]?.count || 0;
 
         const pageNum = Number(page) || 1;
         const limitNum = Number(limit) || 10;
-        const offset = (pageNum - 1) * limitNum;
 
-        const selectSql = `
-            SELECT 
-                COALESCE(o.id, u.id) as id,
-                COALESCE(o.full_name, u.name, 'Turf Owner') as full_name,
-                COALESCE(o.email, u.email) as email,
-                COALESCE(o.mobile, u.mobile, '') as mobile,
-                COALESCE(o.alternate_mobile, u.alternate_mobile, '') as alternate_mobile,
-                COALESCE(o.status, u.status, 'ACTIVE') as status,
-                COALESCE(o.business_name, CONCAT(u.name, ' Arena Network')) as business_name,
-                COALESCE(o.business_type, 'Sports & Recreation') as business_type,
-                o.gst_number,
-                o.pan_number,
-                COALESCE(o.country, 'India') as country,
-                o.state,
-                COALESCE(o.city, 'Indore') as city,
-                o.zip_code,
-                o.full_address,
-                COALESCE(o.profile_image, u.avatar, '') as profile_image,
-                o.created_by,
-                o.updated_by,
-                COALESCE(o.created_at, u.created_at) as created_at,
-                COALESCE(o.updated_at, u.updated_at) as updated_at
-            ${baseSql}
-            ORDER BY created_at DESC 
-            LIMIT ? OFFSET ?
-        `;
-        params.push(limitNum, offset);
-
-        const [rows] = await db.query(selectSql, params);
-        const owners = rows.map(formatOwner);
+        const [count, rows] = await Promise.all([
+            prisma.owner.count({ where }),
+            prisma.owner.findMany({
+                where,
+                orderBy: { createdAt: 'desc' },
+                skip: (pageNum - 1) * limitNum,
+                take: limitNum
+            })
+        ]);
 
         return res.status(200).json({
             success: true,
             data: {
-                owners,
+                owners: rows.map(formatOwner),
                 pagination: {
                     total: count,
                     page: pageNum,
@@ -309,219 +247,120 @@ const getOwners = async (req, res) => {
         });
     } catch (error) {
         console.error('Error fetching owners:', error);
-        return res.status(500).json({
-            success: false,
-            message: 'Failed to fetch owners',
-            error: error.message
-        });
+        return res.status(500).json({ success: false, message: 'Failed to fetch owners', error: error.message });
     }
 };
 
 /**
  * GET /api/v1/owners/:id
- * Get single owner details by ID
  */
 const getOwnerById = async (req, res) => {
     try {
-        const { id } = req.params;
-        const [rows] = await db.query('SELECT * FROM owners WHERE id = ?', [id]);
-
-        if (rows.length === 0) {
-            return res.status(404).json({
-                success: false,
-                message: 'Owner not found'
-            });
+        const owner = await prisma.owner.findUnique({ where: { id: req.params.id } });
+        if (!owner) {
+            return res.status(404).json({ success: false, message: 'Owner not found' });
         }
-
-        return res.status(200).json({
-            success: true,
-            data: formatOwner(rows[0])
-        });
+        return res.status(200).json({ success: true, data: formatOwner(owner) });
     } catch (error) {
         console.error('Error fetching owner details:', error);
-        return res.status(500).json({
-            success: false,
-            message: 'Failed to fetch owner details',
-            error: error.message
-        });
+        return res.status(500).json({ success: false, message: 'Failed to fetch owner details', error: error.message });
     }
 };
 
 /**
  * PUT /api/v1/owners/:id
- * Update owner information
+ * Password changes for an Owner are applied to the linked User row only --
+ * Owner has no password field of its own.
  */
 const updateOwner = async (req, res) => {
-    const conn = await db.getConnection();
     try {
         const { id } = req.params;
-
-        // Check if owner exists
-        const [existing] = await conn.query('SELECT * FROM owners WHERE id = ?', [id]);
-        if (existing.length === 0) {
-            conn.release();
-            return res.status(404).json({
-                success: false,
-                message: 'Owner not found'
-            });
+        const current = await prisma.owner.findUnique({ where: { id } });
+        if (!current) {
+            return res.status(404).json({ success: false, message: 'Owner not found' });
         }
 
-        const currentOwner = existing[0];
-        const fullAddress = req.body.fullAddress || req.body.address;
         const {
-            fullName,
-            email,
-            mobile,
-            alternateMobile,
-            password,
-            status,
-            businessName,
-            businessType,
-            gstNumber,
-            panNumber,
-            country,
-            state,
-            city,
-            zipCode,
-            updatedBy
+            fullName, email, mobile, alternateMobile, password, status,
+            businessName, businessType, gstNumber, panNumber,
+            country, state, city, zipCode
         } = req.body;
+        const fullAddress = req.body.fullAddress || req.body.address;
 
-        // 1. Email uniqueness check if changed
-        if (email && email.toLowerCase().trim() !== currentOwner.email.toLowerCase()) {
-            const [emailCheck] = await conn.query('SELECT id FROM owners WHERE LOWER(email) = ? AND id != ?', [email.toLowerCase().trim(), id]);
-            if (emailCheck.length > 0) {
-                conn.release();
-                return res.status(409).json({
-                    success: false,
-                    message: 'Email address is already in use by another owner.'
-                });
+        if (email && email.toLowerCase().trim() !== current.email.toLowerCase()) {
+            const emailTaken = await prisma.owner.findFirst({ where: { email: email.toLowerCase().trim(), NOT: { id } } });
+            if (emailTaken) {
+                return res.status(409).json({ success: false, message: 'Email address is already in use by another owner.' });
+            }
+        }
+        if (mobile && mobile.trim() !== current.mobile) {
+            const mobileTaken = await prisma.owner.findFirst({ where: { mobile: mobile.trim(), NOT: { id } } });
+            if (mobileTaken) {
+                return res.status(409).json({ success: false, message: 'Mobile number is already in use by another owner.' });
             }
         }
 
-        // 2. Mobile uniqueness check if changed
-        if (mobile && mobile.trim() !== currentOwner.mobile) {
-            const [mobileCheck] = await conn.query('SELECT id FROM owners WHERE mobile = ? AND id != ?', [mobile.trim(), id]);
-            if (mobileCheck.length > 0) {
-                conn.release();
-                return res.status(409).json({
-                    success: false,
-                    message: 'Mobile number is already in use by another owner.'
-                });
-            }
-        }
-
-        // 3. Process Profile Image update
-        let profileImage = currentOwner.profile_image;
+        let profileImage = current.profileImage;
         if (req.file) {
             profileImage = `/uploads/${req.file.filename}`;
         } else if (req.body.profileImage !== undefined) {
             profileImage = saveBase64Image(req.body.profileImage, 'owner');
         }
 
-        // 4. Process Password hash update if provided
-        let passwordHash = currentOwner.password_hash;
-        if (password && password.trim().length >= 6) {
-            passwordHash = await bcrypt.hash(password.trim(), 10);
-        }
+        const nextName = fullName !== undefined ? fullName.trim() : current.fullName;
+        const nextEmail = email !== undefined ? email.toLowerCase().trim() : current.email;
+        const nextMobile = mobile !== undefined ? mobile.trim() : current.mobile;
+        const nextAltMobile = alternateMobile !== undefined ? (alternateMobile ? alternateMobile.trim() : null) : current.alternateMobile;
+        const nextStatus = status !== undefined ? status : current.status;
 
-        // 5. Execute Update Transaction
-        await conn.beginTransaction();
+        const updated = await prisma.$transaction(async (tx) => {
+            const ownerUpdated = await tx.owner.update({
+                where: { id },
+                data: {
+                    fullName: nextName,
+                    email: nextEmail,
+                    mobile: nextMobile,
+                    alternateMobile: nextAltMobile,
+                    status: nextStatus,
+                    businessName: businessName !== undefined ? (businessName ? businessName.trim() : null) : current.businessName,
+                    businessType: businessType !== undefined ? (businessType ? businessType.trim() : null) : current.businessType,
+                    gstNumber: gstNumber !== undefined ? (gstNumber ? gstNumber.trim() : null) : current.gstNumber,
+                    panNumber: panNumber !== undefined ? (panNumber ? panNumber.trim() : null) : current.panNumber,
+                    country: country !== undefined ? (country ? country.trim() : 'India') : current.country,
+                    state: state !== undefined ? (state ? state.trim() : null) : current.state,
+                    city: city !== undefined ? (city ? city.trim() : null) : current.city,
+                    zipCode: zipCode !== undefined ? (zipCode ? zipCode.trim() : null) : current.zipCode,
+                    fullAddress: fullAddress !== undefined ? (fullAddress ? fullAddress.trim() : null) : current.fullAddress,
+                    profileImage,
+                    updatedBy: req.user?.id || 'SYSTEM'
+                }
+            });
 
-        const updateQuery = `
-            UPDATE owners SET
-                full_name = ?,
-                email = ?,
-                mobile = ?,
-                alternate_mobile = ?,
-                password_hash = ?,
-                status = ?,
-                business_name = ?,
-                business_type = ?,
-                gst_number = ?,
-                pan_number = ?,
-                country = ?,
-                state = ?,
-                city = ?,
-                zip_code = ?,
-                full_address = ?,
-                profile_image = ?,
-                updated_by = ?
-            WHERE id = ?
-        `;
+            const userData = {
+                name: nextName,
+                email: nextEmail,
+                mobile: nextMobile,
+                alternateMobile: nextAltMobile,
+                status: nextStatus,
+                avatar: profileImage || null
+            };
+            if (password && password.trim().length >= 6) {
+                userData.passwordHash = await bcrypt.hash(password.trim(), 10);
+            }
+            await tx.user.update({ where: { id: current.userId }, data: userData });
 
-        await conn.query(updateQuery, [
-            fullName !== undefined ? fullName.trim() : currentOwner.full_name,
-            email !== undefined ? email.toLowerCase().trim() : currentOwner.email,
-            mobile !== undefined ? mobile.trim() : currentOwner.mobile,
-            alternateMobile !== undefined ? (alternateMobile ? alternateMobile.trim() : null) : currentOwner.alternate_mobile,
-            passwordHash,
-            status !== undefined ? status : currentOwner.status,
-            businessName !== undefined ? (businessName ? businessName.trim() : null) : currentOwner.business_name,
-            businessType !== undefined ? (businessType ? businessType.trim() : null) : currentOwner.business_type,
-            gstNumber !== undefined ? (gstNumber ? gstNumber.trim() : null) : currentOwner.gst_number,
-            panNumber !== undefined ? (panNumber ? panNumber.trim() : null) : currentOwner.pan_number,
-            country !== undefined ? (country ? country.trim() : 'India') : currentOwner.country,
-            state !== undefined ? (state ? state.trim() : null) : currentOwner.state,
-            city !== undefined ? (city ? city.trim() : null) : currentOwner.city,
-            zipCode !== undefined ? (zipCode ? zipCode.trim() : null) : currentOwner.zip_code,
-            fullAddress !== undefined ? (fullAddress ? fullAddress.trim() : null) : currentOwner.full_address,
-            profileImage,
-            updatedBy || req.user?.id || 'SYSTEM',
-            id
-        ]);
-
-        // Also sync update to users table
-        try {
-            await conn.query(
-                `UPDATE users SET 
-                    name = ?, 
-                    email = ?, 
-                    mobile = ?, 
-                    password_hash = ?,
-                    status = ?,
-                    avatar = ?
-                 WHERE id = ? OR LOWER(email) = ?`,
-                [
-                    fullName !== undefined ? fullName.trim() : currentOwner.full_name,
-                    email !== undefined ? email.toLowerCase().trim() : currentOwner.email,
-                    mobile !== undefined ? mobile.trim() : currentOwner.mobile,
-                    passwordHash,
-                    status !== undefined ? status : currentOwner.status,
-                    profileImage || null,
-                    id,
-                    currentOwner.email.toLowerCase()
-                ]
-            );
-        } catch (uErr) {
-            console.warn('Sync to users table skipped on update:', uErr.message);
-        }
-
-        await conn.commit();
-        conn.release();
-
-        // 6. Return updated object
-        const [updatedRows] = await db.query('SELECT * FROM owners WHERE id = ?', [id]);
-        return res.status(200).json({
-            success: true,
-            message: 'Owner updated successfully',
-            data: formatOwner(updatedRows[0])
+            return ownerUpdated;
         });
 
+        return res.status(200).json({ success: true, message: 'Owner updated successfully', data: formatOwner(updated) });
     } catch (error) {
-        await conn.rollback();
-        conn.release();
         console.error('Error updating owner:', error);
-        return res.status(500).json({
-            success: false,
-            message: 'Failed to update owner',
-            error: error.message
-        });
+        return res.status(500).json({ success: false, message: 'Failed to update owner', error: error.message });
     }
 };
 
 /**
  * PATCH /api/v1/owners/:id/status
- * Change Owner Status (ACTIVE / INACTIVE / SUSPENDED)
  */
 const changeOwnerStatus = async (req, res) => {
     try {
@@ -529,96 +368,44 @@ const changeOwnerStatus = async (req, res) => {
         const { status } = req.body;
 
         if (!status || !['ACTIVE', 'INACTIVE', 'SUSPENDED'].includes(status)) {
-            return res.status(400).json({
-                success: false,
-                message: 'Valid status is required (ACTIVE, INACTIVE, SUSPENDED).'
-            });
+            return res.status(400).json({ success: false, message: 'Valid status is required (ACTIVE, INACTIVE, SUSPENDED).' });
         }
 
-        const [existing] = await db.query('SELECT id, email FROM owners WHERE id = ?', [id]);
-        if (existing.length === 0) {
-            return res.status(404).json({
-                success: false,
-                message: 'Owner not found'
-            });
+        const existing = await prisma.owner.findUnique({ where: { id } });
+        if (!existing) {
+            return res.status(404).json({ success: false, message: 'Owner not found' });
         }
 
-        await db.query('UPDATE owners SET status = ?, updated_by = ? WHERE id = ?', [
-            status,
-            req.user?.id || 'SYSTEM',
-            id
+        await prisma.$transaction([
+            prisma.owner.update({ where: { id }, data: { status, updatedBy: req.user?.id || 'SYSTEM' } }),
+            prisma.user.update({ where: { id: existing.userId }, data: { status } })
         ]);
 
-        try {
-            await db.query('UPDATE users SET status = ? WHERE id = ? OR LOWER(email) = ?', [
-                status,
-                id,
-                existing[0].email.toLowerCase()
-            ]);
-        } catch (uErr) {
-            console.warn('Sync user status skipped:', uErr.message);
-        }
-
-        return res.status(200).json({
-            success: true,
-            message: `Owner status updated to ${status}`
-        });
+        return res.status(200).json({ success: true, message: `Owner status updated to ${status}` });
     } catch (error) {
         console.error('Error updating owner status:', error);
-        return res.status(500).json({
-            success: false,
-            message: 'Failed to update owner status',
-            error: error.message
-        });
+        return res.status(500).json({ success: false, message: 'Failed to update owner status', error: error.message });
     }
 };
 
 /**
  * DELETE /api/v1/owners/:id
- * Delete Owner
+ * Deletes the Owner profile and its linked User account (which cascades to
+ * remove dependent auth session material, per the Prisma schema's onDelete rules).
  */
 const deleteOwner = async (req, res) => {
-    const conn = await db.getConnection();
     try {
-        const { id } = req.params;
-
-        const [existing] = await conn.query('SELECT id, email FROM owners WHERE id = ?', [id]);
-        if (existing.length === 0) {
-            conn.release();
-            return res.status(404).json({
-                success: false,
-                message: 'Owner not found'
-            });
+        const existing = await prisma.owner.findUnique({ where: { id: req.params.id } });
+        if (!existing) {
+            return res.status(404).json({ success: false, message: 'Owner not found' });
         }
 
-        await conn.beginTransaction();
+        await prisma.user.delete({ where: { id: existing.userId } });
 
-        try {
-            await conn.query('DELETE FROM users WHERE id = ? OR LOWER(email) = ?', [
-                id,
-                existing[0].email.toLowerCase()
-            ]);
-        } catch (uErr) {
-            console.warn('Delete from users table skipped:', uErr.message);
-        }
-
-        await conn.query('DELETE FROM owners WHERE id = ?', [id]);
-        await conn.commit();
-        conn.release();
-
-        return res.status(200).json({
-            success: true,
-            message: 'Owner deleted successfully'
-        });
+        return res.status(200).json({ success: true, message: 'Owner deleted successfully' });
     } catch (error) {
-        await conn.rollback();
-        conn.release();
         console.error('Error deleting owner:', error);
-        return res.status(500).json({
-            success: false,
-            message: 'Failed to delete owner',
-            error: error.message
-        });
+        return res.status(500).json({ success: false, message: 'Failed to delete owner', error: error.message });
     }
 };
 

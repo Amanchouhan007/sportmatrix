@@ -41,6 +41,7 @@ import {
     getTopBranches,
     getRecentActivities
 } from '../../services/dashboardService'
+import useRealtime from '../../utils/useRealtime'
 
 const RANGE_OPTIONS = [
     { value: 'TODAY', label: 'Today' },
@@ -184,6 +185,8 @@ export default function SADashboard() {
         if (range === 'CUSTOM' && (!startDate || !endDate)) return
         fetchDashboardData()
     }, [range, startDate, endDate])
+
+    useRealtime(['booking:new', 'booking:cancelled', 'payment:pending', 'payment:owner-confirmed', 'payment:settled'], () => fetchDashboardData())
 
     if (authLoading || isPageLoading) {
         return (

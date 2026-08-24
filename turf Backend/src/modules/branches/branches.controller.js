@@ -1,714 +1,474 @@
-const db = require('../../config/db');
+const prisma = require('../../config/prisma');
+
+const genId = (prefix) => `${prefix}_${Date.now()}_${Math.floor(Math.random() * 100000)}`;
+
+const formatBranch = (b, bookingRevenue = 0) => {
+    const planPrice = Number(b.subscriptionPlan?.monthlyPrice || 0);
+    const sports = b.branchSports && b.branchSports.length > 0
+        ? b.branchSports.map(bs => ({
+            id: bs.id,
+            sportId: bs.sportId,
+            name: bs.sport?.name || bs.name,
+            icon: bs.sport?.icon || bs.icon || '🏏',
+            regularPrice: Number(bs.regularPrice),
+            peakPrice: Number(bs.peakPrice),
+            slotDuration: bs.slotDuration,
+            totalCourts: bs.totalCourts,
+            status: bs.status
+        }))
+        : [];
+
+    return {
+        id: b.id,
+        _id: b.id,
+        branchName: b.branchName,
+        branchCode: b.branchCode,
+        description: b.description || '',
+        ownerId: b.owner ? { _id: b.owner.id, id: b.owner.id, fullName: b.owner.fullName } : null,
+        subscriptionPlanId: b.subscriptionPlan
+            ? { _id: b.subscriptionPlan.id, id: b.subscriptionPlan.id, planName: b.subscriptionPlan.planName, monthlyPrice: planPrice, monthly_price: planPrice }
+            : null,
+        planPrice,
+        plan_price: planPrice,
+        bookingRevenue,
+        booking_revenue: bookingRevenue,
+        city: b.city || '',
+        state: b.state || '',
+        country: b.country || 'India',
+        zipCode: b.zipCode || '',
+        fullAddress: b.fullAddress || '',
+        email: b.email,
+        mobile: b.mobile,
+        alternateMobile: b.alternateMobile || '',
+        gstNumber: b.gstNumber || '',
+        pricePerHour: Number(b.minPriceHourly),
+        price: Number(b.minPriceHourly),
+        minPriceHourly: Number(b.minPriceHourly),
+        openingTime: b.openingTime,
+        closingTime: b.closingTime,
+        turfSize: `${b.dimensionsSqFt || 0} Sq.Ft`,
+        dimensions: `${b.dimensionsSqFt || 0} Sq.Ft`,
+        surfaceType: b.surfaceType,
+        rating: Number(b.rating),
+        reviewCount: b.reviewCount,
+        amenities: b.amenities || [],
+        logo: b.logo || '',
+        images: b.images || [],
+        sports,
+        status: b.status,
+        totalRevenue: planPrice + bookingRevenue,
+        createdAt: b.createdAt
+    };
+};
 
 /**
- * List branches with filters and pagination
+ * Aggregate real completed-booking revenue per branch via the slot relation
+ * (Booking has no direct branchId -- it hangs off Slot).
  */
+const getBookingRevenueByBranch = async (branchIds) => {
+    if (!branchIds.length) return {};
+    const bookings = await prisma.booking.findMany({
+        where: { status: 'COMPLETED', slot: { branchId: { in: branchIds } } },
+        select: { amount: true, slot: { select: { branchId: true } } }
+    });
+    const map = {};
+    for (const b of bookings) {
+        const id = b.slot?.branchId;
+        if (!id) continue;
+        map[id] = (map[id] || 0) + Number(b.amount);
+    }
+    return map;
+};
+
+/**
+ * Resolves the owner-scoping filter for the requesting user: Super Admin or
+ * unauthenticated requests see all (optionally filtered via ?ownerId=),
+ * while authenticated owner users are scoped to their own account.
+ */
+const resolveOwnerScope = (req) => {
+    const isSuperAdmin = req.user?.role === 'SUPER_ADMIN';
+    const { ownerId, ownerUserId } = req.query;
+
+    if (ownerId && ownerId !== 'ALL') {
+        return { OR: [{ ownerId }, { ownerUserId: ownerId }, { owner: { userId: ownerId } }] };
+    }
+    if (ownerUserId && ownerUserId !== 'ALL') {
+        return { OR: [{ ownerUserId }, { owner: { userId: ownerUserId } }] };
+    }
+    if (req.user && !isSuperAdmin) {
+        return { OR: [{ ownerUserId: req.user.id }, { owner: { userId: req.user.id } }, { ownerId: req.user.id }] };
+    }
+    return {};
+};
+
 const getBranches = async (req, res) => {
-    const { status, ownerId, email, search, page = 1, limit = 10 } = req.query;
-
     try {
-        let sql = `
-            SELECT b.*, 
-                   COALESCE(o.full_name, u.name, 'Turf Owner') as owner_full_name,
-                   COALESCE(os.plan_name, p.plan_name, 'Starter Plan') as plan_name,
-                   COALESCE(b.subscription_price_snapshot, NULLIF(os.amount, 0), p.monthly_price, 1000) as plan_price,
-                   (SELECT COALESCE(SUM(amount), 0) FROM bookings WHERE branch_id = b.id AND status IN ('CONFIRMED', 'COMPLETED')) as booking_revenue
-            FROM branches b
-            LEFT JOIN owners o ON (b.owner_id = o.id OR b.owner_id = o.user_id)
-            LEFT JOIN users u ON (b.owner_id = u.id)
-            LEFT JOIN (
-                SELECT os1.* FROM owner_subscriptions os1
-                INNER JOIN (
-                    SELECT owner_id, MAX(created_at) as max_created FROM owner_subscriptions GROUP BY owner_id
-                ) os2 ON os1.owner_id = os2.owner_id AND os1.created_at = os2.max_created
-            ) os ON (b.owner_id = os.owner_id OR o.id = os.owner_id)
-            LEFT JOIN subscription_plans p ON (b.subscription_plan_id = p.id OR LOWER(b.subscription_plan_id) = LOWER(p.plan_name))
-            WHERE 1=1
-        `;
-        let countSql = `SELECT COUNT(*) as count FROM branches b WHERE 1=1`;
-        const params = [];
-        const countParams = [];
+        const { status, search, page = 1, limit = 10 } = req.query;
 
-        if (status && status !== 'ALL') {
-            sql += ' AND b.status = ?';
-            countSql += ' AND b.status = ?';
-            params.push(status);
-            countParams.push(status);
+        const and = [];
+        const scope = resolveOwnerScope(req);
+        if (Object.keys(scope).length > 0) {
+            and.push(scope);
         }
 
-        const userRole = req.user?.role?.toUpperCase();
-        const isSuperAdmin = userRole === 'SUPER_ADMIN' || userRole === 'SUPERADMIN';
-
-        if (!isSuperAdmin) {
-            // STRICT MULTI-TENANT ISOLATION FOR TURF OWNERS: Resolve owner by ID, user_id, or email
-            const targetOwnerId = (ownerId && ownerId !== 'ALL') ? ownerId : (req.user ? req.user.id : null);
-            const targetEmail = email || req.user?.email || '';
-
-            if (targetOwnerId && targetOwnerId !== 'ALL') {
-                const ownerClause = ` AND (
-                    b.owner_id = ? 
-                    OR b.owner_id IN (SELECT id FROM owners WHERE id = ? OR user_id = ? OR (email IS NOT NULL AND email != '' AND LOWER(email) = LOWER(?)))
-                    OR (b.email IS NOT NULL AND b.email != '' AND LOWER(b.email) = LOWER(?))
-                    OR b.owner_id IN (SELECT id FROM owners WHERE email IS NOT NULL AND email != '' AND (LOWER(email) = LOWER(?) OR LOWER(email) = LOWER(?)))
-                )`;
-                sql += ownerClause;
-                countSql += ownerClause;
-                params.push(targetOwnerId, targetOwnerId, targetOwnerId, targetEmail, targetEmail, targetEmail, targetOwnerId);
-                countParams.push(targetOwnerId, targetOwnerId, targetOwnerId, targetEmail, targetEmail, targetEmail, targetOwnerId);
-            }
-        } else {
-            // SuperAdmin user role
-            if (ownerId && ownerId !== 'ALL') {
-                const targetEmail = email || '';
-                const ownerClause = ` AND (
-                    b.owner_id = ? 
-                    OR b.owner_id IN (SELECT id FROM owners WHERE id = ? OR user_id = ? OR (email IS NOT NULL AND email != '' AND LOWER(email) = LOWER(?)))
-                    OR (b.email IS NOT NULL AND b.email != '' AND LOWER(b.email) = LOWER(?))
-                )`;
-                sql += ownerClause;
-                countSql += ownerClause;
-                params.push(ownerId, ownerId, ownerId, targetEmail, targetEmail);
-                countParams.push(ownerId, ownerId, ownerId, targetEmail, targetEmail);
-            }
-            // If SuperAdmin & ownerId === 'ALL': NO OWNER FILTER IS APPLIED, RETURNS ALL 6 BRANCHES
-        }
-
+        if (status && status !== 'ALL') and.push({ status });
         if (search) {
-            const searchClause = ' AND (b.branch_name LIKE ? OR b.city LIKE ? OR b.branch_code LIKE ?)';
-            sql += searchClause;
-            countSql += searchClause;
-            const q = `%${search}%`;
-            params.push(q, q, q);
-            countParams.push(q, q, q);
+            and.push({
+                OR: [
+                    { branchName: { contains: search } },
+                    { city: { contains: search } },
+                    { branchCode: { contains: search } }
+                ]
+            });
         }
+        const where = and.length > 0 ? { AND: and } : {};
 
-        const [countRows] = await db.query(countSql, countParams);
-        const count = countRows[0]?.count || 0;
+        const pageNum = Number(page) || 1;
+        const limitNum = Number(limit) || 10;
 
-        const offset = (Number(page) - 1) * Number(limit);
-        sql += ' ORDER BY b.created_at DESC LIMIT ? OFFSET ?';
-        params.push(Number(limit), Number(offset));
+        const [count, rows] = await Promise.all([
+            prisma.branch.count({ where }),
+            prisma.branch.findMany({
+                where,
+                include: { owner: true, subscriptionPlan: true, branchSports: { include: { sport: true } } },
+                orderBy: { createdAt: 'desc' },
+                skip: (pageNum - 1) * limitNum,
+                take: limitNum
+            })
+        ]);
 
-        const [rows] = await db.query(sql, params);
-
-        const formatted = rows.map(r => {
-            const bookingRev = Number(r.booking_revenue || 0);
-            // Branch revenue = subscription plan monthly_price + actual customer booking revenue
-            // plan_price comes directly from subscription_plans table via JOIN (no hardcoded fallback needed)
-            const planPrice = Number(r.plan_price || 0);
-            const computedRevenue = planPrice + bookingRev;
-
-            return {
-                id: r.id,
-                _id: r.id,
-                branchName: r.branch_name,
-                branchCode: r.branch_code,
-                description: r.description,
-                ownerId: {
-                    _id: r.owner_id || 'own_001',
-                    id: r.owner_id || 'own_001',
-                    fullName: r.owner_full_name || 'Turf Owner'
-                },
-                subscriptionPlanId: {
-                    _id: r.subscription_plan_id || 'plan_starter',
-                    id: r.subscription_plan_id || 'plan_starter',
-                    planName: r.plan_name || 'Starter Plan',
-                    monthlyPrice: planPrice,
-                    monthly_price: planPrice
-                },
-                planPrice: planPrice,
-                plan_price: planPrice,
-                bookingRevenue: bookingRev,
-                booking_revenue: bookingRev,
-                city: r.city || 'Indore',
-                zipCode: r.zip_code || '',
-                fullAddress: r.full_address || '',
-                email: r.email,
-                mobile: r.mobile,
-                pricePerHour: r.price_per_hour || 1000,
-                price: r.price_per_hour || 1000,
-                openingTime: r.opening_time || '06:00 AM',
-                closingTime: r.closing_time || '11:00 PM',
-                turfSize: r.turf_size || '5,000 Sq.Ft',
-                dimensions: r.turf_size || '5,000 Sq.Ft',
-                surfaceType: r.surface_type || 'TurfPro Synthetic Arena',
-                sports: r.sports ? (typeof r.sports === 'string' && r.sports.startsWith('[') ? JSON.parse(r.sports) : r.sports.split(',')) : ['Cricket', 'Football'],
-                amenities: r.amenities ? (typeof r.amenities === 'string' && r.amenities.startsWith('[') ? JSON.parse(r.amenities) : r.amenities.split(',')) : ['Floodlights', 'Parking', 'Washroom'],
-                discountOffer: r.discount_offer || '20% OFF FIRST MATCH',
-                couponCode: r.coupon_code || 'CRICKET20',
-                logo: r.logo || '',
-                images: r.images ? (typeof r.images === 'string' && r.images.startsWith('[') ? JSON.parse(r.images) : [r.images]) : [],
-                status: r.status || 'ACTIVE',
-                totalRevenue: computedRevenue,
-                createdAt: r.created_at
-            };
-        });
+        const revenueMap = await getBookingRevenueByBranch(rows.map(r => r.id));
+        const formatted = rows.map(r => formatBranch(r, revenueMap[r.id] || 0));
 
         return res.status(200).json({
             success: true,
             data: {
                 branches: formatted,
-                pagination: {
-                    total: count,
-                    page: Number(page),
-                    limit: Number(limit),
-                    pages: Math.ceil(count / Number(limit)) || 1
-                }
-            }
-        });
-
-        return res.status(200).json({
-            success: true,
-            data: {
-                branches: finalBranches,
-                pagination: {
-                    total: finalBranches.length,
-                    page: Number(page),
-                    limit: Number(limit),
-                    pages: 1
-                }
+                pagination: { total: count, page: pageNum, limit: limitNum, pages: Math.ceil(count / limitNum) || 1 }
             }
         });
     } catch (error) {
         console.error('Fetch branches error:', error);
-        return res.status(500).json({
-            success: false,
-            message: 'Internal Server Error fetching branches: ' + error.message
-        });
+        return res.status(500).json({ success: false, message: 'Internal Server Error fetching branches: ' + error.message });
     }
 };
 
-/**
- * Get branch by ID
- */
 const getBranchById = async (req, res) => {
-    const { id } = req.params;
-
     try {
-        const [rows] = await db.query('SELECT * FROM branches WHERE id = ?', [id]);
-        if (rows.length === 0) {
-            return res.status(404).json({
-                success: false,
-                message: 'Branch not found.'
-            });
-        }
-
-        const r = rows[0];
-        const formatted = {
-            id: r.id,
-            _id: r.id,
-            branchName: r.branch_name,
-            branchCode: r.branch_code,
-            description: r.description,
-            ownerId: r.owner_id,
-            subscriptionPlanId: r.subscription_plan_id,
-            city: r.city,
-            zipCode: r.zip_code,
-            fullAddress: r.full_address,
-            email: r.email,
-            mobile: r.mobile,
-            pricePerHour: r.price_per_hour || 1000,
-            openingTime: r.opening_time || '06:00 AM',
-            closingTime: r.closing_time || '11:00 PM',
-            turfSize: r.turf_size || '5,000 Sq.Ft',
-            surfaceType: r.surface_type || 'TurfPro Synthetic Arena',
-            sports: r.sports ? (typeof r.sports === 'string' && r.sports.startsWith('[') ? JSON.parse(r.sports) : r.sports.split(',')) : ['Cricket', 'Football'],
-            amenities: r.amenities ? (typeof r.amenities === 'string' && r.amenities.startsWith('[') ? JSON.parse(r.amenities) : r.amenities.split(',')) : ['Floodlights', 'Parking', 'Washroom'],
-            discountOffer: r.discount_offer || '20% OFF FIRST MATCH',
-            couponCode: r.coupon_code || 'CRICKET20',
-            logo: r.logo || '',
-            images: r.images ? (typeof r.images === 'string' && r.images.startsWith('[') ? JSON.parse(r.images) : [r.images]) : [],
-            status: r.status,
-            createdAt: r.created_at
-        };
-
-        return res.status(200).json({
-            success: true,
-            data: formatted
+        const branch = await prisma.branch.findUnique({
+            where: { id: req.params.id },
+            include: { owner: true, subscriptionPlan: true, branchSports: { include: { sport: true } } }
         });
+        if (!branch) {
+            return res.status(404).json({ success: false, message: 'Branch not found.' });
+        }
+        if (req.user && req.user.role !== 'SUPER_ADMIN' && branch.ownerUserId !== req.user.id) {
+            return res.status(403).json({ success: false, message: 'Forbidden: you do not manage this branch.' });
+        }
+        const revenueMap = await getBookingRevenueByBranch([branch.id]);
+        return res.status(200).json({ success: true, data: formatBranch(branch, revenueMap[branch.id] || 0) });
     } catch (error) {
         console.error('Fetch branch by id error:', error);
-        return res.status(500).json({
-            success: false,
-            message: 'Internal Server Error fetching branch.'
-        });
+        return res.status(500).json({ success: false, message: 'Internal Server Error fetching branch.' });
     }
 };
 
 /**
- * Create a new branch
+ * Create a new branch for an existing Owner. A branch is attached to an Owner.
  */
 const createBranch = async (req, res) => {
-    const { 
-        branchName, description, ownerId, newOwnerName, newOwnerBusinessName, subscriptionPlanId, 
-        country, state, city, zipCode, fullAddress, 
-        email, mobile, alternateMobile, gstNumber, 
+    const {
+        branchName, description, ownerId, subscriptionPlanId,
+        country, state, city, zipCode, fullAddress,
+        email, mobile, alternateMobile, gstNumber,
         timezone, currency, logo, images,
-        pricePerHour, openingTime, closingTime, turfSize, surfaceType,
-        sports, amenities, discountOffer, couponCode
+        pricePerHour, openingTime, closingTime, dimensionsSqFt, surfaceType, amenities
     } = req.body;
 
     if (!branchName || !email) {
-        return res.status(400).json({
-            success: false,
-            message: 'branchName and email are required fields.'
-        });
+        return res.status(400).json({ success: false, message: 'branchName and email are required fields.' });
     }
 
     try {
-        const branchId = 'br_' + Date.now();
-        const branchCode = 'BR-' + Math.floor(1000 + Math.random() * 9000);
-
-        let validOwnerId = null;
-        let ownerName = 'Turf Owner';
-        
-        // Handle dynamic real-time new owner registration
-        if (newOwnerName && newOwnerName.trim()) {
-            const createdOwnerId = 'own_' + Date.now();
-            const bName = (newOwnerBusinessName && newOwnerBusinessName.trim()) 
-                ? newOwnerBusinessName.trim() 
-                : (newOwnerName.trim() + ' Network');
-            
-            const uniqueSuffix = Date.now().toString().slice(-6);
-            const ownerEmail = (email && email.trim()) ? email.trim() : `owner_${uniqueSuffix}@turf.com`;
-            const ownerMobile = (mobile && mobile.trim()) ? mobile.trim() : `98${Math.floor(10000000 + Math.random() * 89999999)}`;
-            const defaultPasswordHash = '$2b$10$w8T0.g2K3mY7wYxGvD8H4uO3J5aK1L2M3N4O5P6Q7R8S9T0U1V2W3';
-
-            try {
-                const userId = 'usr_' + Date.now();
-                try {
-                    await db.query(`
-                        INSERT INTO users (id, name, email, password_hash, role, mobile, status)
-                        VALUES (?, ?, ?, ?, 'OWNER', ?, 'ACTIVE')
-                        ON DUPLICATE KEY UPDATE name = VALUES(name)
-                    `, [userId, newOwnerName.trim(), ownerEmail, defaultPasswordHash, ownerMobile]);
-                } catch (uErr) {}
-
-                await db.query(`
-                    INSERT INTO owners (id, user_id, full_name, business_name, email, mobile, password_hash, status)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, 'ACTIVE')
-                `, [
-                    createdOwnerId,
-                    userId,
-                    newOwnerName.trim(),
-                    bName,
-                    ownerEmail,
-                    ownerMobile,
-                    defaultPasswordHash
-                ]);
-
-                validOwnerId = createdOwnerId;
-                ownerName = newOwnerName.trim();
-            } catch (oErr) {
-                console.warn('New owner query fallback note:', oErr.message);
-                const [existing] = await db.query('SELECT id, full_name FROM owners WHERE email = ? OR mobile = ? LIMIT 1', [ownerEmail, ownerMobile]);
-                if (existing.length > 0) {
-                    validOwnerId = existing[0].id;
-                    ownerName = existing[0].full_name;
-                } else {
-                    validOwnerId = createdOwnerId;
-                    ownerName = newOwnerName.trim();
-                }
-            }
-        } else if (ownerId) {
-            const [ownerRows] = await db.query('SELECT id, full_name FROM owners WHERE id = ?', [ownerId]);
-            if (ownerRows.length > 0) {
-                validOwnerId = ownerRows[0].id;
-                ownerName = ownerRows[0].full_name || ownerName;
-            } else {
-                const [userRows] = await db.query('SELECT id, name FROM users WHERE id = ?', [ownerId]);
-                if (userRows.length > 0) {
-                    validOwnerId = userRows[0].id;
-                    ownerName = userRows[0].name || ownerName;
-                }
-            }
-        }
-        
-        if (!validOwnerId) {
-            if (ownerId) {
-                validOwnerId = ownerId;
-                ownerName = req.body.ownerName || 'Turf Owner';
-            } else {
-                const [firstOwner] = await db.query('SELECT id, full_name FROM owners LIMIT 1');
-                if (firstOwner.length > 0) {
-                    validOwnerId = firstOwner[0].id;
-                    ownerName = firstOwner[0].full_name || ownerName;
-                } else {
-                    const [firstUser] = await db.query("SELECT id, name FROM users WHERE role IN ('OWNER', 'SUPER_ADMIN') LIMIT 1");
-                    if (firstUser.length > 0) {
-                        validOwnerId = firstUser[0].id;
-                        ownerName = firstUser[0].name || ownerName;
-                    } else {
-                        validOwnerId = 'own_001';
-                        ownerName = 'Turf Owner';
-                    }
-                }
-            }
+        let owner;
+        if (ownerId) {
+            owner = await prisma.owner.findFirst({
+                where: { OR: [{ id: ownerId }, { userId: ownerId }] }
+            });
+        } else if (req.user?.id) {
+            owner = await prisma.owner.findUnique({ where: { userId: req.user.id } });
+        } else {
+            owner = await prisma.owner.findFirst();
         }
 
-        // Fetch plan name
-        let planName = 'Starter Plan';
-        let planPriceSnapshot = 1000;
+        if (!owner) {
+            return res.status(404).json({ success: false, message: 'Owner account not found.' });
+        }
+
         const planId = subscriptionPlanId || 'plan_starter';
-        const [planRows] = await db.query('SELECT id, plan_name, monthly_price FROM subscription_plans WHERE id = ? OR LOWER(id) = LOWER(?) OR LOWER(plan_name) = LOWER(?)', [planId, planId, planId]);
-        if (planRows.length > 0) {
-            planName = planRows[0].plan_name;
-            planPriceSnapshot = Number(planRows[0].monthly_price || 1000);
+        const plan = await prisma.subscriptionPlan.findUnique({ where: { id: planId } });
+        if (!plan) {
+            return res.status(400).json({ success: false, message: `Subscription plan "${planId}" does not exist.` });
         }
 
-        const sportsJson = Array.isArray(sports) ? JSON.stringify(sports) : (sports || '["Cricket", "Football"]');
-        const amenitiesJson = Array.isArray(amenities) ? JSON.stringify(amenities) : (amenities || '["Floodlights", "Parking", "Washroom"]');
-        const imagesJson = Array.isArray(images) ? JSON.stringify(images) : (typeof images === 'string' && images ? images : '[]');
-
-        await db.query(`
-            INSERT INTO branches (
-                id, branch_name, branch_code, description, owner_id, subscription_plan_id, subscription_price_snapshot,
-                country, state, city, zip_code, full_address, email, mobile, alternate_mobile,
-                gst_number, timezone, currency, logo, images, status,
-                price_per_hour, opening_time, closing_time, turf_size, surface_type,
-                sports, amenities, discount_offer, coupon_code
-            )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'ACTIVE', ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        `, [
-            branchId,
-            branchName,
-            branchCode,
-            description || '',
-            validOwnerId,
-            planId,
-            planPriceSnapshot,
-            country || 'India',
-            state || '',
-            city || '',
-            zipCode || '',
-            fullAddress || '',
-            email,
-            mobile || '',
-            alternateMobile || '',
-            gstNumber || '',
-            timezone || 'Asia/Kolkata',
-            currency || 'INR',
-            logo || '',
-            imagesJson,
-            Number(pricePerHour) || 1000,
-            openingTime || '06:00 AM',
-            closingTime || '11:00 PM',
-            turfSize || '5,000 Sq.Ft',
-            surfaceType || 'TurfPro Synthetic Arena',
-            sportsJson,
-            amenitiesJson,
-            discountOffer || '20% OFF FIRST MATCH',
-            couponCode || 'CRICKET20'
-        ]);
-
-        // Auto-record subscription purchase entry for owner when branch is created
-        try {
-            const subId = `sub_${Date.now()}`;
-            await db.query(`
-                INSERT INTO owner_subscriptions (
-                    id, owner_id, plan_id, plan_name, amount, billing_cycle,
-                    status, payment_status, payment_method, transaction_id, start_date, end_date
-                ) VALUES (?, ?, ?, ?, ?, 'MONTHLY', 'ACTIVE', 'COMPLETED', 'ONLINE', ?, NOW(), DATE_ADD(NOW(), INTERVAL 1 MONTH))
-            `, [subId, validOwnerId, planId, planName, planPriceSnapshot, `TXN_${Date.now()}`]);
-        } catch (subErr) {
-            console.warn('Branch subscription auto-creation note:', subErr.message);
-        }
-
-        const newBranchObject = {
-            id: branchId,
-            _id: branchId,
-            branchName,
-            branchCode,
-            description: description || '',
-            ownerId: { _id: validOwnerId, id: validOwnerId, fullName: ownerName, email },
-            subscriptionPlanId: { _id: planId, id: planId, planName },
-            city: city || 'Indore',
-            zipCode: zipCode || '',
-            fullAddress: fullAddress || '',
-            email,
-            mobile: mobile || '',
-            pricePerHour: Number(pricePerHour) || 1000,
-            price: Number(pricePerHour) || 1000,
-            openingTime: openingTime || '06:00 AM',
-            closingTime: closingTime || '11:00 PM',
-            turfSize: turfSize || '5,000 Sq.Ft',
-            dimensions: turfSize || '5,000 Sq.Ft',
-            surfaceType: surfaceType || 'TurfPro Synthetic Arena',
-            sports: Array.isArray(sports) ? sports : ['Cricket', 'Football'],
-            amenities: Array.isArray(amenities) ? amenities : ['Floodlights', 'Parking', 'Washroom'],
-            discountOffer: discountOffer || '20% OFF FIRST MATCH',
-            couponCode: couponCode || 'CRICKET20',
-            logo: logo || '',
-            images: Array.isArray(images) ? images : [],
-            status: 'ACTIVE',
-            totalRevenue: 0,
-            createdAt: new Date().toISOString()
-        };
-
-        return res.status(201).json({
-            success: true,
-            message: 'Branch created successfully.',
-            data: newBranchObject
+        const branch = await prisma.branch.create({
+            data: {
+                id: genId('br'),
+                branchName,
+                branchCode: `BR-${Math.floor(1000 + Math.random() * 9000)}`,
+                description: description || null,
+                ownerId: owner.id,
+                ownerUserId: owner.userId,
+                subscriptionPlanId: plan.id,
+                country: country || 'India',
+                state: state || null,
+                city: city || null,
+                zipCode: zipCode || null,
+                fullAddress: fullAddress || null,
+                email,
+                mobile: mobile || null,
+                alternateMobile: alternateMobile || null,
+                gstNumber: gstNumber || null,
+                timezone: timezone || 'Asia/Kolkata',
+                currency: currency || 'INR',
+                logo: logo || null,
+                images: Array.isArray(images) ? images : [],
+                minPriceHourly: pricePerHour ? Number(pricePerHour) : undefined,
+                openingTime: openingTime || undefined,
+                closingTime: closingTime || undefined,
+                dimensionsSqFt: dimensionsSqFt ? Number(dimensionsSqFt) : undefined,
+                surfaceType: surfaceType || undefined,
+                amenities: Array.isArray(amenities) ? amenities : [],
+                status: 'ACTIVE'
+            },
+            include: { owner: true, subscriptionPlan: true }
         });
+
+        return res.status(201).json({ success: true, message: 'Branch created successfully.', data: formatBranch(branch, 0) });
     } catch (error) {
         console.error('Create branch error:', error);
-        return res.status(500).json({
-            success: false,
-            message: 'Internal Server Error creating branch: ' + error.message
-        });
+        return res.status(500).json({ success: false, message: 'Internal Server Error creating branch: ' + error.message });
     }
 };
 
-/**
- * Update branch details
- */
+const assertOwnsBranch = async (branchId, user) => {
+    if (!user) return true;
+    if (user.role === 'SUPER_ADMIN') return true;
+    const branch = await prisma.branch.findUnique({ where: { id: branchId } });
+    return !!branch && branch.ownerUserId === user.id;
+};
+
 const updateBranch = async (req, res) => {
     const { id } = req.params;
-    const { 
-        branchName, branchCode, description, ownerId, subscriptionPlanId,
-        city, state, country, zipCode, fullAddress, email, mobile, alternateMobile, gstNumber,
-        logo, images, sports, amenities, pricePerHour, price, openingTime, closingTime,
-        turfSize, dimensions, surfaceType, discountOffer, couponCode, status
-    } = req.body;
 
     try {
-        const [existing] = await db.query('SELECT * FROM branches WHERE id = ?', [id]);
-        if (existing.length === 0) {
-            return res.status(404).json({
-                success: false,
-                message: 'Branch not found.'
-            });
+        if (req.user && !(await assertOwnsBranch(id, req.user))) {
+            return res.status(403).json({ success: false, message: 'Forbidden: you do not manage this branch.' });
         }
 
-        const current = existing[0];
-        const imagesJson = images !== undefined ? (Array.isArray(images) ? JSON.stringify(images) : images) : current.images;
-        const sportsJson = sports !== undefined ? (Array.isArray(sports) ? JSON.stringify(sports) : sports) : current.sports;
-        const amenitiesJson = amenities !== undefined ? (Array.isArray(amenities) ? JSON.stringify(amenities) : amenities) : current.amenities;
-        const targetPrice = pricePerHour !== undefined ? pricePerHour : (price !== undefined ? price : current.price_per_hour);
-        const targetOwner = ownerId || current.owner_id;
-        const targetPlan = subscriptionPlanId || current.subscription_plan_id;
+        const {
+            branchName, description, subscriptionPlanId,
+            city, state, country, zipCode, fullAddress, email, mobile, alternateMobile, gstNumber,
+            logo, images, amenities, minPriceHourly, pricePerHour, price, openingTime, closingTime,
+            dimensionsSqFt, surfaceType, status
+        } = req.body;
 
-        await db.query(`
-            UPDATE branches 
-            SET 
-                branch_name = ?,
-                branch_code = ?,
-                description = ?,
-                owner_id = ?,
-                subscription_plan_id = ?,
-                city = ?,
-                state = ?,
-                country = ?,
-                zip_code = ?,
-                full_address = ?,
-                email = ?,
-                mobile = ?,
-                alternate_mobile = ?,
-                gst_number = ?,
-                logo = ?,
-                images = ?,
-                sports = ?,
-                amenities = ?,
-                price_per_hour = ?,
-                opening_time = ?,
-                closing_time = ?,
-                turf_size = ?,
-                dimensions = ?,
-                surface_type = ?,
-                discount_offer = ?,
-                coupon_code = ?,
-                status = ?
-            WHERE id = ?
-        `, [
-            branchName !== undefined ? branchName : current.branch_name,
-            branchCode !== undefined ? branchCode : current.branch_code,
-            description !== undefined ? description : current.description,
-            targetOwner,
-            targetPlan,
-            city !== undefined ? city : current.city,
-            state !== undefined ? state : current.state,
-            country !== undefined ? country : current.country,
-            zipCode !== undefined ? zipCode : current.zip_code,
-            fullAddress !== undefined ? fullAddress : current.full_address,
-            email !== undefined ? email : current.email,
-            mobile !== undefined ? mobile : current.mobile,
-            alternateMobile !== undefined ? alternateMobile : current.alternate_mobile,
-            gstNumber !== undefined ? gstNumber : current.gst_number,
-            logo !== undefined ? logo : current.logo,
-            imagesJson,
-            sportsJson,
-            amenitiesJson,
-            targetPrice ? Number(targetPrice) : 1000,
-            openingTime !== undefined ? openingTime : current.opening_time,
-            closingTime !== undefined ? closingTime : current.closing_time,
-            turfSize !== undefined ? turfSize : current.turf_size,
-            dimensions !== undefined ? dimensions : current.dimensions,
-            surfaceType !== undefined ? surfaceType : current.surface_type,
-            discountOffer !== undefined ? discountOffer : current.discount_offer,
-            couponCode !== undefined ? couponCode : current.coupon_code,
-            status !== undefined ? status : current.status,
-            id
-        ]);
+        const targetPrice = minPriceHourly ?? pricePerHour ?? price;
 
-        return res.status(200).json({
-            success: true,
-            message: 'Branch details updated successfully in database.'
+        const updated = await prisma.branch.update({
+            where: { id },
+            data: {
+                branchName: branchName ?? undefined,
+                description: description ?? undefined,
+                subscriptionPlanId: subscriptionPlanId ?? undefined,
+                city: city ?? undefined,
+                state: state ?? undefined,
+                country: country ?? undefined,
+                zipCode: zipCode ?? undefined,
+                fullAddress: fullAddress ?? undefined,
+                email: email ?? undefined,
+                mobile: mobile ?? undefined,
+                alternateMobile: alternateMobile ?? undefined,
+                gstNumber: gstNumber ?? undefined,
+                logo: logo ?? undefined,
+                images: Array.isArray(images) ? images : undefined,
+                amenities: Array.isArray(amenities) ? amenities : undefined,
+                minPriceHourly: targetPrice !== undefined ? Number(targetPrice) : undefined,
+                openingTime: openingTime ?? undefined,
+                closingTime: closingTime ?? undefined,
+                dimensionsSqFt: dimensionsSqFt !== undefined ? Number(dimensionsSqFt) : undefined,
+                surfaceType: surfaceType ?? undefined,
+                status: status ?? undefined
+            },
+            include: { owner: true, subscriptionPlan: true, branchSports: { include: { sport: true } } }
         });
+
+        return res.status(200).json({ success: true, message: 'Branch details updated successfully.', data: formatBranch(updated, 0) });
     } catch (error) {
         console.error('Update branch error:', error);
-        return res.status(500).json({
-            success: false,
-            message: 'Internal Server Error updating branch: ' + error.message
-        });
+        return res.status(500).json({ success: false, message: 'Internal Server Error updating branch: ' + error.message });
     }
 };
 
-/**
- * Update branch status
- */
 const changeBranchStatus = async (req, res) => {
     const { id } = req.params;
     const { status } = req.body;
 
+    if (!status || !['ACTIVE', 'INACTIVE', 'SUSPENDED'].includes(status)) {
+        return res.status(400).json({ success: false, message: 'Valid status is required (ACTIVE, INACTIVE, SUSPENDED).' });
+    }
+
     try {
-        const [result] = await db.query('UPDATE branches SET status = ? WHERE id = ?', [status, id]);
-        if (result.affectedRows === 0) {
-            return res.status(404).json({
-                success: false,
-                message: 'Branch not found.'
-            });
+        if (req.user && !(await assertOwnsBranch(id, req.user))) {
+            return res.status(403).json({ success: false, message: 'Forbidden: you do not manage this branch.' });
+        }
+        const updatedBranch = await prisma.branch.update({ where: { id }, data: { status } });
+        
+        if (updatedBranch.ownerUserId) {
+            const isInactive = status === 'INACTIVE' || status === 'SUSPENDED';
+            if (isInactive) {
+                const activeBranches = await prisma.branch.findMany({
+                    where: { ownerUserId: updatedBranch.ownerUserId, status: 'ACTIVE', id: { not: id } }
+                });
+                if (activeBranches.length === 0) {
+                    await prisma.user.update({
+                        where: { id: updatedBranch.ownerUserId },
+                        data: { status: 'SUSPENDED' }
+                    }).catch(() => {});
+                }
+            } else if (status === 'ACTIVE') {
+                await prisma.user.update({
+                    where: { id: updatedBranch.ownerUserId },
+                    data: { status: 'ACTIVE' }
+                }).catch(() => {});
+            }
         }
 
-        return res.status(200).json({
-            success: true,
-            message: `Branch status successfully updated to ${status}.`
-        });
+        return res.status(200).json({ success: true, message: `Branch status successfully updated to ${status}.` });
     } catch (error) {
         console.error('Change branch status error:', error);
-        return res.status(500).json({
-            success: false,
-            message: 'Internal Server Error updating status.'
-        });
+        return res.status(500).json({ success: false, message: 'Internal Server Error updating status.' });
     }
 };
 
-/**
- * Remove a branch
- */
 const deleteBranch = async (req, res) => {
     const { id } = req.params;
 
     try {
-        const [result] = await db.query('DELETE FROM branches WHERE id = ?', [id]);
-        if (result.affectedRows === 0) {
-            return res.status(404).json({
-                success: false,
-                message: 'Branch not found.'
-            });
+        if (req.user && !(await assertOwnsBranch(id, req.user))) {
+            return res.status(403).json({ success: false, message: 'Forbidden: you do not manage this branch.' });
         }
-
-        return res.status(200).json({
-            success: true,
-            message: 'Branch deleted successfully.'
-        });
+        await prisma.branch.delete({ where: { id } });
+        return res.status(200).json({ success: true, message: 'Branch deleted successfully.' });
     } catch (error) {
+        if (error.code === 'P2025') {
+            return res.status(404).json({ success: false, message: 'Branch not found.' });
+        }
         console.error('Delete branch error:', error);
-        return res.status(500).json({
-            success: false,
-            message: 'Internal Server Error deleting branch.'
-        });
+        return res.status(500).json({ success: false, message: 'Internal Server Error deleting branch.' });
     }
 };
 
-/**
- * Get dashboard status
- */
 const getDashboardStats = async (req, res) => {
     try {
-        const userRole = req.user?.role?.toUpperCase();
-        const isSuperAdmin = userRole === 'SUPER_ADMIN' || userRole === 'SUPERADMIN';
-        const targetOwnerId = (req.query.ownerId && req.query.ownerId !== 'ALL') ? req.query.ownerId : (req.user ? req.user.id : null);
-        const targetEmail = req.query.email || req.user?.email || '';
+        const where = resolveOwnerScope(req);
 
-        let branchWhere = '';
-        const params = [];
+        const [total, active, inactive, branches] = await Promise.all([
+            prisma.branch.count({ where }),
+            prisma.branch.count({ where: { ...where, status: 'ACTIVE' } }),
+            prisma.branch.count({ where: { ...where, status: 'INACTIVE' } }),
+            prisma.branch.findMany({ where, include: { subscriptionPlan: true } })
+        ]);
 
-        if (!isSuperAdmin) {
-            const targetOwnerId = (req.query.ownerId && req.query.ownerId !== 'ALL') ? req.query.ownerId : (req.user ? req.user.id : null);
-            const targetEmail = req.query.email || req.user?.email || '';
-
-            if (targetOwnerId && targetOwnerId !== 'ALL') {
-                branchWhere = ` WHERE (
-                    b.owner_id = ? 
-                    OR b.owner_id IN (SELECT id FROM owners WHERE id = ? OR user_id = ? OR (email IS NOT NULL AND email != '' AND LOWER(email) = LOWER(?)))
-                    OR (b.email IS NOT NULL AND b.email != '' AND LOWER(b.email) = LOWER(?))
-                    OR b.owner_id IN (SELECT id FROM owners WHERE email IS NOT NULL AND email != '' AND (LOWER(email) = LOWER(?) OR LOWER(email) = LOWER(?)))
-                )`;
-                params.push(targetOwnerId, targetOwnerId, targetOwnerId, targetEmail, targetEmail, targetEmail, targetOwnerId);
-            }
-        } else {
-            if (req.query.ownerId && req.query.ownerId !== 'ALL') {
-                const targetEmail = req.query.email || '';
-                branchWhere = ` WHERE (
-                    b.owner_id = ? 
-                    OR b.owner_id IN (SELECT id FROM owners WHERE id = ? OR user_id = ? OR (email IS NOT NULL AND email != '' AND LOWER(email) = LOWER(?)))
-                    OR (b.email IS NOT NULL AND b.email != '' AND LOWER(b.email) = LOWER(?))
-                )`;
-                params.push(req.query.ownerId, req.query.ownerId, req.query.ownerId, targetEmail, targetEmail);
-            }
-            // SuperAdmin & ownerId === 'ALL': NO WHERE CLAUSE APPLIED, RETURNS STATS FOR ALL 6 BRANCHES
-        }
-
-        const [rows] = await db.query(`
-            SELECT 
-                COUNT(*) as total,
-                SUM(CASE WHEN b.status='ACTIVE' THEN 1 ELSE 0 END) as active,
-                SUM(CASE WHEN b.status='INACTIVE' THEN 1 ELSE 0 END) as inactive
-            FROM branches b ${branchWhere}
-        `, params);
-
-        const [revenueRows] = await db.query(`
-            SELECT SUM(plan_price) as total_plan_revenue FROM (
-                SELECT 
-                    COALESCE(b.subscription_price_snapshot, NULLIF(os.amount, 0), p.monthly_price, 1000) as plan_price
-                FROM branches b
-                LEFT JOIN owners o ON (b.owner_id = o.id OR b.owner_id = o.user_id)
-                LEFT JOIN (
-                    SELECT os1.* FROM owner_subscriptions os1
-                    INNER JOIN (
-                        SELECT owner_id, MAX(created_at) as max_created FROM owner_subscriptions GROUP BY owner_id
-                    ) os2 ON os1.owner_id = os2.owner_id AND os1.created_at = os2.max_created
-                ) os ON (b.owner_id = os.owner_id OR o.id = os.owner_id)
-                LEFT JOIN subscription_plans p ON (b.subscription_plan_id = p.id OR LOWER(b.subscription_plan_id) = LOWER(p.plan_name))
-                ${branchWhere}
-            ) as b_prices
-        `, params);
-
-        const [bookingRevRows] = await db.query(`
-            SELECT COALESCE(SUM(amount), 0) as booking_rev
-            FROM bookings
-            WHERE status IN ('CONFIRMED', 'COMPLETED')
-            ${branchWhere ? `AND branch_id IN (SELECT b.id FROM branches b ${branchWhere})` : ''}
-        `, branchWhere ? params : []);
-
-        const totalRevenue = Number(revenueRows[0]?.total_plan_revenue || 0) + Number(bookingRevRows[0]?.booking_rev || 0);
+        const planRevenue = branches.reduce((sum, b) => sum + Number(b.subscriptionPlan?.monthlyPrice || 0), 0);
+        const revenueMap = await getBookingRevenueByBranch(branches.map(b => b.id));
+        const bookingRevenue = Object.values(revenueMap).reduce((sum, v) => sum + v, 0);
 
         return res.status(200).json({
             success: true,
             data: {
-                totalBranches: Number(rows[0]?.total || 0),
-                activeBranches: Number(rows[0]?.active || 0),
-                inactiveBranches: Number(rows[0]?.inactive || 0),
-                suspendedBranches: 0,
-                totalRevenue: totalRevenue
+                totalBranches: total,
+                activeBranches: active,
+                inactiveBranches: inactive,
+                suspendedBranches: total - active - inactive,
+                totalRevenue: planRevenue + bookingRevenue
             }
         });
     } catch (error) {
         console.error('Fetch dashboard stats error:', error);
-        return res.status(500).json({
-            success: false,
-            message: 'Internal Server Error.'
+        return res.status(500).json({ success: false, message: 'Internal Server Error.' });
+    }
+};
+
+/**
+ * GET /api/v1/branches/:id/payout-account
+ * Owner-configured UPI/bank/QR destination used by the manual payment
+ * gateway provider so customers know where to pay (see
+ * ManualGatewayProvider.getPayoutDestination). Returns null data if not
+ * configured yet rather than fabricating placeholder account details.
+ */
+const getPayoutAccount = async (req, res) => {
+    const { id } = req.params;
+    try {
+        if (req.user && !(await assertOwnsBranch(id, req.user))) {
+            return res.status(403).json({ success: false, message: 'Forbidden: you do not manage this branch.' });
+        }
+        const account = await prisma.ownerPayoutAccount.findUnique({ where: { branchId: id } });
+        return res.status(200).json({ success: true, data: account || null });
+    } catch (error) {
+        console.error('Fetch payout account error:', error);
+        return res.status(500).json({ success: false, message: 'Internal Server Error fetching payout account: ' + error.message });
+    }
+};
+
+/** PUT /api/v1/branches/:id/payout-account -- Owner/Super Admin only, upserts the branch's payout destination. */
+const upsertPayoutAccount = async (req, res) => {
+    const { id } = req.params;
+    const { accountType, upiId, bankAccountHolder, bankAccountNumber, bankIfsc, bankName, qrCodeImageUrl, isActive } = req.body;
+
+    try {
+        if (!(await assertOwnsBranch(id, req.user))) {
+            return res.status(403).json({ success: false, message: 'Forbidden: you do not manage this branch.' });
+        }
+        if (!['UPI', 'BANK_ACCOUNT', 'QR_CODE'].includes(accountType)) {
+            return res.status(400).json({ success: false, message: 'accountType must be UPI, BANK_ACCOUNT, or QR_CODE.' });
+        }
+        if (accountType === 'UPI' && !upiId) {
+            return res.status(400).json({ success: false, message: 'upiId is required for accountType UPI.' });
+        }
+        if (accountType === 'BANK_ACCOUNT' && (!bankAccountNumber || !bankIfsc || !bankAccountHolder)) {
+            return res.status(400).json({ success: false, message: 'bankAccountHolder, bankAccountNumber, and bankIfsc are required for accountType BANK_ACCOUNT.' });
+        }
+        if (accountType === 'QR_CODE' && !qrCodeImageUrl) {
+            return res.status(400).json({ success: false, message: 'qrCodeImageUrl is required for accountType QR_CODE.' });
+        }
+
+        const branch = await prisma.branch.findUnique({ where: { id } });
+        if (!branch) {
+            return res.status(404).json({ success: false, message: 'Branch not found.' });
+        }
+
+        const data = {
+            accountType,
+            upiId: upiId || null,
+            bankAccountHolder: bankAccountHolder || null,
+            bankAccountNumber: bankAccountNumber || null,
+            bankIfsc: bankIfsc || null,
+            bankName: bankName || null,
+            qrCodeImageUrl: qrCodeImageUrl || null,
+            isActive: isActive !== undefined ? !!isActive : true
+        };
+
+        const account = await prisma.ownerPayoutAccount.upsert({
+            where: { branchId: id },
+            update: data,
+            create: { id: `payout_${Date.now()}_${Math.floor(Math.random() * 100000)}`, branchId: id, ...data }
         });
+
+        return res.status(200).json({ success: true, message: 'Payout account saved successfully.', data: account });
+    } catch (error) {
+        console.error('Upsert payout account error:', error);
+        return res.status(500).json({ success: false, message: 'Internal Server Error saving payout account: ' + error.message });
     }
 };
 
@@ -719,5 +479,7 @@ module.exports = {
     updateBranch,
     changeBranchStatus,
     deleteBranch,
-    getDashboardStats
+    getDashboardStats,
+    getPayoutAccount,
+    upsertPayoutAccount
 };

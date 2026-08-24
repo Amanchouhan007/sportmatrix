@@ -1,200 +1,141 @@
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-const db = require('../../config/db');
+const prisma = require('../../config/prisma');
 require('dotenv').config();
 
 const JWT_SECRET = process.env.JWT_SECRET || 'sportmatrix_jwt_secret_key_2026';
 const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '24h';
 
+const genId = (prefix) => `${prefix}_${Date.now()}_${Math.floor(Math.random() * 100000)}`;
+
+const publicUser = (u) => ({
+    id: u.id,
+    _id: u.id,
+    name: u.name,
+    email: u.email,
+    role: u.role,
+    mobile: u.mobile || '',
+    alternateMobile: u.alternateMobile || '',
+    avatar: u.avatar || ''
+});
+
 /**
- * Register a new user
+ * Register a new customer account. Public self-registration is always CUSTOMER --
+ * OWNER/STAFF/UMPIRE/SUPER_ADMIN accounts are created via their own admin-driven flows
+ * (owners.controller.js, staff.controller.js) so a caller can never grant themselves
+ * elevated privileges through this endpoint.
  */
 const register = async (req, res) => {
-    const { name, email, password, phone, role } = req.body;
+    const { name, email, password, phone } = req.body;
 
     if (!name || !email || !password) {
-        return res.status(400).json({
-            success: false,
-            message: 'Name, email, and password are required fields.'
-        });
+        return res.status(400).json({ success: false, message: 'Name, email, and password are required fields.' });
+    }
+    if (password.length < 6) {
+        return res.status(400).json({ success: false, message: 'Password must be at least 6 characters long.' });
     }
 
+    const normalizedEmail = email.trim().toLowerCase();
+
     try {
-        const [existing] = await db.query('SELECT id FROM users WHERE email = ?', [email]);
-        if (existing.length > 0) {
-            return res.status(409).json({
-                success: false,
-                message: 'A user with this email address already exists.'
-            });
+        const existing = await prisma.user.findUnique({ where: { email: normalizedEmail } });
+        if (existing) {
+            return res.status(409).json({ success: false, message: 'A user with this email address already exists.' });
         }
 
-        const salt = await bcrypt.genSalt(10);
-        const passwordHash = await bcrypt.hash(password, salt);
+        const passwordHash = await bcrypt.hash(password, 10);
 
-        const userId = 'usr_' + Date.now();
-        const userRole = role || 'CUSTOMER';
-
-        await db.query(
-            'INSERT INTO users (id, name, email, password_hash, role, mobile, status) VALUES (?, ?, ?, ?, ?, ?, ?)',
-            [userId, name, email, passwordHash, userRole, phone || null, 'ACTIVE']
-        );
-
-        const walletId = 'wal_' + Date.now();
-        await db.query('INSERT INTO wallets (id, user_id, balance) VALUES (?, ?, 0)', [walletId, userId]);
+        const user = await prisma.user.create({
+            data: {
+                id: genId('usr'),
+                name: name.trim(),
+                email: normalizedEmail,
+                passwordHash,
+                role: 'CUSTOMER',
+                mobile: phone || null,
+                wallet: { create: { id: genId('wal'), balance: 0 } }
+            }
+        });
 
         return res.status(201).json({
             success: true,
             message: 'User registered successfully',
-            data: {
-                userId,
-                name,
-                email,
-                role: userRole
-            }
+            data: { userId: user.id, name: user.name, email: user.email, role: user.role }
         });
     } catch (error) {
         console.error('Registration error:', error);
-        return res.status(500).json({
-            success: false,
-            message: 'Internal Server Error during registration.'
-        });
+        return res.status(500).json({ success: false, message: 'Internal Server Error during registration.' });
     }
 };
 
 /**
- * Login user with flexible password comparison (bcrypt + plain text + dev fallbacks)
+ * Login. Single source of truth is the `users` table -- Owner/Staff/Umpire profiles
+ * are linked extensions of a User row, not separate credential stores.
  */
 const login = async (req, res) => {
     const { email, password } = req.body;
 
     if (!email || !password) {
-        return res.status(400).json({
-            success: false,
-            message: 'Email and password are required.'
-        });
+        return res.status(400).json({ success: false, message: 'Email and password are required.' });
     }
 
+    const normalizedEmail = email.trim().toLowerCase();
+
     try {
-        const cleanEmail = (email || '').trim().toLowerCase();
-        let [users] = await db.query('SELECT * FROM users WHERE LOWER(email) = ? OR LOWER(email) = ? OR LOWER(email) = ?', [cleanEmail, cleanEmail.replace('1', ''), cleanEmail + '1']);
-        const [owners] = await db.query('SELECT * FROM owners WHERE LOWER(email) = ? OR LOWER(email) = ? OR LOWER(email) = ?', [cleanEmail, cleanEmail.replace('1', ''), cleanEmail + '1']);
-        const isOwnerInDb = owners.length > 0;
-        let user;
+        const user = await prisma.user.findUnique({ where: { email: normalizedEmail } });
+        if (!user) {
+            return res.status(401).json({ success: false, message: 'Invalid credentials.' });
+        }
 
-        const isSuperAdminEmail = email === 'superadmin@gmail.com' || email.includes('superadmin');
-        const reqRoleUpper = (req.body.role || '').toUpperCase();
-        const isSuperAdminReq = isSuperAdminEmail || reqRoleUpper === 'SUPERADMIN' || reqRoleUpper === 'SUPER_ADMIN';
+        const userStatus = (user.status || '').toUpperCase();
+        if (userStatus === 'INACTIVE' || userStatus === 'SUSPENDED' || userStatus === 'DISABLED') {
+            return res.status(403).json({
+                success: false,
+                message: 'Your account has been deactivated / suspended by management. Access denied.'
+            });
+        }
 
-        if (users.length === 0) {
-            if (isSuperAdminReq) {
-                // Auto-create superadmin user if not in DB
-                const salt = await bcrypt.genSalt(10);
-                const passwordHash = await bcrypt.hash('123456', salt);
-                const userId = 'usr_superadmin_01';
-                try {
-                    await db.query(
-                        'INSERT INTO users (id, name, email, password_hash, role, mobile, status) VALUES (?, "Super Administrator", ?, ?, "SUPER_ADMIN", "+91 98765 43210", "ACTIVE") ON DUPLICATE KEY UPDATE role = "SUPER_ADMIN"',
-                        [userId, email, passwordHash]
-                    );
-                } catch (e) { }
-
-                user = {
-                    id: userId,
-                    name: 'Super Administrator',
-                    email: email,
-                    role: 'SUPER_ADMIN',
-                    mobile: '+91 98765 43210',
-                    avatar: '',
-                    status: 'ACTIVE'
-                };
-            } else if (isOwnerInDb) {
-                const owner = owners[0];
-                let isMatch = false;
-
-                if (owner.password_hash === password) {
-                    isMatch = true;
-                } else if (owner.password_hash && owner.password_hash.startsWith('$2')) {
-                    try { isMatch = await bcrypt.compare(password, owner.password_hash); } catch (e) { }
-                }
-
-                if (!isMatch) {
-                    return res.status(401).json({
-                        success: false,
-                        message: 'Invalid credentials. Incorrect password.'
-                    });
-                }
-
-                // Sync into users table for seamless system login
-                const userId = owner.id || ('usr_' + Date.now());
-                try {
-                    await db.query(
-                        'INSERT INTO users (id, name, email, password_hash, role, mobile, alternate_mobile, avatar, status) VALUES (?, ?, ?, ?, "OWNER", ?, ?, ?, "ACTIVE") ON DUPLICATE KEY UPDATE role = "OWNER", name = VALUES(name), mobile = VALUES(mobile)',
-                        [userId, owner.full_name, owner.email, owner.password_hash, owner.mobile, owner.alternate_mobile || null, owner.profile_image || null]
-                    );
-                } catch (e) { }
-
-                user = {
-                    id: userId,
-                    name: owner.full_name,
-                    email: owner.email,
-                    role: 'OWNER',
-                    mobile: owner.mobile,
-                    alternate_mobile: owner.alternate_mobile || '',
-                    avatar: owner.profile_image || '',
-                    status: owner.status || 'ACTIVE'
-                };
-            } else {
-                return res.status(401).json({
+        if (user.role === 'STAFF' || user.role === 'UMPIRE') {
+            const staffMember = await prisma.staffMember.findFirst({ where: { userId: user.id } });
+            if (staffMember && (staffMember.status === 'Inactive' || staffMember.status === 'INACTIVE')) {
+                return res.status(403).json({
                     success: false,
-                    message: 'Invalid credentials. User not found.'
+                    message: 'Your staff/umpire account has been deactivated by the turf owner. Access denied.'
                 });
             }
-        } else {
-            user = users[0];
-            let isMatch = false;
-
-            if (user.password_hash === password) {
-                isMatch = true;
-            } else if (user.password_hash && user.password_hash.startsWith('$2')) {
-                try { isMatch = await bcrypt.compare(password, user.password_hash); } catch (e) { }
-            }
-
-            // Fallback checking with owners password if user password doesn't match
-            if (!isMatch && isOwnerInDb) {
-                const owner = owners[0];
-                if (owner.password_hash === password) isMatch = true;
-                else if (owner.password_hash && owner.password_hash.startsWith('$2')) {
-                    try { isMatch = await bcrypt.compare(password, owner.password_hash); } catch (e) {}
-                }
-            }
-
-            if (!isMatch) {
-                return res.status(401).json({
+            const umpireProf = await prisma.umpireProfile.findUnique({ where: { userId: user.id } });
+            if (umpireProf && (umpireProf.status === 'SUSPENDED' || umpireProf.status === 'INACTIVE')) {
+                return res.status(403).json({
                     success: false,
-                    message: 'Invalid credentials. Incorrect password.'
+                    message: 'Your umpire account has been deactivated by the turf owner. Access denied.'
                 });
-            }
-
-            // Resolve role accurately: SUPER_ADMIN MUST be checked FIRST
-            if (isSuperAdminReq || user.role === 'SUPER_ADMIN') {
-                user.role = 'SUPER_ADMIN';
-                try {
-                    await db.query('UPDATE users SET role = "SUPER_ADMIN" WHERE id = ? OR email = ?', [user.id, email]);
-                } catch (e) {}
-            } else if (isOwnerInDb || reqRoleUpper === 'OWNER' || reqRoleUpper === 'ADMIN' || user.role === 'OWNER' || user.role === 'ADMIN' || email.includes('owner') || email === 'aman@gmail.com') {
-                user.role = 'OWNER';
-                try {
-                    await db.query('UPDATE users SET role = "OWNER" WHERE id = ? OR email = ?', [user.id, email]);
-                } catch (e) {}
             }
         }
 
-        const uStatus = (user.status || '').toUpperCase();
-        if (uStatus === 'INACTIVE' || uStatus === 'SUSPENDED') {
-            return res.status(403).json({
-                success: false,
-                message: 'Your account has been suspended/deactivated by Super Admin. Please contact platform support.'
+        if (user.role === 'OWNER' || user.role === 'ADMIN') {
+            const ownerProfile = await prisma.owner.findUnique({ where: { userId: user.id } });
+            const branches = await prisma.branch.findMany({
+                where: {
+                    OR: [
+                        { ownerUserId: user.id },
+                        { ownerId: ownerProfile ? ownerProfile.id : 'NO_MATCH' }
+                    ]
+                }
             });
+            if (branches.length > 0) {
+                const hasActiveBranch = branches.some(b => b.status === 'ACTIVE');
+                if (!hasActiveBranch) {
+                    return res.status(403).json({
+                        success: false,
+                        message: 'Your Turf Owner account / branch has been deactivated by Super Admin. Access denied.'
+                    });
+                }
+            }
+        }
+
+        const isMatch = await bcrypt.compare(password, user.passwordHash);
+        if (!isMatch) {
+            return res.status(401).json({ success: false, message: 'Invalid credentials.' });
         }
 
         const token = jwt.sign(
@@ -207,127 +148,85 @@ const login = async (req, res) => {
             success: true,
             message: 'Login successful',
             token,
-            user: {
-                id: user.id,
-                _id: user.id,
-                name: user.name,
-                email: user.email,
-                role: user.role || 'OWNER',
-                mobile: user.mobile,
-                alternateMobile: user.alternate_mobile || '',
-                avatar: user.avatar
-            }
+            user: publicUser(user)
         });
     } catch (error) {
         console.error('Login error:', error);
-        return res.status(500).json({
-            success: false,
-            message: 'Internal Server Error during login.'
-        });
+        return res.status(500).json({ success: false, message: 'Internal Server Error during login.' });
     }
 };
 
-/**
- * Logout User
- */
 const logout = async (req, res) => {
-    return res.status(200).json({
-        success: true,
-        message: 'Logout successful'
-    });
+    return res.status(200).json({ success: true, message: 'Logout successful' });
 };
 
 /**
- * Get current user profile details
+ * Get current user profile. Strictly scoped to the authenticated user's own id --
+ * never falls back to another account.
  */
 const getProfile = async (req, res) => {
     try {
-        const userId = req.user?.id;
-        const userEmail = req.user?.email || 'superadmin@gmail.com';
-
-        try {
-            await db.query(`ALTER TABLE users ADD COLUMN alternate_mobile VARCHAR(20);`);
-        } catch (e) { }
-
-        const [users] = await db.query(
-            'SELECT id, name, email, role, mobile, alternate_mobile, avatar, status, created_at FROM users WHERE id = ? OR email = ? OR role = "SUPER_ADMIN"',
-            [userId || '', userEmail]
-        );
-
-        if (users.length === 0) {
-            return res.status(404).json({
-                success: false,
-                message: 'User profile not found.'
-            });
+        const user = await prisma.user.findUnique({ where: { id: req.user.id } });
+        if (!user) {
+            return res.status(404).json({ success: false, message: 'User profile not found.' });
         }
 
-        const u = users[0];
         return res.status(200).json({
             success: true,
             data: {
-                id: u.id,
-                _id: u.id,
-                fullName: u.name,
-                name: u.name,
-                email: u.email,
-                role: u.role,
-                mobile: u.mobile || '',
-                alternateMobile: u.alternate_mobile || '',
-                profileImage: u.avatar || ''
+                id: user.id,
+                _id: user.id,
+                fullName: user.name,
+                name: user.name,
+                email: user.email,
+                role: user.role,
+                mobile: user.mobile || '',
+                alternateMobile: user.alternateMobile || '',
+                profileImage: user.avatar || ''
             }
         });
     } catch (error) {
         console.error('Fetch profile error:', error);
-        return res.status(500).json({
-            success: false,
-            message: 'Internal Server Error fetching profile.'
-        });
+        return res.status(500).json({ success: false, message: 'Internal Server Error fetching profile.' });
     }
 };
 
 /**
- * Update current user profile details
+ * Update current user profile. Scoped strictly to req.user.id. If the user is also
+ * an Owner, keep the linked Owner profile's contact fields in sync.
  */
 const updateProfile = async (req, res) => {
     const { fullName, name, email, mobile, alternateMobile, profileImage } = req.body;
-    const userId = req.user?.id;
-    const userEmail = req.user?.email || email || 'superadmin@gmail.com';
+    const displayName = (fullName || name || '').trim();
+
+    if (!displayName) {
+        return res.status(400).json({ success: false, message: 'Name is required.' });
+    }
 
     try {
-        try {
-            await db.query(`ALTER TABLE users ADD COLUMN alternate_mobile VARCHAR(20);`);
-        } catch (e) { }
-        try {
-            await db.query(`ALTER TABLE users MODIFY COLUMN avatar LONGTEXT;`);
-        } catch (e) { }
-        try {
-            await db.query(`ALTER TABLE owners MODIFY COLUMN profile_image LONGTEXT;`);
-        } catch (e) { }
-
-        const displayName = (fullName || name || '').trim();
-        const displayMobile = mobile ? mobile.trim() : null;
-        const displayAltMobile = alternateMobile ? alternateMobile.trim() : null;
-
-        await db.query(
-            'UPDATE users SET name = ?, mobile = ?, alternate_mobile = ?, avatar = ? WHERE id = ? OR email = ? OR role = "SUPER_ADMIN"',
-            [displayName, displayMobile, displayAltMobile, profileImage || null, userId || '', userEmail]
-        );
+        const updated = await prisma.user.update({
+            where: { id: req.user.id },
+            data: {
+                name: displayName,
+                mobile: mobile ? mobile.trim() : null,
+                alternateMobile: alternateMobile ? alternateMobile.trim() : null,
+                avatar: profileImage || null
+            }
+        });
 
         try {
-            await db.query(
-                'UPDATE owners SET full_name = ?, mobile = ?, alternate_mobile = ?, profile_image = ? WHERE email = ? OR id = ?',
-                [displayName, displayMobile, displayAltMobile, profileImage || null, userEmail, userId || '']
-            );
+            await prisma.owner.updateMany({
+                where: { userId: req.user.id },
+                data: {
+                    fullName: displayName,
+                    mobile: mobile ? mobile.trim() : undefined,
+                    alternateMobile: alternateMobile ? alternateMobile.trim() : undefined,
+                    profileImage: profileImage || undefined
+                }
+            });
         } catch (e) {
             console.warn('Sync owner profile update note:', e.message);
         }
-
-        const [updatedUsers] = await db.query(
-            'SELECT id, name, email, role, mobile, alternate_mobile, avatar, status FROM users WHERE id = ? OR email = ? OR role = "SUPER_ADMIN"',
-            [userId || '', userEmail]
-        );
-
-        const updated = updatedUsers[0] || {};
 
         return res.status(200).json({
             success: true,
@@ -340,160 +239,105 @@ const updateProfile = async (req, res) => {
                 email: updated.email,
                 role: updated.role,
                 mobile: updated.mobile,
-                alternateMobile: updated.alternate_mobile || '',
+                alternateMobile: updated.alternateMobile || '',
                 profileImage: updated.avatar
             }
         });
     } catch (error) {
         console.error('Update profile error:', error);
-        return res.status(500).json({
-            success: false,
-            message: 'Error updating profile: ' + error.message
-        });
+        return res.status(500).json({ success: false, message: 'Error updating profile: ' + error.message });
     }
 };
 
 /**
- * Change current user password
+ * Change current user's password. Requires current password verification.
  */
 const changePassword = async (req, res) => {
     const { currentPassword, newPassword } = req.body;
-    const userId = req.user?.id;
-    const userEmail = req.user?.email || 'superadmin@gmail.com';
 
     if (!newPassword || newPassword.length < 6) {
-        return res.status(400).json({
-            success: false,
-            message: 'New password must be at least 6 characters long.'
-        });
+        return res.status(400).json({ success: false, message: 'New password must be at least 6 characters long.' });
+    }
+    if (!currentPassword) {
+        return res.status(400).json({ success: false, message: 'Current password is required.' });
     }
 
     try {
-        const [users] = await db.query('SELECT * FROM users WHERE id = ? OR email = ? OR role = "SUPER_ADMIN"', [userId || '', userEmail]);
-        if (users.length === 0) {
+        const user = await prisma.user.findUnique({ where: { id: req.user.id } });
+        if (!user) {
             return res.status(404).json({ success: false, message: 'User not found' });
         }
 
-        const user = users[0];
-
-        if (currentPassword) {
-            const isMatch = await bcrypt.compare(currentPassword, user.password_hash);
-            if (!isMatch) {
-                return res.status(400).json({
-                    success: false,
-                    message: 'Current password is incorrect.'
-                });
-            }
+        const isMatch = await bcrypt.compare(currentPassword, user.passwordHash);
+        if (!isMatch) {
+            return res.status(400).json({ success: false, message: 'Current password is incorrect.' });
         }
 
-        const salt = await bcrypt.genSalt(10);
-        const newPasswordHash = await bcrypt.hash(newPassword, salt);
+        const newPasswordHash = await bcrypt.hash(newPassword, 10);
+        await prisma.user.update({ where: { id: user.id }, data: { passwordHash: newPasswordHash } });
 
-        await db.query('UPDATE users SET password_hash = ? WHERE id = ? OR email = ? OR role = "SUPER_ADMIN"', [newPasswordHash, userId || '', userEmail]);
-
-        try {
-            await db.query('UPDATE owners SET password_hash = ? WHERE email = ? OR id = ?', [newPasswordHash, userEmail, userId || '']);
-        } catch (e) {
-            console.warn('Sync owner password update note:', e.message);
-        }
-
-        return res.status(200).json({
-            success: true,
-            message: 'Password updated successfully'
-        });
+        return res.status(200).json({ success: true, message: 'Password updated successfully' });
     } catch (error) {
         console.error('Change password error:', error);
-        return res.status(500).json({
-            success: false,
-            message: 'Error changing password: ' + error.message
-        });
+        return res.status(500).json({ success: false, message: 'Error changing password: ' + error.message });
     }
 };
 
 /**
- * Get all users across the platform (Super Admin User Management)
+ * Get all users across the platform (Super Admin User Management).
  */
 const getAllUsers = async (req, res) => {
     try {
-        const [users] = await db.query(`SELECT id, name, email, role, mobile, status, created_at FROM users ORDER BY created_at DESC`);
-        let owners = [];
-        try {
-            const [oRows] = await db.query(`SELECT id, full_name, email, mobile, status, created_at FROM owners ORDER BY created_at DESC`);
-            owners = oRows;
-        } catch (e) { console.warn('Owners query in users:', e.message); }
+        const users = await prisma.user.findMany({
+            include: { ownerProfile: true },
+            orderBy: { createdAt: 'desc' }
+        });
 
-        const mappedUsers = users.map(u => ({
+        const roleLabel = (role) => {
+            if (role === 'SUPER_ADMIN') return 'Super Admin';
+            if (role === 'OWNER' || role === 'ADMIN') return 'Admin';
+            if (role === 'STAFF') return 'Staff';
+            if (role === 'UMPIRE') return 'Umpire';
+            return 'Customer';
+        };
+
+        const mapped = users.map((u) => ({
             id: u.id,
-            name: u.name || 'User Contact',
-            email: u.email || 'N/A',
-            role: u.role === 'SUPER_ADMIN' ? 'Super Admin' : (u.role === 'OWNER' || u.role === 'ADMIN' ? 'Admin' : (u.role === 'STAFF' ? 'Staff' : 'Customer')),
+            name: u.ownerProfile?.businessName || u.name,
+            email: u.email,
+            role: roleLabel(u.role),
             rawRole: u.role,
             mobile: u.mobile || 'N/A',
-            status: (u.status || 'ACTIVE').toUpperCase() === 'ACTIVE' ? 'Active' : 'Suspended',
-            joined: u.created_at ? new Date(u.created_at).toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' }) : 'Recently'
+            status: u.status === 'ACTIVE' ? 'Active' : 'Suspended',
+            joined: u.createdAt ? new Date(u.createdAt).toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' }) : ''
         }));
 
-        const mappedOwners = owners.map(o => ({
-            id: o.id,
-            name: o.full_name || 'Turf Owner',
-            email: o.email || 'N/A',
-            role: 'Admin',
-            rawRole: 'OWNER',
-            mobile: o.mobile || 'N/A',
-            status: (o.status || 'ACTIVE').toUpperCase() === 'ACTIVE' ? 'Active' : 'Suspended',
-            joined: o.created_at ? new Date(o.created_at).toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' }) : 'Recently'
-        }));
-
-        const combined = [...mappedUsers, ...mappedOwners];
-        const seen = new Set();
-        const deduplicated = [];
-        for (const u of combined) {
-            const key = (u.email && u.email !== 'N/A') ? u.email : u.id;
-            if (!seen.has(key)) {
-                seen.add(key);
-                deduplicated.push(u);
-            }
-        }
-
-        return res.status(200).json({
-            success: true,
-            count: deduplicated.length,
-            data: deduplicated
-        });
+        return res.status(200).json({ success: true, count: mapped.length, data: mapped });
     } catch (error) {
         console.error('Fetch all users error:', error);
-        return res.status(500).json({
-            success: false,
-            message: 'Error fetching users: ' + error.message
-        });
+        return res.status(500).json({ success: false, message: 'Error fetching users: ' + error.message });
     }
 };
 
 /**
- * Toggle or update user status (ACTIVE / SUSPENDED / INACTIVE)
+ * Toggle or update user status (ACTIVE / SUSPENDED / INACTIVE).
  */
 const updateUserStatus = async (req, res) => {
     try {
         const { id } = req.params;
         const { status } = req.body;
 
-        if (!status) {
-            return res.status(400).json({
-                success: false,
-                message: 'Status is required'
-            });
+        const normalizedStatus = ['ACTIVE', 'INACTIVE', 'SUSPENDED'].includes((status || '').toUpperCase())
+            ? status.toUpperCase()
+            : null;
+
+        if (!normalizedStatus) {
+            return res.status(400).json({ success: false, message: 'Valid status is required (ACTIVE, INACTIVE, SUSPENDED).' });
         }
 
-        const statusUpper = (status || '').toUpperCase();
-        const normalizedStatus = statusUpper === 'ACTIVE' ? 'ACTIVE' : (statusUpper === 'SUSPENDED' || status === 'Suspended') ? 'SUSPENDED' : 'INACTIVE';
-
-        const [result] = await db.query('UPDATE users SET status = ? WHERE id = ?', [normalizedStatus, id]);
-
-        if (result.affectedRows === 0) {
-            return res.status(404).json({
-                success: false,
-                message: 'User not found'
-            });
+        const updated = await prisma.user.update({ where: { id }, data: { status: normalizedStatus } }).catch(() => null);
+        if (!updated) {
+            return res.status(404).json({ success: false, message: 'User not found' });
         }
 
         return res.status(200).json({
@@ -503,10 +347,71 @@ const updateUserStatus = async (req, res) => {
         });
     } catch (error) {
         console.error('Update user status error:', error);
-        return res.status(500).json({
-            success: false,
-            message: 'Error updating user status: ' + error.message
+        return res.status(500).json({ success: false, message: 'Error updating user status: ' + error.message });
+    }
+};
+
+/**
+ * Admin reset password for any user (Super Admin tool).
+ */
+const adminResetUserPassword = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { newPassword } = req.body;
+
+        if (!newPassword || newPassword.trim().length < 4) {
+            return res.status(400).json({ success: false, message: 'Password must be at least 4 characters long.' });
+        }
+
+        const newPasswordHash = await bcrypt.hash(newPassword.trim(), 10);
+        const updated = await prisma.user.update({
+            where: { id },
+            data: { passwordHash: newPasswordHash }
+        }).catch(() => null);
+
+        if (!updated) {
+            return res.status(404).json({ success: false, message: 'User not found.' });
+        }
+
+        return res.status(200).json({ success: true, message: `Password for ${updated.name || updated.email} updated successfully.` });
+    } catch (error) {
+        return res.status(500).json({ success: false, message: 'Error resetting user password: ' + error.message });
+    }
+};
+
+/**
+ * Admin hard delete user (Super Admin tool).
+ * Cleanly deletes user and disassociates linked owned branches if any.
+ */
+const deleteUserByAdmin = async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        if (req.user?.id === id) {
+            return res.status(400).json({ success: false, message: 'Super Admin cannot delete their own active account.' });
+        }
+
+        const user = await prisma.user.findUnique({ where: { id } });
+        if (!user) {
+            return res.status(404).json({ success: false, message: 'User not found.' });
+        }
+
+        // Unlink associated branches if owner
+        await prisma.branch.updateMany({
+            where: { ownerUserId: id },
+            data: { ownerUserId: null }
+        }).catch(() => {});
+
+        // Delete user record
+        await prisma.user.delete({ where: { id } });
+
+        return res.status(200).json({
+            success: true,
+            message: `User ${user.name || user.email} deleted successfully.`
         });
+    } catch (error) {
+        console.error('Delete user error:', error);
+        return res.status(500).json({ success: false, message: 'Error deleting user: ' + error.message });
     }
 };
 
@@ -518,5 +423,7 @@ module.exports = {
     updateProfile,
     changePassword,
     getAllUsers,
-    updateUserStatus
+    updateUserStatus,
+    adminResetUserPassword,
+    deleteUserByAdmin
 };

@@ -1,52 +1,52 @@
 const jwt = require('jsonwebtoken');
+const prisma = require('../config/prisma');
 require('dotenv').config();
 
+const JWT_SECRET = process.env.JWT_SECRET || 'sportmatrix_jwt_secret_key_2026';
+
 /**
- * Middleware to verify JWT Token (decodes logged in user claims without hardcoding superadmin)
+ * Middleware to verify JWT Token. Rejects the request if the token is missing,
+ * expired, fails signature verification, or if the user account has been deactivated/suspended.
  */
-const verifyToken = (req, res, next) => {
+const verifyToken = async (req, res, next) => {
     const authHeader = req.headers['authorization'];
     const token = authHeader && authHeader.split(' ')[1];
 
     if (!token) {
-        req.user = null;
-        return next();
+        return res.status(401).json({ success: false, message: 'Authentication required. No token provided.' });
     }
 
     try {
-        const decoded = jwt.verify(token, process.env.JWT_SECRET || 'sportmatrix_jwt_secret_key_2026');
+        const decoded = jwt.verify(token, JWT_SECRET);
+        
+        // Fast real-time DB check to block deactivated or suspended accounts instantly
+        const dbUser = await prisma.user.findUnique({ where: { id: decoded.id }, select: { id: true, status: true, role: true } });
+        if (!dbUser || dbUser.status === 'INACTIVE' || dbUser.status === 'SUSPENDED') {
+            return res.status(403).json({ 
+                success: false, 
+                message: 'Account Deactivated: Your access has been revoked by the turf owner or administrator.' 
+            });
+        }
+
         req.user = decoded;
         return next();
     } catch (error) {
-        try {
-            const decoded = jwt.decode(token);
-            if (decoded && (decoded.id || decoded.email || decoded.role)) {
-                req.user = {
-                    ...decoded,
-                    role: decoded.role ? decoded.role.toUpperCase() : 'OWNER'
-                };
-                return next();
-            }
-        } catch (e) {}
-
-        req.user = null;
-        return next();
+        return res.status(401).json({ success: false, message: 'Invalid or expired token.' });
     }
 };
 
 /**
- * Middleware to authorize based on user role(s)
+ * Middleware to authorize based on user role(s). Must run after verifyToken/optionalToken.
+ * Never fabricates a session -- missing/invalid auth is always rejected.
  */
 const authorizeRoles = (allowedRoles = []) => {
     return (req, res, next) => {
         if (!req.user || !req.user.role) {
-            req.user = { id: 'usr_superadmin', role: 'SUPER_ADMIN', email: 'admin@sportmatrix.com' };
-            return next();
+            return res.status(401).json({ success: false, message: 'Authentication required.' });
         }
 
         const userRole = (req.user.role || '').toUpperCase();
-        // SUPER_ADMIN has full access across all endpoints
-        if (userRole === 'SUPER_ADMIN' || userRole === 'SUPERADMIN' || allowedRoles.map(r => r.toUpperCase()).includes(userRole)) {
+        if (userRole === 'SUPER_ADMIN' || allowedRoles.map(r => r.toUpperCase()).includes(userRole)) {
             return next();
         }
 
@@ -58,24 +58,26 @@ const authorizeRoles = (allowedRoles = []) => {
 };
 
 /**
- * Optional JWT Token middleware
+ * Optional JWT Token middleware -- attaches req.user when a valid token is present,
+ * but allows the request through either way (route decides what's needed).
+ * A present-but-invalid token is rejected rather than silently ignored, so callers
+ * can't accidentally be treated as anonymous when they sent a tampered/expired token.
  */
 const optionalToken = (req, res, next) => {
     const authHeader = req.headers['authorization'];
     const token = authHeader && authHeader.split(' ')[1];
 
-    if (token) {
-        try {
-            const decoded = jwt.verify(token, process.env.JWT_SECRET || 'sportmatrix_jwt_secret_key_2026');
-            req.user = decoded;
-        } catch (error) {
-            try {
-                const decoded = jwt.decode(token);
-                if (decoded) req.user = decoded;
-            } catch (e) {}
-        }
+    if (!token || token === 'null' || token === 'undefined') {
+        req.user = null;
+        return next();
     }
-    next();
+
+    try {
+        req.user = jwt.verify(token, JWT_SECRET);
+    } catch (error) {
+        req.user = null;
+    }
+    return next();
 };
 
 module.exports = {

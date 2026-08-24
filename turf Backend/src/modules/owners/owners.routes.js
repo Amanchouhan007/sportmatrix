@@ -46,22 +46,22 @@ const handleProfileImageUpload = (req, res, next) => {
     });
 };
 
-// Owner REST Endpoints
+// Owner REST Endpoints -- Super Admin only (owner PII + account management)
+const requireSuperAdmin = [verifyToken, authorizeRoles(['SUPER_ADMIN'])];
 
-// List all owners & Get owner by ID (Accessible or Restricted to Admins)
-router.get('/', getOwners);
-router.get('/:id', getOwnerById);
+router.get('/', ...requireSuperAdmin, getOwners);
+router.get('/:id', ...requireSuperAdmin, getOwnerById);
 
 // Create Owner (Supports Profile Image upload)
-router.post('/', handleProfileImageUpload, validateCreateOwner, createOwner);
+router.post('/', ...requireSuperAdmin, handleProfileImageUpload, validateCreateOwner, createOwner);
 
 // Update Owner (Supports Profile Image upload)
-router.put('/:id', handleProfileImageUpload, validateUpdateOwner, updateOwner);
+router.put('/:id', ...requireSuperAdmin, handleProfileImageUpload, validateUpdateOwner, updateOwner);
 
 // Status Toggle
-router.patch('/:id/status', changeOwnerStatus);
+router.patch('/:id/status', ...requireSuperAdmin, changeOwnerStatus);
 
 // Delete Owner
-router.delete('/:id', deleteOwner);
+router.delete('/:id', ...requireSuperAdmin, deleteOwner);
 
 module.exports = router;

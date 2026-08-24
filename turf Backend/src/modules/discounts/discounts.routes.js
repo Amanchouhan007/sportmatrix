@@ -9,9 +9,11 @@ const {
     updateDiscountOffer,
     deleteDiscountOffer,
     changeDiscountStatus,
-    duplicateDiscountOffer
+    duplicateDiscountOffer,
+    validatePromoCode
 } = require('./discounts.controller');
 const { validateDiscountOffer } = require('./discounts.validation');
+const { verifyToken, optionalToken, authorizeRoles } = require('../../middleware/auth.middleware');
 
 // Multer Storage Config
 const storage = multer.diskStorage({
@@ -25,12 +27,17 @@ const storage = multer.diskStorage({
 });
 
 const upload = multer({ storage });
+const requireOwnerOrAdmin = [verifyToken, authorizeRoles(['OWNER', 'SUPER_ADMIN'])];
 
-// Routes
-router.get('/', getDiscountOffers);
-router.get('/:id', getDiscountOfferById);
+// Public browsing (offers are shown to customers) -- optionalToken lets owner-scoped filtering apply when logged in
+router.get('/', optionalToken, getDiscountOffers);
+router.post('/validate-promo', optionalToken, validatePromoCode);
+router.get('/:id', optionalToken, getDiscountOfferById);
+
+// Owner/Admin mutation routes
 router.post(
     '/',
+    ...requireOwnerOrAdmin,
     upload.fields([
         { name: 'banner', maxCount: 1 },
         { name: 'thumbnail', maxCount: 1 }
@@ -38,9 +45,9 @@ router.post(
     validateDiscountOffer,
     createDiscountOffer
 );
-router.put('/:id', updateDiscountOffer);
-router.delete('/:id', deleteDiscountOffer);
-router.patch('/:id/status', changeDiscountStatus);
-router.post('/:id/duplicate', duplicateDiscountOffer);
+router.put('/:id', ...requireOwnerOrAdmin, updateDiscountOffer);
+router.delete('/:id', ...requireOwnerOrAdmin, deleteDiscountOffer);
+router.patch('/:id/status', ...requireOwnerOrAdmin, changeDiscountStatus);
+router.post('/:id/duplicate', ...requireOwnerOrAdmin, duplicateDiscountOffer);
 
 module.exports = router;

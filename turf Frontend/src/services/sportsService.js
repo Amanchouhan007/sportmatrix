@@ -6,9 +6,9 @@ import api from './api';
 export const getMasterSports = async () => {
     try {
         const response = await api.get('/sports/master');
-        return response.data;
+        return response;
     } catch (error) {
-        throw new Error(error.response?.data?.message || 'Failed to fetch master sports.');
+        throw new Error(error.response?.data?.message || error.message || 'Failed to fetch master sports.');
     }
 };
 
@@ -19,9 +19,9 @@ export const getBranchSports = async (branchId) => {
     try {
         const id = branchId || 'br_001';
         const response = await api.get(`/sports/branch/${id}`);
-        return response.data;
+        return response;
     } catch (error) {
-        throw new Error(error.response?.data?.message || 'Failed to fetch branch sports.');
+        throw new Error(error.response?.data?.message || error.message || 'Failed to fetch branch sports.');
     }
 };
 
@@ -31,7 +31,8 @@ export const getBranchSports = async (branchId) => {
 export const getSportById = async (id) => {
     try {
         const res = await getBranchSports();
-        const sport = res.data.find(s => s.id === id || s._id === id);
+        const list = res.data || res;
+        const sport = Array.isArray(list) ? list.find(s => s.id === id || s._id === id) : null;
         return { success: true, data: sport };
     } catch (error) {
         throw new Error('Failed to fetch sport by ID.');
@@ -44,9 +45,9 @@ export const getSportById = async (id) => {
 export const activateSport = async (payload) => {
     try {
         const response = await api.post('/sports/branch', payload);
-        return response.data;
+        return response;
     } catch (error) {
-        throw new Error(error.response?.data?.message || 'Failed to activate sport.');
+        throw new Error(error.response?.data?.message || error.message || 'Failed to activate sport.');
     }
 };
 
@@ -56,9 +57,9 @@ export const activateSport = async (payload) => {
 export const updateSport = async (id, payload) => {
     try {
         const response = await api.put(`/sports/branch/${id}`, payload);
-        return response.data;
+        return response;
     } catch (error) {
-        throw new Error(error.response?.data?.message || 'Failed to update sport.');
+        throw new Error(error.response?.data?.message || error.message || 'Failed to update sport.');
     }
 };
 
@@ -68,9 +69,9 @@ export const updateSport = async (id, payload) => {
 export const changeSportStatus = async (id, status) => {
     try {
         const response = await api.patch(`/sports/branch/${id}/status`, { status });
-        return response.data;
+        return response;
     } catch (error) {
-        throw new Error(error.response?.data?.message || 'Failed to update status.');
+        throw new Error(error.response?.data?.message || error.message || 'Failed to update status.');
     }
 };
 
@@ -80,8 +81,8 @@ export const changeSportStatus = async (id, status) => {
 export const deleteSport = async (id) => {
     try {
         const response = await api.delete(`/sports/branch/${id}`);
-        return response.data;
+        return response;
     } catch (error) {
-        throw new Error(error.response?.data?.message || 'Failed to delete sport.');
+        throw new Error(error.response?.data?.message || error.message || 'Failed to delete sport.');
     }
 };

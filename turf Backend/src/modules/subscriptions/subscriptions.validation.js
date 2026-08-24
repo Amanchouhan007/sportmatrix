@@ -10,8 +10,8 @@ const validateCreatePlan = (req, res, next) => {
         errors.push('Plan Name is required and must be a non-empty string.');
     }
 
-    if (status && !['active', 'inactive'].includes(status)) {
-        errors.push('Status must be either active or inactive.');
+    if (status && !['active', 'inactive', 'draft'].includes(status.toLowerCase())) {
+        errors.push('Status must be one of: active, inactive, draft.');
     }
 
     if (monthlyPricing && monthlyPricing.price < 0) {
@@ -41,8 +41,8 @@ const validateUpdatePlan = (req, res, next) => {
         errors.push('Plan Name must be a non-empty string.');
     }
 
-    if (status !== undefined && !['active', 'inactive'].includes(status)) {
-        errors.push('Status must be either active or inactive.');
+    if (status !== undefined && !['active', 'inactive', 'draft'].includes(status.toLowerCase())) {
+        errors.push('Status must be one of: active, inactive, draft.');
     }
 
     if (monthlyPricing && monthlyPricing.price !== undefined && monthlyPricing.price < 0) {

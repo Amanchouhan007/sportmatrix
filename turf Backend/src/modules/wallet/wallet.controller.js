@@ -1,254 +1,204 @@
-const db = require('../../config/db');
+const prisma = require('../../config/prisma');
+const MatchSettlementService = require('../../services/matchSettlement.service');
+const { emitToUser } = require('../../realtime/socket');
 
-/**
- * Get active wallet details and balance
- */
+const genId = (prefix) => `${prefix}_${Date.now()}_${Math.floor(Math.random() * 100000)}`;
+const genTxCode = () => `TXN-${Date.now()}-${Math.floor(Math.random() * 10000)}`;
+
 const getWalletBalance = async (req, res) => {
-    const userId = req.user?.id || req.query.userId || req.query.user_id || 'usr_customer_01';
-
+    if (!req.user) {
+        return res.status(401).json({ success: false, message: 'Authentication required.' });
+    }
     try {
-        let [rows] = await db.query('SELECT * FROM wallets WHERE user_id = ?', [userId]);
-
-        // Dynamically create wallet if user does not have one
-        if (rows.length === 0) {
-            const walletId = 'wal_' + Date.now();
-            await db.query('INSERT INTO wallets (id, user_id, balance) VALUES (?, ?, 0)', [walletId, userId]);
-            
-            return res.status(200).json({
-                success: true,
-                data: {
-                    balance: 0,
-                    locked: 500 // standard security reserve balance
-                }
-            });
+        let wallet = await prisma.wallet.findUnique({ where: { userId: req.user.id } });
+        if (!wallet) {
+            wallet = await prisma.wallet.create({ data: { id: genId('wal'), userId: req.user.id, balance: 0 } });
         }
-
         return res.status(200).json({
             success: true,
             data: {
-                balance: rows[0].balance,
-                locked: 500
+                balance: Number(wallet.balance),
+                locked: Number(wallet.lockedEscrow),
+                totalCommissionPaid: Number(wallet.totalCommissionPaid),
+                bankAccountMasked: wallet.bankAccountMasked
             }
         });
     } catch (error) {
         console.error('Fetch wallet balance error:', error);
-        return res.status(500).json({
-            success: false,
-            message: 'Internal Server Error fetching wallet balance.'
-        });
+        return res.status(500).json({ success: false, message: 'Internal Server Error fetching wallet balance.' });
     }
 };
 
-/**
- * Retrieve transaction history formatted for UI list badges
- */
 const getWalletTransactions = async (req, res) => {
-    const userId = req.user.id;
-
+    if (!req.user) {
+        return res.status(401).json({ success: false, message: 'Authentication required.' });
+    }
     try {
-        const [rows] = await db.query(`
-            SELECT wt.* FROM wallet_transactions wt
-            JOIN wallets w ON wt.wallet_id = w.id
-            WHERE w.user_id = ?
-            ORDER BY wt.created_at DESC
-        `, [userId]);
+        const wallet = await prisma.wallet.findUnique({ where: { userId: req.user.id }, include: { transactions: { orderBy: { createdAt: 'desc' } } } });
+        const rows = wallet?.transactions || [];
 
         const formatDate = (dateVal) => {
-            if (!dateVal) return '';
             const d = new Date(dateVal);
             const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
             return `${months[d.getMonth()]} ${d.getDate()}, ${d.getFullYear()}`;
         };
 
         const formatted = rows.map(r => {
-            const amtStr = r.amount >= 0 
-                ? `+₹${r.amount.toLocaleString()}` 
-                : `-₹${Math.abs(r.amount).toLocaleString()}`;
-
+            const amt = Number(r.amount);
+            const amtStr = amt >= 0 ? `+₹${amt.toLocaleString()}` : `-₹${Math.abs(amt).toLocaleString()}`;
             return {
-                id: r.transaction_code,
-                _id: r.id,
-                type: r.type,
-                desc: r.description,
-                amount: amtStr,
-                date: formatDate(r.created_at),
-                status: r.status
+                id: r.transactionCode, _id: r.id, type: r.type, desc: r.description, amount: amtStr,
+                grossAmount: Number(r.grossAmount), platformCommission: Number(r.platformCommission), settledNet: Number(r.settledNet),
+                date: formatDate(r.createdAt), rawDate: r.createdAt, status: r.status
             };
         });
 
-        return res.status(200).json({
-            success: true,
-            data: formatted
-        });
+        return res.status(200).json({ success: true, data: formatted });
     } catch (error) {
         console.error('Fetch wallet transactions error:', error);
-        return res.status(500).json({
-            success: false,
-            message: 'Internal Server Error fetching transaction logs.'
-        });
+        return res.status(500).json({ success: false, message: 'Internal Server Error fetching transaction logs.' });
     }
 };
 
-/**
- * Handle quick credit top-up balance
- */
 const topUpWallet = async (req, res) => {
-    const userId = req.user.id;
+    if (!req.user) {
+        return res.status(401).json({ success: false, message: 'Authentication required.' });
+    }
     const { amount } = req.body;
-
     if (!amount || Number(amount) <= 0) {
-        return res.status(400).json({
-            success: false,
-            message: 'Please provide a valid top-up amount greater than zero.'
-        });
+        return res.status(400).json({ success: false, message: 'Please provide a valid top-up amount greater than zero.' });
     }
 
-    const connection = await db.getConnection();
     try {
-        await connection.beginTransaction();
-
-        // 1. Lock or create user wallet
-        let [wallets] = await connection.query('SELECT * FROM wallets WHERE user_id = ? FOR UPDATE', [userId]);
-        let wallet;
-
-        if (wallets.length === 0) {
-            const walletId = 'wal_' + Date.now();
-            await connection.query('INSERT INTO wallets (id, user_id, balance) VALUES (?, ?, 0)', [walletId, userId]);
-            wallet = { id: walletId, balance: 0 };
-        } else {
-            wallet = wallets[0];
-        }
-
         const topUpAmt = Number(amount);
-        const newBalance = wallet.balance + topUpAmt;
-
-        // 2. Update wallet balance
-        await connection.query('UPDATE wallets SET balance = ? WHERE id = ?', [newBalance, wallet.id]);
-
-        // 3. Log credit transaction
-        const rand = Math.floor(1000 + Math.random() * 9000);
-        const txnCode = `TXN-${rand}`;
-        await connection.query(`
-            INSERT INTO wallet_transactions (wallet_id, transaction_code, type, description, amount, status)
-            VALUES (?, ?, 'Top-up', 'Wallet top-up', ?, 'Completed')
-        `, [wallet.id, txnCode, topUpAmt]);
-
-        await connection.commit();
-
-        return res.status(200).json({
-            success: true,
-            message: 'Wallet credited successfully',
-            data: {
-                balance: newBalance,
-                transactionCode: txnCode
+        const result = await prisma.$transaction(async (tx) => {
+            let wallet = await tx.wallet.findUnique({ where: { userId: req.user.id } });
+            if (!wallet) {
+                wallet = await tx.wallet.create({ data: { id: genId('wal'), userId: req.user.id, balance: 0 } });
             }
+            const updated = await tx.wallet.update({ where: { id: wallet.id }, data: { balance: { increment: topUpAmt } } });
+            const txnCode = genTxCode();
+            await tx.walletTransaction.create({
+                data: { walletId: wallet.id, transactionCode: txnCode, type: 'TOP_UP', description: 'Wallet top-up', grossAmount: topUpAmt, settledNet: topUpAmt, amount: topUpAmt, status: 'Completed' }
+            });
+            return { balance: Number(updated.balance), transactionCode: txnCode };
         });
+
+        emitToUser(req.user.id, 'wallet:updated', result);
+
+        return res.status(200).json({ success: true, message: 'Wallet credited successfully', data: result });
     } catch (error) {
-        await connection.rollback();
         console.error('Top-up wallet transaction error:', error);
-        return res.status(500).json({
-            success: false,
-            message: 'Internal Server Error processing wallet top-up.'
-        });
-    } finally {
-        connection.release();
+        return res.status(500).json({ success: false, message: 'Internal Server Error processing wallet top-up.' });
     }
 };
 
 /**
- * Process a booking cancellation and refund the amount back to user wallet (Owner only)
+ * Process a booking cancellation and refund the amount back to the customer's
+ * wallet (Owner/Super Admin only).
  */
 const refundBooking = async (req, res) => {
     const { bookingId, refundReason } = req.body;
-
     if (!bookingId) {
-        return res.status(400).json({
-            success: false,
-            message: 'bookingId is required to process refund.'
-        });
+        return res.status(400).json({ success: false, message: 'bookingId is required to process refund.' });
     }
 
-    const connection = await db.getConnection();
     try {
-        await connection.beginTransaction();
-
-        // 1. Fetch and verify booking details
-        const [bookings] = await connection.query('SELECT * FROM bookings WHERE id = ? FOR UPDATE', [bookingId]);
-        if (bookings.length === 0) {
-            await connection.rollback();
-            return res.status(404).json({
-                success: false,
-                message: 'Booking not found.'
-            });
+        const booking = await prisma.booking.findUnique({ where: { id: Number(bookingId) } });
+        if (!booking) {
+            return res.status(404).json({ success: false, message: 'Booking not found.' });
+        }
+        if (booking.status === 'REFUNDED') {
+            return res.status(400).json({ success: false, message: 'This booking has already been refunded.' });
+        }
+        if (!booking.userId) {
+            return res.status(400).json({ success: false, message: 'This booking has no linked customer account to refund into.' });
         }
 
-        const booking = bookings[0];
-
-        if (booking.status === 'CANCELLED') {
-            await connection.rollback();
-            return res.status(400).json({
-                success: false,
-                message: 'This booking has already been cancelled.'
-            });
-        }
-
-        // 2. Find or create customer wallet
-        let [wallets] = await connection.query('SELECT * FROM wallets WHERE user_id = ? FOR UPDATE', [booking.user_id]);
-        let wallet;
-
-        if (wallets.length === 0) {
-            const walletId = 'wal_' + Date.now();
-            await connection.query('INSERT INTO wallets (id, user_id, balance) VALUES (?, ?, 0)', [walletId, booking.user_id]);
-            wallet = { id: walletId, balance: 0 };
-        } else {
-            wallet = wallets[0];
-        }
-
-        // 3. Revert slot to AVAILABLE
-        await connection.query('UPDATE slots SET status = "AVAILABLE", notes = "" WHERE id = ?', [booking.slot_id]);
-
-        // 4. Update booking status to CANCELLED
-        await connection.query('UPDATE bookings SET status = "CANCELLED" WHERE id = ?', [bookingId]);
-
-        // 5. Credit user wallet with the booking amount
-        const newBalance = wallet.balance + booking.amount;
-        await connection.query('UPDATE wallets SET balance = ? WHERE id = ?', [newBalance, wallet.id]);
-
-        // 6. Record refund transaction log
-        const rand = Math.floor(1000 + Math.random() * 9000);
-        const txnCode = `TXN-${rand}`;
-        const refundDesc = refundReason ? `Refund: ${refundReason.trim()}` : `Refund for Booking ID #${bookingId}`;
-        
-        await connection.query(`
-            INSERT INTO wallet_transactions (wallet_id, transaction_code, type, description, amount, status)
-            VALUES (?, ?, 'Refund', ?, ?, 'Completed')
-        `, [wallet.id, txnCode, refundDesc, booking.amount]);
-
-        await connection.commit();
-
-        return res.status(200).json({
-            success: true,
-            message: 'Booking cancelled and refunded successfully.',
-            data: {
-                refundedAmount: booking.amount,
-                newBalance
+        const result = await prisma.$transaction(async (tx) => {
+            if (booking.slotId) {
+                await tx.slot.update({ where: { id: booking.slotId }, data: { status: 'AVAILABLE' } });
             }
+            await tx.booking.update({ where: { id: booking.id }, data: { status: 'REFUNDED' } });
+
+            const desc = refundReason ? `Refund: ${refundReason.trim()}` : `Refund for Booking #${booking.bookingCode || booking.id}`;
+            await MatchSettlementService.postWalletTransaction(tx, {
+                userId: booking.userId, type: 'REFUND', description: desc, amount: Number(booking.amount)
+            });
+
+            const wallet = await tx.wallet.findUnique({ where: { userId: booking.userId } });
+            return { refundedAmount: Number(booking.amount), newBalance: Number(wallet.balance) };
         });
+
+        emitToUser(booking.userId, 'wallet:updated', result);
+
+        return res.status(200).json({ success: true, message: 'Booking cancelled and refunded successfully.', data: result });
     } catch (error) {
-        await connection.rollback();
         console.error('Booking refund error:', error);
-        return res.status(500).json({
-            success: false,
-            message: 'Internal Server Error processing refund.'
-        });
-    } finally {
-        connection.release();
+        return res.status(500).json({ success: false, message: 'Internal Server Error processing refund.' });
     }
 };
 
-module.exports = {
-    getWalletBalance,
-    getWalletTransactions,
-    topUpWallet,
-    refundBooking
+/**
+ * POST /api/v1/wallet/withdraw
+ * Real withdrawal request: funds move from `balance` into `lockedEscrow`
+ * (held, not gone) and a real WalletTransaction is recorded -- no live payout
+ * gateway exists yet, so this doesn't actually wire a bank transfer, but it's
+ * an honest "requested and held" state rather than a UI-only fake success.
+ */
+const requestWithdrawal = async (req, res) => {
+    if (!req.user) {
+        return res.status(401).json({ success: false, message: 'Authentication required.' });
+    }
+    const { amount, payoutMethod, upiId, bankAccountNumber, bankIfsc } = req.body;
+    const withdrawAmt = Number(amount);
+    if (!withdrawAmt || withdrawAmt <= 0) {
+        return res.status(400).json({ success: false, message: 'Please provide a valid withdrawal amount greater than zero.' });
+    }
+    if (payoutMethod === 'UPI' && !upiId) {
+        return res.status(400).json({ success: false, message: 'upiId is required for UPI withdrawals.' });
+    }
+    if (payoutMethod === 'Bank' && (!bankAccountNumber || !bankIfsc)) {
+        return res.status(400).json({ success: false, message: 'bankAccountNumber and bankIfsc are required for bank withdrawals.' });
+    }
+
+    try {
+        const result = await prisma.$transaction(async (tx) => {
+            const wallet = await tx.wallet.findUnique({ where: { userId: req.user.id } });
+            if (!wallet || Number(wallet.balance) < withdrawAmt) {
+                throw Object.assign(new Error('Withdrawal request exceeds current settled balance.'), { code: 'INSUFFICIENT_FUNDS' });
+            }
+
+            const destination = payoutMethod === 'UPI' ? upiId : `${bankAccountNumber} (${bankIfsc})`;
+            const masked = payoutMethod === 'UPI' ? upiId : `**** **** **** ${String(bankAccountNumber).slice(-4)}`;
+
+            const updated = await tx.wallet.update({
+                where: { id: wallet.id },
+                data: { balance: { decrement: withdrawAmt }, lockedEscrow: { increment: withdrawAmt }, bankAccountMasked: masked }
+            });
+
+            const txnCode = genTxCode();
+            await tx.walletTransaction.create({
+                data: {
+                    walletId: wallet.id, transactionCode: txnCode, type: 'WITHDRAWAL',
+                    description: `Withdrawal requested to ${payoutMethod} (${destination})`,
+                    grossAmount: withdrawAmt, settledNet: withdrawAmt, amount: -withdrawAmt, status: 'Held'
+                }
+            });
+
+            return { balance: Number(updated.balance), locked: Number(updated.lockedEscrow), transactionCode: txnCode };
+        });
+
+        emitToUser(req.user.id, 'wallet:updated', result);
+
+        return res.status(200).json({ success: true, message: 'Withdrawal request submitted and held pending settlement.', data: result });
+    } catch (error) {
+        if (error.code === 'INSUFFICIENT_FUNDS') {
+            return res.status(400).json({ success: false, message: error.message });
+        }
+        console.error('Withdrawal request error:', error);
+        return res.status(500).json({ success: false, message: 'Internal Server Error processing withdrawal request.' });
+    }
 };
+
+module.exports = { getWalletBalance, getWalletTransactions, topUpWallet, refundBooking, requestWithdrawal };

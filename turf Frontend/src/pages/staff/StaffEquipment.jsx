@@ -1,19 +1,31 @@
-import { useState } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import DataTable from '../../components/ui/DataTable'
 import Badge from '../../components/ui/Badge'
 import Button from '../../components/ui/Button'
 import Modal from '../../components/ui/Modal'
-
-const initialEquipment = [
-    { name: 'Footballs', category: 'Equipment', stock: 3, condition: 'Fair', status: 'Low Stock' },
-    { name: 'Cricket Bats', category: 'Equipment', stock: 12, condition: 'Good', status: 'In Stock' },
-    { name: 'Shuttle Cocks', category: 'Consumable', stock: 8, condition: 'N/A', status: 'Low Stock' },
-]
+import { useToast } from '../../components/ui/Toast'
+import { getInventory } from '../../services/inventoryService'
 
 export default function StaffEquipment() {
-    const [equipment] = useState(initialEquipment)
+    const { addToast } = useToast()
+    const [equipment, setEquipment] = useState([])
+    const [isLoading, setIsLoading] = useState(true)
     const [isViewOpen, setIsViewOpen] = useState(false)
     const [selectedItem, setSelectedItem] = useState(null)
+
+    const fetchEquipment = useCallback(async () => {
+        setIsLoading(true)
+        try {
+            const res = await getInventory()
+            setEquipment(res.data || [])
+        } catch (err) {
+            addToast({ title: 'Load Failed', message: err.message || 'Failed to load equipment/inventory.', type: 'error' })
+        } finally {
+            setIsLoading(false)
+        }
+    }, [addToast])
+
+    useEffect(() => { fetchEquipment() }, [fetchEquipment])
 
     const handleView = (item) => {
         setSelectedItem(item)
@@ -21,18 +33,17 @@ export default function StaffEquipment() {
     }
 
     const equipmentColumns = [
-        { key: 'name', label: 'Item' }, 
-        { key: 'category', label: 'Category' }, 
+        { key: 'name', label: 'Item' },
+        { key: 'category', label: 'Category' },
         { key: 'stock', label: 'Stock' },
-        { key: 'condition', label: 'Condition' },
-        { 
-            key: 'status', 
-            label: 'Status', 
-            render: v => <Badge variant={v === 'In Stock' ? 'success' : v === 'Low Stock' ? 'warning' : 'danger'} dot>{v}</Badge> 
+        {
+            key: 'status',
+            label: 'Status',
+            render: v => <Badge variant={v === 'In Stock' ? 'success' : v === 'Low Stock' ? 'warning' : 'danger'} dot>{v}</Badge>
         },
-        { 
-            key: 'action', 
-            label: 'Action', 
+        {
+            key: 'action',
+            label: 'Action',
             render: (_, r) => (
                 <Button size="sm" variant="outline" onClick={() => handleView(r)}>
                     👁️ View
@@ -45,11 +56,17 @@ export default function StaffEquipment() {
         <div className="space-y-6">
             <div>
                 <h1 className="text-2xl font-bold text-surface-900">Equipment Status</h1>
-                <p className="text-surface-500 text-sm mt-1">Check and report equipment condition</p>
+                <p className="text-surface-500 text-sm mt-1">Check stock levels for equipment and consumables</p>
             </div>
 
             <div className="bg-white rounded-xl shadow-sm border border-surface-200 overflow-hidden pt-4">
-                <DataTable columns={equipmentColumns} data={equipment} />
+                {isLoading ? (
+                    <div className="py-10 text-center text-slate-400 text-sm font-semibold">Loading equipment...</div>
+                ) : equipment.length === 0 ? (
+                    <div className="py-10 text-center text-slate-400 text-sm font-semibold">No inventory items found for this branch.</div>
+                ) : (
+                    <DataTable columns={equipmentColumns} data={equipment} />
+                )}
             </div>
 
             {/* View Equipment Details Modal */}
@@ -85,14 +102,12 @@ export default function StaffEquipment() {
 
                         <div className="grid grid-cols-2 gap-4">
                             <div className="bg-surface-50 rounded-xl p-4">
-                                <p className="text-xs text-surface-400 uppercase tracking-wider mb-1">🔧 Condition</p>
-                                <p className="text-sm font-semibold text-surface-900">{selectedItem.condition}</p>
+                                <p className="text-xs text-surface-400 uppercase tracking-wider mb-1">💰 Asset Value</p>
+                                <p className="text-sm font-semibold text-surface-900">{selectedItem.value}</p>
                             </div>
                             <div className="bg-surface-50 rounded-xl p-4">
-                                <p className="text-xs text-surface-400 uppercase tracking-wider mb-1">📊 Status</p>
-                                <Badge variant={selectedItem.status === 'In Stock' ? 'success' : selectedItem.status === 'Low Stock' ? 'warning' : 'danger'} dot>
-                                    {selectedItem.status}
-                                </Badge>
+                                <p className="text-xs text-surface-400 uppercase tracking-wider mb-1">📊 Min Threshold</p>
+                                <p className="text-sm font-semibold text-surface-900">{selectedItem.threshold} units</p>
                             </div>
                         </div>
 

@@ -22,28 +22,11 @@ export default function GuestBookingLookupModal({ isOpen, onClose }) {
         setSearching(true)
         try {
             const apiResults = await lookupGuestBookings(query.trim())
-            if (Array.isArray(apiResults) && apiResults.length > 0) {
-                setResults(apiResults)
-            } else {
-                const rawBookings = localStorage.getItem('customer_bookings')
-                const parsed = rawBookings ? JSON.parse(rawBookings) : []
-                const qClean = query.trim().toLowerCase()
-
-                const found = parsed.filter(b => {
-                    const bId = (b.bookingId || b.id || '').toLowerCase()
-                    const bPhone = (b.customerPhone || b.phone || b.mobile || '').toLowerCase()
-                    return bId.includes(qClean) || (bPhone && bPhone.includes(qClean))
-                })
-
-                if (found.length > 0) {
-                    setResults(found)
-                } else {
-                    setResults([])
-                }
-            }
+            setResults(Array.isArray(apiResults) ? apiResults : [])
         } catch (err) {
             console.error('Guest lookup error:', err)
-            setResults([])
+            if (addToast) addToast({ message: err.message || 'Could not look up your booking right now.', type: 'error' })
+            setResults(null)
         } finally {
             setSearching(false)
         }
@@ -90,7 +73,7 @@ export default function GuestBookingLookupModal({ isOpen, onClose }) {
                                         <div className="text-[11px] text-slate-500">{b.date} · {b.time}</div>
                                     </div>
                                     <div className="text-right">
-                                        <span className="font-black text-[#10B981] text-sm block">{b.amount || '₹1,200'}</span>
+                                        <span className="font-black text-[#10B981] text-sm block">₹{Number(b.amount || 0).toLocaleString()}</span>
                                         <span className="text-[10px] text-slate-400">Paid via UPI</span>
                                     </div>
                                 </div>

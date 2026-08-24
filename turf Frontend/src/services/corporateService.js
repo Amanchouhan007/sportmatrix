@@ -1,160 +1,62 @@
-import api, { API_BASE_URL } from './api';
+import api from './api';
 
-// Submit Corporate & Bulk Turf Proposal Request
+/** Submit a corporate & bulk turf booking proposal. Real API call only. */
 export const submitCorporateProposal = async (proposalData) => {
-    try {
-        const payload = {
-            companyName: proposalData.companyName,
-            contactPerson: proposalData.contactPerson,
-            phone: proposalData.phone,
-            email: proposalData.email,
-            eventType: proposalData.eventType,
-            city: proposalData.city,
-            preferredTurf: proposalData.preferredTurf || 'Champion Turf Ground (Palasia, Indore)',
-            estimatedPlayers: proposalData.estimatedPlayers,
-            budget: proposalData.budget || '₹60,000 - ₹1,20,000',
-            eventDate: proposalData.eventDate || null,
-            timeSlot: proposalData.timeSlot || '🏆 Full Day Arena Booking (08:00 AM - 08:00 PM)',
-            paymentMode: proposalData.paymentMode || 'GST_INVOICE',
-            notes: `Turf: ${proposalData.preferredTurf || 'Any'} | Slot: ${proposalData.timeSlot || 'Full Day'} | Payment: ${proposalData.paymentMode || 'GST_INVOICE'}`
-        };
+    const payload = {
+        companyName: proposalData.companyName,
+        contactPerson: proposalData.contactPerson,
+        phone: proposalData.phone,
+        email: proposalData.email,
+        eventType: proposalData.eventType,
+        city: proposalData.city,
+        estimatedPlayers: proposalData.estimatedPlayers,
+        budget: proposalData.budget,
+        eventDate: proposalData.eventDate || null,
+        timeSlot: proposalData.timeSlot,
+        notes: proposalData.notes,
+    };
 
-        const res = await api.post('/corporate/proposals', payload);
-
-        // Client-side backup cache in localStorage & live window event broadcast
-        const record = res.data || { ...payload, id: `CORP-${Date.now()}`, createdAt: new Date().toISOString() };
-        try {
-            const existing = JSON.parse(localStorage.getItem('corporate_leads') || '[]');
-            existing.unshift(record);
-            localStorage.setItem('corporate_leads', JSON.stringify(existing.slice(0, 50)));
-        } catch (e) {
-            console.warn('LocalStorage backup write failed:', e);
-        }
-
-        // Broadcast real-time event for active SuperAdmin & Turf Owner sessions
-        try {
-            if (typeof window !== 'undefined') {
-                window.dispatchEvent(new CustomEvent('corporate_proposal_created', { detail: record }));
-            }
-        } catch (evErr) {}
-
-        return {
-            success: true,
-            data: record,
-            message: res.message || 'Corporate proposal request submitted successfully!'
-        };
-    } catch (error) {
-        console.warn('Backend corporate proposal API offline, saving to local store:', error);
-
-        // Seamless fallback save to localStorage
-        const fallbackRecord = {
-            id: `CORP-${Date.now()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`,
-            ...proposalData,
-            status: 'NEW',
-            createdAt: new Date().toISOString(),
-            isLocalSync: true
-        };
-
-        try {
-            const existing = JSON.parse(localStorage.getItem('corporate_leads') || '[]');
-            existing.unshift(fallbackRecord);
-            localStorage.setItem('corporate_leads', JSON.stringify(existing.slice(0, 50)));
-        } catch (e) {
-            console.error(e);
-        }
-
-        try {
-            if (typeof window !== 'undefined') {
-                window.dispatchEvent(new CustomEvent('corporate_proposal_created', { detail: fallbackRecord }));
-            }
-        } catch (evErr) {}
-
-        return {
-            success: true,
-            data: fallbackRecord,
-            message: 'Corporate proposal request recorded successfully!'
-        };
+    const res = await api.post('/corporate/proposals', payload);
+    if (!res || res.success === false) {
+        throw new Error(res?.message || 'Failed to submit corporate proposal.');
     }
+    return res;
 };
 
-// Fetch All Corporate Proposals for CRM
+/** Fetch all corporate proposals (Owner/Super Admin CRM). */
 export const getCorporateProposals = async (params = {}) => {
-    try {
-        const res = await api.get('/corporate/proposals', { params });
-        return res.data || res;
-    } catch (error) {
-        console.warn('Falling back to local corporate leads store:', error);
-        try {
-            const local = JSON.parse(localStorage.getItem('corporate_leads') || '[]');
-            return local;
-        } catch (e) {
-            return [];
-        }
+    const res = await api.get('/corporate/proposals', { params });
+    if (!res || res.success === false) {
+        throw new Error(res?.message || 'Failed to fetch corporate proposals.');
     }
+    return res.data || [];
 };
 
-// Update Corporate Proposal Status (for Staff / Owner CRM)
+/** Update a corporate proposal's status/notes. */
 export const updateCorporateProposalStatus = async (id, status, notes) => {
-    try {
-        const res = await api.patch(`/corporate/proposals/${id}/status`, { status, notes });
-        return { success: true, data: res.data || res };
-    } catch (error) {
-        console.error('Failed to update proposal status:', error);
-        return { success: false, error };
+    const res = await api.patch(`/corporate/proposals/${id}/status`, { status, notes });
+    if (!res || res.success === false) {
+        throw new Error(res?.message || 'Failed to update proposal status.');
     }
+    return res;
 };
 
-// Admin Custom Quote & Pricing Submission
+/** Submit an admin custom quote for a corporate proposal. */
 export const saveCorporateQuote = async (proposalId, quoteData) => {
-    try {
-        const payload = {
-            quotedPrice: quoteData.quotedPrice,
-            discountAmount: quoteData.discountAmount || 0,
-            gstAmount: quoteData.gstAmount || 0,
-            finalTotal: quoteData.finalTotal,
-            depositRequired: quoteData.depositRequired,
-            addons: quoteData.addons || [],
-            adminNotes: quoteData.adminNotes || '',
-            status: quoteData.status || 'QUOTE_SENT',
-            quotedAt: new Date().toISOString()
-        };
-
-        // Update local CRM storage
-        try {
-            const existing = JSON.parse(localStorage.getItem('corporate_leads') || '[]');
-            const updated = existing.map(item => {
-                if (item.id === proposalId || item.id === String(proposalId)) {
-                    return { ...item, ...payload, quoteData };
-                }
-                return item;
-            });
-            localStorage.setItem('corporate_leads', JSON.stringify(updated));
-
-            // Also update global CRM leads if stored
-            const crmLeads = JSON.parse(localStorage.getItem('global_crm_leads') || '[]');
-            if (crmLeads.length > 0) {
-                const updatedCrm = crmLeads.map(l => {
-                    if (l.id === proposalId || l.id === String(proposalId) || l.proposalId === proposalId) {
-                        return { ...l, status: payload.status, quotedPrice: payload.finalTotal, quoteData };
-                    }
-                    return l;
-                });
-                localStorage.setItem('global_crm_leads', JSON.stringify(updatedCrm));
-            }
-        } catch (e) {
-            console.warn('LocalStorage quote update failed:', e);
-        }
-
-        try {
-            const res = await api.patch(`/corporate/proposals/${proposalId}/quote`, payload);
-            return { success: true, data: res.data || res };
-        } catch (err) {
-            return { success: true, data: payload, isLocal: true };
-        }
-    } catch (error) {
-        console.error('Error saving corporate quote:', error);
-        return { success: false, error };
+    const res = await api.patch(`/corporate/proposals/${proposalId}/quote`, {
+        quotedPrice: quoteData.quotedPrice,
+        discountAmount: quoteData.discountAmount || 0,
+        gstAmount: quoteData.gstAmount || 0,
+        finalTotal: quoteData.finalTotal,
+        depositRequired: quoteData.depositRequired,
+        addons: quoteData.addons || [],
+        adminNotes: quoteData.adminNotes || '',
+        status: quoteData.status || 'PROPOSAL_SENT',
+    });
+    if (!res || res.success === false) {
+        throw new Error(res?.message || 'Failed to save corporate quote.');
     }
+    return res;
 };
 
 export default {

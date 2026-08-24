@@ -13,7 +13,7 @@ import ConfirmDialog from '../../components/ui/ConfirmDialog'
 
 import { useToast } from '../../components/ui/Toast'
 import { useAuth } from '../../context/AuthContext'
-import { getBranches } from '../../services/branchService'
+import { getBranches, updateBranch } from '../../services/branchService'
 import {
     getMasterSports,
     getBranchSports,
@@ -237,21 +237,16 @@ export default function SportsManagement() {
                     }
 
                     // Fetch branches and active branch sports
-                    const branchesRes = await getBranches({ ownerId: user._id })
-                    let branchList = (branchesRes && branchesRes.success && branchesRes.data && branchesRes.data.branches) ? branchesRes.data.branches : []
+                    const branchesRes = await getBranches()
+                    let branchList = branchesRes?.data?.branches || branchesRes?.branches || (Array.isArray(branchesRes?.data) ? branchesRes.data : [])
                     
-                    if (branchList.length === 0) {
-                        branchList = [
-                            { _id: 'br_101', id: 'br_101', branchName: 'Spike Cricket Turf', city: 'Indore', address: 'Bhawarkua, Indore' }
-                        ]
-                    }
                     setBranches(branchList)
 
-                    let activeBranch = selectedBranchId || user.branchId
+                    let activeBranch = selectedBranchId || user.branchId || (branchList[0] ? (branchList[0].id || branchList[0]._id) : null)
                     if (branchList.length > 0) {
-                        const exists = branchList.some(b => b._id === activeBranch)
+                        const exists = branchList.some(b => (b.id || b._id) === activeBranch)
                         if (!exists) {
-                            activeBranch = branchList[0]._id
+                            activeBranch = branchList[0].id || branchList[0]._id
                         }
                     }
 
@@ -260,8 +255,9 @@ export default function SportsManagement() {
                         localStorage.setItem('selectedBranchId', activeBranch)
 
                         const sportsRes = await getBranchSports(activeBranch)
-                        if (sportsRes && sportsRes.success && Array.isArray(sportsRes.data) && sportsRes.data.length > 0) {
-                            setSports(sportsRes.data)
+                        const sportsData = sportsRes?.data || sportsRes
+                        if (Array.isArray(sportsData)) {
+                            setSports(sportsData)
                         }
                     }
                 } catch (err) {
@@ -280,8 +276,14 @@ export default function SportsManagement() {
         setIsCardsLoading(true)
         try {
             const res = await getBranchSports(branchId)
-            if (res && res.success) {
+            if (res && res.success && Array.isArray(res.data)) {
                 setSports(res.data)
+            } else if (Array.isArray(res)) {
+                setSports(res)
+            } else if (res && Array.isArray(res.data)) {
+                setSports(res.data)
+            } else {
+                setSports([])
             }
         } catch (err) {
             console.error('Error loading branch sports:', err)
@@ -305,15 +307,8 @@ export default function SportsManagement() {
             return
         }
 
-        // Restrict only to allowed master sports
-        const allowedSports = ['Cricket', 'Football', 'Football', 'Cricket']
         const selectedSportObj = masterSports.find(s => (s.id || s._id) === currentSport.sportId)
         const sportName = selectedSportObj ? selectedSportObj.name : currentSport.name
-
-        if (!sportName || !allowedSports.includes(sportName)) {
-            addToast({ message: 'Only Cricket, Football, Football, and Cricket are allowed.', type: 'error' })
-            return
-        }
 
         const regPrice = Number(currentSport.price)
         if (isNaN(regPrice) || regPrice <= 0) {
@@ -460,6 +455,52 @@ export default function SportsManagement() {
         }
     }
 
+    // Quick Rates Save Handler (Updates minPriceHourly on Branch & all BranchSports in DB)
+    const handleSaveQuickPricing = async () => {
+        if (!selectedBranchId) {
+            addToast({ message: 'No branch selected.', type: 'error' })
+            return
+        }
+        setIsSubmitLoading(true)
+        try {
+            const regP = Number(quickPricingData.regularPrice)
+            const peakP = Number(quickPricingData.peakPrice)
+
+            if (isNaN(regP) || regP <= 0 || isNaN(peakP) || peakP <= 0) {
+                addToast({ message: 'Rates must be valid numbers greater than 0', type: 'error' })
+                return
+            }
+
+            // 1. Update minPriceHourly on Branch
+            await updateBranch(selectedBranchId, { minPriceHourly: regP })
+
+            // 2. Update regular & peak prices for all configured sports in DB
+            if (sports && sports.length > 0) {
+                for (const s of sports) {
+                    const sId = s.id || s._id
+                    if (sId) {
+                        await updateSport(sId, {
+                            regularPrice: regP,
+                            peakPrice: peakP
+                        })
+                    }
+                }
+            }
+
+            addToast({
+                message: `Updated rates to ₹${regP}/hr (Regular) & ₹${peakP}/hr (Peak)! Saved to database & synced.`,
+                type: 'success'
+            })
+            setQuickPricingModal(false)
+            await loadBranchSports(selectedBranchId)
+        } catch (err) {
+            console.error('Error saving quick rates:', err)
+            addToast({ message: err.message || 'Failed to update rates.', type: 'error' })
+        } finally {
+            setIsSubmitLoading(false)
+        }
+    }
+
     // Card editing selector
     const handleEdit = (sport) => {
         setCurrentSport({
@@ -537,17 +578,18 @@ export default function SportsManagement() {
                         </h1>
                         <p className="text-surface-500 text-sm mt-0.5 font-medium">Configure active athletic sports, pricing tiers, and court availability</p>
                     </div>
-                    {branches.length > 1 && (
-                        <div className="md:ml-4 min-w-56">
+                    {branches.length > 0 && (
+                        <div className="md:ml-4 min-w-64">
                             <Select
                                 value={selectedBranchId}
                                 onChange={(e) => {
-                                    setSelectedBranchId(e.target.value)
-                                    localStorage.setItem('selectedBranchId', e.target.value)
+                                    const val = e.target.value
+                                    setSelectedBranchId(val)
+                                    localStorage.setItem('selectedBranchId', val)
                                 }}
                                 options={branches.map(b => ({
-                                    value: b._id,
-                                    label: `${b.branchName} (${b.branchCode})`
+                                    value: b.id || b._id,
+                                    label: `🏟️ ${b.branchName || 'Main Turf'} (${b.city || 'Arena'})`
                                 }))}
                             />
                         </div>
@@ -583,7 +625,17 @@ export default function SportsManagement() {
                     <div className="flex items-center gap-3">
                         <button 
                             type="button"
-                            onClick={() => setQuickPricingModal(true)}
+                            onClick={() => {
+                                if (sports && sports.length > 0) {
+                                    const first = sports[0]
+                                    setQuickPricingData(prev => ({
+                                        ...prev,
+                                        regularPrice: Number(first.regularPrice) || 1000,
+                                        peakPrice: Number(first.peakPrice) || 1500
+                                    }))
+                                }
+                                setQuickPricingModal(true)
+                            }}
                             className="bg-[#C8FF2E] hover:bg-[#b8f51a] text-[#111827] text-xs font-black uppercase tracking-wider px-4 py-2.5 rounded-xl shadow-md transition-all transform hover:scale-[1.02] cursor-pointer flex items-center gap-2"
                         >
                             <span>⚙️</span> Select & Configure Rates
@@ -592,9 +644,7 @@ export default function SportsManagement() {
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 max-w-2xl gap-3.5">
-                    {sports
-                        .filter(sport => (sport.sportId?.name || sport.name)?.toLowerCase() !== 'football')
-                        .map((sport) => {
+                    {sports.map((sport) => {
                             const sName = sport.sportId?.name || sport.name;
                             const sIcon = sport.sportId?.icon || sport.icon || '🏏';
                             const regP = sport.regularPrice || 800;
@@ -676,7 +726,7 @@ export default function SportsManagement() {
                     Array.from({ length: 2 }).map((_, i) => (
                         <SkeletonLoader key={i} variant="card" />
                     ))
-                ) : sports.filter(s => (s.sportId?.name || s.name)?.toLowerCase() !== 'football').length === 0 ? (
+                ) : sports.length === 0 ? (
                     <div className="col-span-full">
                         <EmptyState
                             icon="🏏"
@@ -685,9 +735,7 @@ export default function SportsManagement() {
                         />
                     </div>
                 ) : (
-                    sports
-                        .filter(sport => (sport.sportId?.name || sport.name)?.toLowerCase() !== 'football')
-                        .map((sport) => {
+                    sports.map((sport) => {
                         const sportName = sport.sportId?.name || sport.name
                         const sportIcon = sport.sportId?.icon || sport.icon || '🏏'
                         const isActiveStatus = sport.status === 'ACTIVE'
@@ -707,18 +755,20 @@ export default function SportsManagement() {
 
                                     <div className="mt-4">
                                         <h3 className="text-lg font-black text-surface-900 tracking-tight">{sportName}</h3>
-                                        <p className="text-xs text-surface-400 font-semibold mt-0.5">{sport.totalCourts} Active Courts/Turfs</p>
+                                        <p className="text-xs text-surface-500 font-semibold mt-0.5">
+                                            {sport.totalCourts} Active Courts • {sport.slotDuration || 60} min slots ({sport.openingTime || '06:00'} - {sport.closingTime || '23:00'})
+                                        </p>
                                     </div>
                                 </div>
 
                                 {/* Pricing details */}
                                 <div className="grid grid-cols-2 gap-2 border-y border-surface-100 py-3 my-3 text-xs">
                                     <div>
-                                        <span className="text-surface-400 font-semibold uppercase block tracking-wider">Regular</span>
+                                        <span className="text-surface-400 font-semibold uppercase block tracking-wider">Regular Rate</span>
                                         <span className="text-sm font-extrabold text-surface-800">₹{sport.regularPrice}/hr</span>
                                     </div>
                                     <div>
-                                        <span className="text-surface-400 font-semibold uppercase block tracking-wider text-right">Peak Hour</span>
+                                        <span className="text-surface-400 font-semibold uppercase block tracking-wider text-right">Peak Hour Rate</span>
                                         <span className="text-sm font-extrabold text-amber-600 block text-right">₹{sport.peakPrice}/hr</span>
                                     </div>
                                 </div>
@@ -777,12 +827,10 @@ export default function SportsManagement() {
                                     icon: selected ? selected.icon : ''
                                 }))
                             }}
-                            options={masterSports
-                                .filter(s => s.name === 'Cricket')
-                                .map(s => ({
-                                    value: s.id || s._id,
-                                    label: `${s.icon} ${s.name}`
-                                }))}
+                            options={masterSports.map(s => ({
+                                value: s.id || s._id,
+                                label: `${s.icon} ${s.name}`
+                            }))}
                         />
                     </div>
 
@@ -965,11 +1013,8 @@ export default function SportsManagement() {
                     {/* Save Actions */}
                     <div className="flex gap-3 justify-end pt-3 border-t border-slate-200">
                         <Button variant="secondary" onClick={() => setQuickPricingModal(false)}>Cancel</Button>
-                        <Button onClick={() => {
-                            addToast({ message: `Updated rates to ₹${quickPricingData.regularPrice}/hr (Regular) & ₹${quickPricingData.peakPrice}/hr (Peak) for ${branches.find(b => b._id === selectedBranchId)?.branchName || 'Turf'}! Auto-synced with booking page.`, type: 'success' });
-                            setQuickPricingModal(false);
-                        }}>
-                            Save Rates & Sync Booking Page
+                        <Button onClick={handleSaveQuickPricing} disabled={isSubmitLoading}>
+                            {isSubmitLoading ? 'Saving...' : 'Save Rates & Sync Booking Page'}
                         </Button>
                     </div>
                 </div>

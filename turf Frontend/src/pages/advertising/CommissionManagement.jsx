@@ -8,9 +8,8 @@ import Select from '../../components/ui/Select'
 import Modal from '../../components/ui/Modal'
 import Pagination from '../../components/ui/Pagination'
 import { useToast } from '../../components/ui/Toast'
-import { FiDollarSign, FiFileText, FiCheckCircle, FiClock, FiDownload, FiCreditCard } from 'react-icons/fi'
-
-const INITIAL_COMMISSIONS = []
+import { FiDollarSign, FiFileText, FiCheckCircle, FiClock, FiCreditCard } from 'react-icons/fi'
+import { getAdCommissions, markCommissionPaid } from '../../services/adsService'
 
 export default function CommissionManagement() {
     const navigate = useNavigate()
@@ -19,25 +18,24 @@ export default function CommissionManagement() {
     const { addToast } = useToast()
     const [commissions, setCommissions] = useState([])
     const [summary, setSummary] = useState({ totalPool: 0, pendingPayouts: 0, settledCommissions: 0 })
+    const [isLoading, setIsLoading] = useState(true)
     const [search, setSearch] = useState('')
     const [statusFilter, setStatusFilter] = useState('ALL')
     const [currentPage, setCurrentPage] = useState(1)
     const [selectedInvoice, setSelectedInvoice] = useState(null)
+    const [payingId, setPayingId] = useState(null)
     const itemsPerPage = 5
 
     const fetchLiveCommissions = async () => {
+        setIsLoading(true)
         try {
-            const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5005/api/v1';
-            const res = await fetch(`${API_URL}/ads/commissions`);
-            const data = await res.json();
-            if (data.success) {
-                setCommissions(Array.isArray(data.data) ? data.data : []);
-                if (data.summary) {
-                    setSummary(data.summary);
-                }
-            }
+            const res = await getAdCommissions()
+            setCommissions(Array.isArray(res.data) ? res.data : [])
+            if (res.summary) setSummary(res.summary)
         } catch (err) {
-            console.error('Error fetching dynamic commissions:', err);
+            addToast({ title: 'Load Failed', message: err.message || 'Failed to load commissions.', type: 'error' })
+        } finally {
+            setIsLoading(false)
         }
     };
 
@@ -45,9 +43,7 @@ export default function CommissionManagement() {
         fetchLiveCommissions();
     }, []);
 
-    const activeCommissionsList = commissions;
-
-    const filteredData = activeCommissionsList.filter(item => {
+    const filteredData = commissions.filter(item => {
         if (!item) return false;
         const matchesSearch = String(item.bookingId || '').toLowerCase().includes(search.toLowerCase()) ||
             String(item.adId || '').toLowerCase().includes(search.toLowerCase()) ||
@@ -61,14 +57,15 @@ export default function CommissionManagement() {
     const paginatedData = filteredData.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)
 
     const handleMarkPaid = async (id) => {
-        setCommissions(prev => prev.map(item => item.bookingId === id ? { ...item, paymentStatus: 'Paid' } : item))
-        addToast({ message: `Commission for Booking ${id} marked as Paid!`, type: 'success' })
+        setPayingId(id)
         try {
-            const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5005/api/v1';
-            await fetch(`${API_URL}/ads/commissions/${id}/pay`, { method: 'PATCH' });
+            await markCommissionPaid(id)
+            addToast({ message: `Commission for Booking ${id} marked as Paid!`, type: 'success' })
             fetchLiveCommissions();
         } catch (err) {
-            console.error('Error marking commission paid:', err);
+            addToast({ title: 'Update Failed', message: err.message || 'Could not mark this commission as paid.', type: 'error' })
+        } finally {
+            setPayingId(null)
         }
     }
 
@@ -180,8 +177,8 @@ export default function CommissionManagement() {
                             onChange={(e) => { setStatusFilter(e.target.value); setCurrentPage(1); }}
                         >
                             <option value="ALL">All Statuses</option>
-                            <option value="Pending">Pending</option>
-                            <option value="Paid">Paid</option>
+                            <option value="PENDING">Pending</option>
+                            <option value="PAID">Paid</option>
                         </Select>
                     </div>
                 </div>
@@ -202,7 +199,9 @@ export default function CommissionManagement() {
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-surface-100">
-                            {paginatedData.length > 0 ? (
+                            {isLoading ? (
+                                <tr><td colSpan="8" className="px-5 py-8 text-center text-surface-400 font-medium">Loading commissions...</td></tr>
+                            ) : paginatedData.length > 0 ? (
                                 paginatedData.map((item) => (
                                     <tr key={item.bookingId} className="hover:bg-surface-50/50 transition-colors">
                                         <td className="px-5 py-4 font-bold text-surface-900 whitespace-nowrap">{item.bookingId}</td>
@@ -222,19 +221,20 @@ export default function CommissionManagement() {
                                             </button>
                                         </td>
                                         <td className="px-5 py-4 whitespace-nowrap">
-                                            <Badge variant={item.paymentStatus === 'Paid' ? 'success' : 'warning'} dot>
-                                                {item.paymentStatus}
+                                            <Badge variant={item.paymentStatus === 'PAID' ? 'success' : 'warning'} dot>
+                                                {item.paymentStatus === 'PAID' ? 'Paid' : 'Pending'}
                                             </Badge>
                                         </td>
                                         <td className="px-5 py-4 text-right whitespace-nowrap">
-                                            {item.paymentStatus === 'Pending' ? (
+                                            {item.paymentStatus === 'PENDING' ? (
                                                 <Button
                                                     size="xs"
                                                     variant="primary"
                                                     className="px-4 py-1.5 text-xs font-bold shadow-xs"
+                                                    disabled={payingId === item.bookingId}
                                                     onClick={() => handleMarkPaid(item.bookingId)}
                                                 >
-                                                    Mark Paid
+                                                    {payingId === item.bookingId ? 'Saving...' : 'Mark Paid'}
                                                 </Button>
                                             ) : (
                                                 <span className="text-xs text-surface-400 italic font-medium">Settled</span>
@@ -273,8 +273,8 @@ export default function CommissionManagement() {
                                 <h3 className="font-bold text-surface-900 text-base">SportMatrix Platform</h3>
                                 <p className="text-xs text-surface-500 font-medium">Commission Invoice Statement</p>
                             </div>
-                            <Badge variant={selectedInvoice.paymentStatus === 'Paid' ? 'success' : 'warning'} dot>
-                                {selectedInvoice.paymentStatus}
+                            <Badge variant={selectedInvoice.paymentStatus === 'PAID' ? 'success' : 'warning'} dot>
+                                {selectedInvoice.paymentStatus === 'PAID' ? 'Paid' : 'Pending'}
                             </Badge>
                         </div>
 
@@ -284,7 +284,9 @@ export default function CommissionManagement() {
                                 <span className="text-surface-500">Date & Time:</span>
                                 <span className="font-bold text-surface-900 block flex items-center gap-1.5 mt-0.5">
                                     <span>📅 {selectedInvoice.date}</span>
-                                    <span className="text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-lg border border-emerald-200 font-mono font-extrabold text-[11px]">⏰ {selectedInvoice.time || '10:45 AM'}</span>
+                                    {selectedInvoice.time && (
+                                        <span className="text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-lg border border-emerald-200 font-mono font-extrabold text-[11px]">⏰ {selectedInvoice.time}</span>
+                                    )}
                                 </span>
                             </div>
                             <div><span className="text-surface-500">Booking ID:</span> <span className="font-bold text-surface-900 block">{selectedInvoice.bookingId}</span></div>
@@ -297,11 +299,9 @@ export default function CommissionManagement() {
                             <div className="flex justify-between text-surface-900 font-bold border-t border-surface-200 pt-2"><span>Net Payable to Turf Owner:</span><span>{selectedInvoice.ownerAmount}</span></div>
                         </div>
 
+                        {/* PDF export isn't built yet -- no button pretending to generate one. */}
                         <div className="flex justify-end gap-2 pt-2">
                             <Button variant="secondary" onClick={() => setSelectedInvoice(null)}>Close</Button>
-                            <Button variant="primary" onClick={() => { addToast({ message: 'Invoice download started.', type: 'info' }); setSelectedInvoice(null); }}>
-                                <FiDownload className="mr-1 inline" /> Download PDF
-                            </Button>
                         </div>
                     </div>
                 </Modal>

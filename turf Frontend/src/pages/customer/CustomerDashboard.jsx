@@ -1,80 +1,71 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import StatCard from '../../components/ui/StatCard'
 import Card from '../../components/ui/Card'
 import Badge from '../../components/ui/Badge'
 import Button from '../../components/ui/Button'
 import { useNavigate } from 'react-router-dom'
 import { getPublicTournaments, getTeams } from '../../services/tournamentService'
+import { getUpcomingBookings } from '../../services/bookingService'
+import api from '../../services/api'
 import { useAuth } from '../../context/AuthContext'
+import useRealtime from '../../utils/useRealtime'
 
 export default function CustomerDashboard() {
     const { user } = useAuth()
     const navigate = useNavigate()
-    const DEFAULT_DEMO = []
 
     const [stats, setStats] = useState({ activeTournaments: 0, activeTeams: 0, matchesPlayed: 0 })
+    const [walletBalance, setWalletBalance] = useState(0)
     const [myBookings, setMyBookings] = useState([])
 
-    useEffect(() => {
-        const fetchDashboardData = async () => {
-            try {
-                const tRes = await getPublicTournaments()
-                const teamRes = await getTeams()
-
-                let activeTournaments = 0
-                if (tRes?.success && Array.isArray(tRes.data)) {
-                    activeTournaments = tRes.data.filter(t => ['Approved', 'Active'].includes(t.status)).length
-                }
-
-                let activeTeams = 0
-                if (teamRes?.success && Array.isArray(teamRes.data)) {
-                    activeTeams = teamRes.data.length
-                }
-
-                setStats({ activeTournaments, activeTeams, matchesPlayed: 0 })
-            } catch (err) {
-                console.error("Failed to load tournament dashboard stats", err)
-            }
-        }
-        fetchDashboardData()
-
-        // Load customer's personal bookings
+    const fetchDashboardData = useCallback(async () => {
         try {
-            const rawCustomer = localStorage.getItem('customer_bookings')
-            const rawGuest = localStorage.getItem('guest_bookings')
-            const cList = rawCustomer ? JSON.parse(rawCustomer) : []
-            const gList = rawGuest ? JSON.parse(rawGuest) : []
-            const allBookings = [...(Array.isArray(cList) ? cList : []), ...(Array.isArray(gList) ? gList : [])]
+            const tRes = await getPublicTournaments()
+            const teamRes = await getTeams()
 
-            if (allBookings.length > 0) {
-                const currentEmail = (user?.email || '').toLowerCase()
-                const currentUserId = user?.id || ''
-                const currentPhone = user?.phone || user?.mobile || ''
-
-                if (user && (currentEmail || currentUserId || currentPhone)) {
-                    const filtered = allBookings.filter(b => {
-                        const bEmail = (b.userEmail || b.email || '').toLowerCase()
-                        const bUserId = b.userId || b.id || ''
-                        const bPhone = b.customerPhone || b.phone || ''
-
-                        if (currentEmail && bEmail && bEmail === currentEmail) return true
-                        if (currentUserId && bUserId && bUserId === currentUserId) return true
-                        if (currentPhone && bPhone && bPhone === currentPhone) return true
-                        return false
-                    })
-                    if (filtered.length > 0) {
-                        setMyBookings(filtered)
-                        return
-                    }
-                }
-                setMyBookings(allBookings)
-            } else {
-                setMyBookings([])
+            let activeTournaments = 0
+            if (tRes?.success && Array.isArray(tRes.data)) {
+                activeTournaments = tRes.data.filter(t => ['Approved', 'Active'].includes(t.status)).length
             }
-        } catch (e) { }
-    }, [user?.email, user?.id])
 
-    const upcomingBookings = myBookings.filter(b => b.status === 'Confirmed' || b.status === 'Pending')
+            let activeTeams = 0
+            if (teamRes?.success && Array.isArray(teamRes.data)) {
+                activeTeams = teamRes.data.length
+            }
+
+            setStats({ activeTournaments, activeTeams, matchesPlayed: 0 })
+        } catch (err) {
+            console.error("Failed to load tournament dashboard stats", err)
+        }
+
+        try {
+            const bookingsRes = await getUpcomingBookings()
+            setMyBookings((bookingsRes.data || []).map(b => ({
+                id: b.booking_id,
+                sport: b.sport_name,
+                venue: b.court_name,
+                date: b.slot_date ? new Date(b.slot_date).toLocaleDateString('en-IN') : '',
+                time: b.start_time,
+                status: b.status === 'COMPLETED' ? 'Confirmed' : b.status
+            })))
+        } catch (err) {
+            setMyBookings([])
+        }
+
+        try {
+            const walletRes = await api.get('/wallet/me')
+            if (walletRes && walletRes.success && walletRes.data) {
+                setWalletBalance(walletRes.data.balance || 0)
+            }
+        } catch (err) {
+            // Non-fatal: wallet card just shows 0
+        }
+    }, [])
+
+    useEffect(() => { fetchDashboardData() }, [fetchDashboardData])
+    useRealtime(['booking:new', 'booking:cancelled', 'wallet:updated', 'payment:settled'], () => fetchDashboardData())
+
+    const upcomingBookings = myBookings.filter(b => b.status === 'Confirmed' || b.status === 'Pending' || b.status === 'HELD')
 
     return (
         <div className="space-y-6">
@@ -87,7 +78,7 @@ export default function CustomerDashboard() {
                 <StatCard label="Total Bookings" value={myBookings.length.toString()} icon="📅" colorTheme="blue" />
                 <StatCard label="Active Teams" value={stats.activeTeams.toString()} icon="👥" colorTheme="emerald" />
                 <StatCard label="Active Tournaments" value={stats.activeTournaments.toString()} icon="🏆" colorTheme="purple" />
-                <StatCard label="Wallet Balance" value="₹0" icon="💰" colorTheme="amber" />
+                <StatCard label="Wallet Balance" value={`₹${walletBalance.toLocaleString('en-IN')}`} icon="💰" colorTheme="amber" />
             </div>
 
             <Card>

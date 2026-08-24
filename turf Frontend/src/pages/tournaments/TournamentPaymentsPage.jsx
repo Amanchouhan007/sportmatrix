@@ -1,38 +1,54 @@
-import { useState } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import DataTable from '../../components/ui/DataTable'
 import Badge from '../../components/ui/Badge'
 import Card from '../../components/ui/Card'
 import StatCard from '../../components/ui/StatCard'
+import { useToast } from '../../components/ui/Toast'
 import { HiCreditCard, HiCurrencyRupee, HiDocumentText, HiTrendingUp } from 'react-icons/hi'
-import { MASTER_PAYMENTS } from '../../services/tournamentStore'
+import { getTournamentPayments } from '../../services/tournamentService'
 
 export default function TournamentPaymentsPage() {
-    const [payments] = useState(MASTER_PAYMENTS)
+    const { addToast } = useToast()
+    const [payments, setPayments] = useState([])
+    const [summary, setSummary] = useState({ totalRevenue: 0, totalCommission: 0, totalTransactions: 0 })
+    const [isLoading, setIsLoading] = useState(true)
 
-    const totalRevenue = payments.reduce((sum, p) => sum + p.amount, 0)
-    const totalCommission = payments.reduce((sum, p) => sum + p.commissionAmount, 0)
+    const fetchPayments = useCallback(async () => {
+        setIsLoading(true)
+        try {
+            const res = await getTournamentPayments()
+            setPayments(res.data || [])
+            setSummary(res.summary || { totalRevenue: 0, totalCommission: 0, totalTransactions: 0 })
+        } catch (err) {
+            addToast({ title: 'Load Failed', message: err.message || 'Failed to load tournament payments.', type: 'error' })
+        } finally {
+            setIsLoading(false)
+        }
+    }, [addToast])
+
+    useEffect(() => { fetchPayments() }, [fetchPayments])
 
     const columns = [
         { key: 'invoiceNumber', label: 'Invoice #', render: v => <span className="font-mono font-extrabold text-primary-600">{v}</span> },
-        { 
-            key: 'payerName', 
-            label: 'Payer & Tournament', 
+        {
+            key: 'payerName',
+            label: 'Payer & Tournament',
             render: (_, r) => (
                 <div>
                     <div className="font-extrabold text-surface-900">{r.payerName}</div>
-                    <div className="text-[11px] text-surface-400 font-medium">{r.tournamentTitle}</div>
+                    <div className="text-[11px] text-surface-400 font-medium">{r.tournament?.title || ''}</div>
                 </div>
-            ) 
+            )
         },
-        { 
-            key: 'transactionType', 
+        {
+            key: 'transactionType',
             label: 'Transaction Type',
             render: v => <Badge variant={v === 'Entry Fee' ? 'primary' : 'success'}>{v}</Badge>
         },
-        { key: 'amount', label: 'Amount', render: v => <span className="font-extrabold text-surface-900">₹{v.toLocaleString()}</span> },
-        { key: 'commissionAmount', label: 'Platform Comm. (10%)', render: v => <span className="font-bold text-emerald-600">₹{v.toLocaleString()}</span> },
-        { key: 'paymentMethod', label: 'Method' },
-        { key: 'status', label: 'Status', render: v => <Badge variant="success" dot>{v}</Badge> },
+        { key: 'amount', label: 'Amount', render: v => <span className="font-extrabold text-surface-900">₹{Number(v).toLocaleString('en-IN')}</span> },
+        { key: 'commissionAmount', label: 'Platform Commission', render: (v, r) => <span className="font-bold text-emerald-600">₹{Number(v).toLocaleString('en-IN')} ({Number(r.platformCommRate)}%)</span> },
+        { key: 'paymentMode', label: 'Method' },
+        { key: 'status', label: 'Status', render: v => <Badge variant={v === 'COMPLETED' ? 'success' : v === 'PENDING' ? 'warning' : 'danger'} dot>{v}</Badge> },
     ]
 
     return (
@@ -51,28 +67,33 @@ export default function TournamentPaymentsPage() {
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
                 <StatCard
                     title="Total Tournament Revenue"
-                    value={`₹${totalRevenue.toLocaleString()}`}
+                    value={`₹${summary.totalRevenue.toLocaleString('en-IN')}`}
                     icon={<HiCurrencyRupee className="w-6 h-6 text-primary-600" />}
-                    trend="+18% vs last month"
-                    trendUp={true}
+                    subtitle="Real ledger total"
                 />
                 <StatCard
-                    title="Platform Commission (10%)"
-                    value={`₹${totalCommission.toLocaleString()}`}
+                    title="Platform Commission"
+                    value={`₹${summary.totalCommission.toLocaleString('en-IN')}`}
                     icon={<HiTrendingUp className="w-6 h-6 text-emerald-500" />}
                     subtitle="Auto calculated on fees & sponsors"
                 />
                 <StatCard
-                    title="Completed Transactions"
-                    value={payments.length}
+                    title="Total Transactions"
+                    value={summary.totalTransactions}
                     icon={<HiDocumentText className="w-6 h-6 text-indigo-500" />}
-                    subtitle="100% Settled via Gateway"
+                    subtitle="Recorded tournament payments"
                 />
             </div>
 
             {/* Datatable */}
             <Card className="p-6">
-                <DataTable columns={columns} data={payments} />
+                {isLoading ? (
+                    <div className="py-10 text-center text-slate-400 text-sm font-semibold">Loading payments...</div>
+                ) : payments.length === 0 ? (
+                    <div className="py-10 text-center text-slate-400 text-sm font-semibold">No tournament payments recorded yet.</div>
+                ) : (
+                    <DataTable columns={columns} data={payments} />
+                )}
             </Card>
         </div>
     )

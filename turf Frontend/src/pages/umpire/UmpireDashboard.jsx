@@ -17,7 +17,8 @@ import {
     HiSparkles,
     HiLightningBolt,
     HiLogout,
-    HiQrcode
+    HiQrcode,
+    HiMenuAlt2
 } from 'react-icons/hi'
 import { HiTrophy } from 'react-icons/hi2'
 import { useToast } from '../../components/ui/Toast'
@@ -37,58 +38,48 @@ export default function UmpireDashboard() {
     const toastContext = useToast()
     const addToast = toastContext?.addToast
 
+    // Responsive Mobile Sidebar Toggle
+    const [isSidebarOpen, setIsSidebarOpen] = useState(false)
+
     // Umpire Active State & QR Configuration
     const [isOnDuty, setIsOnDuty] = useState(true)
     const [activeTab, setActiveTab] = useState('duty') // 'duty' | 'history' | 'qr' | 'rules'
-    const [myUpiId, setMyUpiId] = useState(() => {
-        return localStorage.getItem('umpire_upi_id') || 'rajesh.umpire@okhdfcbank'
-    })
-    const [myUmpireName, setMyUmpireName] = useState('Rajesh Sisodiya')
+    // No hardcoded person/UPI default -- real values arrive from getUmpireProfile() below.
+    const [myUpiId, setMyUpiId] = useState(() => localStorage.getItem('umpire_upi_id') || '')
+    const [myUmpireName, setMyUmpireName] = useState('')
+    const [myMatchFee, setMyMatchFee] = useState(300)
+    const [officiatingLocations, setOfficiatingLocations] = useState('')
 
-    // Matches requiring umpire
-    const [matches, setMatches] = useState(() => {
-        try {
-            const saved = localStorage.getItem('umpire_matches_data')
-            if (saved) {
-                const parsed = JSON.parse(saved)
-                if (Array.isArray(parsed)) {
-                    return parsed.map(m => ({ ...m, umpireFee: 300 }))
-                }
-            }
-        } catch (e) {}
-        return INITIAL_MATCHES
-    })
+    // Matches requiring umpire -- always sourced fresh from getUmpireMatches() below,
+    // not a stale localStorage cache (which could show a previous umpire's matches).
+    const [matches, setMatches] = useState(INITIAL_MATCHES)
 
-    // Officiated match history
-    const [matchHistory, setMatchHistory] = useState(() => {
-        try {
-            const saved = localStorage.getItem('umpire_match_history')
-            if (saved) return JSON.parse(saved)
-        } catch (e) {}
-        return INITIAL_OFFICIATED_HISTORY
-    })
+    // Officiated match history -- same: real data only, no persisted cache fallback.
+    const [matchHistory, setMatchHistory] = useState(INITIAL_OFFICIATED_HISTORY)
 
-    // Active Live Scoring Modal State
+    // Active Live Scoring Modal State -- starts at zero/empty; no demo scoreline.
+    // Reset to this blank state whenever a new match's live scoring begins (see handleStartScoring).
+    const BLANK_SCORE = {
+        runs: 0,
+        wickets: 0,
+        overs: 0,
+        ballsThisOver: [],
+        selectedInnings: '',
+        topBatsman: '',
+        batsmanRuns: 0,
+        batsmanBalls: 0,
+        batsmanFours: 0,
+        batsmanSixes: 0,
+        topBowler: '',
+        bowlerWickets: 0,
+        bowlerOvers: '0.0',
+        bowlerRuns: 0,
+        mvpPlayer: '',
+        mvpPhone: '',
+        matchNotes: ''
+    }
     const [scoringMatch, setScoringMatch] = useState(null)
-    const [currentScore, setCurrentScore] = useState({
-        runs: 74,
-        wickets: 3,
-        overs: 5.2,
-        ballsThisOver: ['1', '4', '0', '6', 'W', '1'],
-        selectedInnings: 'Vijay Nagar Blasters',
-        topBatsman: 'Rahul Sharma',
-        batsmanRuns: 58,
-        batsmanBalls: 32,
-        batsmanFours: 6,
-        batsmanSixes: 3,
-        topBowler: 'Aman Verma',
-        bowlerWickets: 3,
-        bowlerOvers: '4.0',
-        bowlerRuns: 22,
-        mvpPlayer: 'Rahul Sharma',
-        mvpPhone: '+91 98765 43210',
-        matchNotes: 'Clean match. Certified with 1.5x rating.'
-    })
+    const [currentScore, setCurrentScore] = useState(BLANK_SCORE)
 
     // QR Payment Modal State & Custom QR Upload
     const [qrModalMatch, setQrModalMatch] = useState(null)
@@ -113,6 +104,11 @@ export default function UmpireDashboard() {
     // Official Payment Receipt Modal State
     const [receiptModalMatch, setReceiptModalMatch] = useState(null)
 
+    // New Match Assignment Confirmation Popup -- previously assignment was only
+    // ever shown as a static "Assigned to {name}" badge with no popup. Shows once
+    // per dashboard load for the soonest assigned match still needing acknowledgment.
+    const [newAssignmentMatch, setNewAssignmentMatch] = useState(null)
+
     useEffect(() => {
         getUmpireProfile().then(prof => {
             if (prof) {
@@ -124,58 +120,81 @@ export default function UmpireDashboard() {
 
         getUmpireMatches().then(list => {
             if (Array.isArray(list)) {
-                const upcoming = list.filter(m => m.match_status !== 'COMPLETED').map(m => ({
-                    id: m.id || m.match_code,
-                    matchCode: m.match_code,
-                    title: m.match_title || `${m.team1_name} vs ${m.team2_name}`,
-                    turf: m.venue || 'Spike Cricket Turf',
-                    turfLocation: m.venue || 'Indore Turf',
-                    date: m.scheduled_time || 'Today',
-                    time: m.scheduled_time || 'Today',
-                    matchType: m.match_type || 'DARE MATCH',
-                    modeBadge: m.match_type ? `🔥 ${m.match_type.toUpperCase()}` : '🔥 DARE MATCH',
-                    hasUmpireRequested: true,
-                    status: m.match_status || 'Live Now',
-                    statusColor: m.match_status === 'COMPLETED' ? 'gray' : 'emerald',
-                    umpireFee: m.duty_fee || 300,
-                    paymentStatus: m.payment_status || 'Direct QR Pending',
-                    teamA: {
-                        name: m.team1_name || 'Team A',
-                        captain: m.team1_captain || 'Captain 1',
-                        phone: m.team1_phone || '',
-                        score: m.team1_score || 0,
-                        wickets: m.team1_wickets || 0,
-                        overs: m.team1_overs || '0.0'
-                    },
-                    teamB: {
-                        name: m.team2_name || 'Team B',
-                        captain: m.team2_captain || 'Captain 2',
-                        phone: m.team2_phone || '',
-                        score: m.team2_score || 0,
-                        wickets: m.team2_wickets || 0,
-                        overs: m.team2_overs || '0.0'
-                    },
-                    target: m.target || 0
-                }));
+                const upcoming = list.filter(m => (m.dutyStatus || m.match_status) !== 'CERTIFIED_COMPLETED').map(m => {
+                    const matchObj = m.match || {};
+                    const teamA = matchObj.teamAName || m.team1_name || 'Team A';
+                    const teamB = matchObj.teamBName || m.team2_name || 'Team B';
+                    return {
+                        id: m.id || m.matchId || m.match_code,
+                        matchCode: m.matchId || m.id || m.match_code,
+                        title: m.title || `${teamA} vs ${teamB}`,
+                        turf: m.turf || m.venue || 'E2E Test Arena (Indore)',
+                        turfLocation: m.turfLocation || 'Indore',
+                        date: m.date || (matchObj.createdAt ? new Date(matchObj.createdAt).toLocaleDateString() : 'Today'),
+                        time: m.time || (matchObj.createdAt ? new Date(matchObj.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Today'),
+                        matchType: m.matchType || matchObj.paymentMode || 'DARE MATCH',
+                        modeBadge: m.modeBadge || (matchObj.paymentMode ? `🔥 ${matchObj.paymentMode}` : '🔥 DARE MATCH'),
+                        hasUmpireRequested: true,
+                        status: m.dutyStatus || m.status || 'SCHEDULED',
+                        statusColor: (m.dutyStatus || m.status) === 'CERTIFIED_COMPLETED' ? 'gray' : 'emerald',
+                        umpireFee: Number(m.dutyFee || m.umpireFee || 300),
+                        paymentStatus: m.feePaymentStatus === 'RECEIVED' ? 'Paid Direct QR' : (m.paymentStatus || 'Direct QR Pending'),
+                        teamA: {
+                            name: teamA,
+                            captain: m.teamA?.captain || (m.tossWinnerTeam === teamA ? 'Captain (Toss Winner)' : 'Captain A'),
+                            phone: m.teamA?.phone || '',
+                            score: m.teamA?.score || 0,
+                            wickets: m.teamA?.wickets || 0,
+                            overs: m.teamA?.overs || '0.0'
+                        },
+                        teamB: {
+                            name: teamB,
+                            captain: m.teamB?.captain || (m.tossWinnerTeam === teamB ? 'Captain (Toss Winner)' : 'Captain B'),
+                            phone: m.teamB?.phone || '',
+                            score: m.teamB?.score || 0,
+                            wickets: m.teamB?.wickets || 0,
+                            overs: m.teamB?.overs || '0.0'
+                        },
+                        target: m.target || 0
+                    };
+                });
 
-                const completed = list.filter(m => m.match_status === 'COMPLETED').map(m => ({
-                    id: m.id || m.match_code,
-                    matchTitle: m.match_title || `${m.team1_name} vs ${m.team2_name}`,
-                    turf: m.venue || 'Indore Turf',
-                    date: m.scheduled_time || 'Recently',
-                    time: m.scheduled_time || 'Recently',
-                    officiatedBy: `${myUmpireName}`,
-                    result: `${m.winner_name || 'Winner Declared'} won`,
-                    mvp: 'Player Performance Score (1.5x)',
-                    payment: `✓ ₹${m.duty_fee || 300} Received`,
-                    verifiedTier: '⚖️ 1.5x Umpire Certified'
-                }));
+                const completed = list.filter(m => (m.dutyStatus || m.match_status) === 'CERTIFIED_COMPLETED').map(m => {
+                    const matchObj = m.match || {};
+                    const teamA = matchObj.teamAName || m.team1_name || 'Team A';
+                    const teamB = matchObj.teamBName || m.team2_name || 'Team B';
+                    return {
+                        id: m.id || m.matchId || m.match_code,
+                        matchTitle: m.matchTitle || `${teamA} vs ${teamB}`,
+                        turf: m.turf || 'E2E Test Arena (Indore)',
+                        date: m.date || (m.certifiedAt ? new Date(m.certifiedAt).toLocaleDateString() : 'Recently'),
+                        time: m.time || (m.certifiedAt ? new Date(m.certifiedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Recently'),
+                        officiatedBy: `${myUmpireName || 'Official Umpire'}`,
+                        result: m.result || `${m.tossWinnerTeam || teamA} won`,
+                        mvp: m.mvp || 'Player Performance Score (1.5x)',
+                        payment: `✓ ₹${m.dutyFee || m.umpireFee || 300} Received`,
+                        verifiedTier: '⚖️ 1.5x Umpire Certified'
+                    };
+                });
 
                 setMatches(upcoming);
                 setMatchHistory(completed);
+
+                const alreadyAcknowledged = JSON.parse(sessionStorage.getItem('umpire_acknowledged_matches') || '[]');
+                const unacknowledged = upcoming.find(m => m.hasUmpireRequested && !alreadyAcknowledged.includes(m.id));
+                if (unacknowledged) setNewAssignmentMatch(unacknowledged);
             }
         });
     }, []);
+
+    const handleAcknowledgeAssignment = () => {
+        if (!newAssignmentMatch) return
+        try {
+            const alreadyAcknowledged = JSON.parse(sessionStorage.getItem('umpire_acknowledged_matches') || '[]')
+            sessionStorage.setItem('umpire_acknowledged_matches', JSON.stringify([...alreadyAcknowledged, newAssignmentMatch.id]))
+        } catch (e) {}
+        setNewAssignmentMatch(null)
+    }
 
     // Save Live Ball
     const handleAddBall = (eventStr) => {
@@ -485,169 +504,183 @@ export default function UmpireDashboard() {
     }
 
     return (
-        <div className="min-h-screen bg-[#F8FAFC] text-[#111827] pb-24 animate-in fade-in duration-300">
+        <div className="min-h-screen bg-[#F8FAFC] text-[#111827] flex flex-col md:flex-row font-sans animate-in fade-in duration-300">
             {/* ═══════════════════════════════════════════════════
-                TOP OFFICIAL UMPIRE BADGE HEADER BAR
+                MOBILE OVERLAY BACKDROP
             ═══════════════════════════════════════════════════ */}
-            <div className="bg-slate-900 text-white border-b border-slate-800 px-4 sm:px-8 py-6 shadow-md">
-                <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-start md:items-center justify-between gap-5">
-                    {/* Umpire Profile & Credentials */}
-                    <div className="flex items-center gap-4">
-                        <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-amber-400 via-yellow-500 to-amber-600 text-slate-950 flex items-center justify-center text-3xl font-black shadow-lg shadow-amber-500/20 ring-4 ring-amber-400/30 shrink-0">
-                            ⚖️
-                        </div>
-                        <div>
-                            <div className="flex flex-wrap items-center gap-2 mb-1">
-                                <h1 className="text-xl sm:text-2xl font-black text-white tracking-tight">
-                                    {myUmpireName}
-                                </h1>
-                                <span className="px-2.5 py-0.5 rounded-full bg-amber-400/20 text-amber-300 border border-amber-400/40 text-[10px] font-black uppercase tracking-wider font-mono">
-                                    LIC: UMP-IND-409
-                                </span>
-                                <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 text-[10px] font-black uppercase tracking-wider">
-                                    ✓ BCCI / Turf Certified Level-2
-                                </span>
+            {isSidebarOpen && (
+                <div 
+                    className="fixed inset-0 bg-slate-950/60 z-40 md:hidden backdrop-blur-xs transition-opacity"
+                    onClick={() => setIsSidebarOpen(false)}
+                />
+            )}
+
+            {/* ═══════════════════════════════════════════════════
+                RESPONSIVE LEFT SIDEBAR
+            ═══════════════════════════════════════════════════ */}
+            <aside className={`fixed md:static top-0 bottom-0 left-0 z-50 w-72 bg-slate-900 text-white flex flex-col justify-between border-r border-slate-800 transition-transform duration-300 transform ${
+                isSidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
+            } shrink-0`}>
+                <div>
+                    {/* Brand & Umpire Badge Header */}
+                    <div className="p-5 border-b border-slate-800 flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-400 to-amber-600 text-slate-950 flex items-center justify-center text-xl font-black shadow-md">
+                                ⚖️
                             </div>
-                            <p className="text-xs text-slate-400 font-medium flex items-center gap-2">
-                                <span>🏟️ Officiating At: <strong className="text-slate-200 font-bold">Spike Turf & Royal Ground (Indore)</strong></span>
-                                <span>•</span>
-                                <span className="text-emerald-400 font-mono font-bold">QR: {myUpiId}</span>
+                            <div>
+                                <h2 className="text-sm font-black text-white tracking-wider uppercase">SPORTAMAX</h2>
+                                <p className="text-[10px] text-amber-400 font-bold uppercase tracking-widest">OFFICIAL UMPIRE</p>
+                            </div>
+                        </div>
+
+                        <button 
+                            type="button"
+                            onClick={() => setIsSidebarOpen(false)}
+                            className="md:hidden text-slate-400 hover:text-white p-1 cursor-pointer"
+                        >
+                            <HiX className="w-6 h-6" />
+                        </button>
+                    </div>
+
+                    {/* Umpire Profile Summary Card */}
+                    <div className="p-4 mx-3 my-3 bg-slate-800/80 rounded-2xl border border-slate-700/60 space-y-2">
+                        <div className="flex items-center justify-between">
+                            <span className="text-xs font-black text-white truncate max-w-[150px]">{myUmpireName || 'Official Umpire'}</span>
+                            <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 text-[9px] font-bold">
+                                ✓ Certified
+                            </span>
+                        </div>
+                        <p className="text-[11px] text-slate-400 font-medium truncate">
+                            🏟️ {officiatingLocations || 'E2E Test Arena (Indore)'}
+                        </p>
+                        <div className="flex items-center justify-between text-[10px] font-mono pt-1 border-t border-slate-700/50">
+                            <span className="text-slate-400">UPI QR:</span>
+                            <span className="text-emerald-400 font-bold truncate max-w-[120px]">{myUpiId || 'Not Set'}</span>
+                        </div>
+                    </div>
+
+                    {/* Navigation Links */}
+                    <nav className="p-3 space-y-1">
+                        <div className="px-3 py-2 text-[10px] font-black uppercase tracking-widest text-slate-400">NAVIGATION MENU</div>
+                        {[
+                            { id: 'duty', label: 'Live Duty & Matches', badge: matches.length, icon: '⚡' },
+                            { id: 'history', label: 'Match History Log', badge: matchHistory.length, icon: '📜' },
+                            { id: 'qr', label: 'My UPI Payment QR', badge: null, icon: '💳' },
+                            { id: 'rules', label: 'Umpiring Rules', badge: null, icon: '📖' },
+                        ].map(tab => {
+                            const isActive = activeTab === tab.id
+                            return (
+                                <button
+                                    key={tab.id}
+                                    type="button"
+                                    onClick={() => {
+                                        setActiveTab(tab.id)
+                                        setIsSidebarOpen(false)
+                                    }}
+                                    className={`w-full flex items-center justify-between px-4 py-3 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                                        isActive
+                                            ? 'bg-[#C8FF2E] text-slate-950 shadow-md font-black'
+                                            : 'text-slate-300 hover:bg-slate-800 hover:text-white'
+                                    }`}
+                                >
+                                    <div className="flex items-center gap-2.5">
+                                        <span className="text-base">{tab.icon}</span>
+                                        <span>{tab.label}</span>
+                                    </div>
+                                    {tab.badge !== null && tab.badge !== undefined && (
+                                        <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-black font-mono ${
+                                            isActive ? 'bg-slate-950 text-[#C8FF2E]' : 'bg-slate-800 text-slate-300 border border-slate-700'
+                                        }`}>
+                                            {tab.badge}
+                                        </span>
+                                    )}
+                                </button>
+                            )
+                        })}
+                    </nav>
+                </div>
+
+                {/* Sidebar Bottom Controls */}
+                <div className="p-3 border-t border-slate-800 space-y-2">
+                    <button
+                        type="button"
+                        onClick={() => {
+                            setIsOnDuty(!isOnDuty)
+                            if (addToast) addToast(isOnDuty ? 'Duty Status: Off Duty' : 'Duty Status: On Duty', 'info')
+                        }}
+                        className={`w-full py-2.5 px-3 rounded-xl text-xs font-black uppercase tracking-wider flex items-center justify-center gap-2 transition-all cursor-pointer ${
+                            isOnDuty ? 'bg-emerald-500 text-white' : 'bg-slate-800 text-slate-400 border border-slate-700'
+                        }`}
+                    >
+                        <span className={`w-2 h-2 rounded-full ${isOnDuty ? 'bg-white animate-pulse' : 'bg-red-400'}`}></span>
+                        <span>{isOnDuty ? '🟢 ON DUTY' : '🔴 OFF DUTY'}</span>
+                    </button>
+
+                    <button
+                        type="button"
+                        onClick={() => {
+                            if (logout) logout()
+                            navigate('/')
+                        }}
+                        className="w-full py-2.5 px-3 rounded-xl text-xs font-black uppercase tracking-wider bg-red-600/20 hover:bg-red-600 text-red-300 hover:text-white border border-red-500/40 transition-all cursor-pointer flex items-center justify-center gap-2"
+                    >
+                        <HiLogout className="w-4 h-4" />
+                        <span>Logout</span>
+                    </button>
+                </div>
+            </aside>
+
+            {/* ═══════════════════════════════════════════════════
+                MAIN CONTENT AREA
+            ═══════════════════════════════════════════════════ */}
+            <div className="flex-1 flex flex-col min-w-0 min-h-screen">
+                {/* Top Header Bar for Mobile Hamburger & Quick Actions */}
+                <header className="bg-white border-b border-slate-200 px-4 sm:px-8 py-3.5 flex items-center justify-between gap-4 sticky top-0 z-30 shadow-xs">
+                    <div className="flex items-center gap-3">
+                        <button
+                            type="button"
+                            onClick={() => setIsSidebarOpen(true)}
+                            className="md:hidden p-2 rounded-xl bg-slate-100 text-slate-700 hover:bg-slate-200 transition-colors cursor-pointer"
+                        >
+                            <HiMenuAlt2 className="w-6 h-6" />
+                        </button>
+                        <div>
+                            <h2 className="text-sm font-black text-slate-900 uppercase tracking-tight">
+                                {activeTab === 'duty' && '⚡ Live Duty & Assigned Matches'}
+                                {activeTab === 'history' && '📜 Match History & Officiated Log'}
+                                {activeTab === 'qr' && '💳 My UPI Payment QR Code'}
+                                {activeTab === 'rules' && '📖 Box Cricket Umpiring Rules'}
+                            </h2>
+                            <p className="text-[11px] text-slate-500 font-medium hidden sm:block">
+                                🏟️ {officiatingLocations || 'E2E Test Arena (Indore)'}
                             </p>
                         </div>
                     </div>
 
-                    {/* Header Action Controls */}
-                    <div className="flex flex-wrap items-center gap-2.5 w-full md:w-auto justify-between md:justify-end">
-                        {/* Show QR Code Fast Button */}
+                    <div className="flex items-center gap-2">
                         <button
                             type="button"
-                            onClick={() => setQrModalMatch({ title: 'Direct Match Fee', umpireFee: 300, turf: 'Ground Match' })}
-                            className="px-4 py-2.5 rounded-xl bg-[#C8FF2E] hover:bg-[#B5F000] text-slate-950 font-black text-xs uppercase tracking-wider flex items-center gap-2 shadow-md transition-all cursor-pointer hover:scale-105"
+                            onClick={() => setQrModalMatch({ title: 'Direct Match Fee', umpireFee: myMatchFee, turf: 'Ground Match' })}
+                            className="px-3.5 py-2 rounded-xl bg-[#C8FF2E] hover:bg-[#B5F000] text-slate-950 font-black text-xs uppercase tracking-wider flex items-center gap-1.5 shadow-xs transition-all cursor-pointer shrink-0"
                         >
                             <HiQrcode className="w-4 h-4 text-slate-950" />
-                            <span>Show My Payment QR (₹300)</span>
-                        </button>
-
-                        <button
-                            type="button"
-                            onClick={() => {
-                                setIsOnDuty(!isOnDuty)
-                                if (addToast) addToast(isOnDuty ? 'Duty Status: Off Duty' : 'Duty Status: On Duty (Accepting Match Scoring)', 'info')
-                            }}
-                            className={`px-3.5 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider flex items-center gap-1.5 transition-all cursor-pointer shadow-sm ${
-                                isOnDuty 
-                                    ? 'bg-emerald-500 hover:bg-emerald-600 text-white shadow-emerald-500/30' 
-                                    : 'bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700'
-                            }`}
-                        >
-                            <span className={`w-2 h-2 rounded-full ${isOnDuty ? 'bg-white animate-pulse' : 'bg-red-400'}`}></span>
-                            <span>{isOnDuty ? '🟢 ON DUTY' : '🔴 OFF DUTY'}</span>
+                            <span className="hidden sm:inline">Show QR (₹{myMatchFee})</span>
                         </button>
 
                         <button
                             type="button"
                             onClick={() => navigate('/leaderboard')}
-                            className="px-3.5 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-white font-bold text-xs border border-white/20 transition-all cursor-pointer flex items-center gap-1.5"
+                            className="p-2 sm:px-3 sm:py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold transition-all cursor-pointer flex items-center gap-1"
                         >
                             <span>👑</span>
-                            <span>Leaderboard</span>
-                        </button>
-
-                        <button
-                            type="button"
-                            onClick={() => {
-                                if (logout) logout()
-                                navigate('/')
-                                if (addToast) addToast('Logged out of Umpire Portal', 'info')
-                            }}
-                            className="px-3.5 py-2.5 rounded-xl bg-red-600/20 hover:bg-red-600 text-red-300 hover:text-white font-black text-xs border border-red-500/40 transition-all cursor-pointer flex items-center gap-1.5"
-                            title="Sign out of Umpire Portal"
-                        >
-                            <HiLogout className="w-4 h-4" />
-                            <span>Logout</span>
+                            <span className="hidden sm:inline">Leaderboard</span>
                         </button>
                     </div>
-                </div>
-            </div>
+                </header>
 
-            {/* ═══════════════════════════════════════════════════
-                KEY OVERVIEW SUMMARY CARDS
-            ═══════════════════════════════════════════════════ */}
-            <div className="max-w-7xl mx-auto px-4 sm:px-8 -mt-3">
-                <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-                    {/* Stat 1 */}
-                    <div className="bg-white p-4 rounded-2xl border border-[#E5E7EB] shadow-sm flex items-center justify-between">
-                        <div>
-                            <span className="text-[10px] font-black uppercase text-slate-400 tracking-wider block">Assigned Today</span>
-                            <div className="text-2xl font-black text-[#111827] mt-0.5">3 Matches</div>
-                            <span className="text-[11px] font-bold text-emerald-600">Umpire Service Requested</span>
-                        </div>
-                        <div className="w-12 h-12 rounded-xl bg-emerald-50 text-emerald-600 text-2xl flex items-center justify-center font-black">
-                            🏏
-                        </div>
-                    </div>
-
-                    {/* Stat 2 */}
-                    <div className="bg-white p-4 rounded-2xl border border-[#E5E7EB] shadow-sm flex items-center justify-between">
-                        <div>
-                            <span className="text-[10px] font-black uppercase text-slate-400 tracking-wider block">Matches Officiated</span>
-                            <div className="text-2xl font-black text-[#111827] mt-0.5">{matchHistory.length} Matches</div>
-                            <span className="text-[11px] font-bold text-blue-600">Scorecards Certified Live</span>
-                        </div>
-                        <div className="w-12 h-12 rounded-xl bg-blue-50 text-blue-600 text-2xl flex items-center justify-center font-black">
-                            ⚖️
-                        </div>
-                    </div>
-
-                    {/* Stat 3 */}
-                    <div className="bg-white p-4 rounded-2xl border border-[#E5E7EB] shadow-sm flex items-center justify-between">
-                        <div>
-                            <span className="text-[10px] font-black uppercase text-slate-400 tracking-wider block">Payment Mode</span>
-                            <div className="text-lg font-black text-purple-700 truncate max-w-[140px] mt-0.5">Direct UPI QR</div>
-                            <span className="text-[10px] font-mono text-slate-500 truncate block">{myUpiId}</span>
-                        </div>
-                        <div className="w-12 h-12 rounded-xl bg-purple-50 text-purple-600 text-2xl flex items-center justify-center font-black">
-                            📱
-                        </div>
-                    </div>
-
-                    {/* Stat 4 */}
-                    <div className="bg-white p-4 rounded-2xl border border-[#E5E7EB] shadow-sm flex items-center justify-between">
-                        <div>
-                            <span className="text-[10px] font-black uppercase text-slate-400 tracking-wider block">Leaderboard Weight</span>
-                            <div className="text-2xl font-black text-amber-600 font-mono mt-0.5">1.5x Points</div>
-                            <span className="text-[11px] font-bold text-amber-700">Official Sign-Off Tier</span>
-                        </div>
-                        <div className="w-12 h-12 rounded-xl bg-amber-50 text-amber-600 text-2xl flex items-center justify-center font-black">
-                            ⭐
-                        </div>
-                    </div>
-                </div>
-
-                {/* ═══════════════════════════════════════════════════
-                    MAIN NAVIGATION TABS
-                ═══════════════════════════════════════════════════ */}
-                <div className="flex items-center gap-2 border-b border-[#E5E7EB] mt-8 pb-3 overflow-x-auto no-scrollbar">
-                    {[
-                        { id: 'duty', label: '⚡ Live Duty & Assigned Matches (3)', icon: '🏏' },
-                        { id: 'history', label: '📜 Match History & Officiated Log (Kaunsa Match Kisne Kiya)', icon: '⚖️' },
-                        { id: 'qr', label: '📱 My UPI Payment QR Code', icon: '💳' },
-                        { id: 'rules', label: '📖 Box Cricket Umpiring Rules', icon: '📜' },
-                    ].map(tab => (
-                        <button
-                            key={tab.id}
-                            onClick={() => setActiveTab(tab.id)}
-                            className={`px-5 py-2.5 rounded-2xl text-xs font-black uppercase tracking-wider whitespace-nowrap transition-all cursor-pointer flex items-center gap-2 ${
-                                activeTab === tab.id
-                                    ? 'bg-[#111827] text-white shadow-md'
-                                    : 'bg-white text-slate-600 hover:text-[#111827] border border-[#E5E7EB]'
-                            }`}
-                        >
-                            <span>{tab.icon}</span>
-                            <span>{tab.label}</span>
-                        </button>
-                    ))}
-                </div>
+                {/* Dashboard Body Content */}
+                <main className="flex-1 p-4 sm:p-6 lg:p-8 max-w-7xl w-full mx-auto space-y-6">
 
                 {/* ═══════════════════════════════════════════════════
                     TAB 1: LIVE DUTY & ASSIGNED MATCHES
@@ -775,19 +808,18 @@ export default function UmpireDashboard() {
                                                     type="button"
                                                     onClick={() => {
                                                         setScoringMatch(match)
-                                                        setCurrentScore(prev => ({
-                                                            ...prev,
+                                                        setCurrentScore({
+                                                            ...BLANK_SCORE,
                                                             runs: match.teamA?.score || 0,
                                                             wickets: match.teamA?.wickets || 0,
                                                             overs: parseFloat(match.teamA?.overs) || 0.0,
                                                             ballsThisOver: match.currentOverBalls || [],
                                                             selectedInnings: match.teamA?.name || 'Team A',
-                                                            topBatsman: match.teamA?.captain || 'Rahul Sharma',
-                                                            topBowler: match.teamB?.captain || 'Aman Verma',
-                                                            mvpPlayer: match.teamA?.captain || 'Rahul Sharma',
-                                                            mvpPhone: match.teamA?.phone || '+91 98765 43210',
-                                                            matchNotes: 'Official match certified by licensed referee.'
-                                                        }))
+                                                            topBatsman: match.teamA?.captain || '',
+                                                            topBowler: match.teamB?.captain || '',
+                                                            mvpPlayer: match.teamA?.captain || '',
+                                                            mvpPhone: match.teamA?.phone || ''
+                                                        })
                                                     }}
                                                     className="px-5 py-2.5 rounded-xl bg-[#C8FF2E] hover:bg-[#B5F000] text-[#111827] font-black text-xs uppercase tracking-wider transition-all shadow-md hover:scale-105 cursor-pointer flex items-center gap-2"
                                                 >
@@ -1179,11 +1211,72 @@ export default function UmpireDashboard() {
                         </div>
                     </div>
                 )}
-            </div>
+                </main>
 
             {/* ═══════════════════════════════════════════════════
                 🪙 OFFICIAL TOSS CEREMONY MODAL (System Flip & Manual Toggle)
             ═══════════════════════════════════════════════════ */}
+            {/* New Match Assignment Confirmation Popup */}
+            {newAssignmentMatch && (
+                <div className="fixed inset-0 z-[999999] flex items-center justify-center bg-black/80 backdrop-blur-md p-4 animate-in fade-in overflow-y-auto">
+                    <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl max-w-lg w-full p-6 space-y-5 my-auto max-h-[95vh] overflow-y-auto">
+                        <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                            <div className="flex items-center gap-2.5">
+                                <div className="w-11 h-11 rounded-2xl bg-emerald-100 text-emerald-900 text-2xl flex items-center justify-center font-black shrink-0 border border-emerald-300 shadow-xs">
+                                    ⚖️
+                                </div>
+                                <div>
+                                    <h3 className="font-black text-base text-[#111827]">
+                                        You've Been Assigned a Match
+                                    </h3>
+                                    <p className="text-[11px] font-semibold text-slate-500">{myUmpireName}</p>
+                                </div>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={handleAcknowledgeAssignment}
+                                className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-500 font-bold cursor-pointer"
+                            >
+                                <HiX className="w-5 h-5" />
+                            </button>
+                        </div>
+
+                        <div className="p-3.5 bg-slate-900 text-white rounded-2xl space-y-1">
+                            <div className="text-[10px] font-black uppercase text-emerald-400 tracking-wider">
+                                {newAssignmentMatch.modeBadge} &middot; {newAssignmentMatch.turf}
+                            </div>
+                            <div className="text-sm font-black flex items-center justify-between">
+                                <span>{newAssignmentMatch.teamA?.name}</span>
+                                <span className="text-slate-400 text-xs">vs</span>
+                                <span>{newAssignmentMatch.teamB?.name}</span>
+                            </div>
+                            <div className="text-[11px] text-slate-300 font-semibold pt-1">
+                                {newAssignmentMatch.date} &middot; {newAssignmentMatch.time}
+                            </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-3 text-xs">
+                            <div className="bg-slate-50 rounded-xl p-3 border border-slate-200">
+                                <p className="text-slate-400 font-bold uppercase text-[10px]">Duty Fee</p>
+                                <p className="font-black text-slate-900">₹{newAssignmentMatch.umpireFee}</p>
+                            </div>
+                            <div className="bg-slate-50 rounded-xl p-3 border border-slate-200">
+                                <p className="text-slate-400 font-bold uppercase text-[10px]">Payment Status</p>
+                                <p className="font-black text-slate-900">{newAssignmentMatch.paymentStatus}</p>
+                            </div>
+                        </div>
+
+                        <button
+                            type="button"
+                            onClick={handleAcknowledgeAssignment}
+                            className="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs uppercase tracking-wider rounded-xl transition-all cursor-pointer shadow-md"
+                        >
+                            Acknowledge Assignment
+                        </button>
+                    </div>
+                </div>
+            )}
+
             {tossMatch && (
                 <div className="fixed inset-0 z-[999999] flex items-center justify-center bg-black/80 backdrop-blur-md p-4 animate-in fade-in overflow-y-auto">
                     <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl max-w-lg w-full p-6 space-y-5 my-auto max-h-[95vh] overflow-y-auto">
@@ -1876,6 +1969,7 @@ export default function UmpireDashboard() {
                     </div>
                 </div>
             )}
+            </div>
         </div>
     )
 }

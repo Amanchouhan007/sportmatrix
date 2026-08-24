@@ -41,21 +41,13 @@ export default function LiveCricketChallengeCard({
     const [timeLeft, setTimeLeft] = useState(862) // Countdown in seconds
     const dragStartRef = useRef({ startX: 0, startY: 0, initialX: 0, initialY: 0 })
 
-    // Normalize challenges array from props or fallback to single props / defaults
+    // Normalize challenges array strictly from props
     const matchPool = Array.isArray(challenges) && challenges.length > 0 
         ? challenges 
-        : [
-            {
-                id: turfId || 16,
-                challengerTeam: challengerTeam || 'Indore Strikers XI',
-                venueName: venueName || 'Champion Turf Ground, Palasia, Indore',
-                matchTime: matchTime || 'Tonight, 8:30 PM – 9:30 PM',
-                matchFee: matchFee || 1800,
-                depositFee: depositFee || Math.round((matchFee || 1800) * 0.3),
-                sportName: sportName || 'Box Cricket',
-                badge: '🔥 LIVE DARE'
-            }
-        ]
+        : [];
+
+    if (matchPool.length === 0) return null;
+
 
     const totalMatches = matchPool.length
     const safeIndex = Math.min(currentIndex, totalMatches - 1)

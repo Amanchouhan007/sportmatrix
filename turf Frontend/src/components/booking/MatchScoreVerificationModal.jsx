@@ -19,86 +19,60 @@ export default function MatchScoreVerificationModal({ match, isOpen, onClose, on
     const isAlreadyVerified = match.verificationStatus === 'Verified' || match.status === 'Verified'
     const isDisputed = match.verificationStatus === 'Disputed' || match.status === 'Disputed'
 
-    // Mock/Real Innings Data Fallback
+    // Real match data only -- no fabricated per-player batting/bowling lines.
+    // The backend doesn't track ball-by-ball stats, so those tables simply show
+    // an empty state rather than the same fake names for every match.
     const team1Data = match.team1 || {
-        name: match.team1Name || match.team1_name || 'Vijay Nagar Blasters (You)',
-        score: match.team1Score ?? match.team1_score ?? 148,
-        wickets: match.team1Wickets ?? 4,
-        overs: match.team1Overs ?? '16.0',
-        batting: match.team1Batting || [
-            { name: 'Rahul Sharma (C)', runs: 58, balls: 32, fours: 6, sixes: 3, sr: 181.2, isOut: false },
-            { name: 'Amit Verma', runs: 34, balls: 22, fours: 4, sixes: 1, sr: 154.5, isOut: true, dismissal: 'c Patel b Kumar' },
-            { name: 'Sameer Khan', runs: 28, balls: 18, fours: 3, sixes: 1, sr: 155.5, isOut: true, dismissal: 'b Singh' },
-            { name: 'Vikram Joshi', runs: 16, balls: 12, fours: 1, sixes: 1, sr: 133.3, isOut: false },
-        ],
-        bowling: match.team1Bowling || [
-            { name: 'Karan Mehra', overs: '4.0', maidens: 0, runs: 26, wickets: 2, econ: '6.50' },
-            { name: 'Siddharth Rao', overs: '4.0', maidens: 1, runs: 22, wickets: 2, econ: '5.50' },
-            { name: 'Devendra Gill', overs: '4.0', maidens: 0, runs: 38, wickets: 1, econ: '9.50' },
-        ]
+        name: match.team1Name || match.team1_name || 'Team A',
+        score: match.team1Score ?? match.team1_score ?? null,
+        wickets: match.team1Wickets ?? null,
+        overs: match.team1Overs ?? null,
+        batting: match.team1Batting || [],
+        bowling: match.team1Bowling || []
     }
 
     const team2Data = match.team2 || {
-        name: match.team2Name || match.team2_name || 'Palasia Super Strikers',
-        score: match.team2Score ?? match.team2_score ?? 136,
-        wickets: match.team2Wickets ?? 7,
-        overs: match.team2Overs ?? '16.0',
-        batting: match.team2Batting || [
-            { name: 'Pritam Sengupta (C)', runs: 44, balls: 29, fours: 5, sixes: 2, sr: 151.7, isOut: true, dismissal: 'c Sharma b Rao' },
-            { name: 'Rohan Gupta', runs: 26, balls: 19, fours: 3, sixes: 0, sr: 136.8, isOut: true, dismissal: 'b Mehra' },
-            { name: 'Ankit Patel', runs: 18, balls: 14, fours: 2, sixes: 0, sr: 128.5, isOut: true, dismissal: 'run out' },
-            { name: 'Sunil Kumar', runs: 12, balls: 8, fours: 1, sixes: 0, sr: 150.0, isOut: false },
-        ],
-        bowling: match.team2Bowling || [
-            { name: 'Ankit Patel', overs: '4.0', maidens: 0, runs: 32, wickets: 1, econ: '8.00' },
-            { name: 'Sunil Kumar', overs: '4.0', maidens: 0, runs: 28, wickets: 1, econ: '7.00' },
-            { name: 'Harish Singh', overs: '4.0', maidens: 0, runs: 42, wickets: 1, econ: '10.50' },
-        ]
+        name: match.team2Name || match.team2_name || 'Team B',
+        score: match.team2Score ?? match.team2_score ?? null,
+        wickets: match.team2Wickets ?? null,
+        overs: match.team2Overs ?? null,
+        batting: match.team2Batting || [],
+        bowling: match.team2Bowling || []
     }
 
-    const mvpName = match.mvp || 'Rahul Sharma (58 Runs & 1 Catch)'
+    const mvpName = match.mvp || null
     const winnerName = match.winnerName || (team1Data.score > team2Data.score ? team1Data.name : team2Data.name)
     const margin = Math.abs(team1Data.score - team2Data.score)
 
-    const handleApproveScorecard = () => {
+    // No artificial delay or unconditional success toast -- onApprove/onDispute
+    // are real API calls (see CustomerMatches.jsx) and already report their own
+    // real success/failure toast, so this only closes the modal once that
+    // promise resolves rather than pretending it always succeeds.
+    const handleApproveScorecard = async () => {
+        if (!onApprove) return onClose()
         setIsSubmitting(true)
-        setTimeout(() => {
+        try {
+            await onApprove(match.id || match._id, currentTier)
+        } finally {
             setIsSubmitting(false)
-            if (onApprove) {
-                onApprove(match.id || match._id, currentTier)
-            }
-            if (addToast) {
-                addToast({
-                    title: 'Scorecard Verified & Certified! 🏆',
-                    message: `Official match badge issued (${multiplier} Rank Multiplier applied to career stats).`,
-                    type: 'success'
-                })
-            }
             onClose()
-        }, 500)
+        }
     }
 
-    const handleDisputeSubmit = () => {
+    const handleDisputeSubmit = async () => {
         if (!disputeReason.trim()) {
             if (addToast) addToast({ message: 'Please write a brief reason for disputing this score.', type: 'warning' })
             return
         }
+        if (!onDispute) return onClose()
         setIsSubmitting(true)
-        setTimeout(() => {
+        try {
+            await onDispute(match.id || match._id, disputeReason)
+        } finally {
             setIsSubmitting(false)
-            if (onDispute) {
-                onDispute(match.id || match._id, disputeReason)
-            }
-            if (addToast) {
-                addToast({
-                    title: 'Scorecard Disputed ⚠️',
-                    message: 'Match stats quarantined. Assigned to Turf Admin & Match Resolver.',
-                    type: 'error'
-                })
-            }
             setDisputeMode(false)
             onClose()
-        }, 500)
+        }
     }
 
     return createPortal(
@@ -194,23 +168,22 @@ export default function MatchScoreVerificationModal({ match, isOpen, onClose, on
                             </div>
                             <div className="text-right">
                                 <span className="text-xs font-mono font-bold text-slate-600 bg-white px-2.5 py-1 rounded-lg border border-slate-200">
-                                    {team1Data.score}/{team1Data.wickets} vs {team2Data.score}/{team2Data.wickets}
+                                    {team1Data.score ?? '—'}{team1Data.wickets != null ? `/${team1Data.wickets}` : ''} vs {team2Data.score ?? '—'}{team2Data.wickets != null ? `/${team2Data.wickets}` : ''}
                                 </span>
                             </div>
                         </div>
 
-                        <div className="bg-emerald-50/70 border border-emerald-200 rounded-2xl p-4 flex items-center justify-between">
-                            <div>
-                                <span className="text-[10px] font-black uppercase tracking-wider text-[#065F46] block">Player of the Match (MVP)</span>
-                                <div className="text-sm sm:text-base font-black text-emerald-950 mt-0.5 flex items-center gap-1.5">
-                                    <HiStar className="text-amber-500 w-4 h-4" />
-                                    <span>{mvpName}</span>
+                        {mvpName && (
+                            <div className="bg-emerald-50/70 border border-emerald-200 rounded-2xl p-4 flex items-center justify-between">
+                                <div>
+                                    <span className="text-[10px] font-black uppercase tracking-wider text-[#065F46] block">Player of the Match (MVP)</span>
+                                    <div className="text-sm sm:text-base font-black text-emerald-950 mt-0.5 flex items-center gap-1.5">
+                                        <HiStar className="text-amber-500 w-4 h-4" />
+                                        <span>{mvpName}</span>
+                                    </div>
                                 </div>
                             </div>
-                            <span className="text-[10px] font-black uppercase px-2.5 py-1 rounded-full bg-[#16A34A] text-white shadow-2xs">
-                                +12 Rank PTS
-                            </span>
-                        </div>
+                        )}
                     </div>
 
                     {/* Scorecard Tabs (1st Innings / 2nd Innings / Bowling) */}
@@ -225,7 +198,7 @@ export default function MatchScoreVerificationModal({ match, isOpen, onClose, on
                                         : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                                 }`}
                             >
-                                1st Inn: {team1Data.name} ({team1Data.score}/{team1Data.wickets})
+                                1st Inn: {team1Data.name} ({team1Data.score ?? '—'}{team1Data.wickets != null ? `/${team1Data.wickets}` : ''})
                             </button>
                             <button
                                 type="button"
@@ -236,7 +209,7 @@ export default function MatchScoreVerificationModal({ match, isOpen, onClose, on
                                         : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                                 }`}
                             >
-                                2nd Inn: {team2Data.name} ({team2Data.score}/{team2Data.wickets})
+                                2nd Inn: {team2Data.name} ({team2Data.score ?? '—'}{team2Data.wickets != null ? `/${team2Data.wickets}` : ''})
                             </button>
                             <button
                                 type="button"

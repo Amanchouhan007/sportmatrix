@@ -23,8 +23,8 @@ export default function AuthModal({
     authRegPassword,
     setAuthRegPassword,
     authLoading,
+    authError,
     handleAuthLoginSubmit,
-    handleQuickDemoLogin,
     handleRegisterSubmit
 }) {
     if (!isOpen) return null
@@ -59,13 +59,6 @@ export default function AuthModal({
                     </button>
                     <button
                         type="button"
-                        onClick={() => setAuthModalTab('quick')}
-                        className={`flex-1 py-2 rounded-lg transition-all cursor-pointer ${authModalTab === 'quick' ? 'bg-white text-[#16A34A] shadow-sm font-black' : 'hover:text-slate-900'}`}
-                    >
-                        ⚡ 1-Click Demo
-                    </button>
-                    <button
-                        type="button"
                         onClick={() => setAuthModalTab('register')}
                         className={`flex-1 py-2 rounded-lg transition-all cursor-pointer ${authModalTab === 'register' ? 'bg-white text-[#16A34A] shadow-sm font-black' : 'hover:text-slate-900'}`}
                     >
@@ -73,34 +66,13 @@ export default function AuthModal({
                     </button>
                 </div>
 
+                {authError && (
+                    <div className="text-xs font-semibold text-red-700 bg-red-50 border border-red-200 rounded-xl px-3.5 py-2.5">{authError}</div>
+                )}
+
                 {/* TAB 1: LOGIN FORM */}
                 {authModalTab === 'login' && (
                     <form onSubmit={handleAuthLoginSubmit} className="space-y-3.5 text-xs">
-                        <div>
-                            <label className="text-[10px] font-black uppercase text-slate-500 mb-1 block">Role / Category</label>
-                            <div className="grid grid-cols-3 gap-1.5">
-                                {[
-                                    { id: 'customer', label: '⚽ Customer' },
-                                    { id: 'owner', label: '👑 Owner' },
-                                    { id: 'superadmin', label: '🛡️ Admin' },
-                                ].map((r) => (
-                                    <button
-                                        type="button"
-                                        key={r.id}
-                                        onClick={() => {
-                                            setAuthRole(r.id)
-                                            if (r.id === 'customer') { setAuthEmail('customer@gmail.com'); setAuthPassword('123') }
-                                            if (r.id === 'owner') { setAuthEmail('owner@gmail.com'); setAuthPassword('123456') }
-                                            if (r.id === 'superadmin') { setAuthEmail('superadmin@gmail.com'); setAuthPassword('123456') }
-                                        }}
-                                        className={`py-1.5 px-2 rounded-lg border font-bold text-[11px] transition-all cursor-pointer ${authRole === r.id ? 'bg-emerald-50 border-[#16A34A] text-[#16A34A]' : 'bg-slate-50 border-slate-200 text-slate-700'}`}
-                                    >
-                                        {r.label}
-                                    </button>
-                                ))}
-                            </div>
-                        </div>
-
                         <div>
                             <label className="text-[10px] font-black uppercase text-slate-500 mb-1 block">Email Address</label>
                             <input
@@ -133,40 +105,7 @@ export default function AuthModal({
                     </form>
                 )}
 
-                {/* TAB 2: 1-CLICK QUICK DEMO LOGIN */}
-                {authModalTab === 'quick' && (
-                    <div className="space-y-2 text-xs">
-                        <div
-                            onClick={() => handleQuickDemoLogin('customer')}
-                            className="p-3 bg-emerald-50 hover:bg-emerald-100/80 border border-emerald-300 rounded-xl cursor-pointer transition-all flex items-center justify-between group"
-                        >
-                            <div className="flex items-center gap-2.5">
-                                <span className="text-xl">⚽</span>
-                                <div>
-                                    <div className="font-black text-[#111827]">Rohan Verma (Customer)</div>
-                                    <div className="text-[10px] text-emerald-800 font-medium">customer@gmail.com</div>
-                                </div>
-                            </div>
-                            <span className="text-[10px] font-black bg-[#16A34A] text-white px-2.5 py-1 rounded-md">Select ➔</span>
-                        </div>
-
-                        <div
-                            onClick={() => handleQuickDemoLogin('guest')}
-                            className="p-3 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-xl cursor-pointer transition-all flex items-center justify-between group"
-                        >
-                            <div className="flex items-center gap-2.5">
-                                <span className="text-xl">🏃</span>
-                                <div>
-                                    <div className="font-black text-[#111827]">Continue as Guest</div>
-                                    <div className="text-[10px] text-slate-500 font-medium">Fast guest booking</div>
-                                </div>
-                            </div>
-                            <span className="text-[10px] font-black bg-slate-800 text-white px-2.5 py-1 rounded-md">Guest ➔</span>
-                        </div>
-                    </div>
-                )}
-
-                {/* TAB 3: REGISTER NEW ACCOUNT */}
+                {/* TAB 2: REGISTER NEW ACCOUNT */}
                 {authModalTab === 'register' && (
                     <form onSubmit={handleRegisterSubmit} className="space-y-2.5 text-xs">
                         <div>

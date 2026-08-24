@@ -1,358 +1,239 @@
-const db = require('../../config/db');
+const prisma = require('../../config/prisma');
+
+const genId = () => `slot_${Date.now()}_${Math.floor(Math.random() * 100000)}`;
+
+const toDateStr = (d) => {
+    if (!d) return '';
+    const dt = new Date(d);
+    return `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}-${String(dt.getDate()).padStart(2, '0')}`;
+};
+
+const formatSlot = (r) => ({
+    id: r.id,
+    _id: r.id,
+    branchId: r.branchId,
+    sportId: r.sport ? { id: r.sport.id, _id: r.sport.id, name: r.sport.name, icon: r.sport.icon } : (r.sportId || null),
+    courtName: r.courtName,
+    date: toDateStr(r.slotDate),
+    slotDate: toDateStr(r.slotDate),
+    startTime: r.startTime ? r.startTime.substring(0, 5) : '',
+    endTime: r.endTime ? r.endTime.substring(0, 5) : '',
+    duration: r.duration,
+    regularPrice: Number(r.regularPrice),
+    price: r.isPeakHour ? Number(r.peakPrice) : Number(r.regularPrice),
+    peakPrice: Number(r.peakPrice),
+    isPeakHour: !!r.isPeakHour,
+    status: r.status,
+    notes: r.notes || '',
+    virtual: !!r.virtual
+});
 
 /**
- * Fetch slots based on query parameters (branchId, date, sportId, courtName)
+ * Builds the full day's worth of time-slots for a branch+sport from its real
+ * BranchSport configuration (opening/closing time, court count, pricing).
+ * Slots not yet persisted are returned as ephemeral "virtual" AVAILABLE slots --
+ * they only become real rows once a booking actually holds one.
  */
+const buildVirtualSlotsForDay = (branchSport, date, existingByCourtTime) => {
+    const virtual = [];
+    const [openH] = branchSport.openingTime.split(':').map(Number);
+    const [closeH] = branchSport.closingTime.split(':').map(Number);
+    const durationMin = branchSport.slotDuration || 60;
+    const stepHours = durationMin / 60;
+
+    for (let court = 1; court <= (branchSport.totalCourts || 1); court++) {
+        const courtName = `Court ${court}`;
+        for (let h = openH; h < closeH; h += stepHours) {
+            const startTime = `${String(Math.floor(h)).padStart(2, '0')}:${h % 1 ? '30' : '00'}:00`;
+            const endH = h + stepHours;
+            const endTime = `${String(Math.floor(endH)).padStart(2, '0')}:${endH % 1 ? '30' : '00'}:00`;
+            const key = `${courtName}|${startTime}`;
+            if (existingByCourtTime.has(key)) continue;
+
+            const isPeak = Math.floor(h) >= 18 || Math.floor(h) < 6;
+            virtual.push({
+                id: `virtual_${branchSport.branchId}_${branchSport.sportId}_${courtName.replace(' ', '')}_${date}_${startTime.replace(/:/g, '')}`,
+                branchId: branchSport.branchId,
+                sportId: branchSport.sport,
+                courtName,
+                slotDate: date,
+                startTime,
+                endTime,
+                duration: durationMin,
+                regularPrice: branchSport.regularPrice,
+                peakPrice: branchSport.peakPrice,
+                isPeakHour: isPeak,
+                status: 'AVAILABLE',
+                notes: '',
+                virtual: true
+            });
+        }
+    }
+    return virtual;
+};
+
 const getSlots = async (req, res) => {
     const { branchId, date, sportId, courtName } = req.query;
 
     try {
-        let sql = `
-            SELECT 
-                sl.*,
-                s.name as sport_name,
-                s.icon as sport_icon
-            FROM slots sl
-            LEFT JOIN sports s ON sl.sport_id = s.id
-            WHERE 1=1
-        `;
-        const params = [];
+        const where = {};
+        if (branchId) where.branchId = branchId;
+        if (date) where.slotDate = new Date(date);
+        if (sportId) where.sportId = sportId;
+        if (courtName) where.courtName = courtName;
 
-        if (branchId) {
-            sql += ' AND sl.branch_id = ?';
-            params.push(branchId);
-        }
-        if (date) {
-            sql += ' AND sl.slot_date = ?';
-            params.push(date);
-        }
-        if (sportId) {
-            sql += ' AND sl.sport_id = ?';
-            params.push(sportId);
-        }
-        if (courtName) {
-            sql += ' AND sl.court_name = ?';
-            params.push(courtName);
-        }
+        const persisted = await prisma.slot.findMany({ where, include: { sport: true }, orderBy: { startTime: 'asc' } });
+        let allSlots = persisted.map(formatSlot);
 
-        let [rows] = await db.query(sql, params);
-
-        // Auto-generate hourly slots for requested date if no slots exist in database
-        if (rows.length === 0 && date) {
-            const times = ['06:00', '07:00', '08:00', '09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00', '18:00', '19:00', '20:00', '21:00', '22:00'];
-            const targetBranch = branchId || 'br_001';
-            const targetSport = sportId || 'sp_master_01';
-            const court = courtName || 'Main Court';
-
-            const insertValues = times.map((t, i) => {
-                const endHour = parseInt(t.split(':')[0]) + 1;
-                const endTime = `${String(endHour).padStart(2, '0')}:00`;
-                const isPeak = (i >= 10 && i <= 14) || i >= 17;
-                const slotId = `slot_${targetBranch}_${date.replace(/-/g, '')}_${i}_${Math.random().toString(36).substring(2, 6)}`;
-                return [
-                    slotId, targetBranch, targetSport, court, date, `${t}:00`, `${endTime}:00`, 60, 800, 1200, isPeak ? 1 : 0, 'AVAILABLE', ''
-                ];
+        // Only synthesize the remaining open slots when the caller gave us enough
+        // to resolve a real BranchSport pricing/hours configuration.
+        if (branchId && sportId && date) {
+            const branchSport = await prisma.branchSport.findUnique({
+                where: { branchId_sportId: { branchId, sportId } },
+                include: { sport: true }
             });
-
-            try {
-                await db.query(`
-                    INSERT IGNORE INTO slots (
-                        id, branch_id, sport_id, court_name, slot_date, start_time, end_time, duration, regular_price, peak_price, is_peak_hour, status, notes
-                    ) VALUES ?
-                `, [insertValues]);
-
-                const [newRows] = await db.query(sql, params);
-                if (newRows.length > 0) rows = newRows;
-            } catch (genErr) {
-                console.error('Error auto-generating date slots:', genErr);
+            if (branchSport && branchSport.status === 'ACTIVE') {
+                const existingByCourtTime = new Set(persisted.map(s => `${s.courtName}|${s.startTime}`));
+                const virtual = buildVirtualSlotsForDay(
+                    { ...branchSport, sport: branchSport.sport },
+                    date,
+                    existingByCourtTime
+                ).map(formatSlot);
+                allSlots = allSlots.concat(courtName ? virtual.filter(v => v.courtName === courtName) : virtual);
             }
         }
 
-        // Format dates and times to match expected frontend interface formats
-        const formattedSlots = rows.map(r => {
-            // Format slotDate to YYYY-MM-DD
-            let slotDateStr = '';
-            if (r.slot_date) {
-                const d = new Date(r.slot_date);
-                const year = d.getFullYear();
-                const month = String(d.getMonth() + 1).padStart(2, '0');
-                const day = String(d.getDate()).padStart(2, '0');
-                slotDateStr = `${year}-${month}-${day}`;
-            }
+        allSlots.sort((a, b) => (a.courtName + a.startTime).localeCompare(b.courtName + b.startTime));
 
-            return {
-                id: r.id,
-                _id: r.id, // compatibility
-                branchId: r.branch_id,
-                sportId: r.sport_id ? {
-                    id: r.sport_id,
-                    _id: r.sport_id,
-                    name: r.sport_name,
-                    icon: r.sport_icon
-                } : null,
-                courtName: r.court_name,
-                date: slotDateStr,
-                slotDate: slotDateStr,
-                startTime: r.start_time ? r.start_time.substring(0, 5) : '', // HH:MM
-                endTime: r.end_time ? r.end_time.substring(0, 5) : '',     // HH:MM
-                duration: r.duration,
-                regularPrice: r.regular_price,
-                price: r.is_peak_hour ? r.peak_price : r.regular_price, // current effective price
-                peakPrice: r.peak_price,
-                isPeakHour: !!r.is_peak_hour,
-                status: r.status,
-                notes: r.notes || ''
-            };
-        });
-
-        return res.status(200).json({
-            success: true,
-            data: formattedSlots
-        });
+        return res.status(200).json({ success: true, data: allSlots });
     } catch (error) {
         console.error('Fetch slots error:', error);
-        return res.status(500).json({
-            success: false,
-            message: 'Internal Server Error fetching slots.'
-        });
+        return res.status(500).json({ success: false, message: 'Internal Server Error fetching slots.' });
     }
 };
 
-/**
- * Get slot by ID
- */
 const getSlotById = async (req, res) => {
-    const { id } = req.params;
-
     try {
-        const [rows] = await db.query(`
-            SELECT sl.*, s.name as sport_name, s.icon as sport_icon 
-            FROM slots sl
-            LEFT JOIN sports s ON sl.sport_id = s.id
-            WHERE sl.id = ?
-        `, [id]);
-
-        if (rows.length === 0) {
-            return res.status(404).json({
-                success: false,
-                message: 'Slot not found.'
-            });
+        const slot = await prisma.slot.findUnique({ where: { id: req.params.id }, include: { sport: true } });
+        if (!slot) {
+            return res.status(404).json({ success: false, message: 'Slot not found.' });
         }
-
-        const r = rows[0];
-        let slotDateStr = '';
-        if (r.slot_date) {
-            const d = new Date(r.slot_date);
-            slotDateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-        }
-
-        const formattedSlot = {
-            id: r.id,
-            _id: r.id,
-            branchId: r.branch_id,
-            sportId: r.sport_id ? {
-                id: r.sport_id,
-                _id: r.sport_id,
-                name: r.sport_name,
-                icon: r.sport_icon
-            } : null,
-            courtName: r.court_name,
-            date: slotDateStr,
-            slotDate: slotDateStr,
-            startTime: r.start_time ? r.start_time.substring(0, 5) : '',
-            endTime: r.end_time ? r.end_time.substring(0, 5) : '',
-            duration: r.duration,
-            regularPrice: r.regular_price,
-            price: r.is_peak_hour ? r.peak_price : r.regular_price,
-            peakPrice: r.peak_price,
-            isPeakHour: !!r.is_peak_hour,
-            status: r.status,
-            notes: r.notes || ''
-        };
-
-        return res.status(200).json({
-            success: true,
-            data: formattedSlot
-        });
+        return res.status(200).json({ success: true, data: formatSlot(slot) });
     } catch (error) {
         console.error('Fetch slot by id error:', error);
-        return res.status(500).json({
-            success: false,
-            message: 'Internal Server Error fetching slot.'
-        });
+        return res.status(500).json({ success: false, message: 'Internal Server Error fetching slot.' });
     }
 };
 
-/**
- * Create a new custom slot
- */
+const assertBranchAccess = async (branchId, user) => {
+    if (user.role === 'SUPER_ADMIN') return true;
+    const branch = await prisma.branch.findUnique({ where: { id: branchId } });
+    return !!branch && branch.ownerUserId === user.id;
+};
+
 const createSlot = async (req, res) => {
-    const {
-        branchId,
-        sportId,
-        courtName,
-        slotDate,
-        startTime,
-        endTime,
-        duration,
-        regularPrice,
-        peakPrice,
-        isPeakHour
-    } = req.body;
+    const { branchId, sportId, courtName, slotDate, startTime, endTime, duration, regularPrice, peakPrice, isPeakHour } = req.body;
 
     if (!branchId || !sportId || !courtName || !slotDate || !startTime || !endTime) {
-        return res.status(400).json({
-            success: false,
-            message: 'branchId, sportId, courtName, slotDate, startTime, and endTime are required fields.'
-        });
+        return res.status(400).json({ success: false, message: 'branchId, sportId, courtName, slotDate, startTime, and endTime are required fields.' });
     }
 
     try {
-        const slotId = 'slot_' + Date.now() + '_' + Math.floor(Math.random() * 1000);
-        const peakHour = isPeakHour ? 1 : 0;
+        if (!(await assertBranchAccess(branchId, req.user))) {
+            return res.status(403).json({ success: false, message: 'Forbidden: you do not manage this branch.' });
+        }
 
-        await db.query(`
-            INSERT INTO slots (
-                id, branch_id, sport_id, court_name, slot_date, start_time, end_time, duration, regular_price, peak_price, is_peak_hour, status, notes
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'AVAILABLE', '')
-        `, [
-            slotId,
-            branchId,
-            sportId,
-            courtName,
-            slotDate,
-            startTime,
-            endTime,
-            duration || 60,
-            regularPrice || 0,
-            peakPrice || 0,
-            peakHour
-        ]);
-
-        return res.status(201).json({
-            success: true,
-            message: 'Slot created successfully',
+        const slot = await prisma.slot.create({
             data: {
-                id: slotId,
-                _id: slotId,
-                branchId,
-                sportId,
-                courtName,
-                date: slotDate,
-                startTime,
-                endTime,
+                id: genId(),
+                branchId, sportId, courtName,
+                slotDate: new Date(slotDate),
+                startTime, endTime,
+                duration: duration || 60,
+                regularPrice: regularPrice || 0,
+                peakPrice: peakPrice || 0,
+                isPeakHour: !!isPeakHour,
                 status: 'AVAILABLE'
             }
         });
+
+        return res.status(201).json({ success: true, message: 'Slot created successfully', data: formatSlot(slot) });
     } catch (error) {
+        if (error.code === 'P2002') {
+            return res.status(409).json({ success: false, message: 'A slot already exists for this court/date/time.' });
+        }
         console.error('Create slot error:', error);
-        return res.status(500).json({
-            success: false,
-            message: 'Internal Server Error creating slot.'
-        });
+        return res.status(500).json({ success: false, message: 'Internal Server Error creating slot.' });
     }
 };
 
-/**
- * Update slot price or court details
- */
 const updateSlot = async (req, res) => {
     const { id } = req.params;
     const { regularPrice, peakPrice, courtName } = req.body;
 
     try {
-        const [existing] = await db.query('SELECT id FROM slots WHERE id = ?', [id]);
-        if (existing.length === 0) {
-            return res.status(404).json({
-                success: false,
-                message: 'Slot configuration not found.'
-            });
+        const existing = await prisma.slot.findUnique({ where: { id } });
+        if (!existing) {
+            return res.status(404).json({ success: false, message: 'Slot configuration not found.' });
+        }
+        if (!(await assertBranchAccess(existing.branchId, req.user))) {
+            return res.status(403).json({ success: false, message: 'Forbidden: you do not manage this branch.' });
         }
 
-        await db.query(`
-            UPDATE slots 
-            SET 
-                regular_price = COALESCE(?, regular_price),
-                peak_price = COALESCE(?, peak_price),
-                court_name = COALESCE(?, court_name)
-            WHERE id = ?
-        `, [regularPrice, peakPrice, courtName, id]);
-
-        return res.status(200).json({
-            success: true,
-            message: 'Slot updated successfully'
+        await prisma.slot.update({
+            where: { id },
+            data: { regularPrice: regularPrice ?? undefined, peakPrice: peakPrice ?? undefined, courtName: courtName ?? undefined }
         });
+
+        return res.status(200).json({ success: true, message: 'Slot updated successfully' });
     } catch (error) {
         console.error('Update slot error:', error);
-        return res.status(500).json({
-            success: false,
-            message: 'Internal Server Error updating slot.'
-        });
+        return res.status(500).json({ success: false, message: 'Internal Server Error updating slot.' });
     }
 };
 
-/**
- * Update slot status (AVAILABLE, BOOKED, BLOCKED, COMPLETED)
- */
 const updateSlotStatus = async (req, res) => {
     const { id } = req.params;
     const { status, notes } = req.body;
 
     if (!status || !['AVAILABLE', 'BOOKED', 'BLOCKED', 'COMPLETED'].includes(status)) {
-        return res.status(400).json({
-            success: false,
-            message: 'Status must be one of: AVAILABLE, BOOKED, BLOCKED, COMPLETED.'
-        });
+        return res.status(400).json({ success: false, message: 'Status must be one of: AVAILABLE, BOOKED, BLOCKED, COMPLETED.' });
     }
 
     try {
-        const [result] = await db.query('UPDATE slots SET status = ?, notes = ? WHERE id = ?', [status, notes || '', id]);
-        
-        if (result.affectedRows === 0) {
-            return res.status(404).json({
-                success: false,
-                message: 'Slot configuration not found.'
-            });
+        const existing = await prisma.slot.findUnique({ where: { id } });
+        if (!existing) {
+            return res.status(404).json({ success: false, message: 'Slot configuration not found.' });
+        }
+        if (!(await assertBranchAccess(existing.branchId, req.user))) {
+            return res.status(403).json({ success: false, message: 'Forbidden: you do not manage this branch.' });
         }
 
-        return res.status(200).json({
-            success: true,
-            message: `Slot status updated to ${status}`
-        });
+        await prisma.slot.update({ where: { id }, data: { status, notes: notes || '' } });
+        return res.status(200).json({ success: true, message: `Slot status updated to ${status}` });
     } catch (error) {
         console.error('Update slot status error:', error);
-        return res.status(500).json({
-            success: false,
-            message: 'Internal Server Error updating status.'
-        });
+        return res.status(500).json({ success: false, message: 'Internal Server Error updating status.' });
     }
 };
 
-/**
- * Delete a slot
- */
 const deleteSlot = async (req, res) => {
     const { id } = req.params;
 
     try {
-        const [result] = await db.query('DELETE FROM slots WHERE id = ?', [id]);
-        if (result.affectedRows === 0) {
-            return res.status(404).json({
-                success: false,
-                message: 'Slot configuration not found.'
-            });
+        const existing = await prisma.slot.findUnique({ where: { id } });
+        if (!existing) {
+            return res.status(404).json({ success: false, message: 'Slot configuration not found.' });
+        }
+        if (!(await assertBranchAccess(existing.branchId, req.user))) {
+            return res.status(403).json({ success: false, message: 'Forbidden: you do not manage this branch.' });
         }
 
-        return res.status(200).json({
-            success: true,
-            message: 'Slot deleted successfully'
-        });
+        await prisma.slot.delete({ where: { id } });
+        return res.status(200).json({ success: true, message: 'Slot deleted successfully' });
     } catch (error) {
         console.error('Delete slot error:', error);
-        return res.status(500).json({
-            success: false,
-            message: 'Internal Server Error deleting slot.'
-        });
+        return res.status(500).json({ success: false, message: 'Internal Server Error deleting slot.' });
     }
 };
 
@@ -362,5 +243,6 @@ module.exports = {
     createSlot,
     updateSlot,
     updateSlotStatus,
-    deleteSlot
+    deleteSlot,
+    genId
 };

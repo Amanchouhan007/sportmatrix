@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect } from 'react';
 import { loginUser } from '../services/authService';
+import { getSocket, disconnectSocket } from '../services/socket';
 
 const AuthContext = createContext(null);
 
@@ -16,6 +17,7 @@ export const AuthProvider = ({ children }) => {
             try {
                 setToken(storedToken);
                 setUser(JSON.parse(storedUser));
+                getSocket();
             } catch (error) {
                 console.error('Error parsing stored user data:', error);
                 // Clear corrupt data
@@ -27,39 +29,25 @@ export const AuthProvider = ({ children }) => {
     }, []);
 
     /**
-     * Authenticate user with backend and validate selected role
-     * @param {string} email 
-     * @param {string} password 
-     * @param {string} selectedRole - UI selected role ('superadmin', 'owner', 'staff', 'customer')
+     * Authenticate user with the backend. The account's role always comes from
+     * the server -- it is never guessed or overridden on the client.
+     * @param {string} email
+     * @param {string} password
      */
-    const login = async (email, password, selectedRole) => {
-        const data = await loginUser(email, password, selectedRole);
-        
-        if (data && data.success) {
-            const roleMapping = {
-                superadmin: 'SUPER_ADMIN',
-                owner: 'OWNER',
-                staff: 'STAFF',
-                umpire: 'UMPIRE',
-                customer: 'CUSTOMER'
-            };
+    const login = async (email, password) => {
+        const data = await loginUser(email, password);
 
-            const mappedRole = selectedRole ? roleMapping[selectedRole.toLowerCase()] : null;
-            const activeRole = data.user?.role || mappedRole || 'CUSTOMER';
-            const userObj = { ...data.user, role: activeRole };
-
-            // Save details to localStorage
-            localStorage.setItem('token', data.token);
-            localStorage.setItem('user', JSON.stringify(userObj));
-            
-            // Update context state
-            setUser(userObj);
-            setToken(data.token);
-            
-            return userObj;
-        } else {
-            throw new Error(data.message || 'Login failed');
+        if (!data || !data.success) {
+            throw new Error(data?.message || 'Login failed');
         }
+
+        const userObj = data.user;
+        localStorage.setItem('token', data.token);
+        localStorage.setItem('user', JSON.stringify(userObj));
+        setUser(userObj);
+        setToken(data.token);
+        getSocket();
+        return userObj;
     };
 
     /**
@@ -68,6 +56,7 @@ export const AuthProvider = ({ children }) => {
     const logout = () => {
         localStorage.removeItem('token');
         localStorage.removeItem('user');
+        disconnectSocket();
         setUser(null);
         setToken(null);
         if (typeof window !== 'undefined') {
@@ -89,15 +78,19 @@ export const AuthProvider = ({ children }) => {
     };
 
     /**
-     * Set active user session directly (e.g. after registration)
+     * Set active user session directly from a real backend response (e.g. after
+     * an owner-onboarding flow that returns its own token). Never fabricates a
+     * token or elevates a role -- both must come from the server.
      */
     const setSession = (userObj, tokenStr) => {
-        const sessionUser = { ...userObj, role: userObj.role || 'OWNER' };
-        const sessionToken = tokenStr || `token_${Date.now()}`;
-        localStorage.setItem('token', sessionToken);
+        if (!tokenStr) {
+            throw new Error('setSession requires a real token from the backend.');
+        }
+        const sessionUser = { ...userObj, role: userObj.role || 'CUSTOMER' };
+        localStorage.setItem('token', tokenStr);
         localStorage.setItem('user', JSON.stringify(sessionUser));
         setUser(sessionUser);
-        setToken(sessionToken);
+        setToken(tokenStr);
         return sessionUser;
     };
 

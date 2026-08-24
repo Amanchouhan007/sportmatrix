@@ -9,7 +9,7 @@ const {
     uploadSportImage
 } = require('./sports.controller');
 
-const { verifyToken, optionalToken, authorizeRoles } = require('../../middleware/auth.middleware');
+const { verifyToken, authorizeRoles } = require('../../middleware/auth.middleware');
 const upload = require('../../config/multer.config');
 
 const router = express.Router();
@@ -19,10 +19,10 @@ router.get('/master', getMasterSports);
 router.get('/branch/:branchId', getBranchSports);
 
 // Owner / Admin configuration routes
-router.post('/branch', optionalToken, activateBranchSport);
-router.put('/branch/:id', optionalToken, updateBranchSport);
-router.patch('/branch/:id/status', optionalToken, changeSportStatus);
-router.delete('/branch/:id', optionalToken, deleteBranchSport);
+router.post('/branch', verifyToken, authorizeRoles(['OWNER', 'SUPER_ADMIN']), activateBranchSport);
+router.put('/branch/:id', verifyToken, authorizeRoles(['OWNER', 'SUPER_ADMIN']), updateBranchSport);
+router.patch('/branch/:id/status', verifyToken, authorizeRoles(['OWNER', 'SUPER_ADMIN']), changeSportStatus);
+router.delete('/branch/:id', verifyToken, authorizeRoles(['OWNER', 'SUPER_ADMIN']), deleteBranchSport);
 
 // Image Upload Endpoint (Multer integration)
 router.post('/upload', verifyToken, authorizeRoles(['OWNER', 'SUPER_ADMIN']), upload.single('image'), uploadSportImage);

@@ -1,6 +1,9 @@
 const express = require('express');
 const router = express.Router();
 const controller = require('./umpire.controller');
+const { verifyToken } = require('../../middleware/auth.middleware');
+
+router.use(verifyToken);
 
 router.get('/profile', controller.getUmpireProfile);
 router.put('/profile', controller.updateUmpireProfile);

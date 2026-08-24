@@ -131,9 +131,11 @@ enum AdType {
 }
 
 enum AdStatus {
+  DRAFT
   PENDING
   APPROVED
   ACTIVE
+  PAUSED
   BOOKING_GENERATED
   COMMISSION_PENDING
   PAID
@@ -238,6 +240,7 @@ enum WalletTxType {
   ESCROW_HOLD
   ESCROW_RELEASE
   COMMISSION
+  WITHDRAWAL
 }
 
 // ------------------------------------------------------------------------------
@@ -261,6 +264,7 @@ model User {
   ownerProfile     Owner?
   umpireProfile    UmpireProfile?
   playerProfile    PlayerProfile?
+  staffMemberProfile StaffMember?
   managedBranches  Branch[]     @relation("OwnerBranches")
   staffBranchId    String?      @map("staff_branch_id") @db.VarChar(50)
   staffBranch      Branch?      @relation("StaffBranch", fields: [staffBranchId], references: [id], onDelete: SetNull)
@@ -473,11 +477,14 @@ model Branch {
   corporateBookings  CorporateBooking[]
   reviews            Review[]
   matches            Match[]
+  dareChallenges     DareChallenge[]
+  payoutAccount      OwnerPayoutAccount?
 
   @@index([city])
   @@index([status])
   @@map("branches")
 }
+
 
 enum MediaType {
   PHOTO
@@ -512,9 +519,11 @@ model Sport {
   slots               Slot[]
   tournaments         Tournament[]
   matches             Match[]
+  dareChallenges      DareChallenge[]
 
   @@map("sports")
 }
+
 
 model BranchSport {
   id                 String      @id @map("id") @db.VarChar(50) // e.g. bs_001
@@ -570,11 +579,47 @@ model Slot {
   bookings     Booking[]
   slotHolds    SlotHold[]
   matches      Match[]
+  dareChallenges DareChallenge[]
 
+  @@unique([branchId, courtName, slotDate, startTime])
   @@index([branchId, slotDate])
   @@index([status])
   @@map("slots")
 }
+
+// ------------------------------------------------------------------------------
+// 5B. DARE CHALLENGES & OPEN MATCH CALLOUTS
+// ------------------------------------------------------------------------------
+
+model DareChallenge {
+  id              String         @id @default(cuid()) @map("id") @db.VarChar(50)
+  branchId        String         @map("branch_id") @db.VarChar(50)
+  branch          Branch         @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  sportId         String?        @map("sport_id") @db.VarChar(50)
+  sport           Sport?         @relation(fields: [sportId], references: [id], onDelete: SetNull)
+  slotId          String?        @map("slot_id") @db.VarChar(50)
+  slot            Slot?          @relation(fields: [slotId], references: [id], onDelete: SetNull)
+
+  challengerTeam  String         @map("challenger_team") @db.VarChar(100) // e.g. "Palasia Smashers"
+  captainName     String?        @map("captain_name") @db.VarChar(100)
+  captainMobile   String?        @map("captain_mobile") @db.VarChar(20)
+
+  matchDate       DateTime?      @map("match_date") @db.Date
+  matchTime       String         @map("match_time") @db.VarChar(100) // e.g. "Tomorrow, 7:00 AM – 8:00 AM"
+  matchFee        Decimal        @default(1800.00) @map("match_fee") @db.Decimal(10, 2)
+  depositFee      Decimal        @default(540.00) @map("deposit_fee") @db.Decimal(10, 2) // 30% security deposit
+  sportName       String         @default("Box Cricket") @map("sport_name") @db.VarChar(50)
+  badge           String         @default("🔥 LIVE DARE") @map("badge") @db.VarChar(50)
+  status          String         @default("ACTIVE") @map("status") @db.VarChar(20) // ACTIVE, ACCEPTED, COMPLETED, CANCELLED
+
+  createdAt       DateTime       @default(now()) @map("created_at")
+  updatedAt       DateTime       @default(now()) @updatedAt @map("updated_at")
+
+  @@index([branchId])
+  @@index([status])
+  @@map("dare_challenges")
+}
+
 
 model SlotHold {
   id              String   @id @default(cuid()) @map("id") @db.VarChar(50)
@@ -593,6 +638,7 @@ model SlotHold {
   expiresAt       DateTime @map("expires_at")
   createdAt       DateTime @default(now()) @map("created_at")
 
+  @@unique([slotId])
   @@index([slotId, expiresAt])
   @@map("slot_holds")
 }
@@ -641,6 +687,11 @@ model Match {
   teamBScore               Int?             @map("team_b_score")
   winnerTeamSide           String?          @map("winner_team_side") @db.VarChar(20) // "TEAM_A" or "TEAM_B"
 
+  // Opponent Invite Token (Team B payment link)
+  inviteTokenHash          String?          @unique @map("invite_token_hash") @db.VarChar(64)
+  inviteExpiresAt          DateTime?        @map("invite_expires_at")
+  inviteStatus             String?          @map("invite_status") @db.VarChar(20) // SENT, PAID, DECLINED
+
   createdAt                DateTime         @default(now()) @map("created_at")
   updatedAt                DateTime         @default(now()) @updatedAt @map("updated_at")
 
@@ -686,6 +737,18 @@ model MatchPayment {
   paymentStatus    PaymentStatus @default(PENDING) @map("payment_status")
   gatewayRef       String?       @map("gateway_ref") @db.VarChar(100)
   upiTransactionId String?       @map("upi_transaction_id") @db.VarChar(100)
+  idempotencyKey   String?       @unique @map("idempotency_key") @db.VarChar(100)
+
+  // Commission-split settlement (Phase 1 payment gateway abstraction). paymentStatus
+  // only flips to COMPLETED once both legs below are CONFIRMED by the active
+  // PaymentGatewayProvider (manual confirmation today, automatic once a real
+  // gateway such as Razorpay Route is plugged into PaymentGatewayConfig).
+  commissionAmount     Decimal              @default(0.00) @map("commission_amount") @db.Decimal(10, 2)
+  ownerAmount          Decimal              @default(0.00) @map("owner_amount") @db.Decimal(10, 2)
+  ownerPayoutStatus    SettlementLegStatus  @default(PENDING) @map("owner_payout_status")
+  commissionStatus     SettlementLegStatus  @default(PENDING) @map("commission_status")
+  ownerConfirmedAt     DateTime?            @map("owner_confirmed_at")
+  commissionConfirmedAt DateTime?           @map("commission_confirmed_at")
 
   createdAt        DateTime      @default(now()) @map("created_at")
   updatedAt        DateTime      @default(now()) @updatedAt @map("updated_at")
@@ -835,6 +898,19 @@ model Advertisement {
   startDate      DateTime     @map("start_date") @db.Date
   endDate        DateTime     @map("end_date") @db.Date
   description    String?      @map("description") @db.Text
+
+  // Impression Ad Creative (only used when type = IMPRESSION_AD)
+  adTitle             String?  @map("ad_title") @db.VarChar(150)
+  shortHeadline       String?  @map("short_headline") @db.VarChar(150)
+  ctaText             String?  @map("cta_text") @db.VarChar(50)
+  redirectUrl         String?  @map("redirect_url") @db.VarChar(500)
+  bannerImageUrl      String?  @map("banner_image_url") @db.Text
+  mobileBannerImageUrl String? @map("mobile_banner_image_url") @db.Text
+  thumbnailImageUrl   String?  @map("thumbnail_image_url") @db.Text
+  videoUrl            String?  @map("video_url") @db.Text
+  pricingModel        String?  @map("pricing_model") @db.VarChar(20) // CPM, CPC etc.
+  cpmRate             Decimal? @map("cpm_rate") @db.Decimal(10, 2)
+  placements          String?  @map("placements") @db.VarChar(500) // comma-separated placement slots
 
   createdAt      DateTime     @default(now()) @map("created_at")
   updatedAt      DateTime     @default(now()) @updatedAt @map("updated_at")
@@ -1635,6 +1711,13 @@ model Payment {
   paymentMethod PaymentMethod @default(UPI) @map("payment_method")
   status        PaymentStatus @default(COMPLETED) @map("status")
 
+  // Commission-split settlement (Phase 1 payment gateway abstraction) -- mirrors
+  // MatchPayment's split fields for POS/billing payments. `commission` above is
+  // the platform's cut; `ownerAmount` is what's due to the turf owner.
+  ownerAmount       Decimal             @default(0.00) @map("owner_amount") @db.Decimal(10, 2)
+  ownerPayoutStatus SettlementLegStatus @default(PENDING) @map("owner_payout_status")
+  commissionStatus  SettlementLegStatus @default(PENDING) @map("commission_status")
+
   createdAt     DateTime      @default(now()) @map("created_at")
 
   @@index([status])
@@ -1871,6 +1954,12 @@ model StaffMember {
   branchId    String         @map("branch_id") @db.VarChar(50)
   branch      Branch         @relation(fields: [branchId], references: [id], onDelete: Cascade)
 
+  // Links this roster entry to a real, login-capable User (role STAFF). Without
+  // this, "adding a staff member" was only ever a roster row with no way to
+  // actually log in scoped to the branch.
+  userId      String?        @unique @map("user_id") @db.VarChar(50)
+  user        User?          @relation(fields: [userId], references: [id], onDelete: SetNull)
+
   fullName    String         @map("full_name") @db.VarChar(100) // Ravi Kumar, Suresh Patil, Anita Desai
   email       String         @map("email") @db.VarChar(100)
   phone       String         @map("phone") @db.VarChar(20)      // +91 98765 43210
@@ -2039,5 +2128,71 @@ model LiveMatchSession {
   createdAt     DateTime  @default(now()) @map("created_at")
 
   @@map("live_match_sessions")
+}
+
+// ------------------------------------------------------------------------------
+// 24. PLUGGABLE PAYMENT GATEWAY & OWNER COMMISSION-SPLIT PAYOUTS
+// ------------------------------------------------------------------------------
+// No live payment gateway is wired in yet. Every booking payment still records a
+// real commission/owner split (same commission-rate math MatchPricingService
+// already performs), and now requires the owner to confirm receipt and the
+// platform to confirm its commission before the payment is COMPLETED. Swapping
+// PaymentGatewayConfig.activeProvider to a real gateway later (e.g. RAZORPAY_ROUTE)
+// activates automatic split settlement without further schema changes.
+
+enum SettlementLegStatus {
+  PENDING
+  CONFIRMED
+  FAILED
+}
+
+enum PaymentGatewayProviderType {
+  MANUAL
+  RAZORPAY_ROUTE
+  STRIPE_CONNECT
+}
+
+enum OwnerPayoutAccountType {
+  UPI
+  BANK_ACCOUNT
+  QR_CODE
+}
+
+model OwnerPayoutAccount {
+  id                String                 @id @default(cuid()) @map("id") @db.VarChar(50)
+  branchId          String                 @unique @map("branch_id") @db.VarChar(50)
+  branch            Branch                 @relation(fields: [branchId], references: [id], onDelete: Cascade)
+
+  accountType       OwnerPayoutAccountType @default(UPI) @map("account_type")
+  upiId             String?                @map("upi_id") @db.VarChar(100)
+  bankAccountHolder String?                @map("bank_account_holder") @db.VarChar(150)
+  bankAccountNumber String?                @map("bank_account_number") @db.VarChar(50)
+  bankIfsc          String?                @map("bank_ifsc") @db.VarChar(20)
+  bankName          String?                @map("bank_name") @db.VarChar(100)
+  qrCodeImageUrl    String?                @map("qr_code_image_url") @db.VarChar(255)
+  isActive          Boolean                @default(true) @map("is_active")
+
+  createdAt         DateTime               @default(now()) @map("created_at")
+  updatedAt         DateTime               @default(now()) @updatedAt @map("updated_at")
+
+  @@map("owner_payout_accounts")
+}
+
+model PaymentGatewayConfig {
+  id             String                     @id @map("id") @db.VarChar(50) // singleton row: "global_gateway"
+  activeProvider PaymentGatewayProviderType @default(MANUAL) @map("active_provider")
+  isLiveMode     Boolean                    @default(false) @map("is_live_mode")
+
+  razorpayKeyId         String? @map("razorpay_key_id") @db.VarChar(150)
+  razorpayKeySecret      String? @map("razorpay_key_secret") @db.VarChar(150)
+  razorpayWebhookSecret String? @map("razorpay_webhook_secret") @db.VarChar(150)
+
+  stripeSecretKey     String? @map("stripe_secret_key") @db.VarChar(150)
+  stripeWebhookSecret String? @map("stripe_webhook_secret") @db.VarChar(150)
+
+  updatedBy String?  @map("updated_by") @db.VarChar(50)
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at")
+
+  @@map("payment_gateway_configs")
 }
 

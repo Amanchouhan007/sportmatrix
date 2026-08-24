@@ -38,9 +38,9 @@ export default function TournamentListPage() {
         if (filter === 'All') return true;
         
         const stat = (t.status || '').toLowerCase();
-        if (filter === 'Running') return ['open', 'running', 'approved', 'active'].includes(stat);
-        if (filter === 'Upcoming') return ['upcoming', 'pending', 'approved', 'active'].includes(stat);
-        if (filter === 'Closed') return ['completed', 'cancelled', 'closed'].includes(stat);
+        if (filter === 'Running') return ['open', 'running', 'approved', 'active', 'registration_open', 'few_slots_left'].includes(stat);
+        if (filter === 'Upcoming') return ['upcoming', 'pending', 'approved', 'active', 'registration_open', 'few_slots_left'].includes(stat);
+        if (filter === 'Closed') return ['completed', 'cancelled', 'closed', 'rejected'].includes(stat);
         
         return false;
     });

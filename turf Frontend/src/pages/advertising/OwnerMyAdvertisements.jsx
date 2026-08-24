@@ -13,8 +13,18 @@ import {
     FiDownload, FiRefreshCw, FiCalendar, FiTrendingUp, FiCheckCircle
 } from 'react-icons/fi'
 import { HiMegaphone } from 'react-icons/hi2'
+import { getAds, updateAdStatus, deleteAd } from '../../services/adsService'
 
-const INITIAL_OWNER_ADS = []
+const TYPE_LABELS = { GUARANTEED_BOOKING: 'Guaranteed Booking', DISCOUNT_OFFER: 'Discount Offer', IMPRESSION_AD: 'Impression Ad' }
+const ACTIVE_STATUSES = ['ACTIVE']
+const PENDING_STATUSES = ['DRAFT', 'PENDING', 'APPROVED', 'PAUSED']
+
+const mapAdForDisplay = (a) => ({
+    ...a,
+    type: TYPE_LABELS[a.type] || a.type,
+    status: ACTIVE_STATUSES.includes(a.status) ? 'Active' : PENDING_STATUSES.includes(a.status) ? 'Pending' : 'Expired',
+    rawStatus: a.status
+})
 
 export default function OwnerMyAdvertisements() {
     const navigate = useNavigate()
@@ -29,25 +39,22 @@ export default function OwnerMyAdvertisements() {
     const [typeFilter, setTypeFilter] = useState('ALL')
     const [confirmModal, setConfirmModal] = useState({ open: false, type: '', ad: null })
 
-    useEffect(() => {
-        const fetchLiveAds = async () => {
-            try {
-                const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5005/api/v1';
-                const res = await fetch(`${API_URL}/ads`);
-                if (!res.ok) throw new Error('Network response was not ok');
-                const data = await res.json();
-                if (data.success && Array.isArray(data.data)) {
-                    const demoAdIds = ['ad_101', 'ad_102', 'ad_103'];
-                    setAds(data.data.filter(a => !demoAdIds.includes(a.id) && !demoAdIds.includes(a._id)));
-                } else {
-                    setAds([]);
-                }
-            } catch (err) {
-                console.warn('Backend GET /ads failed:', err.message);
-                setAds([]);
-            }
-        };
+    const [isLoading, setIsLoading] = useState(true)
 
+    const fetchLiveAds = async () => {
+        setIsLoading(true)
+        try {
+            const res = await getAds()
+            setAds((res.data || []).map(mapAdForDisplay))
+        } catch (err) {
+            addToast({ title: 'Load Failed', message: err.message || 'Failed to load your advertisements.', type: 'error' })
+            setAds([])
+        } finally {
+            setIsLoading(false)
+        }
+    }
+
+    useEffect(() => {
         fetchLiveAds();
     }, []);
 
@@ -58,22 +65,33 @@ export default function OwnerMyAdvertisements() {
         return matchesSearch && matchesStatus && matchesType
     })
 
-    const handlePauseToggle = (ad) => {
-        const newStatus = ad.status === 'Active' ? 'Pending' : 'Active'
-        setAds(prev => prev.map(item => item.id === ad.id ? { ...item, status: newStatus } : item))
-        addToast({ message: `Campaign "${ad.name}" is now ${newStatus}!`, type: 'info' })
-        setConfirmModal({ open: false, type: '', ad: null })
+    const handlePauseToggle = async (ad) => {
+        const newBackendStatus = ad.status === 'Active' ? 'PAUSED' : 'ACTIVE'
+        try {
+            await updateAdStatus(ad.id, newBackendStatus)
+            addToast({ message: `Campaign "${ad.name}" is now ${newBackendStatus === 'ACTIVE' ? 'Active' : 'Paused'}!`, type: 'info' })
+            fetchLiveAds()
+        } catch (err) {
+            addToast({ title: 'Update Failed', message: err.message || 'Could not update campaign status.', type: 'error' })
+        } finally {
+            setConfirmModal({ open: false, type: '', ad: null })
+        }
     }
 
     const handleMarkPaid = (campaignId) => {
-        // Placeholder logic for marking a campaign fee as paid.
-        addToast({ message: `Campaign ${campaignId} commission marked as paid!`, type: 'success' });
+        navigate(`${basePath}/ads/commissions`)
     };
 
-    const handleDelete = (id) => {
-        setAds(prev => prev.filter(item => item.id !== id))
-        addToast({ message: `Campaign deleted successfully!`, type: 'success' })
-        setConfirmModal({ open: false, type: '', ad: null })
+    const handleDelete = async (id) => {
+        try {
+            await deleteAd(id)
+            addToast({ message: `Campaign deleted successfully!`, type: 'success' })
+            fetchLiveAds()
+        } catch (err) {
+            addToast({ title: 'Delete Failed', message: err.message || 'Could not delete this campaign.', type: 'error' })
+        } finally {
+            setConfirmModal({ open: false, type: '', ad: null })
+        }
     }
 
     const handleExportCSV = () => {
@@ -132,7 +150,13 @@ export default function OwnerMyAdvertisements() {
                         Revenue: <strong className="text-emerald-700 font-extrabold">₹{ads.reduce((sum, a) => sum + (Number(String(a.revenue || '').replace(/[^\d.]/g, '')) || 0), 0).toLocaleString('en-IN')}</strong>
                     </div>
                     <div className="px-3.5 py-1.5 rounded-xl bg-purple-50 text-purple-700 text-xs font-bold border border-purple-200/80">
-                        Conversion: <strong className="text-surface-900 font-extrabold">11.3%</strong>
+                        Conversion: <strong className="text-surface-900 font-extrabold">
+                            {(() => {
+                                const totalClicks = ads.reduce((s, a) => s + (a.clicks || 0), 0)
+                                const totalBookings = ads.reduce((s, a) => s + (a.bookings || 0), 0)
+                                return totalClicks > 0 ? `${((totalBookings / totalClicks) * 100).toFixed(1)}%` : '0.0%'
+                            })()}
+                        </strong>
                     </div>
                     <div className="px-3.5 py-1.5 rounded-xl bg-amber-50 text-amber-700 text-xs font-bold border border-amber-200/80">
                         Active: <strong className="text-amber-700 font-extrabold">{ads.filter(a => (a.status || '').toUpperCase() === 'ACTIVE').length}</strong>
@@ -211,8 +235,9 @@ export default function OwnerMyAdvertisements() {
                         </button>
 
                         <button
-                            onClick={() => setAds([...INITIAL_OWNER_ADS])}
-                            className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-white hover:bg-surface-50 border border-surface-200/80 text-[11px] font-bold text-surface-700 hover:text-indigo-600 transition-all cursor-pointer shadow-2xs shrink-0"
+                            onClick={fetchLiveAds}
+                            disabled={isLoading}
+                            className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-white hover:bg-surface-50 border border-surface-200/80 text-[11px] font-bold text-surface-700 hover:text-indigo-600 transition-all cursor-pointer shadow-2xs shrink-0 disabled:opacity-50"
                         >
                             <FiRefreshCw className="w-3 h-3 text-indigo-600" /> Refresh
                         </button>
@@ -229,7 +254,13 @@ export default function OwnerMyAdvertisements() {
             </div>
 
             {/* 4 & ⭐ Master Campaign Card Structure VIEW */}
-            {viewMode === 'card' ? (
+            {isLoading ? (
+                <div className="py-16 text-center text-slate-400 text-sm font-semibold bg-white rounded-3xl border border-surface-200/80">Loading your campaigns...</div>
+            ) : filteredAds.length === 0 ? (
+                <div className="py-16 text-center text-slate-400 text-sm font-semibold bg-white rounded-3xl border border-surface-200/80">
+                    {ads.length === 0 ? 'No campaigns yet -- click "Campaign" above to create one.' : 'No campaigns match your filters.'}
+                </div>
+            ) : viewMode === 'card' ? (
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                     {filteredAds.map((ad) => {
                         // Top Color Accent Strip based on Ad Type
@@ -288,27 +319,23 @@ export default function OwnerMyAdvertisements() {
                                     </div>
                                 </div>
 
-                                {/* 6. Campaign Performance Grid with Trends */}
+                                {/* 6. Campaign Performance Grid */}
                                 <div className="grid grid-cols-4 gap-3 bg-surface-50/90 p-4 rounded-2xl border border-surface-200/60 text-center">
                                     <div>
                                         <div className="text-[11px] font-bold text-surface-400 uppercase">Views</div>
                                         <div className="text-sm font-black text-surface-900 mt-0.5">{(ad.views / 1000).toFixed(1)}K</div>
-                                        <div className="text-[10px] font-extrabold text-emerald-600">▲ 18%</div>
                                     </div>
                                     <div>
                                         <div className="text-[11px] font-bold text-surface-400 uppercase">Clicks</div>
                                         <div className="text-sm font-black text-surface-900 mt-0.5">{(ad.clicks / 1000).toFixed(1)}K</div>
-                                        <div className="text-[10px] font-extrabold text-emerald-600">▲ 14%</div>
                                     </div>
                                     <div>
                                         <div className="text-[11px] font-bold text-surface-400 uppercase">Bookings</div>
                                         <div className="text-sm font-black text-indigo-600 mt-0.5">{ad.bookings}</div>
-                                        <div className="text-[10px] font-extrabold text-emerald-600">▲ 12%</div>
                                     </div>
                                     <div>
                                         <div className="text-[11px] font-bold text-surface-400 uppercase">Revenue</div>
                                         <div className="text-sm font-black text-emerald-600 mt-0.5">{ad.revenue}</div>
-                                        <div className="text-[10px] font-extrabold text-emerald-600">▲ 9%</div>
                                     </div>
                                 </div>
 

@@ -27,10 +27,25 @@ api.interceptors.request.use(
 api.interceptors.response.use(
     (response) => response.data || response,
     (error) => {
+        const message = error.response?.data?.message || error.message || '';
+        const status = error.response?.status;
+        
+        if (status === 403 || status === 401) {
+            const lowerMsg = message.toLowerCase();
+            if (lowerMsg.includes('deactivated') || lowerMsg.includes('suspended') || lowerMsg.includes('revoked') || lowerMsg.includes('access denied')) {
+                localStorage.removeItem('token');
+                localStorage.removeItem('sport_matrix_token');
+                localStorage.removeItem('user');
+                if (window.location.pathname !== '/login') {
+                    window.location.href = '/login?reason=deactivated';
+                }
+            }
+        }
+
         const customError = {
             success: false,
-            message: error.response?.data?.message || error.message || 'Server unreachable. Using local fallback.',
-            status: error.response?.status || 500,
+            message: message || 'Server unreachable.',
+            status: status || 500,
             isNetworkError: !error.response
         };
         console.warn('[API Client Warning]:', customError.message);
@@ -50,6 +65,30 @@ export const getApi = async (url, params = {}) => {
 export const postApi = async (url, data = {}) => {
     try {
         return await api.post(url, data);
+    } catch (err) {
+        return { success: false, error: err };
+    }
+};
+
+export const putApi = async (url, data = {}) => {
+    try {
+        return await api.put(url, data);
+    } catch (err) {
+        return { success: false, error: err };
+    }
+};
+
+export const patchApi = async (url, data = {}) => {
+    try {
+        return await api.patch(url, data);
+    } catch (err) {
+        return { success: false, error: err };
+    }
+};
+
+export const deleteApi = async (url, params = {}) => {
+    try {
+        return await api.delete(url, { params });
     } catch (err) {
         return { success: false, error: err };
     }

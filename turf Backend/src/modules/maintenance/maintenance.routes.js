@@ -1,9 +1,9 @@
 const express = require('express');
 const { getTickets, createTicket, updateTicketStatus, deleteTicket } = require('./maintenance.controller');
-const { optionalToken } = require('../../middleware/auth.middleware');
+const { verifyToken, authorizeRoles } = require('../../middleware/auth.middleware');
 
 const router = express.Router();
-router.use(optionalToken);
+router.use(verifyToken, authorizeRoles(['OWNER', 'STAFF', 'SUPER_ADMIN']));
 
 router.get('/', getTickets);
 router.get('/tickets', getTickets);
