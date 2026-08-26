@@ -52,18 +52,21 @@ export default function SuperAdminGlobalCRMPage() {
 
     const formatSlotDisplay = (slotStr) => {
         if (!slotStr) return 'N/A'
-        if (slotStr.includes('(2026-')) {
+        if (slotStr.includes('(')) {
             const [time, dateRaw] = slotStr.split('(')
-            const cleanDate = dateRaw.replace(')', '').trim()
-            let cleanTime = time.trim()
-            if (cleanTime.includes(':')) {
-                const [h, m] = cleanTime.split(':')
+            const cleanDate = dateRaw ? dateRaw.replace(')', '').trim() : ''
+            let rawTime = time.replace(/AM|PM/gi, '').trim()
+            let cleanTime = rawTime
+            if (rawTime.includes(':')) {
+                const [h, m] = rawTime.split(':')
                 const hour = parseInt(h, 10)
-                const ampm = hour >= 12 ? 'PM' : 'AM'
-                const formattedHour = hour % 12 || 12
-                cleanTime = `${formattedHour}:${m} ${ampm}`
+                if (!isNaN(hour)) {
+                    const ampm = hour >= 12 ? 'PM' : 'AM'
+                    const formattedHour = hour % 12 || 12
+                    cleanTime = `${String(formattedHour).padStart(2, '0')}:${m} ${ampm}`
+                }
             }
-            return `${cleanTime} • ${cleanDate}`
+            return cleanDate ? `${cleanTime} • ${cleanDate}` : cleanTime
         }
         if (slotStr.includes('08:00 AM') || slotStr.includes('Full Day')) {
             return `Full Day Arena (08:00 AM - 08:00 PM)`
@@ -152,18 +155,50 @@ export default function SuperAdminGlobalCRMPage() {
         if (addToast) addToast(`Master Platform CRM exported ${targetLeads.length} contacts to CSV!`, 'success')
     }
 
-    const branches = ['all', ...new Set([...realBranches, ...leads.map(l => l.turfBranch).filter(Boolean)])]
+    const getCategoryDetails = (lead) => {
+        const cat = (lead.category || lead.role || '').toUpperCase();
+        if (cat.includes('CORP')) {
+            return { label: 'Corporate', icon: '🏢', bg: 'bg-purple-100 text-purple-900 border-purple-300' };
+        }
+        if (cat.includes('UMP')) {
+            return { label: 'Umpire / Referee', icon: '🏁', bg: 'bg-amber-100 text-amber-900 border-amber-300' };
+        }
+        if (cat.includes('TEAM') || cat.includes('CAPT')) {
+            return { label: 'Captain / Team', icon: '🏏', bg: 'bg-emerald-100 text-emerald-900 border-emerald-300' };
+        }
+        if (cat.includes('ORG')) {
+            return { label: 'Organizer', icon: '🏆', bg: 'bg-rose-100 text-rose-900 border-rose-300' };
+        }
+        return { label: 'Player Contact', icon: '⚡', bg: 'bg-cyan-100 text-cyan-900 border-cyan-300' };
+    };
+
+    const branches = ['all', ...new Set([...realBranches, ...leads.map(l => l.turfBranch || l.branchName).filter(Boolean)])];
 
     const filteredLeads = leads.filter(lead => {
-        const matchesBranch = selectedBranch === 'all' || lead.turfBranch === selectedBranch
-        const matchesRole = selectedRole === 'all' || lead.role === selectedRole
-        const matchesDate = !selectedDate || (lead.createdAt && lead.createdAt.includes(selectedDate))
-        const matchesSearch = 
-            lead.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            lead.phone?.includes(searchQuery) ||
-            lead.teamName?.toLowerCase().includes(searchQuery.toLowerCase())
-        return matchesBranch && matchesRole && matchesDate && matchesSearch
-    })
+        const leadBranch = lead.turfBranch || lead.branchName || 'All Venues';
+        const leadCat = (lead.category || lead.role || '').toUpperCase();
+        
+        const matchesBranch = selectedBranch === 'all' || leadBranch.toLowerCase() === selectedBranch.toLowerCase();
+        
+        let matchesRole = true;
+        if (selectedRole !== 'all') {
+            const sel = selectedRole.toUpperCase();
+            if (sel.includes('CORP')) matchesRole = leadCat.includes('CORP');
+            else if (sel.includes('TEAM') || sel.includes('CAPT')) matchesRole = leadCat.includes('TEAM') || leadCat.includes('CAPT');
+            else if (sel.includes('UMP')) matchesRole = leadCat.includes('UMP');
+            else if (sel.includes('ORG')) matchesRole = leadCat.includes('ORG');
+            else if (sel.includes('PLAY')) matchesRole = leadCat.includes('PLAY');
+        }
+
+        const matchesDate = !selectedDate || (lead.createdAt && String(lead.createdAt).includes(selectedDate));
+        const matchesSearch = !searchQuery || 
+            (lead.name || lead.contactName || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+            (lead.phone || '').includes(searchQuery) ||
+            (lead.teamName || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+            (lead.preferredSport || '').toLowerCase().includes(searchQuery.toLowerCase());
+
+        return matchesBranch && matchesRole && matchesDate && matchesSearch;
+    });
 
     const isAllSelected = filteredLeads.length > 0 && filteredLeads.every(l => selectedLeadIds.includes(l.id))
 
@@ -216,19 +251,19 @@ export default function SuperAdminGlobalCRMPage() {
                 </div>
                 <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm">
                     <div className="text-[10px] font-black uppercase text-slate-400">Total Teams & Captains</div>
-                    <div className="text-2xl font-black text-emerald-600 mt-1">{filteredLeads.filter(l => l.role === 'team' || l.role === 'captain' || l.category === 'CAPTAIN').length}</div>
+                    <div className="text-2xl font-black text-emerald-600 mt-1">{filteredLeads.filter(l => (l.category || l.role || '').toUpperCase().includes('TEAM') || (l.category || l.role || '').toUpperCase().includes('CAPT')).length}</div>
                 </div>
                 <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm">
                     <div className="text-[10px] font-black uppercase text-slate-400">Corporate Proposals</div>
-                    <div className="text-2xl font-black text-indigo-600 mt-1">{filteredLeads.filter(l => l.role === 'corporate' || l.category === 'CORPORATE').length}</div>
+                    <div className="text-2xl font-black text-indigo-600 mt-1">{filteredLeads.filter(l => (l.category || l.role || '').toUpperCase().includes('CORP')).length}</div>
                 </div>
                 <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm">
                     <div className="text-[10px] font-black uppercase text-slate-400">Active Umpires</div>
-                    <div className="text-2xl font-black text-amber-600 mt-1">{filteredLeads.filter(l => l.role === 'umpire' || l.category === 'UMPIRE').length}</div>
+                    <div className="text-2xl font-black text-amber-600 mt-1">{filteredLeads.filter(l => (l.category || l.role || '').toUpperCase().includes('UMP')).length}</div>
                 </div>
                 <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm">
                     <div className="text-[10px] font-black uppercase text-slate-400">Active Venues</div>
-                    <div className="text-2xl font-black text-purple-600 mt-1">{summaryStats?.activeVenues || (branches.length > 1 ? branches.length - 1 : 4)}</div>
+                    <div className="text-2xl font-black text-purple-600 mt-1">{summaryStats?.activeVenues || (branches.length > 1 ? branches.length - 1 : 7)}</div>
                 </div>
             </div>
 
@@ -298,23 +333,15 @@ export default function SuperAdminGlobalCRMPage() {
                         <span className="bg-[#C8FF2E] text-slate-950 px-3 py-1 rounded-full text-xs font-black">
                             {selectedLeadIds.length} Selected
                         </span>
-                        <span className="text-xs font-bold text-slate-300">
-                            SuperAdmin Bulk Broadcast Ready
-                        </span>
                     </div>
+
                     <div className="flex items-center gap-2">
                         <button
                             onClick={handleOpenBulkBroadcast}
-                            className="px-4 py-2 rounded-xl bg-[#25D366] hover:bg-[#20bd5a] text-white font-black text-xs flex items-center gap-2 shadow-md cursor-pointer transition-all"
+                            className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-xs rounded-xl shadow-sm transition-all flex items-center gap-1.5"
                         >
-                            <HiPaperAirplane className="rotate-90 w-4 h-4" />
-                            <span>📢 Global Offer Broadcast to ({selectedLeadIds.length}) Contacts</span>
-                        </button>
-                        <button
-                            onClick={() => setSelectedLeadIds([])}
-                            className="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold text-xs cursor-pointer"
-                        >
-                            Deselect All
+                            <HiPaperAirplane className="w-3.5 h-3.5" />
+                            <span>Broadcast Offer</span>
                         </button>
                     </div>
                 </div>
@@ -323,10 +350,10 @@ export default function SuperAdminGlobalCRMPage() {
             {/* Master Table */}
             <div className="bg-white border border-slate-200/90 rounded-3xl shadow-sm overflow-hidden">
                 <div className="overflow-x-auto">
-                    <table className="w-full text-left text-xs">
+                    <table className="w-full text-left text-xs whitespace-nowrap">
                         <thead className="bg-slate-900 text-white uppercase font-black tracking-wider text-[10px]">
                             <tr>
-                                <th className="py-4 px-4 w-10 text-center">
+                                <th className="py-3.5 px-4 w-10 text-center">
                                     <input
                                         type="checkbox"
                                         checked={isAllSelected}
@@ -335,31 +362,26 @@ export default function SuperAdminGlobalCRMPage() {
                                         title="Select All Leads"
                                     />
                                 </th>
-                                <th className="py-4 px-4">Contact / Name</th>
-                                <th className="py-4 px-4">Category</th>
-                                <th className="py-4 px-4">Turf Branch</th>
-                                <th className="py-4 px-4">Booking Time / Slot</th>
-                                <th className="py-4 px-4">Team / Details</th>
-                                <th className="py-4 px-4">Status</th>
-                                <th className="py-4 px-4 text-right">SuperAdmin Action</th>
+                                <th className="py-3.5 px-4">Contact / Name</th>
+                                <th className="py-3.5 px-4">Category</th>
+                                <th className="py-3.5 px-4">Turf Branch</th>
+                                <th className="py-3.5 px-4">Booking Time / Slot</th>
+                                <th className="py-3.5 px-4">Team / Details</th>
+                                <th className="py-3.5 px-4">Status</th>
+                                <th className="py-3.5 px-4 text-right">SuperAdmin Action</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100 font-medium text-slate-800">
                             {filteredLeads.map((lead) => {
                                 const isSelected = selectedLeadIds.includes(lead.id)
-                                const isCorp = lead.role === 'corporate'
-                                const isTeam = lead.role === 'team'
-                                const isUmpire = lead.role === 'umpire'
-                                const isOrg = lead.role === 'organizer'
-
-                                const avatarIcon = isCorp ? '🏢' : isTeam ? '🏏' : isUmpire ? '🚩' : isOrg ? '🏆' : '👤'
+                                const catInfo = getCategoryDetails(lead)
                                 const formattedName = formatDisplayName(lead)
                                 const formattedPhone = formatPhoneBadge(lead.phone)
                                 const formattedSlot = formatSlotDisplay(lead.preferredSlot)
 
                                 return (
                                     <tr key={lead.id} className={`hover:bg-emerald-50/30 transition-colors ${isSelected ? 'bg-emerald-50/60' : ''}`}>
-                                        <td className="py-4 px-4 text-center">
+                                        <td className="py-3.5 px-4 text-center">
                                             <input
                                                 type="checkbox"
                                                 checked={isSelected}
@@ -369,16 +391,14 @@ export default function SuperAdminGlobalCRMPage() {
                                         </td>
                                         
                                         {/* Contact / Name Column */}
-                                        <td className="py-4 px-4">
+                                        <td className="py-3.5 px-4">
                                             <div className="flex items-center gap-3">
-                                                <div className={`w-10 h-10 rounded-2xl flex items-center justify-center text-base shrink-0 shadow-2xs border ${
-                                                    isCorp ? 'bg-purple-50 border-purple-200' : isTeam ? 'bg-emerald-50 border-emerald-200' : 'bg-slate-100 border-slate-200'
-                                                }`}>
-                                                    {avatarIcon}
+                                                <div className="w-9 h-9 rounded-xl bg-slate-100 border border-slate-200 flex items-center justify-center text-sm shrink-0 shadow-2xs">
+                                                    {catInfo.icon}
                                                 </div>
                                                 <div>
-                                                    <div className="font-black text-slate-900 text-sm">{formattedName}</div>
-                                                    <div className="text-[11px] text-slate-500 font-mono flex items-center gap-1 mt-0.5">
+                                                    <div className="font-black text-slate-900 text-xs whitespace-nowrap">{formattedName}</div>
+                                                    <div className="text-[11px] text-slate-500 font-mono flex items-center gap-1 mt-0.5 whitespace-nowrap">
                                                         <HiPhone className="w-3 h-3 text-emerald-600" />
                                                         <span>{formattedPhone}</span>
                                                     </div>
@@ -387,43 +407,33 @@ export default function SuperAdminGlobalCRMPage() {
                                         </td>
 
                                         {/* Category Column */}
-                                        <td className="py-4 px-4">
-                                            <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-[11px] font-black uppercase tracking-wider border shadow-2xs ${
-                                                isCorp 
-                                                    ? 'bg-purple-50 text-purple-700 border-purple-200' 
-                                                    : isTeam
-                                                    ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                                                    : isUmpire
-                                                    ? 'bg-amber-50 text-amber-700 border-amber-200'
-                                                    : isOrg
-                                                    ? 'bg-rose-50 text-rose-700 border-rose-200'
-                                                    : 'bg-slate-100 text-slate-700 border-slate-200'
-                                            }`}>
-                                                <span>{avatarIcon}</span>
-                                                {isCorp ? 'Corporate' : isTeam ? 'Captain / Team' : isOrg ? 'Tournament Org' : isUmpire ? 'Umpire' : lead.role}
+                                        <td className="py-3.5 px-4">
+                                            <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-[10px] font-black uppercase tracking-wider border shadow-2xs whitespace-nowrap ${catInfo.bg}`}>
+                                                <span>{catInfo.icon}</span>
+                                                {catInfo.label}
                                             </span>
                                         </td>
 
                                         {/* Turf Branch Column */}
-                                        <td className="py-4 px-4">
-                                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl bg-slate-100/80 border border-slate-200 text-slate-800 font-bold text-xs">
-                                                📍 {lead.turfBranch || 'Indore Turf Complex'}
+                                        <td className="py-3.5 px-4">
+                                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl bg-slate-100 border border-slate-200 text-slate-800 font-bold text-xs whitespace-nowrap">
+                                                📍 {lead.turfBranch || lead.branchName || 'All Venues'}
                                             </span>
                                         </td>
 
                                         {/* Booking Time / Slot Column */}
-                                        <td className="py-4 px-4 whitespace-nowrap">
-                                            <div className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-800 bg-slate-100 px-3 py-1.5 rounded-xl border border-slate-200">
+                                        <td className="py-3.5 px-4 whitespace-nowrap">
+                                            <div className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-800 bg-slate-100 px-2.5 py-1 rounded-xl border border-slate-200 whitespace-nowrap">
                                                 <span className="text-emerald-600">⏰</span>
                                                 <span className="font-mono text-slate-800">{formattedSlot}</span>
                                             </div>
                                         </td>
 
                                         {/* Team / Details Column */}
-                                        <td className="py-4 px-4">
-                                            <div className="font-bold text-slate-900">{lead.teamName || `${formattedName}'s Team`}</div>
+                                        <td className="py-3.5 px-4 max-w-xs">
+                                            <div className="font-bold text-slate-900 text-xs truncate">{lead.teamName || `${formattedName}'s Team`}</div>
                                             {lead.notes && (
-                                                <div className="text-[11px] text-slate-400 font-medium truncate max-w-xs mt-0.5">{lead.notes}</div>
+                                                <div className="text-[11px] text-slate-500 font-medium truncate max-w-xs mt-0.5">{lead.notes}</div>
                                             )}
                                         </td>
 
@@ -451,7 +461,7 @@ export default function SuperAdminGlobalCRMPage() {
                                         {/* SuperAdmin Action Buttons */}
                                         <td className="py-4 px-4 text-right">
                                             <div className="flex items-center justify-end gap-2">
-                                                {isCorp && (
+                                                {(catInfo.label === 'Corporate' || (lead.category || lead.role || '').toUpperCase().includes('CORP')) && (
                                                     <button
                                                         onClick={() => {
                                                             setSelectedLeadForQuote(lead)

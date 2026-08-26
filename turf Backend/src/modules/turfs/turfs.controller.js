@@ -5,31 +5,43 @@ const prisma = require('../../config/prisma');
  * data. Never fabricates a fallback venue: an unmatched id is a real 404, and
  * an empty catalog is a real empty array.
  */
-const formatPublicTurf = (b) => ({
-    id: b.id,
-    _id: b.id,
-    name: b.branchName,
-    city: b.city || '',
-    location: b.fullAddress || b.city || '',
-    address: b.fullAddress || '',
-    price: Number(b.minPriceHourly),
-    pricePerHour: Number(b.minPriceHourly),
-    openingTime: b.openingTime,
-    closingTime: b.closingTime,
-    dimensions: b.dimensionsSqFt ? `${b.dimensionsSqFt} Sq.Ft` : '',
-    turfSize: b.dimensionsSqFt ? `${b.dimensionsSqFt} Sq.Ft` : '',
-    surfaceType: b.surfaceType,
-    sports: (b.branchSports || []).filter(bs => bs.status === 'ACTIVE').map(bs => bs.sport.name),
-    amenities: b.amenities || [],
-    logo: b.logo || '',
-    image: (Array.isArray(b.images) && b.images[0]) || b.logo || '',
-    images: b.images || [],
-    rating: Number(b.rating),
-    reviewsCount: b.reviewCount,
-    latitude: b.latitude !== null && b.latitude !== undefined ? Number(b.latitude) : null,
-    longitude: b.longitude !== null && b.longitude !== undefined ? Number(b.longitude) : null,
-    status: b.status
-});
+const formatPublicTurf = (b) => {
+    const activeBranchSports = (b.branchSports || []).filter(bs => bs.status === 'ACTIVE');
+    const mappedSports = activeBranchSports.length > 0
+        ? activeBranchSports.map(bs => ({
+            id: bs.sport?.id || bs.sportId,
+            name: bs.sport?.name || 'Cricket',
+            price: Number(bs.pricePerHour || b.minPriceHourly || 700),
+            peakPrice: Number(bs.peakHourPrice || Math.round(Number(bs.pricePerHour || b.minPriceHourly || 700) * 1.5))
+        }))
+        : [{ name: 'Cricket', price: Number(b.minPriceHourly || 700), peakPrice: Math.round(Number(b.minPriceHourly || 700) * 1.5) }];
+
+    return {
+        id: b.id,
+        _id: b.id,
+        name: b.branchName,
+        city: b.city || '',
+        location: b.fullAddress || b.city || '',
+        address: b.fullAddress || '',
+        price: Number(b.minPriceHourly),
+        pricePerHour: Number(b.minPriceHourly),
+        openingTime: b.openingTime,
+        closingTime: b.closingTime,
+        dimensions: b.dimensionsSqFt ? `${b.dimensionsSqFt} Sq.Ft` : '',
+        turfSize: b.dimensionsSqFt ? `${b.dimensionsSqFt} Sq.Ft` : '',
+        surfaceType: b.surfaceType,
+        sports: mappedSports,
+        amenities: b.amenities || [],
+        logo: b.logo || '',
+        image: (Array.isArray(b.images) && b.images[0]) || b.logo || '',
+        images: b.images || [],
+        rating: Number(b.rating),
+        reviewsCount: b.reviewCount,
+        latitude: b.latitude !== null && b.latitude !== undefined ? Number(b.latitude) : null,
+        longitude: b.longitude !== null && b.longitude !== undefined ? Number(b.longitude) : null,
+        status: b.status
+    };
+};
 
 const PUBLIC_INCLUDE = { branchSports: { include: { sport: true } } };
 
@@ -214,11 +226,74 @@ const updateTurfMedia = async (req, res) => {
     }
 };
 
+/**
+ * Fetch all turfs/branches belonging to the authenticated logged-in Owner/Staff
+ */
+const getMyTurfs = async (req, res) => {
+    try {
+        if (!req.user) {
+            return res.status(401).json({ success: false, message: 'Authentication required' });
+        }
+        let where = {};
+        if (req.user.role === 'OWNER') {
+            where = { ownerUserId: req.user.id };
+        } else if (req.user.role === 'STAFF') {
+            const user = await prisma.user.findUnique({ where: { id: req.user.id } });
+            if (user?.staffBranchId) {
+                where = { id: user.staffBranchId };
+            } else {
+                where = { ownerUserId: req.user.id };
+            }
+        } else if (req.user.role === 'SUPER_ADMIN') {
+            where = { status: 'ACTIVE' };
+        }
+
+        const branches = await prisma.branch.findMany({
+            where,
+            include: {
+                branchSports: {
+                    include: { sport: true }
+                }
+            },
+            orderBy: { createdAt: 'desc' }
+        });
+
+
+        return res.json({
+            success: true,
+            data: branches.map(b => ({
+                id: b.id,
+                branchName: b.branchName,
+                name: b.branchName,
+                city: b.city,
+                fullAddress: b.fullAddress,
+                minPriceHourly: b.minPriceHourly,
+                openingTime: b.openingTime,
+                closingTime: b.closingTime,
+                sports: (b.branchSports || []).map(bs => ({
+                    id: bs.id,
+                    sportId: bs.sportId,
+                    name: bs.sport?.name || 'Sport',
+                    icon: bs.sport?.icon || '🏏',
+                    regularPrice: bs.regularPrice,
+                    peakPrice: bs.peakPrice,
+                    totalCourts: bs.totalCourts
+                }))
+            }))
+        });
+    } catch (error) {
+        console.error('Error in getMyTurfs:', error);
+        return res.status(500).json({ success: false, message: 'Server Error: ' + error.message });
+    }
+};
+
 module.exports = {
     getTurfs,
+    getMyTurfs,
     getTurfById,
     getTurfsNearby,
     searchTurfs,
     filterTurfs,
     updateTurfMedia
 };
+

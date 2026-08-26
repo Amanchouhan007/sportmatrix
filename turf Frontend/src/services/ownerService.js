@@ -31,6 +31,13 @@ let ownersState = getLocalOwners();
  */
 const mapOwnerResponse = (o) => {
     if (!o) return null;
+    const branchesCountVal = typeof o.branches === 'number'
+        ? o.branches
+        : (Array.isArray(o.branches) ? o.branches.length : (o.branchesCount ?? o.branches_count ?? 0));
+    const branchesListVal = Array.isArray(o.branchesList)
+        ? o.branchesList
+        : (Array.isArray(o.branches) ? o.branches : []);
+
     return {
         _id: o.id || o._id,
         id: o.id || o._id,
@@ -50,11 +57,14 @@ const mapOwnerResponse = (o) => {
         zipCode: o.zipCode || o.zip_code || '',
         address: o.fullAddress || o.full_address || o.address || '',
         profileImage: o.profileImage || o.profile_image || '',
-        branchesCount: o.branchesCount ?? o.branches_count ?? 0,
+        branches: branchesCountVal,
+        branchesCount: branchesCountVal,
+        branchesList: branchesListVal,
         totalBookings: o.totalBookings ?? o.total_bookings ?? 0,
         totalRevenue: o.totalRevenue ?? o.total_revenue ?? 0,
         commission: o.commission ?? '₹0',
-        joinedDate: o.createdAt ? new Date(o.createdAt).toISOString().split('T')[0] : (o.joinedDate || new Date().toISOString().split('T')[0])
+        joinedDate: o.createdAt ? new Date(o.createdAt).toISOString().split('T')[0] : (o.joinedDate || new Date().toISOString().split('T')[0]),
+        createdAt: o.createdAt
     };
 };
 
@@ -68,6 +78,7 @@ export const getOwners = async (filters = {}) => {
         if (resData && (resData.success || resData.owners)) {
             const rawOwners = resData.data?.owners || resData.owners || [];
             const mappedOwners = rawOwners.map(mapOwnerResponse);
+            saveLocalOwners(mappedOwners);
             return {
                 success: true,
                 data: {

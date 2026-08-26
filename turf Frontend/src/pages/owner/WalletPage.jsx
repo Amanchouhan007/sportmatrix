@@ -32,33 +32,38 @@ export default function WalletPage() {
   const fetchWalletData = useCallback(() => {
     api.get('/wallet/me')
       .then(res => {
-        if (res && res.success && res.data) {
-          setBalance(res.data.balance || 0)
-          setTotalCommissionPaid(res.data.totalCommissionPaid || 0)
-          setLockedEscrow(res.data.locked || 0)
+        const d = res?.data || res
+        if (d) {
+          setBalance(d.balance || 0)
+          setTotalCommissionPaid(d.totalCommissionPaid || 0)
+          setLockedEscrow(d.locked || 0)
         }
       })
       .catch(() => {})
 
     api.get('/wallet/transactions')
       .then(res => {
-        if (res && res.success && Array.isArray(res.data)) {
-          const mapped = res.data.map(t => ({
-            id: t.id || `TXN-${t._id}`,
+        const list = res?.data || (Array.isArray(res) ? res : [])
+        if (Array.isArray(list)) {
+          const mapped = list.map(t => ({
+            id: t.id || `TXN-${t._id || t.id}`,
             type: t.type || 'Booking',
-            amount: `+₹${(t.grossAmount || 0).toLocaleString('en-IN')}`,
+            amount: `+₹${(t.grossAmount || t.amount || 0).toLocaleString('en-IN')}`,
             rawAmount: t.amount,
-            commission: `-₹${Math.abs(t.platformCommission || 0).toLocaleString('en-IN')}`,
-            net: `₹${(t.settledNet || 0).toLocaleString('en-IN')}`,
-            date: t.date || 'Today',
-            rawDate: t.rawDate,
+            commission: `-₹${Math.abs(t.platformCommission || t.commission || 0).toLocaleString('en-IN')}`,
+            net: `₹${(t.settledNet || t.ownerAmount || t.amount || 0).toLocaleString('en-IN')}`,
+            date: t.date || (t.createdAt ? String(t.createdAt).split('T')[0] : 'Today'),
+            rawDate: t.rawDate || t.createdAt,
             status: t.status || 'Completed'
           }))
           setTransactionsList(mapped)
+        } else {
+          setTransactionsList([])
         }
       })
       .catch(() => setTransactionsList([]))
   }, [])
+
 
   useEffect(() => { fetchWalletData() }, [fetchWalletData])
 

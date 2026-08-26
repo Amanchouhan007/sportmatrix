@@ -18,11 +18,12 @@ export const createSlot = async (payload) => {
 export const getSlots = async (params = {}) => {
     try {
         const response = await api.get('/slots', { params });
-        return response.data;
+        return response;
     } catch (error) {
-        throw new Error(error.response?.data?.message || 'Failed to fetch slots.');
+        throw new Error(error.message || 'Failed to fetch slots.');
     }
 };
+
 
 /**
  * Get slot details by ID

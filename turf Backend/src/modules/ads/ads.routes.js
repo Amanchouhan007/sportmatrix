@@ -10,20 +10,19 @@ const {
     getPayments,
     getAdAnalytics
 } = require('./ads.controller');
-const { verifyToken, authorizeRoles } = require('../../middleware/auth.middleware');
+const { verifyToken, optionalToken, authorizeRoles } = require('../../middleware/auth.middleware');
 
 const router = express.Router();
-router.use(verifyToken, authorizeRoles(['OWNER', 'STAFF', 'SUPER_ADMIN']));
 
-router.get('/commissions', getCommissions);
-router.patch('/commissions/:bookingId/pay', markCommissionPaid);
-router.get('/analytics', getAdAnalytics);
-router.get('/payments', getPayments);
+router.get('/commissions', optionalToken, getCommissions);
+router.patch('/commissions/:bookingId/pay', verifyToken, markCommissionPaid);
+router.get('/analytics', optionalToken, getAdAnalytics);
+router.get('/payments', optionalToken, getPayments);
 
-router.get('/', getAdvertisements);
-router.post('/', createAdvertisement);
-router.put('/:id', updateAdvertisement);
-router.patch('/:id/status', updateAdStatus);
-router.delete('/:id', deleteAdvertisement);
+router.get('/', optionalToken, getAdvertisements);
+router.post('/', verifyToken, createAdvertisement);
+router.put('/:id', verifyToken, updateAdvertisement);
+router.patch('/:id/status', verifyToken, updateAdStatus);
+router.delete('/:id', verifyToken, deleteAdvertisement);
 
 module.exports = router;

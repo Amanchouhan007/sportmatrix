@@ -8,7 +8,8 @@ import AdminMatchControlModal from '../../components/tournaments/AdminMatchContr
 import { useToast } from '../../components/ui/Toast'
 import { HiRefresh, HiPlay } from 'react-icons/hi'
 import { HiTrophy } from 'react-icons/hi2'
-import { getPublicTournaments, getFixtures, generateFixtures, updateMatchScore } from '../../services/tournamentService'
+import api from '../../services/api'
+import { getFixtures, generateFixtures, updateMatchScore } from '../../services/tournamentService'
 
 const STATUS_TO_BACKEND = { Scheduled: 'SCHEDULED', Live: 'LIVE', Completed: 'COMPLETED', Cancelled: 'ABANDONED' }
 const STATUS_FROM_BACKEND = { SCHEDULED: 'Scheduled', LIVE: 'Live', COMPLETED: 'Completed', ABANDONED: 'Cancelled' }
@@ -28,8 +29,8 @@ export default function TournamentFixturesPage() {
     const fetchTournaments = useCallback(async () => {
         setIsLoadingTournaments(true)
         try {
-            const res = await getPublicTournaments({})
-            const list = res.data || []
+            const res = await api.get('/tournaments')
+            const list = (res?.data || (Array.isArray(res) ? res : []))
             setTournaments(list)
             if (list.length > 0) setSelectedTournament(list[0].id || list[0]._id)
         } catch (err) {

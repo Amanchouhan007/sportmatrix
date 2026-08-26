@@ -39,28 +39,69 @@ const processPayment = async (req, res) => {
 
 const getPaymentStats = async (req, res) => {
     try {
-        const [payments, subAgg] = await Promise.all([
-            prisma.payment.findMany({ select: { amount: true, status: true } }),
-            prisma.branch.findMany({ where: { status: 'ACTIVE' }, include: { subscriptionPlan: true } })
+        const [payments, matchPayments] = await Promise.all([
+            prisma.payment.findMany({ include: { user: true } }),
+            prisma.matchPayment.findMany({ include: { user: true, match: true } })
         ]);
 
-        const subRev = subAgg.reduce((sum, b) => sum + Number(b.subscriptionPlan?.monthlyPrice || 0), 0);
-        const paymentsRev = payments.reduce((sum, p) => sum + Number(p.amount), 0);
-        const totalRevenue = paymentsRev + subRev;
+        const processedSlotIds = new Set(payments.map(p => p.bookingId).filter(Boolean));
+        let totalRevenue = 0;
+        let totalCommission = 0;
+        let totalTransactions = 0;
+        let completedCount = 0;
+        let pendingCount = 0;
+        let pendingPayments = 0;
+        let refundedCount = 0;
+        let refundedAmount = 0;
 
-        const completedCount = payments.filter(p => p.status === 'COMPLETED').length + subAgg.length;
-        const pendingCount = payments.filter(p => p.status === 'PENDING').length;
-        const refundedCount = payments.filter(p => p.status === 'REFUNDED').length;
-        const pendingPayments = payments.filter(p => p.status === 'PENDING').reduce((sum, p) => sum + Number(p.amount), 0);
-        const refundedAmount = payments.filter(p => p.status === 'REFUNDED').reduce((sum, p) => sum + Number(p.amount), 0);
+        for (const p of payments) {
+            totalTransactions += 1;
+            const gross = Number(p.amount || 0);
+            const comm = Number(p.commission || Math.round(gross * 0.1));
+            totalRevenue += gross;
+            totalCommission += comm;
+
+            if (p.status === 'COMPLETED') {
+                completedCount += 1;
+            } else if (p.status === 'PENDING') {
+                pendingCount += 1;
+                pendingPayments += gross;
+            } else if (p.status === 'REFUNDED') {
+                refundedCount += 1;
+                refundedAmount += gross;
+            }
+        }
+
+        for (const mp of matchPayments) {
+            if (mp.match?.slotId && processedSlotIds.has(mp.match.slotId)) {
+                continue; // Skip duplicate
+            }
+            totalTransactions += 1;
+            const gross = Number(mp.amount || 0);
+            const comm = Number(mp.commissionAmount || Math.round(gross * 0.1));
+            totalRevenue += gross;
+            totalCommission += comm;
+
+            if (mp.paymentStatus === 'COMPLETED' || mp.paymentStatus === 'PAID') {
+                completedCount += 1;
+            } else {
+                pendingCount += 1;
+                pendingPayments += gross;
+            }
+        }
 
         return res.status(200).json({
             success: true,
             data: {
                 summary: {
-                    totalTransactions: payments.length + subAgg.length,
-                    totalRevenue, totalCommission: Math.round(totalRevenue * 0.1),
-                    pendingPayments, pendingCount, completedCount, refundedAmount, refundedCount
+                    totalTransactions,
+                    totalRevenue,
+                    totalCommission,
+                    pendingPayments,
+                    pendingCount,
+                    completedCount,
+                    refundedAmount,
+                    refundedCount
                 }
             }
         });
@@ -75,7 +116,8 @@ const formatPaymentLog = (p) => ({
     paymentId: p.invoiceNumber, transactionId: `TXN-${p.invoiceNumber}`, invoiceNumber: p.invoiceNumber,
     userId: { _id: p.userId, fullName: p.user?.name || p.customerName, email: p.user?.email || '', mobile: p.user?.mobile || '' },
     user: p.user?.name || p.customerName, customer: p.user?.name || p.customerName,
-    type: p.type.toUpperCase(), amount: Number(p.amount),
+    branchName: p.booking?.slot?.branch?.branchName || p.branchName || 'E2E Test Arena',
+    type: p.type ? p.type.toUpperCase() : 'BOOKING', amount: Number(p.amount),
     commissionAmount: Number(p.commission),
     commissionRate: Number(p.amount) > 0 ? Math.round((Number(p.commission) / Number(p.amount)) * 100) : 0,
     ownerAmount: Number(p.ownerAmount),
@@ -103,14 +145,52 @@ const getBillHistory = async (req, res) => {
         const pageNum = Number(page) || 1;
         const limitNum = Number(limit) || 20;
 
-        const [total, rows] = await Promise.all([
-            prisma.payment.count({ where }),
-            prisma.payment.findMany({ where, include: { user: true }, orderBy: { createdAt: 'desc' }, skip: (pageNum - 1) * limitNum, take: limitNum })
+        const [payments, matchPayments] = await Promise.all([
+            prisma.payment.findMany({ where, include: { user: true, booking: { include: { slot: { include: { branch: true } } } } }, orderBy: { createdAt: 'desc' } }),
+            prisma.matchPayment.findMany({ include: { user: true, match: { include: { branch: true } } }, orderBy: { createdAt: 'desc' } })
         ]);
+
+        const logs = payments.map(formatPaymentLog);
+        for (const mp of matchPayments) {
+            const gross = Number(mp.amount || 0);
+            const comm = Number(mp.commissionAmount || Math.round(gross * 0.1));
+            const owner = Number(mp.ownerAmount || (gross - comm));
+            const commRate = gross > 0 ? Math.round((comm / gross) * 100) : 10;
+
+            logs.push({
+                _id: `mp_${mp.id}`, id: `mp_${mp.id}`,
+                paymentId: `INV-${mp.id.substring(0, 10)}`,
+                transactionId: `TXN-${mp.id.substring(0, 10)}`,
+                invoiceNumber: `INV-${mp.id.substring(0, 10)}`,
+                userId: { _id: mp.userId, fullName: mp.playerName || 'Player', email: '', mobile: mp.playerPhone || '' },
+                user: mp.playerName || 'Player',
+                customer: mp.playerName || 'Player',
+                branchName: mp.match?.branch?.branchName || 'E2E Test Arena',
+                type: 'BOOKING',
+                amount: gross,
+                commissionAmount: comm,
+                commissionRate: commRate,
+                ownerAmount: owner,
+                ownerPayoutStatus: mp.ownerPayoutStatus || 'PENDING',
+                commissionStatus: mp.commissionStatus || 'CONFIRMED',
+                paymentMethod: mp.paymentMode || 'UPI',
+                status: mp.paymentStatus === 'COMPLETED' ? 'COMPLETED' : 'PENDING',
+                notice: `Match Booking - ${mp.match?.branch?.branchName || 'Turf Arena'} (${commRate}% Platform Commission: ₹${comm})`,
+                paymentDate: mp.createdAt,
+                createdAt: mp.createdAt,
+                date: mp.createdAt
+            });
+        }
+
+        logs.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+        const total = logs.length;
+        const startIndex = (pageNum - 1) * limitNum;
+        const paginatedLogs = logs.slice(startIndex, startIndex + limitNum);
 
         return res.status(200).json({
             success: true,
-            data: rows.map(formatPaymentLog),
+            data: paginatedLogs,
             pagination: { total, page: pageNum, limit: limitNum, totalPages: Math.ceil(total / limitNum) || 1 }
         });
     } catch (error) {
@@ -162,4 +242,174 @@ const createPaymentLog = async (req, res) => {
     }
 };
 
-module.exports = { processPayment, getBillHistory, getPaymentStats, getPaymentLogById, createPaymentLog };
+const posCheckout = async (req, res) => {
+    const {
+        branchId,
+        sportId,
+        courtName,
+        slotDate,
+        slotTime,
+        duration = 60,
+        customerName,
+        customerPhone,
+        customerEmail,
+        customerType = 'Guest',
+        paymentMethod = 'UPI',
+        paymentStatus = 'Paid',
+        advanceAmount = 0,
+        cartItems = [],
+        selectedExtras = [],
+        discountAmount = 0,
+        totalAmount,
+        notes
+    } = req.body;
+
+    const name = (customerName || 'Walk-In Guest').trim();
+    const phone = (customerPhone || '9876543210').trim();
+    const amount = Number(totalAmount) || 0;
+
+    if (!amount) {
+        return res.status(400).json({ success: false, message: 'totalAmount is required.' });
+    }
+
+    try {
+        const cleanPhone = phone.replace(/\D/g, '');
+        const invoiceNumber = `INV-POS-${Math.floor(100000 + Math.random() * 900000)}`;
+
+        let user = await prisma.user.findFirst({
+            where: { OR: [{ mobile: { contains: cleanPhone.length >= 4 ? cleanPhone : phone } }, { email: customerEmail || `pos_${cleanPhone}@sportmatrix.com` }] }
+        });
+
+        if (!user) {
+            user = await prisma.user.create({
+                data: {
+                    id: `usr_pos_${Date.now()}_${Math.floor(Math.random()*1000)}`,
+                    name,
+                    email: customerEmail?.trim() || `pos_${cleanPhone}@sportmatrix.com`,
+                    passwordHash: 'WALKIN_GUEST_NOPASS',
+                    mobile: cleanPhone || phone,
+                    role: 'CUSTOMER',
+                    status: 'ACTIVE'
+                }
+            }).catch(() => null);
+        }
+
+        let slotId = null;
+        if (branchId && slotDate && slotTime) {
+            const dateObj = new Date(slotDate);
+            const [sH, sM] = slotTime.split(':').map(Number);
+            const dur = Number(duration) || 60;
+            const eM = (sH * 60 + (sM || 0) + dur);
+            const endH = String(Math.floor(eM / 60)).padStart(2, '0');
+            const endM = String(eM % 60).padStart(2, '0');
+            const endTimeStr = `${endH}:${endM}:00`;
+            const startTimeStr = `${String(sH).padStart(2, '0')}:${String(sM || 0).padStart(2, '0')}:00`;
+
+            let slot = await prisma.slot.findFirst({
+                where: {
+                    branchId,
+                    slotDate: dateObj,
+                    startTime: startTimeStr
+                }
+            });
+
+            if (!slot) {
+                slot = await prisma.slot.create({
+                    data: {
+                        id: `s_pos_${Date.now()}_${Math.floor(Math.random()*1000)}`,
+                        branchId,
+                        sportId: sportId || null,
+                        courtName: courtName || 'Court 1',
+                        slotDate: dateObj,
+                        startTime: startTimeStr,
+                        endTime: endTimeStr,
+                        duration: dur,
+                        regularPrice: Math.round(amount),
+                        peakPrice: Math.round(amount),
+                        status: 'BOOKED',
+                        notes: `POS Walk-In Booking: ${name}`
+                    }
+                }).catch(() => null);
+            } else {
+                await prisma.slot.update({
+                    where: { id: slot.id },
+                    data: { status: 'BOOKED', notes: `POS Walk-In Booking: ${name}` }
+                }).catch(() => {});
+            }
+            if (slot) slotId = slot.id;
+        }
+
+        const bookingCode = `BK-POS-${Math.floor(100000 + Math.random() * 900000)}`;
+        const booking = await prisma.booking.create({
+            data: {
+                id: `bk_pos_${Date.now()}_${Math.floor(Math.random()*1000)}`,
+                bookingCode,
+                bookingNumber: bookingCode,
+                slotId,
+                userId: user?.id || null,
+                customerName: name,
+                customerPhone: phone,
+                mobileNumber: phone,
+                customerEmail: customerEmail?.trim() || null,
+                totalPrice: Math.round(amount),
+                finalPrice: Math.round(amount),
+                appliedDiscount: Math.round(Number(discountAmount) || 0),
+                paymentMode: (paymentMethod || 'UPI').toUpperCase(),
+                paymentStatus: paymentStatus === 'Paid' ? 'COMPLETED' : 'PENDING',
+                status: 'CONFIRMED',
+                notes: notes || `POS ${customerType} Checkout`
+            }
+        });
+
+        if (Array.isArray(cartItems) && cartItems.length > 0) {
+            for (const item of cartItems) {
+                if (item.id && item.qty > 0) {
+                    await prisma.inventory.update({
+                        where: { id: String(item.id) },
+                        data: { stockQuantity: { decrement: Number(item.qty) } }
+                    }).catch(() => {});
+                }
+            }
+        }
+
+        // POS venue walk-in bookings carry 0% platform commission (100% owner share)
+        await prisma.payment.create({
+            data: {
+                bookingId: booking.id,
+                userId: user?.id || null,
+                invoiceNumber,
+                customerName: name,
+                amount: Math.round(amount),
+                commission: 0,
+                ownerAmount: Math.round(amount),
+                ownerPayoutStatus: 'CONFIRMED',
+                paymentMethod: (paymentMethod || 'UPI').toUpperCase(),
+                status: 'COMPLETED',
+                type: 'POS_BILL'
+            }
+        });
+
+
+        return res.status(201).json({
+            success: true,
+            message: 'POS Transaction recorded successfully!',
+            data: {
+                invoiceNumber,
+                bookingCode,
+                customerName: name,
+                customerPhone: phone,
+                totalAmount: amount,
+                paymentMethod,
+                paymentStatus,
+                date: new Date().toISOString(),
+                booking
+            }
+        });
+    } catch (error) {
+        console.error('POS Checkout Error:', error);
+        return res.status(500).json({ success: false, message: 'POS Checkout failed: ' + error.message });
+    }
+};
+
+module.exports = { processPayment, posCheckout, getBillHistory, getPaymentStats, getPaymentLogById, createPaymentLog };
+

@@ -145,6 +145,11 @@ const resolveDispute = async (req, res) => {
             return res.status(400).json({ success: false, message: 'Resolution notes are required.' });
         }
 
+        const dispute = await prisma.dispute.findUnique({ where: { id: req.params.id } });
+        if (!dispute) {
+            return res.status(404).json({ success: false, message: 'Dispute not found.' });
+        }
+
         const updated = await prisma.dispute.update({
             where: { id: req.params.id },
             data: {
@@ -154,13 +159,27 @@ const resolveDispute = async (req, res) => {
                 refundToWallet: !!refundToWallet,
                 resolutionDate: new Date()
             }
-        }).catch(() => null);
+        });
 
-        if (!updated) {
-            return res.status(404).json({ success: false, message: 'Dispute not found.' });
+        // Connectivity: If linked to booking or match, update status accordingly upon resolution
+        if (updated.bookingId && refundToWallet) {
+            await prisma.booking.update({
+                where: { id: updated.bookingId },
+                data: { status: 'REFUNDED', notes: `Refunded via Dispute ${updated.id}` }
+            }).catch(() => null);
+        }
+        if (updated.matchId && refundToWallet) {
+            await prisma.match.update({
+                where: { id: updated.matchId },
+                data: { matchStatus: 'CANCELLED' }
+            }).catch(() => null);
         }
 
-        return res.status(200).json({ success: true, message: 'Dispute resolved successfully.', data: { id: updated.id, status: 'RESOLVED', resolvedAt: updated.resolutionDate } });
+        return res.status(200).json({ 
+            success: true, 
+            message: 'Dispute resolved successfully.', 
+            data: { id: updated.id, status: 'RESOLVED', resolvedAt: updated.resolutionDate } 
+        });
     } catch (error) {
         console.error('[resolveDispute] Error:', error);
         return res.status(500).json({ success: false, message: error.message });

@@ -19,14 +19,14 @@ const EMPTY_FORM = {
     endDate: '',
     description: '',
 
-    commissionPercent: '15',
-    minBookingGoal: '30',
-    avgBookingPrice: '1500',
+    commissionPercent: '',
+    minBookingGoal: '',
+    avgBookingPrice: '',
     targetArea: '5',
 
-    campaignBudget: '5000',
-    dailyBudget: '500',
-    cpmRate: '50',
+    campaignBudget: '',
+    dailyBudget: '',
+    cpmRate: '',
     placements: [],
     adTitle: '',
     shortHeadline: '',
@@ -61,13 +61,12 @@ export default function CreateAdvertisement() {
         setIsLoadingBranches(true)
         try {
             const res = await getBranches({ limit: 100 })
-            const list = res.data || res.branches || []
+            const rawList = (res && res.data?.branches) || (res && res.branches) || (res && res.data) || (Array.isArray(res) ? res : [])
+            const list = Array.isArray(rawList) ? rawList : []
             setBranches(list)
-            if (list.length > 0) {
-                setFormData(prev => ({ ...prev, branchId: list[0].id, branchName: list[0].branchName || list[0].name || '' }))
-            }
         } catch (err) {
             addToast({ title: 'Load Failed', message: err.message || 'Failed to load your branches.', type: 'error' })
+            setBranches([])
         } finally {
             setIsLoadingBranches(false)
         }
@@ -289,34 +288,41 @@ export default function CreateAdvertisement() {
         }
     }
 
-    const buildPayload = (statusOverride) => ({
-        branchId: formData.branchId,
-        campaignName: formData.campaignName,
-        type: campaignType === 'guaranteed_booking' ? 'GUARANTEED_BOOKING' : 'IMPRESSION_AD',
-        status: statusOverride,
-        startDate: formData.startDate,
-        endDate: formData.endDate,
-        description: formData.description,
-        durationMonths,
-        commissionRate: campaignType === 'guaranteed_booking' ? Number(formData.commissionPercent) : undefined,
-        bookingGoal: campaignType === 'guaranteed_booking' ? Number(formData.minBookingGoal) : undefined,
-        avgSlotPrice: campaignType === 'guaranteed_booking' ? Number(formData.avgBookingPrice) : undefined,
-        targetRadiusKm: Number(formData.targetArea),
-        estimatedReach: campaignType === 'guaranteed_booking' ? estimatedReach : estimatedAudience,
-        budgetTotal: campaignType === 'impression_ad' ? Number(formData.campaignBudget) : undefined,
-        dailyBudget: campaignType === 'impression_ad' ? Number(formData.dailyBudget) : undefined,
-        pricingModel: campaignType === 'impression_ad' ? 'CPM' : undefined,
-        cpmRate: campaignType === 'impression_ad' ? Number(formData.cpmRate) : undefined,
-        placements: campaignType === 'impression_ad' ? formData.placements : undefined,
-        adTitle: campaignType === 'impression_ad' ? formData.adTitle : undefined,
-        shortHeadline: campaignType === 'impression_ad' ? formData.shortHeadline : undefined,
-        ctaText: campaignType === 'impression_ad' ? formData.callToAction : undefined,
-        redirectUrl: campaignType === 'impression_ad' ? formData.redirectUrl : undefined,
-        bannerImageUrl: campaignType === 'impression_ad' ? formData.bannerImage : undefined,
-        mobileBannerImageUrl: campaignType === 'impression_ad' ? formData.mobileBannerImage : undefined,
-        thumbnailImageUrl: campaignType === 'impression_ad' ? formData.thumbnailImage : undefined,
-        videoUrl: campaignType === 'impression_ad' ? formData.promotionalVideo : undefined
-    })
+    const buildPayload = (statusOverride) => {
+        const targetBranchId = formData.branchId || (branches.length > 0 ? branches[0].id : '')
+        const targetName = formData.campaignName.trim() || `${campaignType === 'guaranteed_booking' ? 'Guaranteed' : 'Impression'} Ad (${new Date().toLocaleDateString('en-IN')})`
+        const todayStr = new Date().toISOString().split('T')[0]
+        const thirtyDaysStr = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+
+        return {
+            branchId: targetBranchId,
+            campaignName: targetName,
+            type: campaignType === 'guaranteed_booking' ? 'GUARANTEED_BOOKING' : 'IMPRESSION_AD',
+            status: statusOverride,
+            startDate: formData.startDate || todayStr,
+            endDate: formData.endDate || thirtyDaysStr,
+            description: formData.description || '',
+            durationMonths,
+            commissionRate: campaignType === 'guaranteed_booking' ? (Number(formData.commissionPercent) || 15) : undefined,
+            bookingGoal: campaignType === 'guaranteed_booking' ? (Number(formData.minBookingGoal) || 30) : undefined,
+            avgSlotPrice: campaignType === 'guaranteed_booking' ? (Number(formData.avgBookingPrice) || 1500) : undefined,
+            targetRadiusKm: Number(formData.targetArea) || 5,
+            estimatedReach: campaignType === 'guaranteed_booking' ? estimatedReach : estimatedAudience,
+            budgetTotal: campaignType === 'impression_ad' ? (Number(formData.campaignBudget) || 5000) : undefined,
+            dailyBudget: campaignType === 'impression_ad' ? (Number(formData.dailyBudget) || 500) : undefined,
+            pricingModel: campaignType === 'impression_ad' ? 'CPM' : undefined,
+            cpmRate: campaignType === 'impression_ad' ? (Number(formData.cpmRate) || 50) : undefined,
+            placements: campaignType === 'impression_ad' ? formData.placements : undefined,
+            adTitle: campaignType === 'impression_ad' ? (formData.adTitle || targetName) : undefined,
+            shortHeadline: campaignType === 'impression_ad' ? (formData.shortHeadline || 'Special Offer') : undefined,
+            ctaText: campaignType === 'impression_ad' ? (formData.callToAction || 'Book Now') : undefined,
+            redirectUrl: campaignType === 'impression_ad' ? formData.redirectUrl : undefined,
+            bannerImageUrl: campaignType === 'impression_ad' ? formData.bannerImage : undefined,
+            mobileBannerImageUrl: campaignType === 'impression_ad' ? formData.mobileBannerImage : undefined,
+            thumbnailImageUrl: campaignType === 'impression_ad' ? formData.thumbnailImage : undefined,
+            videoUrl: campaignType === 'impression_ad' ? formData.promotionalVideo : undefined
+        }
+    }
 
     const handleSubmit = async (e) => {
         e?.preventDefault()
@@ -324,14 +330,20 @@ export default function CreateAdvertisement() {
         setIsSubmitting(true)
         try {
             const finalStatus = STATUS_TO_BACKEND[formData.campaignStatus] || 'ACTIVE'
+            const payload = buildPayload(finalStatus)
+            if (!payload.branchId) {
+                addToast({ message: 'Please select a Turf/Branch before publishing!', type: 'error' })
+                setIsSubmitting(false)
+                return
+            }
             if (draftAdId) {
-                await updateAd(draftAdId, buildPayload(finalStatus))
+                await updateAd(draftAdId, payload)
                 await updateAdStatus(draftAdId, finalStatus)
             } else {
-                await createAd(buildPayload(finalStatus))
+                await createAd(payload)
             }
-            addToast({ title: 'Campaign Published', message: `"${formData.campaignName}" is now live.`, type: 'success' })
-            navigate('/admin/ads')
+            addToast({ title: 'Campaign Published', message: `"${payload.campaignName}" is now live.`, type: 'success' })
+            navigate(`${basePath}/ads`)
         } catch (err) {
             addToast({ title: 'Publish Failed', message: err.message || 'Could not publish this campaign.', type: 'error' })
         } finally {
@@ -340,19 +352,22 @@ export default function CreateAdvertisement() {
     }
 
     const handleSaveDraft = async () => {
-        if (!formData.campaignName.trim() || !formData.branchId || !formData.startDate || !formData.endDate) {
-            addToast({ message: 'Campaign Name, Turf, and dates are required before saving a draft.', type: 'error' })
-            return
-        }
         setIsSubmitting(true)
         try {
+            const payload = buildPayload('DRAFT')
+            if (!payload.branchId) {
+                addToast({ message: 'No turf found. Please ensure at least one turf exists.', type: 'error' })
+                setIsSubmitting(false)
+                return
+            }
             if (draftAdId) {
-                await updateAd(draftAdId, buildPayload('DRAFT'))
+                await updateAd(draftAdId, payload)
             } else {
-                const res = await createAd(buildPayload('DRAFT'))
+                const res = await createAd(payload)
                 setDraftAdId(res.data?.id || res.data?._id || null)
             }
-            addToast({ title: 'Draft Saved', message: `Campaign draft "${formData.campaignName}" saved successfully!`, type: 'info' })
+            addToast({ title: 'Draft Saved', message: `Campaign draft "${payload.campaignName}" saved successfully!`, type: 'info' })
+            navigate(`${basePath}/ads`)
         } catch (err) {
             addToast({ title: 'Save Failed', message: err.message || 'Could not save this draft.', type: 'error' })
         } finally {
@@ -516,11 +531,11 @@ export default function CreateAdvertisement() {
                                         label="Select Turf *"
                                         value={formData.branchId}
                                         onChange={(e) => handleBranchSelect(e.target.value)}
-                                        disabled={isLoadingBranches || branches.length === 0}
+                                        disabled={isLoadingBranches || !Array.isArray(branches) || branches.length === 0}
                                     >
                                         {isLoadingBranches && <option value="">Loading branches...</option>}
-                                        {!isLoadingBranches && branches.length === 0 && <option value="">No branches found</option>}
-                                        {branches.map(b => (
+                                        {!isLoadingBranches && (!Array.isArray(branches) || branches.length === 0) && <option value="">No branches found</option>}
+                                        {(Array.isArray(branches) ? branches : []).map(b => (
                                             <option key={b.id} value={b.id}>{b.branchName || b.name} {b.city ? `(${b.city})` : ''}</option>
                                         ))}
                                     </Select>
@@ -1018,23 +1033,25 @@ export default function CreateAdvertisement() {
                                 </div>
                                 <div className="flex justify-between items-center pb-1.5 border-b border-surface-200/40">
                                     <span className="text-surface-500 font-bold">Commission %</span>
-                                    <span className="font-extrabold text-purple-600">{formData.commissionPercent}%</span>
+                                    <span className="font-extrabold text-purple-600">{formData.commissionPercent ? `${formData.commissionPercent}%` : '—'}</span>
                                 </div>
                                 <div className="flex justify-between items-center pb-1.5 border-b border-surface-200/40">
                                     <span className="text-surface-500 font-bold">Minimum Booking Goal</span>
-                                    <span className="font-bold text-indigo-600">{expectedBookings} Slots</span>
+                                    <span className="font-bold text-indigo-600">{formData.minBookingGoal ? `${formData.minBookingGoal} Slots` : '—'}</span>
                                 </div>
                                 <div className="flex justify-between items-center pb-1.5 border-b border-surface-200/40">
                                     <span className="text-surface-500 font-bold">Average Slot Price</span>
-                                    <span className="font-bold text-surface-900">₹{bookingPrice}</span>
+                                    <span className="font-bold text-surface-900">{formData.avgBookingPrice ? `₹${Number(formData.avgBookingPrice).toLocaleString('en-IN')}` : '—'}</span>
                                 </div>
                                 <div className="flex justify-between items-center pb-1.5 border-b border-surface-200/40">
                                     <span className="text-surface-500 font-bold">Target Radius</span>
-                                    <span className="font-bold text-indigo-600">{formData.targetArea} KM</span>
+                                    <span className="font-bold text-indigo-600">{formData.targetArea ? `${formData.targetArea} KM` : '—'}</span>
                                 </div>
                                 <div className="flex justify-between items-center pt-1 text-sm">
                                     <span className="text-surface-800 font-black">Est. Net Revenue</span>
-                                    <span className="font-black text-emerald-600">₹{netOwnerRevenue.toLocaleString()}</span>
+                                    <span className="font-black text-emerald-600">
+                                        {netOwnerRevenue > 0 && formData.commissionPercent && formData.minBookingGoal && formData.avgBookingPrice ? `₹${netOwnerRevenue.toLocaleString('en-IN')}` : '—'}
+                                    </span>
                                 </div>
                             </div>
                         ) : (
@@ -1088,16 +1105,17 @@ export default function CreateAdvertisement() {
             </div>
 
             {/* Sticky Bottom Action Bar */}
-            <div className="fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-surface-200 p-4 shadow-xl">
-                <div className="max-w-7xl mx-auto flex items-center justify-between gap-4">
+            <div className="sticky bottom-4 z-30 bg-white/95 backdrop-blur-md border border-surface-200 p-4 shadow-2xl rounded-2xl mt-8">
+                <div className="flex items-center justify-between gap-4">
                     <div className="flex items-center gap-3">
                         <Button variant="secondary" size="sm" onClick={() => navigate('/admin/ads')} disabled={isSubmitting}>
                             Cancel
                         </Button>
                         <button
+                            type="button"
                             onClick={handleSaveDraft}
                             disabled={isSubmitting}
-                            className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-surface-100 hover:bg-surface-200 text-surface-700 text-xs font-bold transition-all cursor-pointer disabled:opacity-50"
+                            className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition-all cursor-pointer border border-slate-200 shadow-sm disabled:opacity-50"
                         >
                             <FiSave className="w-4 h-4 text-indigo-600" /> {isSubmitting ? 'Saving...' : 'Save Draft'}
                         </button>

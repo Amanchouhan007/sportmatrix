@@ -725,7 +725,7 @@ const getAllTournamentMatches = async (req, res) => {
                         title: true,
                         branchId: true,
                         turfCourtName: true,
-                        branch: { select: { name: true, city: true } }
+                        branch: { select: { branchName: true, city: true } }
                     }
                 }
             },

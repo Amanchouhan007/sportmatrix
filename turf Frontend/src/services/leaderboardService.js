@@ -18,22 +18,23 @@ export const calculatePPS = (player, tierWeight = 1.0) => {
 export const fetchGlobalLeaderboard = async () => {
     try {
         const res = await api.get('/tournaments/leaderboard/global');
-        if (res && res.data && res.data.success && Array.isArray(res.data.data) && res.data.data.length > 0) {
-            return res.data.data.map(item => ({
+        const list = res?.data || (Array.isArray(res) ? res : []);
+        if (Array.isArray(list) && list.length > 0) {
+            return list.map(item => ({
                 id: item.id || item.team_id,
-                name: item.team_name || item.captain_name || 'Sports Team',
+                name: item.team_name || item.captain_name || item.name || 'Sports Team',
                 avatar: item.logo || '🏆',
                 team: item.team_name || 'Independent',
                 city: item.city || 'Indore',
-                sport: item.sport_type || 'Cricket',
+                sport: item.sport_type || item.sport || 'Cricket',
                 role: 'Team Leader',
-                matches: item.matches_played || 0,
+                matches: item.matches_played || item.matches || 0,
                 runs: (item.wins || 0) * 50,
                 battingAvg: item.points || 0,
                 strikeRate: 150.0,
                 wickets: item.goal_difference || item.draws || 0,
                 economy: 6.0,
-                winRate: `${Math.round(((item.wins || 0) / Math.max(1, item.matches_played || 1)) * 100)}%`,
+                winRate: `${Math.round(((item.wins || 0) / Math.max(1, item.matches_played || item.matches || 1)) * 100)}%`,
                 mvps: item.wins || 0,
                 highestScore: `${item.goals_for || 0}`,
                 bestBowling: '—',
@@ -45,9 +46,9 @@ export const fetchGlobalLeaderboard = async () => {
             }));
         }
     } catch (e) {
-        console.warn('Backend leaderboard fetch error:', e.message);
+        console.warn('fetchGlobalLeaderboard API error:', e.message);
     }
-    return getLeaderboardPlayers();
+    return [];
 };
 
 export const INITIAL_LEADERBOARD_PLAYERS = []

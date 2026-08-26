@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { HiUserGroup, HiPlus, HiSearch, HiFilter, HiPaperAirplane, HiDownload, HiTrash, HiPencilAlt, HiSparkles, HiPhone, HiTag, HiOutlineRefresh, HiCheck } from 'react-icons/hi'
-import { getCrmLeads, saveCrmLead, deleteCrmLead, fetchCrmLeadsAsync, AVAILABLE_TURF_BRANCHES } from '../../services/crmService'
+import { getCrmLeads, saveCrmLead, deleteCrmLead, fetchCrmLeadsAsync, convertCorporateBookingAsync, AVAILABLE_TURF_BRANCHES } from '../../services/crmService'
 import { getCorporateProposals } from '../../services/corporateService'
 import OfferBroadcastModal from '../../components/crm/OfferBroadcastModal'
 import { useToast } from '../../components/ui/Toast'
@@ -19,6 +19,19 @@ export default function TurfLeadCRMPage() {
     const [selectedLeadForBroadcast, setSelectedLeadForBroadcast] = useState(null)
     const [selectedLeadsForBroadcast, setSelectedLeadsForBroadcast] = useState([])
     const { addToast } = useToast()
+
+    // Corporate Conversion Modal States
+    const [isConvertModalOpen, setIsConvertModalOpen] = useState(false)
+    const [selectedLeadForConvert, setSelectedLeadForConvert] = useState(null)
+    const [convertForm, setConvertForm] = useState({
+        branchId: 'br_1787309376260',
+        bookingDate: new Date().toISOString().split('T')[0],
+        startHour: 8,
+        endHour: 20,
+        agreedAmount: 6000,
+        notes: ''
+    })
+    const [isConverting, setIsConverting] = useState(false)
 
     // Form inputs for Add Lead Modal
     const [formName, setFormName] = useState('')
@@ -166,6 +179,41 @@ export default function TurfLeadCRMPage() {
         setSelectedLeadsForBroadcast(bulkLeads)
         setSelectedLeadForBroadcast(null)
         setIsBroadcastModalOpen(true)
+    }
+
+    const handleOpenConvertModal = (lead) => {
+        setSelectedLeadForConvert(lead)
+        setConvertForm({
+            branchId: lead.branchId || 'br_1787309376260',
+            bookingDate: new Date().toISOString().split('T')[0],
+            startHour: 8,
+            endHour: 20,
+            agreedAmount: 6000,
+            companyName: lead.teamName || lead.name || 'Corporate Client',
+            phone: lead.phone || '',
+            email: lead.email || '',
+            notes: `Confirmed Corporate Booking for ${lead.name || 'Client'}`
+        })
+        setIsConvertModalOpen(true)
+    }
+
+    const handleConvertSubmit = async (e) => {
+        e.preventDefault()
+        setIsConverting(true)
+        try {
+            const res = await convertCorporateBookingAsync({
+                leadId: selectedLeadForConvert?.id,
+                ...convertForm
+            })
+            if (addToast) addToast({ message: res.message || 'Corporate Booking confirmed & slots locked successfully!', type: 'success' })
+            setIsConvertModalOpen(false)
+            loadLeadsData()
+        } catch (err) {
+            console.error('Convert corporate booking error:', err)
+            if (addToast) addToast({ message: err.message || 'Failed to convert corporate booking.', type: 'error' })
+        } finally {
+            setIsConverting(false)
+        }
     }
 
     // Filter Logic
@@ -328,6 +376,7 @@ export default function TurfLeadCRMPage() {
                 <div className="flex bg-slate-100 p-1 rounded-xl gap-1 text-xs font-bold overflow-x-auto">
                     {[
                         { id: 'all', label: '👥 All Contacts' },
+                        { id: 'corporate', label: '🏢 Corporate Proposals' },
                         { id: 'team', label: '🏏 Teams / Captains' },
                         { id: 'player', label: '⚡ Players' },
                         { id: 'umpire', label: '🚩 Umpires' },
@@ -448,6 +497,14 @@ export default function TurfLeadCRMPage() {
                                             </td>
                                             <td className="py-3.5 px-4 text-right">
                                                 <div className="flex items-center justify-end gap-2">
+                                                    {(lead.role === 'corporate' || lead.category === 'CORPORATE') && (
+                                                        <button
+                                                            onClick={() => handleOpenConvertModal(lead)}
+                                                            className="px-3 py-1.5 rounded-lg bg-[#C8FF2E] hover:bg-[#b8f51a] text-slate-950 font-black text-[11px] shadow-sm cursor-pointer flex items-center gap-1 transition-all"
+                                                        >
+                                                            <span>⚡ Lock Slots & Book</span>
+                                                        </button>
+                                                    )}
                                                     <button
                                                         onClick={() => handleOpenSingleBroadcast(lead)}
                                                         className="px-3 py-1.5 rounded-lg bg-[#25D366] hover:bg-[#20bd5a] text-white font-bold text-[11px] shadow-sm cursor-pointer flex items-center gap-1 transition-all"
@@ -616,6 +673,122 @@ export default function TurfLeadCRMPage() {
                 selectedLead={selectedLeadForBroadcast}
                 selectedLeads={selectedLeadsForBroadcast}
             />
+
+            {/* CONVERT CORPORATE BOOKING & BLOCK SLOTS MODAL */}
+            {isConvertModalOpen && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/80 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+                    <div className="bg-white border border-slate-200 rounded-3xl p-6 max-w-lg w-full shadow-2xl space-y-4">
+                        <div className="flex items-center justify-between">
+                            <h3 className="text-xl font-black text-slate-900 tracking-tight">
+                                🏢 Confirm Corporate Booking & Block Slots
+                            </h3>
+                            <button
+                                type="button"
+                                onClick={() => setIsConvertModalOpen(false)}
+                                className="text-slate-400 hover:text-slate-600 font-bold"
+                            >
+                                ✕
+                            </button>
+                        </div>
+
+                        <form onSubmit={handleConvertSubmit} className="space-y-3 text-xs">
+                            <p className="text-xs text-slate-600">
+                                Confirming this proposal will automatically mark <strong>all requested time slots as BOOKED</strong> for <strong>{convertForm.companyName}</strong> in the system database.
+                            </p>
+
+                            <div className="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label className="text-[10px] font-black uppercase text-slate-500 mb-1 block">Company / Client Name</label>
+                                    <input
+                                        type="text"
+                                        value={convertForm.companyName}
+                                        onChange={(e) => setConvertForm({ ...convertForm, companyName: e.target.value })}
+                                        required
+                                        className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 font-bold text-slate-900"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="text-[10px] font-black uppercase text-slate-500 mb-1 block">Mobile Number</label>
+                                    <input
+                                        type="text"
+                                        value={convertForm.phone}
+                                        onChange={(e) => setConvertForm({ ...convertForm, phone: e.target.value })}
+                                        required
+                                        className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 font-bold text-slate-900"
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="grid grid-cols-3 gap-3">
+                                <div>
+                                    <label className="text-[10px] font-black uppercase text-slate-500 mb-1 block">Booking Date *</label>
+                                    <input
+                                        type="date"
+                                        value={convertForm.bookingDate}
+                                        onChange={(e) => setConvertForm({ ...convertForm, bookingDate: e.target.value })}
+                                        required
+                                        className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 font-bold text-slate-900"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="text-[10px] font-black uppercase text-slate-500 mb-1 block">Start Hour</label>
+                                    <select
+                                        value={convertForm.startHour}
+                                        onChange={(e) => setConvertForm({ ...convertForm, startHour: Number(e.target.value) })}
+                                        className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 font-bold text-slate-900"
+                                    >
+                                        {[6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20].map(h => (
+                                            <option key={h} value={h}>{h}:00 {h >= 12 ? 'PM' : 'AM'}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                                <div>
+                                    <label className="text-[10px] font-black uppercase text-slate-500 mb-1 block">End Hour</label>
+                                    <select
+                                        value={convertForm.endHour}
+                                        onChange={(e) => setConvertForm({ ...convertForm, endHour: Number(e.target.value) })}
+                                        className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 font-bold text-slate-900"
+                                    >
+                                        {[7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23].map(h => (
+                                            <option key={h} value={h}>{h}:00 {h >= 12 ? 'PM' : 'AM'}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div>
+                                <label className="text-[10px] font-black uppercase text-slate-500 mb-1 block">Agreed Package Price (₹) *</label>
+                                <input
+                                    type="number"
+                                    value={convertForm.agreedAmount}
+                                    onChange={(e) => setConvertForm({ ...convertForm, agreedAmount: e.target.value })}
+                                    required
+                                    placeholder="e.g. 5500"
+                                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2 font-bold text-slate-900 text-sm"
+                                />
+                            </div>
+
+                            <div className="flex justify-end gap-2 pt-3 border-t border-slate-200">
+                                <button
+                                    type="button"
+                                    onClick={() => setIsConvertModalOpen(false)}
+                                    disabled={isConverting}
+                                    className="px-4 py-2 rounded-xl border border-slate-200 font-bold"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    type="submit"
+                                    disabled={isConverting}
+                                    className="px-5 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-[#C8FF2E] font-black shadow-md flex items-center gap-2"
+                                >
+                                    {isConverting ? 'Locking Slots...' : '⚡ Lock Slots & Confirm Booking'}
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
         </div>
     )
 }

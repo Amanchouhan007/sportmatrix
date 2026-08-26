@@ -582,7 +582,7 @@ export default function SADashboard() {
                                                     </div>
                                                 </td>
                                                 <td className="py-3.5 px-4 font-black text-slate-900">
-                                                    ₹{Number(row.Revenue || row.totalRevenue || 0).toLocaleString('en-IN')}
+                                                    ₹{Number(row.planPrice || 0).toLocaleString('en-IN')}
                                                 </td>
                                                 <td className="py-3.5 px-4">
                                                     <span className="px-2.5 py-1 rounded-full bg-emerald-100 text-[#16A34A] text-[10px] font-black uppercase tracking-wider inline-flex items-center gap-1">

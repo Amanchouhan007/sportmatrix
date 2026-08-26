@@ -7,20 +7,17 @@ import api from './api';
 export const getDisputes = async (params = {}) => {
     try {
         const res = await api.get('/disputes', { params });
-        const resData = res?.data !== undefined ? res.data : res;
-        if (resData && resData.success !== false) {
-            return {
-                success: true,
-                data: resData.data || [],
-                pagination: resData.pagination || {
-                    page: 1, limit: 20, total: 0, totalPages: 1
-                }
-            };
-        }
+        // Axios interceptor returns response.data directly
+        const disputesArray = Array.isArray(res) ? res : (Array.isArray(res?.data) ? res.data : []);
+        return {
+            success: true,
+            data: disputesArray,
+            pagination: res?.pagination || { page: 1, limit: 20, total: disputesArray.length, totalPages: 1 }
+        };
     } catch (error) {
-        console.warn('Backend GET /disputes failed, using localStorage fallback:', error.message);
+        console.warn('Backend GET /disputes failed:', error.message);
     }
-    // Fallback: load from localStorage
+    // Fallback: load from localStorage if offline
     const saved = localStorage.getItem('sa_disputes');
     const data = saved ? JSON.parse(saved) : [];
     return {

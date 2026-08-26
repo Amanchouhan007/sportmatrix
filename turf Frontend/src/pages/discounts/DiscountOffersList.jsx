@@ -97,9 +97,10 @@ export default function DiscountOffersList() {
                 page,
                 limit: 10
             })
-            if (res.success && res.data) {
-                setOffers(res.data.offers || [])
-                setPagination(res.data.pagination || { total: 0, page: 1, limit: 10, totalPages: 1 })
+            if (res && res.success !== false) {
+                const rawOffers = Array.isArray(res.data) ? res.data : (res.data?.offers || res.offers || [])
+                setOffers(Array.isArray(rawOffers) ? rawOffers : [])
+                setPagination(res.data?.pagination || res.pagination || { total: 0, page: 1, limit: 10, totalPages: 1 })
             }
         } catch (err) {
             addToast({ message: 'Failed to load discount offers', type: 'error' })

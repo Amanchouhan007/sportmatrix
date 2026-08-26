@@ -46,31 +46,48 @@ export default function TournamentAllPage({ role = 'owner' }) {
         fetchLiveTournaments();
     }, []);
 
-    const handleApprove = (t, remarks = 'Approved by Owner') => {
-        setTournaments(prev => prev.map(item => item.id === t.id ? { ...item, status: 'Approved', ownerRemarks: remarks } : item))
-        setReviewModal({ open: false, tournament: null, remarks: '' })
-        addToast({ title: 'Tournament Approved!', message: `${t.title} is now public & match slots are locked on turf.`, type: 'success' })
+    const handleApprove = async (t) => {
+        try {
+            await api.post(`/tournaments/${t.id}/approve`);
+            setTournaments(prev => prev.map(item => item.id === t.id ? { ...item, status: 'APPROVED' } : item))
+            setReviewModal({ open: false, tournament: null, remarks: '' })
+            addToast({ title: 'Tournament Approved!', message: `${t.title} is now public & match slots are locked on turf.`, type: 'success' })
+        } catch (err) {
+            addToast({ title: 'Approve Failed', message: err.message || 'Could not approve tournament.', type: 'error' })
+        }
     }
 
-    const handleReject = (t, remarks) => {
+    const handleReject = async (t, remarks) => {
         if (!remarks) {
             addToast({ title: 'Remarks required', message: 'Please provide rejection remarks', type: 'error' })
             return
         }
-        setTournaments(prev => prev.map(item => item.id === t.id ? { ...item, status: 'Rejected', ownerRemarks: remarks } : item))
-        setReviewModal({ open: false, tournament: null, remarks: '' })
-        addToast({ title: 'Tournament Rejected', message: `${t.title} has been rejected.`, type: 'warning' })
+        try {
+            await api.post(`/tournaments/${t.id}/reject`, { remarks });
+            setTournaments(prev => prev.map(item => item.id === t.id ? { ...item, status: 'REJECTED' } : item))
+            setReviewModal({ open: false, tournament: null, remarks: '' })
+            addToast({ title: 'Tournament Rejected', message: `${t.title} has been rejected.`, type: 'warning' })
+        } catch (err) {
+            addToast({ title: 'Reject Failed', message: err.message || 'Could not reject tournament.', type: 'error' })
+        }
     }
 
-    const handleDelete = () => {
-        setTournaments(prev => prev.filter(t => t.id !== deleteConfirm.id))
-        setDeleteConfirm({ open: false, id: null, title: '' })
-        addToast({ title: 'Tournament Deleted', message: `Tournament has been removed`, type: 'success' })
+    const handleDelete = async () => {
+        const id = deleteConfirm.id;
+        try {
+            await api.delete(`/tournaments/${id}`);
+            setTournaments(prev => prev.filter(t => t.id !== id))
+            setDeleteConfirm({ open: false, id: null, title: '' })
+            addToast({ title: 'Tournament Deleted', message: `Tournament has been removed`, type: 'success' })
+        } catch (err) {
+            addToast({ title: 'Delete Failed', message: err.message || 'Could not delete tournament.', type: 'error' })
+        }
     }
 
     const filteredTournaments = tournaments.filter(t => {
-        const matchesTab = activeTab === 'ALL' || t.status.toUpperCase() === activeTab.replace('_', ' ')
-        const matchesSearch = t.title.toLowerCase().includes(searchTerm.toLowerCase()) || t.sport.toLowerCase().includes(searchTerm.toLowerCase())
+        const tStatus = (t.status || '').toUpperCase()
+        const matchesTab = activeTab === 'ALL' || tStatus === activeTab || tStatus.includes(activeTab)
+        const matchesSearch = (t.title || '').toLowerCase().includes(searchTerm.toLowerCase()) || (t.sport || '').toLowerCase().includes(searchTerm.toLowerCase())
         return matchesTab && matchesSearch
     })
 
@@ -115,10 +132,12 @@ export default function TournamentAllPage({ role = 'owner' }) {
             key: 'status',
             label: 'Approval Status',
             render: v => {
+                const s = (v || '').toUpperCase()
                 let badgeVariant = 'default'
-                if (v === 'Approved' || v === 'Active') badgeVariant = 'success'
-                else if (v === 'Pending Approval') badgeVariant = 'warning'
-                else if (v === 'Rejected' || v === 'Cancelled') badgeVariant = 'danger'
+                if (s.includes('APPROVED') || s === 'ACTIVE' || s === 'RUNNING') badgeVariant = 'success'
+                else if (s.includes('PENDING')) badgeVariant = 'warning'
+                else if (s === 'REJECTED' || s === 'CANCELLED') badgeVariant = 'danger'
+                else if (s === 'COMPLETED') badgeVariant = 'primary'
                 return <Badge variant={badgeVariant} dot>{v}</Badge>
             }
         },

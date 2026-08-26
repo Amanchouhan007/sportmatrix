@@ -19,27 +19,29 @@ export default function StaffDashboard() {
     useEffect(() => {
         api.get('/billing/history')
             .then(res => {
-                if (res.data && res.data.success && Array.isArray(res.data.data) && res.data.data.length > 0) {
-                    const mapped = res.data.data.map(b => ({
-                        id: b.paymentId || b.id,
-                        customer: b.user || b.customer || 'Valued Player',
-                        sport: b.type === 'BOOKING' ? 'Cricket' : 'Sports',
-                        time: b.time || '05:25 PM',
-                        court: b.court || 'Main Court',
+                const list = res?.data || (Array.isArray(res) ? res : []);
+                if (Array.isArray(list) && list.length > 0) {
+                    const mapped = list.map(b => ({
+                        id: b.invoiceNumber || b.paymentId || b.id,
+                        customer: b.customerName || b.user?.fullName || b.user || b.customer || 'Valued Player',
+                        sport: b.type === 'BOOKING' ? 'Cricket' : (b.type || 'Sports'),
+                        time: b.time || '06:00 PM',
+                        court: b.court || b.branchName || 'Main Court',
                         amount: b.amount || 0,
                         status: b.status === 'CONFIRMED' || b.status === 'COMPLETED' ? 'Confirmed' : 'Pending',
-                        date: b.date ? b.date.split('T')[0] : 'Today'
-                    }))
-                    setBookings(mapped)
+                        date: b.date ? String(b.date).split('T')[0] : 'Today'
+                    }));
+                    setBookings(mapped);
                 } else {
-                    setBookings([])
+                    setBookings([]);
                 }
             })
             .catch(e => {
                 console.warn('StaffDashboard API fetch note:', e.message);
                 setBookings([]);
-            })
-    }, [])
+            });
+    }, []);
+
 
     // Calculate dynamic stats
     const stats = {

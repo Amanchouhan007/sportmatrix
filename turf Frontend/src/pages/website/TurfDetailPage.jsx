@@ -52,8 +52,8 @@ const defaultTurfData = {
 }
 
 const allTurfsList = [
-    { id: 1, name: 'Green Arena Football Turf', location: 'Andheri West, Mumbai', city: 'Mumbai', rating: 4.8, price: 1200, image: '/images/turf1.png', sports: ['Football', 'Cricket'], amenities: ['Floodlights', 'Parking', 'Washroom'], lat: 19.1136, lng: 72.8697 },
-    { id: 2, name: 'Champion Turf Ground', location: 'Vijay Nagar, Indore', city: 'Indore', rating: 4.8, price: 900, image: '/images/turf2.png', sports: ['Cricket', 'Football'], amenities: ['Floodlights', 'Parking', 'Seating', 'Drinking Water'], lat: 22.7244, lng: 75.8839 },
+    { id: 1, name: 'Green Arena Turf', location: 'Andheri West, Mumbai', city: 'Mumbai', rating: 4.8, price: 1200, image: '/images/turf1.png', sports: ['Cricket'], amenities: ['Floodlights', 'Parking', 'Washroom'], lat: 19.1136, lng: 72.8697 },
+    { id: 2, name: 'Champion Turf Ground', location: 'Vijay Nagar, Indore', city: 'Indore', rating: 4.8, price: 900, image: '/images/turf2.png', sports: ['Cricket'], amenities: ['Floodlights', 'Parking', 'Seating', 'Drinking Water'], lat: 22.7244, lng: 75.8839 },
     { id: 3, name: 'Royal Cricket Ground', location: 'Palasia, Indore', city: 'Indore', rating: 4.7, price: 1000, image: '/images/turf5.png', sports: ['Cricket'], amenities: ['Floodlights', 'Parking', 'Drinking Water'], lat: 22.7533, lng: 75.8937 },
     { id: 4, name: 'ProPlay Cricket Arena', location: 'Vashi, Navi Mumbai', city: 'Mumbai', rating: 4.5, price: 1000, image: '/images/turf4.png', sports: ['Cricket'], amenities: ['Floodlights', 'Parking'], lat: 19.0330, lng: 73.0297 },
     { id: 5, name: 'GameVault Cricket Center', location: 'Koramangala, Bangalore', city: 'Bangalore', rating: 4.9, price: 1200, image: '/images/turf3.png', sports: ['Cricket'], amenities: ['Floodlights', 'Parking', 'Seating', 'Washroom'], lat: 12.9698, lng: 77.7500 },
@@ -205,37 +205,7 @@ const generateSlotsForDate = (hourlyPrice = 1200, selectedDateObj = null, turfId
         // Real-time slot management: if TODAY and slot hour has elapsed
         const isSlotPassedToday = isToday && slotHour <= currentHour
 
-        // Distinct, realistic schedule tailored for each day
         let status = 'available'
-
-        if (dayShort === 'SUN' || dayShort.includes('SUNDAY')) {
-            if ([0, 1, 2, 4, 7, 12, 14, 15, 16].includes(i)) status = 'booked'
-        } else if (dayShort === 'MON' || dayShort.includes('MONDAY')) {
-            if ([0, 1, 3, 4, 5, 7, 11, 15].includes(i)) status = 'booked'
-            else if (i === 6) status = 'maintenance' // 12:00 PM
-            else if (i === 2) status = 'staff_unavailable' // 8:00 AM
-        } else if (dayShort === 'TUE' || dayShort.includes('TUESDAY')) {
-            if ([2, 4, 8, 12, 15].includes(i)) status = 'booked'
-            else if (i === 5) status = 'maintenance' // 11:00 AM
-        } else if (dayShort === 'WED' || dayShort.includes('WEDNESDAY')) {
-            if ([3, 7, 11, 14, 15].includes(i)) status = 'booked'
-            else if (i === 1) status = 'staff_unavailable' // 7:00 AM
-        } else if (dayShort === 'THU' || dayShort.includes('THURSDAY')) {
-            if ([0, 2, 5, 8, 11, 15].includes(i)) status = 'booked'
-            else if (i === 7) status = 'maintenance' // 1:00 PM
-        } else if (dayShort === 'FRI' || dayShort.includes('FRIDAY')) {
-            if ([1, 3, 5, 8, 10, 12, 13, 14, 16].includes(i)) status = 'booked'
-        } else if (dayShort === 'SAT' || dayShort.includes('SATURDAY')) {
-            if ([0, 1, 2, 4, 6, 8, 11, 13, 14, 15].includes(i)) status = 'booked'
-            else if (i === 3) status = 'staff_unavailable' // 9:00 AM
-        } else {
-            const hash = (dateNum * 11 + i * 17 + (turfId || 16) * 5) % 100
-            if (hash < 40) status = 'booked'
-            else if (hash === 91) status = 'maintenance'
-            else if (hash === 92) status = 'staff_unavailable'
-        }
-
-        // Lock slot if it has elapsed today
         if (isSlotPassedToday) {
             status = 'booked'
         }
@@ -280,11 +250,15 @@ export default function TurfDetailPage() {
 
     const activeTurf = useMemo(() => {
         if (liveBranch) {
-            let parsedSports = ['Cricket', 'Football'];
+            let parsedSports = [];
             try {
-                if (Array.isArray(liveBranch.sports)) parsedSports = liveBranch.sports;
+                if (Array.isArray(liveBranch.sports) && liveBranch.sports.length > 0) parsedSports = liveBranch.sports;
                 else if (typeof liveBranch.sports === 'string' && liveBranch.sports.trim().startsWith('[')) parsedSports = JSON.parse(liveBranch.sports);
             } catch (_) {}
+
+            if (!parsedSports || parsedSports.length === 0) {
+                parsedSports = [{ name: 'Cricket', price: Number(liveBranch.pricePerHour ?? liveBranch.price ?? 700), peakPrice: Math.round(Number(liveBranch.pricePerHour ?? liveBranch.price ?? 700) * 1.5) }];
+            }
 
             let parsedAmenities = ['Floodlights', 'Parking', 'Washroom'];
             try {
@@ -317,7 +291,27 @@ export default function TurfDetailPage() {
             };
         }
         const found = allTurfsList.find(t => String(t.id) === String(id));
-        return found || allTurfsList[0];
+        if (found) return found;
+        return {
+            id,
+            _id: id,
+            name: 'Turf Arena',
+            location: 'Indore, MP',
+            city: 'Indore',
+            rating: 4.8,
+            price: 700,
+            dimensions: '5,000 Sq.Ft',
+            surfaceType: 'TurfPro Synthetic Arena',
+            image: '/images/turf1.png',
+            sports: [{ name: 'Cricket', price: 700, peakPrice: 1050 }],
+            amenities: ['Floodlights', 'Parking', 'Washroom'],
+            openingTime: '06:00',
+            closingTime: '23:00',
+            discountOffer: '20% OFF FIRST MATCH',
+            couponCode: 'CRICKET20',
+            lat: 22.7244,
+            lng: 75.8839
+        };
     }, [liveBranch, id]);
 
     const videoRef = useRef(null)
@@ -349,10 +343,10 @@ export default function TurfDetailPage() {
         name: activeTurf.name,
         location: activeTurf.location,
         rating: activeTurf.rating,
-        sports: (activeTurf.sports && activeTurf.sports.length > 0 ? activeTurf.sports : ['Cricket']).map(s => {
+        sports: (activeTurf.sports && activeTurf.sports.length > 0 ? activeTurf.sports : [{ name: 'Cricket', price: Number(activeTurf.price || 700), peakPrice: Math.round(Number(activeTurf.price || 700) * 1.5) }]).map(s => {
             const sName = typeof s === 'string' ? s : (s?.name || 'Cricket');
-            const sPrice = typeof s === 'object' && s?.regularPrice ? Number(s.regularPrice) : activeTurf.price;
-            const sPeak = typeof s === 'object' && s?.peakPrice ? Number(s.peakPrice) : (sPrice + 400);
+            const sPrice = typeof s === 'object' && (s?.price || s?.regularPrice) ? Number(s.price || s.regularPrice) : Number(activeTurf.price || 700);
+            const sPeak = typeof s === 'object' && s?.peakPrice ? Number(s.peakPrice) : Math.round(sPrice * 1.5);
             return {
                 name: sName,
                 price: sPrice,
@@ -607,11 +601,13 @@ export default function TurfDetailPage() {
 
     // Check if this Turf offers Verified Umpire Service (Configured by Turf Owner)
     const isTurfUmpireAvailable = (() => {
+        if (activeTurf?.hasActiveUmpire !== undefined) return Boolean(activeTurf.hasActiveUmpire);
+        if (activeTurf?.hasUmpireService !== undefined) return Boolean(activeTurf.hasUmpireService);
         const savedSetting = localStorage.getItem(`turf_umpire_enabled_${activeTurf?.id || id}`)
         if (savedSetting !== null) return savedSetting === 'true'
         const globalSetting = localStorage.getItem('turf_umpire_enabled')
         if (globalSetting !== null) return globalSetting === 'true'
-        return activeTurf?.hasUmpireService !== false
+        return false;
     })()
 
     const selectedSlotIndex = slots.findIndex(s => s.id === (currentSlot?.id ?? selectedSlot))

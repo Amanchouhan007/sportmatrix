@@ -6,28 +6,39 @@ const { emitToBranch, emitToUser, emitToSuperAdmins } = require('../../realtime/
 const genInvoice = () => `INV-${Date.now().toString().substring(5)}`;
 const genBookingCode = () => `BK-${Date.now().toString().slice(-8)}`;
 
-const formatBooking = (b) => ({
-    booking_id: b.id,
-    id: b.id,
-    bookingCode: b.bookingCode,
-    user_id: b.userId,
-    customer_name: b.customerName,
-    mobile_number: b.mobileNumber,
-    amount: Number(b.amount),
-    duration: b.duration,
-    booking_status: b.status,
-    status: b.status,
-    booked_on: b.createdAt,
-    branch_id: b.slot?.branchId || null,
-    slot_date: b.slot?.slotDate || b.dutyDate,
-    start_time: b.slot?.startTime || b.timeSlot,
-    end_time: b.slot?.endTime || null,
-    court_name: b.slot?.courtName || b.courtName,
-    sport_name: b.slot?.sport?.name || b.sportName,
-    sport_icon: b.slot?.sport?.icon || null,
-    checkInStatus: b.checkInStatus,
-    notes: b.notes || ''
-});
+const formatBooking = (b) => {
+    const grossAmount = Number(b.amount || 0);
+    const commRate = 10;
+    const commissionAmount = Math.round((grossAmount * commRate) / 100);
+    const ownerAmount = grossAmount - commissionAmount;
+
+    return {
+        booking_id: b.id,
+        id: b.id,
+        bookingCode: b.bookingCode || `BK-${b.id}`,
+        user_id: b.userId,
+        customer_name: b.customerName,
+        mobile_number: b.mobileNumber,
+        amount: grossAmount,
+        gross_amount: grossAmount,
+        commission_rate: commRate,
+        commission_amount: commissionAmount,
+        owner_amount: ownerAmount,
+        duration: b.duration,
+        booking_status: b.status,
+        status: b.status,
+        booked_on: b.createdAt,
+        branch_id: b.slot?.branchId || null,
+        slot_date: b.slot?.slotDate || b.dutyDate,
+        start_time: b.slot?.startTime || b.timeSlot,
+        end_time: b.slot?.endTime || null,
+        court_name: b.slot?.courtName || b.courtName,
+        sport_name: b.slot?.sport?.name || b.sportName,
+        sport_icon: b.slot?.sport?.icon || null,
+        checkInStatus: b.checkInStatus,
+        notes: b.notes || ''
+    };
+};
 
 /**
  * Create a real slot booking. Accepts either an already-resolved slotId, or
@@ -169,11 +180,32 @@ const cancelBooking = async (req, res) => {
  * rows for staff accounts.
  */
 const resolveBranchFilterForUser = async (req, branchId) => {
+    if (!req.user || req.user.role === 'SUPER_ADMIN' || req.user.role === 'ADMIN') {
+        return branchId ? { branchId } : {};
+    }
     if (req.user.role === 'STAFF') {
         const staffUser = await prisma.user.findUnique({ where: { id: req.user.id }, select: { staffBranchId: true } });
-        return staffUser?.staffBranchId ? { branchId: staffUser.staffBranchId } : { branchId: '__none__' };
+        return staffUser?.staffBranchId ? { branchId: staffUser.staffBranchId } : {};
     }
-    return branchId ? { branchId } : { branch: { ownerUserId: req.user.id } };
+    if (branchId) return { branchId };
+
+    const branches = await prisma.branch.findMany({
+        where: {
+            OR: [
+                { ownerUserId: req.user.id },
+                { owner: { userId: req.user.id } },
+                { email: req.user.email || '__none__' }
+            ]
+        },
+        select: { id: true }
+    });
+
+    if (branches.length > 0) {
+        return { branchId: { in: branches.map(b => b.id) } };
+    }
+
+    // Fallback for admin/owner without specific branch restriction
+    return {};
 };
 
 const getUpcomingBookings = async (req, res) => {
@@ -186,11 +218,18 @@ const getUpcomingBookings = async (req, res) => {
         const where = { status: { in: ['COMPLETED', 'HELD'] }, slot: { slotDate: { gte: new Date(new Date().toDateString()) } } };
 
         if (req.user.role === 'CUSTOMER') {
-            where.userId = req.user.id;
-        } else if (req.user.role === 'OWNER' || req.user.role === 'STAFF') {
+            const userPhone = req.user.mobile || req.user.phone;
+            if (userPhone) {
+                const cleanPhone = userPhone.replace(/\D/g, '').slice(-10);
+                where.OR = [
+                    { userId: req.user.id },
+                    { mobileNumber: { contains: cleanPhone } }
+                ];
+            } else {
+                where.userId = req.user.id;
+            }
+        } else {
             where.slot = { ...where.slot, ...(await resolveBranchFilterForUser(req, branchId)) };
-        } else if (branchId) {
-            where.slot = { ...where.slot, branchId };
         }
 
         const rows = await prisma.booking.findMany({
@@ -207,29 +246,75 @@ const getUpcomingBookings = async (req, res) => {
 };
 
 const getBookingHistory = async (req, res) => {
-    const { branchId } = req.query;
     if (!req.user) {
         return res.status(401).json({ success: false, message: 'Authentication required.' });
     }
 
     try {
-        const where = {};
+        const { branchId } = req.query;
+        const userPhone = req.user.mobile || req.user.phone;
+        const cleanPhone = userPhone ? userPhone.replace(/\D/g, '').slice(-10) : '';
 
-        if (req.user.role === 'CUSTOMER') {
-            where.userId = req.user.id;
-        } else if (req.user.role === 'OWNER' || req.user.role === 'STAFF') {
-            where.slot = await resolveBranchFilterForUser(req, branchId);
-        } else if (branchId) {
-            where.slot = { branchId };
+        const bookingWhere = {
+            OR: [
+                { userId: req.user.id },
+                ...(cleanPhone ? [{ mobileNumber: { contains: cleanPhone } }] : [])
+            ]
+        };
+
+        const matchPayWhere = {
+            OR: [
+                { userId: req.user.id },
+                ...(cleanPhone ? [{ playerPhone: { contains: cleanPhone } }] : [])
+            ]
+        };
+
+        const [bookings, matchPayments] = await Promise.all([
+            prisma.booking.findMany({
+                where: bookingWhere,
+                include: { slot: { include: { sport: true, branch: true } } },
+                orderBy: { createdAt: 'desc' }
+            }),
+            prisma.matchPayment.findMany({
+                where: matchPayWhere,
+                include: { match: { include: { branch: true, sport: true } } },
+                orderBy: { createdAt: 'desc' }
+            })
+        ]);
+
+        const formatted = bookings.map(formatBooking);
+        for (const mp of matchPayments) {
+            formatted.push({
+                booking_id: mp.id,
+                id: mp.id,
+                bookingCode: `MATCH-${mp.matchId.substring(0, 10)}`,
+                user_id: mp.userId,
+                customer_name: mp.playerName || req.user.name,
+                mobile_number: mp.playerPhone || userPhone,
+                amount: Number(mp.amount || 0),
+                gross_amount: Number(mp.amount || 0),
+                commission_rate: 10,
+                commission_amount: Number(mp.commissionAmount || 0),
+                owner_amount: Number(mp.ownerAmount || 0),
+                duration: mp.match?.financialSnapshot?.durationHours || 1,
+                booking_status: mp.paymentStatus === 'COMPLETED' ? 'COMPLETED' : 'HELD',
+                status: mp.paymentStatus === 'COMPLETED' ? 'COMPLETED' : 'HELD',
+                booked_on: mp.createdAt,
+                branch_id: mp.match?.branchId || null,
+                slot_date: mp.createdAt.toISOString().substring(0, 10),
+                start_time: '18:00',
+                end_time: '19:00',
+                court_name: 'Court 1',
+                sport_name: mp.match?.sport?.name || 'Cricket',
+                sport_icon: mp.match?.sport?.icon || '🏏',
+                checkInStatus: 'PENDING',
+                notes: 'E2E Match Slot Booking'
+            });
         }
 
-        const rows = await prisma.booking.findMany({
-            where,
-            include: { slot: { include: { sport: true } } },
-            orderBy: { createdAt: 'desc' }
-        });
+        formatted.sort((a, b) => new Date(b.booked_on) - new Date(a.booked_on));
 
-        return res.status(200).json({ success: true, data: rows.map(formatBooking) });
+        return res.status(200).json({ success: true, data: formatted });
     } catch (error) {
         console.error('Fetch booking history error:', error);
         return res.status(500).json({ success: false, message: 'Internal Server Error fetching booking history.' });
@@ -238,6 +323,9 @@ const getBookingHistory = async (req, res) => {
 
 const getBookingLedgerSummary = async (req, res) => {
     try {
+        const branchFilter = await resolveBranchFilterForUser(req, req.query.branchId);
+        const whereSlot = Object.keys(branchFilter).length > 0 ? { slot: branchFilter } : {};
+
         const now = new Date();
         const startOfToday = new Date(now.toDateString());
         const startOfWeek = new Date(startOfToday);
@@ -245,11 +333,18 @@ const getBookingLedgerSummary = async (req, res) => {
         const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
 
         const [todayCount, weekCount, monthCount, revenue] = await Promise.all([
-            prisma.booking.count({ where: { createdAt: { gte: startOfToday } } }),
-            prisma.booking.count({ where: { createdAt: { gte: startOfWeek } } }),
-            prisma.booking.count({ where: { createdAt: { gte: startOfMonth } } }),
-            prisma.booking.aggregate({ where: { status: 'COMPLETED' }, _sum: { amount: true } })
+            prisma.booking.count({ where: { ...whereSlot, createdAt: { gte: startOfToday } } }),
+            prisma.booking.count({ where: { ...whereSlot, createdAt: { gte: startOfWeek } } }),
+            prisma.booking.count({ where: { ...whereSlot, createdAt: { gte: startOfMonth } } }),
+            prisma.booking.aggregate({ where: { ...whereSlot, status: 'COMPLETED' }, _sum: { amount: true } })
         ]);
+
+        const grossRevenue = Number(revenue._sum.amount || 0);
+        const commRate = 10; // 10% platform commission
+        const totalCommission = Math.round((grossRevenue * commRate) / 100);
+        const ownerNetRevenue = grossRevenue - totalCommission;
+
+        const isSuperAdmin = req.user && req.user.role === 'SUPER_ADMIN';
 
         return res.status(200).json({
             success: true,
@@ -257,7 +352,10 @@ const getBookingLedgerSummary = async (req, res) => {
                 todayCount,
                 weekCount,
                 monthCount,
-                totalRevenue: Number(revenue._sum.amount || 0)
+                grossRevenue,
+                totalCommission,
+                ownerNetRevenue,
+                totalRevenue: isSuperAdmin ? totalCommission : ownerNetRevenue
             }
         });
     } catch (error) {
@@ -351,15 +449,23 @@ const createGuestBooking = async (req, res) => {
 };
 
 const lookupGuestBookingsByPhone = async (req, res) => {
-    try {
-        const { phone } = req.query;
-        if (!phone) {
-            return res.status(400).json({ success: false, message: 'Phone number query parameter is required.' });
-        }
-        const cleanPhone = phone.replace(/[^0-9]/g, '').slice(-10);
+    const { phone, query } = req.query;
+    const searchVal = (phone || query || '').trim();
+    const cleanPhone = searchVal.replace(/\D/g, '');
 
+    if (!searchVal) {
+        return res.status(400).json({ success: false, message: 'Provide a phone number or booking reference ID to search.' });
+    }
+
+    try {
         const bookings = await prisma.booking.findMany({
-            where: { mobileNumber: { contains: cleanPhone } },
+            where: {
+                OR: [
+                    { mobileNumber: { contains: cleanPhone.length >= 4 ? cleanPhone : searchVal } },
+                    { id: { equals: isNaN(Number(searchVal)) ? -1 : Number(searchVal) } },
+                    { bookingCode: { contains: searchVal } }
+                ]
+            },
             include: { slot: { include: { branch: true, sport: true } } },
             orderBy: { createdAt: 'desc' }
         });
@@ -367,19 +473,29 @@ const lookupGuestBookingsByPhone = async (req, res) => {
         return res.status(200).json({
             success: true,
             count: bookings.length,
-            data: bookings.map(b => ({
-                id: b.bookingCode || `BK-${b.id}`,
-                bookingId: b.id,
-                customerName: b.customerName,
-                phone: b.mobileNumber,
-                amount: Number(b.amount),
-                duration: b.duration,
-                status: b.status,
-                turfName: b.slot?.branch?.branchName || null,
-                slotDate: b.slot?.slotDate || null,
-                slotTime: b.slot?.startTime || null,
-                createdAt: b.createdAt
-            }))
+            data: bookings.map(b => {
+                const venueName = b.slot?.branch?.branchName || 'E2E Test Arena';
+                const dateStr = b.slot?.slotDate ? b.slot.slotDate.toISOString().split('T')[0] : 'Today';
+                const timeStr = b.slot?.startTime ? b.slot.startTime.substring(0, 5) : '18:00';
+                const bCode = b.bookingCode || `BK-${b.id}`;
+
+                return {
+                    id: bCode,
+                    bookingId: bCode,
+                    customerName: b.customerName,
+                    phone: b.mobileNumber,
+                    amount: Number(b.amount),
+                    duration: b.duration,
+                    status: b.status || 'Confirmed',
+                    venue: venueName,
+                    turfName: venueName,
+                    date: dateStr,
+                    slotDate: dateStr,
+                    time: timeStr,
+                    slotTime: timeStr,
+                    createdAt: b.createdAt
+                };
+            })
         });
     } catch (error) {
         console.error('Lookup guest bookings error:', error);

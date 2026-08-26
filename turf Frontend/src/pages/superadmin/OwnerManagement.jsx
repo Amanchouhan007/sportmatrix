@@ -443,6 +443,38 @@ export default function OwnerManagement() {
         }
     }
 
+    const handleExportCSV = () => {
+        if (!owners || owners.length === 0) {
+            addToast({ title: 'Export Error', message: 'No owners available to export.', type: 'error' })
+            return
+        }
+
+        const headers = ['Owner Name', 'Email', 'Mobile', 'Business Name', 'Business Type', 'City', 'Branches Count', 'Status', 'Registered Date']
+        const rows = owners.map(o => [
+            `"${(o.fullName || o.name || '').replace(/"/g, '""')}"`,
+            `"${(o.email || '').replace(/"/g, '""')}"`,
+            `"${(o.mobile || '').replace(/"/g, '""')}"`,
+            `"${(o.businessName || '').replace(/"/g, '""')}"`,
+            `"${(o.businessType || '').replace(/"/g, '""')}"`,
+            `"${(o.city || '').replace(/"/g, '""')}"`,
+            o.branches ?? o.branchesList?.length ?? 0,
+            `"${o.status || 'ACTIVE'}"`,
+            `"${o.createdAt ? new Date(o.createdAt).toLocaleDateString('en-IN') : ''}"`
+        ])
+
+        const csvString = [headers.join(','), ...rows.map(e => e.join(','))].join('\n')
+        const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' })
+        const url = URL.createObjectURL(blob)
+        const link = document.createElement('a')
+        link.setAttribute('href', url)
+        link.setAttribute('download', `sportturfs_owners_export_${new Date().toISOString().slice(0, 10)}.csv`)
+        document.body.appendChild(link)
+        link.click()
+        document.body.removeChild(link)
+
+        addToast({ title: 'Export Downloaded', message: 'Owners report exported to CSV successfully.', type: 'success' })
+    }
+
     return (
         <div className="space-y-7 font-sans text-slate-900">
             {/* Page Title & Action Header */}
@@ -461,7 +493,7 @@ export default function OwnerManagement() {
                         <span className="hidden md:inline">Refresh</span>
                     </button>
                     <button
-                        onClick={() => addToast({ title: 'Export Generated', message: 'Owners report exported to CSV successfully.', type: 'success' })}
+                        onClick={handleExportCSV}
                         className="h-11 px-4 rounded-full bg-white border border-slate-200/80 text-slate-700 hover:text-[#16A34A] hover:border-emerald-300 font-bold text-xs transition-all cursor-pointer shadow-2xs flex items-center gap-2"
                     >
                         <FiDownload className="w-4 h-4 text-[#16A34A]" />
@@ -724,7 +756,7 @@ export default function OwnerManagement() {
                                                     {/* Total Branches */}
                                                     <td className="py-3 px-4 text-center">
                                                         <span className="inline-flex items-center justify-center px-3 py-1 rounded-full bg-slate-100 text-slate-800 font-black text-xs border border-slate-200/60">
-                                                            {r.branches || 0}
+                                                            {r.branches ?? r.branchesList?.length ?? 0}
                                                         </span>
                                                     </td>
 
@@ -817,22 +849,45 @@ export default function OwnerManagement() {
                                                 {isExpanded && (
                                                     <tr className="bg-emerald-50/20 border-b border-emerald-100">
                                                         <td colSpan="8" className="p-4">
-                                                            <div className="bg-white rounded-2xl p-4 border border-emerald-200/80 grid grid-cols-2 md:grid-cols-4 gap-4 text-xs font-semibold">
-                                                                <div>
-                                                                    <span className="text-[10px] text-slate-400 uppercase font-black block">Registered Date</span>
-                                                                    <span className="text-slate-800 font-bold">{r.createdAt ? new Date(r.createdAt).toLocaleDateString('en-IN') : 'N/A'}</span>
+                                                            <div className="bg-white rounded-2xl p-4 border border-emerald-200/80 space-y-4">
+                                                                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-xs font-semibold">
+                                                                    <div>
+                                                                        <span className="text-[10px] text-slate-400 uppercase font-black block">Registered Date</span>
+                                                                        <span className="text-slate-800 font-bold">{r.createdAt ? new Date(r.createdAt).toLocaleDateString('en-IN') : 'N/A'}</span>
+                                                                    </div>
+                                                                    <div>
+                                                                        <span className="text-[10px] text-slate-400 uppercase font-black block">Contact Mobile</span>
+                                                                        <span className="text-slate-800 font-bold">{r.mobile || 'N/A'}</span>
+                                                                    </div>
+                                                                    <div>
+                                                                        <span className="text-[10px] text-slate-400 uppercase font-black block">Location</span>
+                                                                        <span className="text-slate-800 font-bold">📍 {r.city || 'India'}, {r.state || ''}</span>
+                                                                    </div>
+                                                                    <div>
+                                                                        <span className="text-[10px] text-slate-400 uppercase font-black block">GST / PAN</span>
+                                                                        <span className="text-slate-800 font-bold">{r.gstNumber || r.panNumber || 'Not Provided'}</span>
+                                                                    </div>
                                                                 </div>
-                                                                <div>
-                                                                    <span className="text-[10px] text-slate-400 uppercase font-black block">Contact Mobile</span>
-                                                                    <span className="text-slate-800 font-bold">{r.mobile || 'N/A'}</span>
-                                                                </div>
-                                                                <div>
-                                                                    <span className="text-[10px] text-slate-400 uppercase font-black block">Location</span>
-                                                                    <span className="text-slate-800 font-bold">📍 {r.city || 'India'}, {r.state || ''}</span>
-                                                                </div>
-                                                                <div>
-                                                                    <span className="text-[10px] text-slate-400 uppercase font-black block">GST / PAN</span>
-                                                                    <span className="text-slate-800 font-bold">{r.gstNumber || r.panNumber || 'Not Provided'}</span>
+
+                                                                {/* Registered Branches list */}
+                                                                <div className="border-t border-slate-100 pt-3">
+                                                                    <span className="text-[10px] text-slate-400 uppercase font-black block mb-2">Registered Turf Arenas / Branches ({r.branchesList?.length || r.branches || 0})</span>
+                                                                    {r.branchesList && r.branchesList.length > 0 ? (
+                                                                        <div className="flex flex-wrap gap-2">
+                                                                            {r.branchesList.map((b, bIdx) => (
+                                                                                <div key={b.id || bIdx} className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-50 border border-slate-200 text-xs">
+                                                                                    <span className="font-extrabold text-slate-900">🏢 {b.branchName}</span>
+                                                                                    {b.branchCode && <span className="text-[10px] font-mono text-slate-500">({b.branchCode})</span>}
+                                                                                    {b.city && <span className="text-[10px] text-emerald-700 font-semibold">• {b.city}</span>}
+                                                                                    <span className={`px-1.5 py-0.5 rounded text-[9px] font-black uppercase ${b.status === 'ACTIVE' ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-200 text-slate-700'}`}>
+                                                                                        {b.status || 'ACTIVE'}
+                                                                                    </span>
+                                                                                </div>
+                                                                            ))}
+                                                                        </div>
+                                                                    ) : (
+                                                                        <p className="text-xs text-slate-400 font-medium italic">No branches registered under this owner yet.</p>
+                                                                    )}
                                                                 </div>
                                                             </div>
                                                         </td>
@@ -1236,6 +1291,34 @@ export default function OwnerManagement() {
                                     </div>
                                 </div>
                             </div>
+                        </div>
+
+                        {/* Registered Branches section in modal */}
+                        <div className="bg-white p-4 rounded-2xl border border-slate-200/80 space-y-3 font-sans">
+                            <h4 className="text-xs font-black text-emerald-600 uppercase tracking-wider border-b border-slate-100 pb-1.5 flex items-center gap-1.5">
+                                <FiLayers className="w-3.5 h-3.5" />
+                                Registered Turf Arenas & Branches ({viewingOwner.branchesList?.length || viewingOwner.branches || 0})
+                            </h4>
+                            {viewingOwner.branchesList && viewingOwner.branchesList.length > 0 ? (
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                                    {viewingOwner.branchesList.map((b, bIdx) => (
+                                        <div key={b.id || bIdx} className="p-3 rounded-xl bg-slate-50 border border-slate-200/80 flex flex-col justify-between space-y-1">
+                                            <div className="flex items-center justify-between">
+                                                <span className="font-extrabold text-slate-900 text-xs">🏢 {b.branchName}</span>
+                                                <span className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase ${b.status === 'ACTIVE' ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-200 text-slate-700'}`}>
+                                                    {b.status || 'ACTIVE'}
+                                                </span>
+                                            </div>
+                                            <div className="text-[11px] text-slate-500 font-medium flex items-center justify-between">
+                                                <span>Code: <strong className="font-mono text-slate-700">{b.branchCode || 'N/A'}</strong></span>
+                                                <span>City: <strong className="text-slate-700">{b.city || 'India'}</strong></span>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            ) : (
+                                <p className="text-xs text-slate-400 font-medium italic">No branches registered under this owner.</p>
+                            )}
                         </div>
 
                         <div className="flex justify-end pt-2 border-t border-slate-100">

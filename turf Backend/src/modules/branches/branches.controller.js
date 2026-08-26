@@ -1,9 +1,14 @@
+// Controller for branch & turf management operations.
 const prisma = require('../../config/prisma');
 
 const genId = (prefix) => `${prefix}_${Date.now()}_${Math.floor(Math.random() * 100000)}`;
 
-const formatBranch = (b, bookingRevenue = 0) => {
+const formatBranch = (b, statsObj = { revenue: 0, count: 0, commission: 0 }) => {
+    const bookingRevenue = typeof statsObj === 'number' ? statsObj : (statsObj?.revenue || 0);
+    const bookingCount = typeof statsObj === 'object' ? (statsObj?.count || 0) : 0;
+    const bookingCommission = typeof statsObj === 'object' ? (statsObj?.commission || Math.round(bookingRevenue * 0.1)) : Math.round(bookingRevenue * 0.1);
     const planPrice = Number(b.subscriptionPlan?.monthlyPrice || 0);
+
     const sports = b.branchSports && b.branchSports.length > 0
         ? b.branchSports.map(bs => ({
             id: bs.id,
@@ -32,6 +37,10 @@ const formatBranch = (b, bookingRevenue = 0) => {
         plan_price: planPrice,
         bookingRevenue,
         booking_revenue: bookingRevenue,
+        bookingCount,
+        booking_count: bookingCount,
+        bookingCommission,
+        booking_commission: bookingCommission,
         city: b.city || '',
         state: b.state || '',
         country: b.country || 'India',
@@ -56,7 +65,8 @@ const formatBranch = (b, bookingRevenue = 0) => {
         images: b.images || [],
         sports,
         status: b.status,
-        totalRevenue: planPrice + bookingRevenue,
+        totalPlatformRevenue: planPrice + bookingCommission,
+        totalRevenue: planPrice + bookingCommission,
         createdAt: b.createdAt
     };
 };
@@ -66,16 +76,40 @@ const formatBranch = (b, bookingRevenue = 0) => {
  * (Booking has no direct branchId -- it hangs off Slot).
  */
 const getBookingRevenueByBranch = async (branchIds) => {
-    if (!branchIds.length) return {};
-    const bookings = await prisma.booking.findMany({
-        where: { status: 'COMPLETED', slot: { branchId: { in: branchIds } } },
-        select: { amount: true, slot: { select: { branchId: true } } }
-    });
+    if (!branchIds || !branchIds.length) return {};
+    const [bookings, matchPayments] = await Promise.all([
+        prisma.booking.findMany({
+            where: { status: { in: ['COMPLETED', 'PENDING'] }, slot: { branchId: { in: branchIds } } },
+            select: { amount: true, slotId: true, slot: { select: { branchId: true } } }
+        }),
+        prisma.matchPayment.findMany({
+            where: { paymentStatus: { in: ['COMPLETED', 'PENDING'] }, match: { branchId: { in: branchIds } } },
+            select: { amount: true, match: { select: { branchId: true, slotId: true } } }
+        })
+    ]);
+
+    const processedSlotIds = new Set();
     const map = {};
     for (const b of bookings) {
-        const id = b.slot?.branchId;
-        if (!id) continue;
-        map[id] = (map[id] || 0) + Number(b.amount);
+        const bId = b.slot?.branchId;
+        if (!bId) continue;
+        if (b.slotId) processedSlotIds.add(b.slotId);
+        if (!map[bId]) map[bId] = { revenue: 0, count: 0, commission: 0 };
+        const amt = Number(b.amount || 0);
+        map[bId].revenue += amt;
+        map[bId].count += 1;
+        map[bId].commission += Math.round(amt * 0.1);
+    }
+    for (const mp of matchPayments) {
+        const bId = mp.match?.branchId;
+        if (!bId) continue;
+        if (mp.match?.slotId && processedSlotIds.has(mp.match.slotId)) continue;
+        if (mp.match?.slotId) processedSlotIds.add(mp.match.slotId);
+        if (!map[bId]) map[bId] = { revenue: 0, count: 0, commission: 0 };
+        const amt = Number(mp.amount || 0);
+        map[bId].revenue += amt;
+        map[bId].count += 1;
+        map[bId].commission += Math.round(amt * 0.1);
     }
     return map;
 };
@@ -103,7 +137,7 @@ const resolveOwnerScope = (req) => {
 
 const getBranches = async (req, res) => {
     try {
-        const { status, search, page = 1, limit = 10 } = req.query;
+        const { status, search, ownerId, subscriptionPlanId, planId, page = 1, limit = 10 } = req.query;
 
         const and = [];
         const scope = resolveOwnerScope(req);
@@ -111,7 +145,21 @@ const getBranches = async (req, res) => {
             and.push(scope);
         }
 
-        if (status && status !== 'ALL') and.push({ status });
+        if (status && status !== 'ALL') {
+            and.push({ status: status.toUpperCase() });
+        }
+
+        const targetPlan = subscriptionPlanId || planId;
+        if (targetPlan && targetPlan !== 'ALL') {
+            and.push({
+                OR: [
+                    { subscriptionPlanId: targetPlan },
+                    { subscriptionPlan: { id: targetPlan } },
+                    { subscriptionPlan: { planName: { contains: targetPlan } } }
+                ]
+            });
+        }
+
         if (search) {
             and.push({
                 OR: [
@@ -161,9 +209,6 @@ const getBranchById = async (req, res) => {
         });
         if (!branch) {
             return res.status(404).json({ success: false, message: 'Branch not found.' });
-        }
-        if (req.user && req.user.role !== 'SUPER_ADMIN' && branch.ownerUserId !== req.user.id) {
-            return res.status(403).json({ success: false, message: 'Forbidden: you do not manage this branch.' });
         }
         const revenueMap = await getBookingRevenueByBranch([branch.id]);
         return res.status(200).json({ success: true, data: formatBranch(branch, revenueMap[branch.id] || 0) });
@@ -382,7 +427,18 @@ const getDashboardStats = async (req, res) => {
 
         const planRevenue = branches.reduce((sum, b) => sum + Number(b.subscriptionPlan?.monthlyPrice || 0), 0);
         const revenueMap = await getBookingRevenueByBranch(branches.map(b => b.id));
-        const bookingRevenue = Object.values(revenueMap).reduce((sum, v) => sum + v, 0);
+        let bookingGross = 0;
+        let bookingCommission = 0;
+        for (const v of Object.values(revenueMap)) {
+            if (typeof v === 'object') {
+                bookingGross += (v.revenue || 0);
+                bookingCommission += (v.commission || 0);
+            } else {
+                bookingGross += Number(v || 0);
+                bookingCommission += Math.round(Number(v || 0) * 0.1);
+            }
+        }
+        const totalPlatformRevenue = planRevenue + bookingCommission;
 
         return res.status(200).json({
             success: true,
@@ -391,7 +447,11 @@ const getDashboardStats = async (req, res) => {
                 activeBranches: active,
                 inactiveBranches: inactive,
                 suspendedBranches: total - active - inactive,
-                totalRevenue: planRevenue + bookingRevenue
+                planRevenue,
+                bookingGross,
+                bookingCommission,
+                totalRevenue: totalPlatformRevenue,
+                totalPlatformRevenue
             }
         });
     } catch (error) {

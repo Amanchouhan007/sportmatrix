@@ -688,7 +688,7 @@ export default function GlobalAnalytics() {
                                     <FiMapPin className="w-4 h-4 text-emerald-600" />
                                     Top Branches by Bookings
                                 </h3>
-                                <div className="space-y-3 flex-1 flex flex-col justify-center max-h-[300px] overflow-y-auto pr-1">
+                                <div className="space-y-2.5 flex-1 max-h-[320px] overflow-y-auto pr-1 py-1">
                                     {topBranches.length === 0 ? (
                                         <RenderEmptyState 
                                             icon="📍" 
@@ -697,9 +697,9 @@ export default function GlobalAnalytics() {
                                         />
                                     ) : (
                                         topBranches.map((b, i) => (
-                                            <div key={b._id} className="min-h-[60px] p-3.5 rounded-[22px] border border-slate-100 bg-white/90 hover:bg-emerald-50/40 hover:border-emerald-200 transition-all duration-200 flex items-center justify-between">
+                                            <div key={b._id} className="min-h-[56px] p-3 rounded-2xl border border-slate-100 bg-white/90 hover:bg-emerald-50/40 hover:border-emerald-200 transition-all duration-200 flex items-center justify-between">
                                                 <div className="flex items-center gap-3">
-                                                    <span className="w-7 h-7 rounded-full bg-gradient-to-tr from-green-500 to-emerald-400 text-white text-xs font-black flex items-center justify-center shadow-xs">
+                                                    <span className="w-7 h-7 rounded-full bg-gradient-to-tr from-green-500 to-emerald-400 text-white text-xs font-black flex items-center justify-center shadow-xs shrink-0">
                                                         #{i + 1}
                                                     </span>
                                                     <div>
@@ -707,7 +707,7 @@ export default function GlobalAnalytics() {
                                                         <div className="text-[10px] text-slate-400 font-semibold">{b.city} • {b.ownerName || 'N/A'}</div>
                                                     </div>
                                                 </div>
-                                                <div className="text-right">
+                                                <div className="text-right shrink-0">
                                                     <div className="text-xs font-bold text-slate-900">{b.bookingsCount} Bookings</div>
                                                     <div className="text-[10px] text-[#16A34A] font-bold mt-0.5">₹{Number(b.revenue || 0).toLocaleString()}</div>
                                                 </div>
@@ -725,7 +725,7 @@ export default function GlobalAnalytics() {
                                     <FiUsers className="w-4 h-4 text-indigo-600" />
                                     Top Owners by Revenue
                                 </h3>
-                                <div className="space-y-3 flex-1 flex flex-col justify-center max-h-[300px] overflow-y-auto pr-1">
+                                <div className="space-y-2.5 flex-1 max-h-[320px] overflow-y-auto pr-1 py-1">
                                     {topOwners.length === 0 ? (
                                         <RenderEmptyState 
                                             icon="👤" 

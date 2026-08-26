@@ -1,12 +1,24 @@
 const prisma = require('../../config/prisma');
 
 const resolveOwnerBranchIds = async (userId) => {
-    const branches = await prisma.branch.findMany({ where: { ownerUserId: userId }, select: { id: true } });
-    return branches.map(b => b.id);
+    const branches = await prisma.branch.findMany({
+        where: {
+            OR: [
+                { ownerUserId: userId },
+                { owner: { userId } }
+            ]
+        },
+        select: { id: true }
+    });
+    const ids = branches.map(b => b.id);
+    if (ids.length > 0) return ids;
+
+    const allBranches = await prisma.branch.findMany({ select: { id: true } });
+    return allBranches.map(b => b.id);
 };
 
 /**
- * Owner-scoped dashboard summary: today's revenue/bookings, active matches,
+ * Owner-scoped dashboard summary: today's net revenue/bookings, active matches,
  * available slots today, recent bookings, and hourly peak occupancy -- all
  * computed from real Slot/Booking rows via the slot->branch relation.
  */
@@ -48,27 +60,45 @@ const getOwnerDashboardSummary = async (branchIds) => {
         return { h: `${h % 12 === 0 ? 12 : h % 12} ${h >= 12 ? 'PM' : 'AM'}`, v: Math.min(count * 20, 100), count };
     });
 
+    const grossTodaysRevenue = Number(todaysAgg._sum.amount || 0);
+    const commRate = 10; // 10% platform commission
+    const todaysCommission = Math.round((grossTodaysRevenue * commRate) / 100);
+    const netTodaysRevenue = grossTodaysRevenue - todaysCommission;
+
+    const grossTotalRevenue = Number(totalAgg._sum.amount || 0);
+    const totalCommission = Math.round((grossTotalRevenue * commRate) / 100);
+    const netTotalRevenue = grossTotalRevenue - totalCommission;
+
     return {
-        todaysRevenue: Number(todaysAgg._sum.amount || 0),
+        todaysRevenue: netTodaysRevenue,
+        todaysGrossRevenue: grossTodaysRevenue,
+        todaysCommission,
         todaysBookings: todaysCount,
         activeMatches, upcomingEvents: 0,
-        totalRevenue: Number(totalAgg._sum.amount || 0),
+        totalRevenue: netTotalRevenue,
         availableSlots, sportsCount,
-        recentBookings: recent.map(b => ({
-            id: String(b.id),
-            time: b.createdAt.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
-            customer: b.customerName, sport: b.slot?.sportId ? b.sportName : b.sportName,
-            court: b.slot?.courtName || b.courtName,
-            amount: `₹${Number(b.amount).toLocaleString()}`,
-            status: ['COMPLETED', 'HELD'].includes(b.status) ? 'Confirmed' : 'Pending'
-        })),
+        recentBookings: recent.map(b => {
+            const gross = Number(b.amount || 0);
+            const comm = Math.round((gross * commRate) / 100);
+            const net = gross - comm;
+            return {
+                id: String(b.id),
+                time: b.createdAt.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
+                customer: b.customerName, sport: b.slot?.sportId ? b.sportName : b.sportName,
+                court: b.slot?.courtName || b.courtName,
+                amount: `₹${net.toLocaleString()}`,
+                grossAmount: `₹${gross.toLocaleString()}`,
+                commissionAmount: `₹${comm.toLocaleString()}`,
+                status: ['COMPLETED', 'HELD'].includes(b.status) ? 'Confirmed' : 'Pending'
+            };
+        }),
         peakData
     };
 };
 
 const getDashboardSummary = async (req, res) => {
     try {
-        if (req.user?.role === 'OWNER') {
+        if (req.user?.role === 'OWNER' || req.user?.role === 'ADMIN' || req.user?.role === 'STAFF') {
             const branchIds = await resolveOwnerBranchIds(req.user.id);
             return res.status(200).json({ success: true, data: await getOwnerDashboardSummary(branchIds) });
         }
@@ -85,15 +115,19 @@ const getDashboardSummary = async (req, res) => {
 
         const subscriptionRevenue = branches.reduce((sum, b) => sum + Number(b.subscriptionPlan?.monthlyPrice || 0), 0);
         const bookingAgg = await prisma.booking.aggregate({ where: { status: 'COMPLETED' }, _sum: { amount: true } });
-        const bookingRevenue = Number(bookingAgg._sum.amount || 0);
+        const grossBookingRevenue = Number(bookingAgg._sum.amount || 0);
+        const platformCommission = Math.round((grossBookingRevenue * 10) / 100);
 
         return res.status(200).json({
             success: true,
             data: {
                 totalBranches: total, activeBranches: active, inactiveBranches: inactive,
-                totalRevenue: subscriptionRevenue + bookingRevenue, totalUsers,
+                totalRevenue: subscriptionRevenue + platformCommission,
+                platformCommission,
+                grossBookingRevenue,
+                totalUsers,
                 activeSubscriptions: activePlanCount || 3,
-                monthlyGrowth: (subscriptionRevenue + bookingRevenue) > 0 ? 100 : 0
+                monthlyGrowth: (subscriptionRevenue + platformCommission) > 0 ? 100 : 0
             }
         });
     } catch (error) {
@@ -183,7 +217,7 @@ const getTopBranches = async (req, res) => {
                 city: br.city, City: br.city, status: br.status, Status: br.status,
                 ownerName: br.owner?.fullName || null, planName: br.subscriptionPlan?.planName || null,
                 planPrice, Bookings: bookingsByBranch[br.id] || 0, bookingsCount: bookingsByBranch[br.id] || 0,
-                Revenue: planPrice + bookingRev, totalRevenue: planPrice + bookingRev
+                Revenue: planPrice, totalRevenue: planPrice
             };
         }).sort((a, b) => b.totalRevenue - a.totalRevenue).slice(0, 100);
 

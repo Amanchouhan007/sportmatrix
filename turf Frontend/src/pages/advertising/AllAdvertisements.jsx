@@ -40,14 +40,12 @@ export default function AllAdvertisements() {
         const fetchLiveAds = async () => {
             try {
                 const result = await getAds();
-                if (result && result.success !== false && Array.isArray(result.data) && result.data.length > 0) {
-                    setAds(result.data);
-                } else {
-                    setAds(INITIAL_ADS);
-                }
+                const rawList = (result && result.data) || (result && result.ads) || (Array.isArray(result) ? result : [])
+                const list = Array.isArray(rawList) ? rawList : []
+                setAds(list);
             } catch (err) {
-                console.warn('Backend not connected, using frontend dummy ads:', err);
-                setAds(INITIAL_ADS);
+                console.warn('Backend GET /ads error:', err);
+                setAds([]);
             }
         };
         fetchLiveAds();

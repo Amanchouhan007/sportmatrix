@@ -40,7 +40,8 @@ export default function MaintenancePage() {
         setIsLoading(true)
         try {
             const res = await getMaintenanceTickets()
-            setTasks((res.data || []).map(t => ({
+            const list = res?.data || (Array.isArray(res) ? res : []);
+            setTasks(list.map(t => ({
                 id: t.id,
                 task: t.issueDescription,
                 area: t.turfArea,
@@ -55,6 +56,7 @@ export default function MaintenancePage() {
             setIsLoading(false)
         }
     }, [addToast])
+
 
     useEffect(() => { fetchMaintenance() }, [fetchMaintenance])
     useRealtime(['maintenance:updated'], () => fetchMaintenance())

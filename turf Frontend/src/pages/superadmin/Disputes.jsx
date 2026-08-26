@@ -100,7 +100,11 @@ export default function Disputes() {
                 </span>
             )
         },
-        { key: 'user', label: 'User' },
+        { 
+            key: 'user', 
+            label: 'User',
+            render: v => <span className="font-semibold text-slate-800 text-xs">{v}</span>
+        },
         {
             key: 'type',
             label: 'Type',
@@ -109,9 +113,17 @@ export default function Disputes() {
         {
             key: 'amount',
             label: 'Amount',
-            render: v => `₹${Number(v || 0).toLocaleString()}`
+            render: v => <span className="font-bold text-slate-900 text-xs">₹{Number(v || 0).toLocaleString('en-IN')}</span>
         },
-        { key: 'reason', label: 'Reason' },
+        { 
+            key: 'reason', 
+            label: 'Reason',
+            render: v => (
+                <div className="max-w-[280px] lg:max-w-[340px] truncate text-xs text-slate-600" title={v}>
+                    {v}
+                </div>
+            )
+        },
         {
             key: 'status',
             label: 'Status',
@@ -126,10 +138,10 @@ export default function Disputes() {
             label: 'Actions',
             render: (_, r) => {
                 if (r.status === 'Resolved' || r.rawStatus === 'RESOLVED') {
-                    return <span className="text-xs text-slate-400 font-medium">Completed</span>
+                    return <span className="text-xs text-emerald-600 font-semibold bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-100">✓ Resolved</span>
                 }
                 return (
-                    <div className="flex gap-2">
+                    <div className="flex gap-1.5 whitespace-nowrap">
                         {(r.status === 'Open' || r.rawStatus === 'OPEN') && (
                             <Button size="sm" variant="outline" onClick={() => handleMarkInReview(r)}>
                                 Review

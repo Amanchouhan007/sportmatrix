@@ -1,6 +1,7 @@
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const prisma = require('../../config/prisma');
+const { sendForgotPasswordEmail } = require('../../services/email.service');
 require('dotenv').config();
 
 const JWT_SECRET = process.env.JWT_SECRET || 'sportmatrix_jwt_secret_key_2026';
@@ -415,6 +416,49 @@ const deleteUserByAdmin = async (req, res) => {
     }
 };
 
+/**
+ * Public Forgot Password request handler -- generates temporary password and dispatches email via Brevo
+ */
+const forgotPassword = async (req, res) => {
+    const { email } = req.body;
+    if (!email || !email.trim()) {
+        return res.status(400).json({ success: false, message: 'Email address is required.' });
+    }
+
+    const normalizedEmail = email.trim().toLowerCase();
+    try {
+        const user = await prisma.user.findUnique({ where: { email: normalizedEmail } });
+        if (!user) {
+            return res.status(200).json({
+                success: true,
+                message: 'If an account exists with this email address, password reset instructions have been sent.'
+            });
+        }
+
+        const temporaryPassword = `Pass@${Math.floor(100000 + Math.random() * 900000)}`;
+        const passwordHash = await bcrypt.hash(temporaryPassword, 10);
+
+        await prisma.user.update({
+            where: { id: user.id },
+            data: { passwordHash }
+        });
+
+        await sendForgotPasswordEmail({
+            recipientEmail: user.email,
+            recipientName: user.name,
+            temporaryPassword
+        });
+
+        return res.status(200).json({
+            success: true,
+            message: `Password reset instructions and new temporary password sent to ${user.email}.`
+        });
+    } catch (error) {
+        console.error('Forgot password error:', error);
+        return res.status(500).json({ success: false, message: 'Failed to process forgot password request.' });
+    }
+};
+
 module.exports = {
     register,
     login,
@@ -422,6 +466,7 @@ module.exports = {
     getProfile,
     updateProfile,
     changePassword,
+    forgotPassword,
     getAllUsers,
     updateUserStatus,
     adminResetUserPassword,

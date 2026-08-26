@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import Card from '../../components/ui/Card'
 import Input from '../../components/ui/Input'
@@ -6,6 +6,7 @@ import Select from '../../components/ui/Select'
 import CustomDatePicker from '../../components/ui/CustomDatePicker'
 import Button from '../../components/ui/Button'
 import { useToast } from '../../components/ui/Toast'
+import api from '../../services/api'
 import { HiCalendar, HiCurrencyRupee, HiUserGroup, HiUpload, HiArrowLeft, HiCog, HiPhone, HiUser } from 'react-icons/hi'
 import { HiTrophy } from 'react-icons/hi2'
 
@@ -15,15 +16,15 @@ export default function TournamentCreatePage({ role = 'owner' }) {
 
     const [form, setForm] = useState({
         title: '',
-        organizerName: 'SportMatrix Events Team',
-        organizerContact: '+91 98765 43210',
-        banner: 'https://images.unsplash.com/photo-1551958219-acbc608c6377?auto=format&fit=crop&q=80&w=800',
+        organizerName: '',
+        organizerContact: '',
+        banner: '',
         bannerFile: null,
-        sportId: 'sp_master_01',
-        categoryId: 'cat_01',
+        sportId: '',
+        categoryId: '',
         description: '',
         rules: '',
-        courtName: 'Court A (Main Turf)',
+        courtName: '',
         registrationStartDate: '',
         startDate: '',
         endDate: '',
@@ -32,10 +33,10 @@ export default function TournamentCreatePage({ role = 'owner' }) {
         matchGapMinutes: '15',
         maxTeams: '16',
         minTeams: '4',
-        entryFee: '500',
-        winnerPrize: '30000',
-        runnerPrize: '15000',
-        thirdPrize: '5000',
+        entryFee: '0',
+        winnerPrize: '0',
+        runnerPrize: '0',
+        thirdPrize: '0',
         format: 'Knockout',
         skillLevel: 'Open',
         ageLimit: 'Open',
@@ -45,17 +46,79 @@ export default function TournamentCreatePage({ role = 'owner' }) {
         tournamentVisibility: 'Public',
         registrationApproval: 'Auto Approval',
         refundPolicy: 'No Refund',
-        facilities: [
-            'Parking',
-            'Drinking Water',
-            'Washroom',
-            'Changing Room',
-            'First Aid',
-            'Flood Lights',
-            'Live Score'
-        ],
+        facilities: [],
         status: role === 'owner' ? 'Approved' : 'Pending Approval'
     })
+
+    const [masterSports, setMasterSports] = useState([])
+    const [categories, setCategories] = useState([])
+
+    useEffect(() => {
+        // Load sports from owner's active branches first, fallback to turf master sports
+        Promise.all([
+            api.get('/branches').catch(() => null),
+            api.get('/sports/master').catch(() => null)
+        ]).then(([branchesRes, masterRes]) => {
+            const masterList = (masterRes && masterRes.success && Array.isArray(masterRes.data)) ? masterRes.data : []
+            const branchesList = (branchesRes && branchesRes.success && Array.isArray(branchesRes.data?.branches))
+                ? branchesRes.data.branches
+                : (branchesRes && Array.isArray(branchesRes.data)) ? branchesRes.data : []
+
+            // Extract sports configured on owner's real turfs/branches
+            const activeBranchSports = []
+            branchesList.forEach(b => {
+                if (Array.isArray(b.sports) && b.sports.length > 0) {
+                    b.sports.forEach(sp => {
+                        if (!sp.status || sp.status === 'ACTIVE') {
+                            const sportId = sp.sportId || sp.id
+                            const master = masterList.find(m => m.id === sportId)
+                            activeBranchSports.push({
+                                id: sportId,
+                                name: sp.name || master?.name || 'Cricket',
+                                icon: sp.icon || master?.icon || '🏏'
+                            })
+                        }
+                    })
+                }
+            })
+
+            // Deduplicate active sports
+            const uniqueActive = []
+            const seen = new Set()
+            activeBranchSports.forEach(s => {
+                if (s.id && !seen.has(s.id)) {
+                    seen.add(s.id)
+                    uniqueActive.push(s)
+                }
+            })
+
+            let finalSports = []
+            if (uniqueActive.length > 0) {
+                finalSports = uniqueActive
+            } else if (masterList.length > 0) {
+                // Default to primary turf sports (Cricket & Football)
+                finalSports = masterList.filter(s =>
+                    ['Cricket', 'Football', 'Box Cricket'].some(n => (s.name || '').toLowerCase().includes(n.toLowerCase()))
+                )
+                if (finalSports.length === 0) finalSports = masterList
+            }
+
+            setMasterSports(finalSports)
+            const cricket = finalSports.find(s => s.id === 'sp_master_02' || (s.name || '').toLowerCase().includes('cricket'))
+            const defaultSportId = cricket ? cricket.id : (finalSports[0]?.id || '')
+            setForm(prev => ({ ...prev, sportId: defaultSportId }))
+        })
+
+        // Load tournament categories
+        api.get('/tournaments/categories').then(res => {
+            if (res && res.success && Array.isArray(res.data)) {
+                setCategories(res.data)
+                if (res.data.length > 0) {
+                    setForm(prev => ({ ...prev, categoryId: res.data[0].id }))
+                }
+            }
+        }).catch(() => {})
+    }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
     const basePath = role === 'staff' ? '/staff/tournaments' : '/admin/tournaments'
 
@@ -99,11 +162,10 @@ export default function TournamentCreatePage({ role = 'owner' }) {
                     ...(token ? { 'Authorization': `Bearer ${token}` } : {})
                 },
                 body: JSON.stringify({
-                    branchId: 'br_001',
                     title: form.title,
                     banner: form.banner,
                     sportId: form.sportId,
-                    categoryId: form.categoryId,
+                    categoryId: form.categoryId || undefined,
                     description: form.description,
                     rules: form.rules,
                     courtName: form.courtName,
@@ -172,23 +234,17 @@ export default function TournamentCreatePage({ role = 'owner' }) {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <Input
                             label="Tournament Title *"
-                            placeholder="e.g. Indore Premier Football League"
+                            placeholder="e.g. Indore Premier Cricket League T20"
                             value={form.title}
                             onChange={(e) => setForm({ ...form, title: e.target.value })}
                             required
                         />
 
                         <Select
-                            label="Sport Category"
+                            label="Sport"
                             value={form.sportId}
                             onChange={(e) => setForm({ ...form, sportId: e.target.value })}
-                            options={[
-                                { value: 'sp_master_01', label: 'Football ⚽' },
-                                { value: 'sp_master_02', label: 'Cricket 🏏' },
-                                { value: 'sp_master_03', label: 'Badminton 🏸' },
-                                { value: 'sp_master_04', label: 'Tennis 🎾' },
-                                { value: 'sp_master_05', label: 'Box Cricket 🏏' },
-                            ]}
+                            options={masterSports.map(s => ({ value: s.id, label: `${s.icon ? s.icon + ' ' : ''}${s.name}` }))}
                         />
                     </div>
 
@@ -216,13 +272,7 @@ export default function TournamentCreatePage({ role = 'owner' }) {
                             label="Tournament Category"
                             value={form.categoryId}
                             onChange={(e) => setForm({ ...form, categoryId: e.target.value })}
-                            options={[
-                                { value: 'cat_01', label: 'Open Category (All Ages)' },
-                                { value: 'cat_02', label: 'Under 19 (U-19)' },
-                                { value: 'cat_03', label: 'Corporate Cup' },
-                                { value: 'cat_04', label: 'Veterans (35+)' },
-                                { value: 'cat_05', label: 'Women League' },
-                            ]}
+                            options={categories.map(c => ({ value: c.id, label: c.name }))}
                         />
 
                         {/* Tournament Banner Upload */}
@@ -260,7 +310,7 @@ export default function TournamentCreatePage({ role = 'owner' }) {
                         <label className="block text-xs font-bold text-surface-700 mb-1">Tournament Rules & Guidelines</label>
                         <textarea
                             rows="3"
-                            placeholder="e.g. Standard FIFA 5-a-side rules apply. 2 halves of 25 mins each."
+                            placeholder="e.g. Standard Box Cricket / T20 tournament rules apply. 10 overs per inning."
                             value={form.rules}
                             onChange={(e) => setForm({ ...form, rules: e.target.value })}
                             className="w-full p-3 text-xs bg-white border border-surface-200 rounded-xl outline-none focus:ring-2 focus:ring-primary-500"
@@ -307,7 +357,7 @@ export default function TournamentCreatePage({ role = 'owner' }) {
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <Input
                             label="Select Turf / Court"
-                            placeholder="e.g. Court A (Main Turf)"
+                            placeholder="e.g. Turf Court 1 (Main Pitch)"
                             value={form.courtName}
                             onChange={(e) => setForm({ ...form, courtName: e.target.value })}
                         />

@@ -71,65 +71,47 @@ export default function TeamsPlayers() {
     const [membersCount, setMembersCount] = useState(11)
 
     useEffect(() => {
-        getTeams().then(res => {
-            if (res && res.success && Array.isArray(res.data)) {
-                const mapped = res.data.map((t, idx) => ({
-                    id: t.id || idx + 1,
-                    name: t.team_name || t.name || 'Team',
-                    sport: t.sport || 'Cricket',
-                    players: t.players_count || t.players || 11,
-                    ranking: idx + 1,
-                    wins: t.wins || 0,
-                    losses: t.losses || 0,
-                    logo: t.sport === 'Football' ? '⚽' : '🏏'
-                }))
-                setTeamList(mapped)
-            } else {
-                setTeamList([])
-            }
-        }).catch(() => setTeamList([]))
-
-        const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5005/api/v1';
-        fetch(`${API_URL}/tournaments/leaderboard/global`)
-            .then(r => r.json())
+        api.get('/teams')
             .then(res => {
-                if (res && res.success && Array.isArray(res.data)) {
-                    const mapped = res.data.map(p => ({
-                        name: p.name || 'Player',
+                const list = res?.data || (Array.isArray(res) ? res : []);
+                if (Array.isArray(list) && list.length > 0) {
+                    const mapped = list.map((t, idx) => ({
+                        id: t.id || idx + 1,
+                        name: t.teamName || t.name || t.team_name || 'Team',
+                        sport: t.sport || 'Cricket',
+                        players: t.rosterCount || t.membersCount || t.players_count || 11,
+                        ranking: t.rank || idx + 1,
+                        wins: t.wins || 0,
+                        losses: t.losses || 0,
+                        logo: (t.sport || '').toLowerCase() === 'football' ? '⚽' : '🏏'
+                    }));
+                    setTeamList(mapped);
+                } else {
+                    setTeamList([]);
+                }
+            })
+            .catch(e => console.warn('Fetch teams note:', e.message));
+
+        api.get('/tournaments/leaderboard/global')
+            .then(res => {
+                const list = res?.data || (Array.isArray(res) ? res : []);
+                if (Array.isArray(list) && list.length > 0) {
+                    const mapped = list.map(p => ({
+                        name: p.name || p.fullName || 'Player',
                         sport: p.sport || 'Cricket',
                         skill: p.role || 'All-Rounder',
                         matches: p.matches || 0,
                         rating: p.trustScore ? (p.trustScore / 20).toFixed(1) : 4.8,
                         status: 'Active'
-                    }))
-                    setPlayerList(mapped)
+                    }));
+                    setPlayerList(mapped);
                 } else {
-                    setPlayerList([])
+                    setPlayerList([]);
                 }
             })
-            .catch(() => setPlayerList([]))
-    }, [])
+            .catch(() => setPlayerList([]));
+    }, []);
 
-    // Load live teams from backend REST API
-    useEffect(() => {
-        api.get('/teams')
-            .then(res => {
-                if (res.data && res.data.success && Array.isArray(res.data.data) && res.data.data.length > 0) {
-                    const mapped = res.data.data.map(t => ({
-                        id: t.id,
-                        name: t.name,
-                        sport: t.sport || 'Cricket',
-                        players: t.members_count || 11,
-                        ranking: 1,
-                        wins: 0,
-                        losses: 0,
-                        logo: t.sport === 'Football' ? '⚽' : '🏏'
-                    }))
-                    setTeamList(prev => [...mapped, ...prev])
-                }
-            })
-            .catch(e => console.warn('Fetch teams note:', e.message))
-    }, [])
 
     const handleCreateTeam = async (e) => {
         e.preventDefault()

@@ -38,13 +38,15 @@ export default function InventoryPage() {
         setIsLoading(true)
         try {
             const res = await getInventory()
-            setItems(res.data || [])
+            const list = res?.data || (Array.isArray(res) ? res : []);
+            setItems(list)
         } catch (err) {
             addToast({ title: 'Load Failed', message: err.message || 'Failed to load inventory.', type: 'error' })
         } finally {
             setIsLoading(false)
         }
     }, [addToast])
+
 
     useEffect(() => { fetchInventory() }, [fetchInventory])
 

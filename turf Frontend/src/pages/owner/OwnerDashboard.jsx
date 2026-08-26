@@ -288,7 +288,7 @@ export default function OwnerDashboard() {
                 </div>
 
                 {/* Data Table */}
-                <div className="overflow-x-auto rounded-xl border border-slate-200/80 bg-white">
+                <div className="overflow-x-auto rounded-xl border border-slate-200/80 bg-white pb-2">
                     <table className="w-full text-xs text-left border-collapse min-w-[700px]">
                         <thead>
                             <tr className="bg-slate-50 border-b border-slate-200/80 text-slate-600 font-black uppercase tracking-wider h-11">
@@ -304,7 +304,9 @@ export default function OwnerDashboard() {
 
                         <tbody className="divide-y divide-slate-100">
                             {(stats.recentBookings || DEFAULT_BOOKINGS).map((b, i) => {
-                                const initials = (b.customer || '').split(' ').map(n => n[0]).join('').toUpperCase() || 'CU'
+                                const list = stats.recentBookings || DEFAULT_BOOKINGS;
+                                const initials = (b.customer || '').split(' ').map(n => n[0]).join('').toUpperCase() || 'CU';
+                                const isNearBottom = i >= Math.max(0, list.length - 2);
                                 
                                 return (
                                     <tr
@@ -380,19 +382,30 @@ export default function OwnerDashboard() {
 
                                         {/* Actions Dropdown */}
                                         <td className="px-4.5 py-3 whitespace-nowrap text-right relative row-action-container">
-                                            <button
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    setActiveRowAction(activeRowAction === (b.id || i) ? null : (b.id || i))
-                                                }}
-                                                className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
-                                                aria-label="Actions"
-                                            >
-                                                <HiDotsVertical className="w-4 h-4" />
-                                            </button>
+                                            <div className="flex items-center justify-end gap-1.5">
+                                                <button
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        navigate('/admin/bookings')
+                                                    }}
+                                                    className="px-2.5 py-1 text-[11px] font-extrabold text-slate-700 bg-slate-100 hover:bg-slate-200/80 rounded-lg transition-colors cursor-pointer"
+                                                >
+                                                    View
+                                                </button>
+                                                <button
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        setActiveRowAction(activeRowAction === (b.id || i) ? null : (b.id || i))
+                                                    }}
+                                                    className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
+                                                    aria-label="Actions"
+                                                >
+                                                    <HiDotsVertical className="w-4 h-4" />
+                                                </button>
+                                            </div>
 
                                             {activeRowAction === (b.id || i) && (
-                                                <div className="absolute right-4 top-10 z-30 w-36 bg-white border border-slate-200/90 rounded-xl shadow-lg p-1 space-y-0.5 text-left text-xs font-bold animate-in fade-in duration-150">
+                                                <div className={`absolute right-4 ${isNearBottom ? 'bottom-full mb-1.5' : 'top-10'} z-50 w-36 bg-white border border-slate-200/90 rounded-xl shadow-xl p-1 space-y-0.5 text-left text-xs font-bold animate-in fade-in duration-150`}>
                                                     <button
                                                         onClick={() => {
                                                             setActiveRowAction(null)
@@ -401,7 +414,7 @@ export default function OwnerDashboard() {
                                                         className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-slate-700 hover:bg-slate-50 transition-colors cursor-pointer"
                                                     >
                                                         <HiEye className="w-3.5 h-3.5 text-slate-400" />
-                                                        <span>View</span>
+                                                        <span>Details</span>
                                                     </button>
                                                     <button
                                                         onClick={() => {
@@ -433,6 +446,7 @@ export default function OwnerDashboard() {
                     </table>
                 </div>
             </div>
+
         </div>
     )
 }

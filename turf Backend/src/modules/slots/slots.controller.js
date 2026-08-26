@@ -28,6 +28,26 @@ const formatSlot = (r) => ({
     virtual: !!r.virtual
 });
 
+const parseTimeToHour = (timeStr, defaultHour, isClosing = false) => {
+    if (!timeStr) return defaultHour;
+    const str = String(timeStr).trim().toUpperCase();
+    const isPM = str.includes('PM');
+    const isAM = str.includes('AM');
+    const parts = str.replace(/AM|PM/gi, '').trim().split(':');
+    let h = parseInt(parts[0], 10);
+    if (isNaN(h)) return defaultHour;
+    
+    if (isPM && h < 12) h += 12;
+    if (isAM && h === 12) h = 0;
+    
+    // If no AM/PM, but closing time is specified as <= 11 (e.g. 11:00 or 11:00:00), treat as 23 (11 PM)
+    if (!isPM && !isAM && isClosing && h <= 11) {
+        h += 12;
+    }
+    
+    return h;
+};
+
 /**
  * Builds the full day's worth of time-slots for a branch+sport from its real
  * BranchSport configuration (opening/closing time, court count, pricing).
@@ -36,8 +56,8 @@ const formatSlot = (r) => ({
  */
 const buildVirtualSlotsForDay = (branchSport, date, existingByCourtTime) => {
     const virtual = [];
-    const [openH] = branchSport.openingTime.split(':').map(Number);
-    const [closeH] = branchSport.closingTime.split(':').map(Number);
+    const openH = parseTimeToHour(branchSport.openingTime, 6, false);
+    const closeH = parseTimeToHour(branchSport.closingTime, 23, true);
     const durationMin = branchSport.slotDuration || 60;
     const stepHours = durationMin / 60;
 
@@ -78,29 +98,145 @@ const getSlots = async (req, res) => {
     try {
         const where = {};
         if (branchId) where.branchId = branchId;
-        if (date) where.slotDate = new Date(date);
+        if (date) {
+            const startDate = new Date(date);
+            if (!isNaN(startDate.getTime())) {
+                startDate.setHours(0, 0, 0, 0);
+                const endDate = new Date(date);
+                endDate.setHours(23, 59, 59, 999);
+                where.slotDate = { gte: startDate, lte: endDate };
+            }
+        }
         if (sportId) where.sportId = sportId;
         if (courtName) where.courtName = courtName;
 
-        const persisted = await prisma.slot.findMany({ where, include: { sport: true }, orderBy: { startTime: 'asc' } });
+        const persisted = await prisma.slot.findMany({ where, include: { sport: true }, orderBy: { startTime: 'asc' } }).catch(() => []);
         let allSlots = persisted.map(formatSlot);
 
         // Only synthesize the remaining open slots when the caller gave us enough
         // to resolve a real BranchSport pricing/hours configuration.
-        if (branchId && sportId && date) {
-            const branchSport = await prisma.branchSport.findUnique({
-                where: { branchId_sportId: { branchId, sportId } },
-                include: { sport: true }
-            });
-            if (branchSport && branchSport.status === 'ACTIVE') {
-                const existingByCourtTime = new Set(persisted.map(s => `${s.courtName}|${s.startTime}`));
-                const virtual = buildVirtualSlotsForDay(
-                    { ...branchSport, sport: branchSport.sport },
-                    date,
-                    existingByCourtTime
-                ).map(formatSlot);
-                allSlots = allSlots.concat(courtName ? virtual.filter(v => v.courtName === courtName) : virtual);
+        if (branchId && date) {
+            let targetSportId = sportId;
+            if (!targetSportId) {
+                const firstActiveSport = await prisma.branchSport.findFirst({
+                    where: { branchId, status: 'ACTIVE' }
+                }).catch(() => null);
+                if (firstActiveSport) targetSportId = firstActiveSport.sportId;
             }
+
+            if (targetSportId) {
+                const branchSport = await prisma.branchSport.findUnique({
+                    where: { branchId_sportId: { branchId, sportId: targetSportId } },
+                    include: { sport: true }
+                }).catch(() => null);
+                if (branchSport && branchSport.status === 'ACTIVE') {
+                    const existingByCourtTime = new Set(persisted.map(s => `${s.courtName}|${s.startTime}`));
+                    const virtual = buildVirtualSlotsForDay(
+                        { ...branchSport, sport: branchSport.sport },
+                        date,
+                        existingByCourtTime
+                    ).map(formatSlot);
+                    allSlots = allSlots.concat(courtName ? virtual.filter(v => v.courtName === courtName) : virtual);
+                }
+            }
+
+            // Cross-check real Booking and Match rows to mark booked slots
+            const dateStr = date;
+
+            const [realBookings, realMatches] = await Promise.all([
+                prisma.booking.findMany({
+                    where: {
+                        status: { in: ['COMPLETED', 'PENDING', 'HELD'] }
+                    },
+                    include: { slot: true }
+                }).catch(() => []),
+
+
+
+                prisma.match.findMany({
+                    where: {
+                        branchId,
+                        matchStatus: { in: ['CONFIRMED', 'SLOT_HELD', 'IN_PROGRESS', 'COMPLETED'] }
+                    },
+                    include: { slot: true }
+                }).catch(() => [])
+            ]);
+
+
+            const bookedTimeSet = new Set();
+
+            const addVariantsToSet = (rawTime) => {
+                if (!rawTime) return;
+                const str = String(rawTime).trim().toUpperCase();
+                const isPM = str.includes('PM');
+                const isAM = str.includes('AM');
+                const cleanStr = str.replace(/AM|PM/gi, '').trim();
+                const [hStr, mStr] = cleanStr.split(':');
+                let h = parseInt(hStr, 10);
+                if (isNaN(h)) return;
+
+                if (isPM && h < 12) h += 12;
+                if (isAM && h === 12) h = 0;
+
+                const m = mStr ? mStr.substring(0, 2) : '00';
+                const h24 = String(h).padStart(2, '0');
+                const h12 = String(h % 12 || 12).padStart(2, '0');
+                const period = h >= 12 ? 'PM' : 'AM';
+
+                bookedTimeSet.add(`${h24}:${m}`);
+                bookedTimeSet.add(`${h24}:${m}:00`);
+                bookedTimeSet.add(`${h12}:${m} ${period}`);
+                bookedTimeSet.add(`${h12}:${m}${period}`);
+                bookedTimeSet.add(`${h12}:${m}`);
+            };
+
+            for (const b of realBookings) {
+                const bTime = b.timeSlot || b.slot?.startTime || '';
+                const bDate = b.dutyDate ? toDateStr(b.dutyDate) : (b.slot?.slotDate ? toDateStr(b.slot.slotDate) : '');
+                if (bTime && (!bDate || bDate === dateStr)) {
+                    addVariantsToSet(bTime);
+                }
+            }
+            for (const m of realMatches) {
+                const mTime = m.slot?.startTime || '';
+                const mDate = m.slot?.slotDate ? toDateStr(m.slot.slotDate) : (m.createdAt ? toDateStr(m.createdAt) : '');
+                if (mTime && (!mDate || mDate === dateStr)) {
+                    addVariantsToSet(mTime);
+                }
+            }
+
+            if (bookedTimeSet.size > 0) {
+                allSlots = allSlots.map(s => {
+                    if (s.startTime) {
+                        const sStr = String(s.startTime).trim().toUpperCase();
+                        const isPM = sStr.includes('PM');
+                        const isAM = sStr.includes('AM');
+                        const cleanStr = sStr.replace(/AM|PM/gi, '').trim();
+                        const [hStr, mStr] = cleanStr.split(':');
+                        let h = parseInt(hStr, 10);
+                        if (!isNaN(h)) {
+                            if (isPM && h < 12) h += 12;
+                            if (isAM && h === 12) h = 0;
+                            const m = mStr ? mStr.substring(0, 2) : '00';
+                            const h24 = String(h).padStart(2, '0');
+                            const h12 = String(h % 12 || 12).padStart(2, '0');
+                            const period = h >= 12 ? 'PM' : 'AM';
+
+                            if (
+                                bookedTimeSet.has(`${h24}:${m}`) ||
+                                bookedTimeSet.has(`${h24}:${m}:00`) ||
+                                bookedTimeSet.has(`${h12}:${m} ${period}`) ||
+                                bookedTimeSet.has(`${h12}:${m}${period}`) ||
+                                bookedTimeSet.has(cleanStr.substring(0, 5))
+                            ) {
+                                return { ...s, status: 'BOOKED' };
+                            }
+                        }
+                    }
+                    return s;
+                });
+            }
+
         }
 
         allSlots.sort((a, b) => (a.courtName + a.startTime).localeCompare(b.courtName + b.startTime));

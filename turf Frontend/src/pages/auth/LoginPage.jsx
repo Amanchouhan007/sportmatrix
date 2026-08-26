@@ -33,6 +33,36 @@ export default function LoginPage() {
     const [fieldErrors, setFieldErrors] = useState({ email: '', password: '' })
     const [isSubmitting, setIsSubmitting] = useState(false)
 
+    // Forgot password state
+    const [isForgotModalOpen, setIsForgotModalOpen] = useState(false)
+    const [forgotEmail, setForgotEmail] = useState('')
+    const [isSendingForgot, setIsSendingForgot] = useState(false)
+    const [forgotMessage, setForgotMessage] = useState('')
+
+    const handleForgotPasswordSubmit = async (e) => {
+        e.preventDefault()
+        if (!forgotEmail.trim()) {
+            setForgotMessage('Please enter your email address.')
+            return
+        }
+        setIsSendingForgot(true)
+        setForgotMessage('')
+        try {
+            const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5005/api/v1';
+            const res = await fetch(`${API_URL}/auth/forgot-password`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email: forgotEmail })
+            })
+            const data = await res.json()
+            setForgotMessage(data.message || 'Password reset email sent!')
+        } catch (err) {
+            setForgotMessage('Failed to connect to backend server.')
+        } finally {
+            setIsSendingForgot(false)
+        }
+    }
+
     // Pre-fill form from location state if provided
     useEffect(() => {
         if (location.state?.email) {
@@ -329,9 +359,18 @@ export default function LoginPage() {
                                 />
                                 <span>Remember me</span>
                             </label>
-                            <a href="#forgot" onClick={(e) => e.preventDefault()} className="text-[#16A34A] font-bold hover:underline transition-colors">
+                            <button 
+                                type="button" 
+                                onClick={(e) => { 
+                                    e.preventDefault(); 
+                                    setForgotEmail(form.email); 
+                                    setForgotMessage('');
+                                    setIsForgotModalOpen(true); 
+                                }} 
+                                className="text-[#16A34A] font-bold hover:underline transition-colors cursor-pointer"
+                            >
                                 Forgot password?
-                            </a>
+                            </button>
                         </div>
 
                         {/* Role Selector Grid */}
@@ -404,6 +443,66 @@ export default function LoginPage() {
                     </p>
                 </div>
             </div>
+
+            {/* Forgot Password Modal */}
+            {isForgotModalOpen && (
+                <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-150">
+                    <div className="bg-white rounded-3xl p-6 sm:p-8 max-w-md w-full border border-slate-200 shadow-2xl relative">
+                        <button
+                            onClick={() => setIsForgotModalOpen(false)}
+                            className="absolute top-4 right-4 text-slate-400 hover:text-slate-700 transition-colors p-1"
+                        >
+                            ✕
+                        </button>
+
+                        <div className="w-12 h-12 rounded-2xl bg-emerald-50 text-[#16A34A] flex items-center justify-center text-xl font-black mb-4">
+                            🔑
+                        </div>
+
+                        <h3 className="text-xl font-black text-slate-900 tracking-tight">Forgot Password?</h3>
+                        <p className="text-xs text-slate-500 font-medium mt-1 mb-6">
+                            Enter your registered email address. We will send password reset instructions and temporary credentials via Brevo Email.
+                        </p>
+
+                        <form onSubmit={handleForgotPasswordSubmit} className="space-y-4">
+                            <div>
+                                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">Registered Email Address</label>
+                                <input
+                                    type="email"
+                                    required
+                                    placeholder="name@company.com"
+                                    value={forgotEmail}
+                                    onChange={e => setForgotEmail(e.target.value)}
+                                    className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 text-slate-900 text-xs font-bold outline-none focus:border-[#16A34A] focus:ring-2 focus:ring-[#16A34A]/20 focus:bg-white transition-all"
+                                />
+                            </div>
+
+                            {forgotMessage && (
+                                <div className={`p-3 rounded-xl text-xs font-bold ${forgotMessage.includes('sent') ? 'bg-emerald-50 text-emerald-800 border border-emerald-200' : 'bg-amber-50 text-amber-800 border border-amber-200'}`}>
+                                    {forgotMessage}
+                                </div>
+                            )}
+
+                            <div className="flex justify-end gap-3 pt-2">
+                                <button
+                                    type="button"
+                                    onClick={() => setIsForgotModalOpen(false)}
+                                    className="px-5 py-2.5 rounded-xl border border-slate-200 text-xs font-bold text-slate-700 hover:bg-slate-50"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    type="submit"
+                                    disabled={isSendingForgot}
+                                    className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-[#C8FF2E] to-[#b5f000] text-slate-950 font-black text-xs uppercase tracking-wider shadow-md hover:scale-105 active:scale-95 transition-all disabled:opacity-50"
+                                >
+                                    {isSendingForgot ? 'Sending Email...' : 'Send Reset Email'}
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
         </div>
     )
 }

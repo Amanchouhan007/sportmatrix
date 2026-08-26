@@ -7,11 +7,16 @@ const navLinks = [
     { label: 'TURFS & VENUES', href: '/turfs', isPage: true },
     { label: 'LEADERBOARD 🏆', href: '/leaderboard', isPage: true },
     { label: 'MEMBERSHIP', href: '/membership', isPage: true },
+    { label: '🔍 FIND BOOKING', isFindModal: true },
 ]
 
 export default function Navbar() {
     const [mobileOpen, setMobileOpen] = useState(false)
     const [scrolled, setScrolled] = useState(false)
+    const [isFindModalOpen, setIsFindModalOpen] = useState(false)
+    const [lookupQuery, setLookupQuery] = useState('')
+    const [lookupLoading, setLookupLoading] = useState(false)
+    const [lookupResult, setLookupResult] = useState(null)
     const navigate = useNavigate()
     const location = useLocation()
     const { user, logout } = useAuth()
@@ -23,6 +28,11 @@ export default function Navbar() {
     }, [])
 
     const handleNavClick = (link) => {
+        if (link.isFindModal) {
+            setIsFindModalOpen(true)
+            setMobileOpen(false)
+            return
+        }
         if (link.isPage) {
             navigate(link.href)
             setMobileOpen(false)
@@ -222,6 +232,99 @@ export default function Navbar() {
                     )}
                 </div>
             </div>
+
+            {/* GUEST FIND BOOKING MODAL */}
+            {isFindModalOpen && (
+                <div className="fixed inset-0 z-[99999] flex items-center justify-center bg-slate-950/80 backdrop-blur-md p-4 animate-in fade-in duration-200">
+                    <div className="bg-white border border-slate-200 rounded-3xl p-6 max-w-md w-full shadow-2xl space-y-4">
+                        <div className="flex items-center justify-between">
+                            <h3 className="text-xl font-black text-slate-900 tracking-tight flex items-center gap-2">
+                                🔍 Find Guest Booking
+                            </h3>
+                            <button
+                                type="button"
+                                onClick={() => { setIsFindModalOpen(false); setLookupResult(null); setLookupQuery(''); }}
+                                className="text-slate-400 hover:text-slate-600 font-bold"
+                            >
+                                ✕
+                            </button>
+                        </div>
+
+                        <p className="text-xs text-slate-500 font-medium">
+                            Enter your <strong>Mobile Number</strong> or <strong>Booking Reference ID</strong> to track and download your receipt:
+                        </p>
+
+                        <div className="space-y-3">
+                            <div>
+                                <label className="text-[10px] font-black uppercase tracking-wider text-slate-500 mb-1 block">Phone / Booking Ref ID</label>
+                                <div className="flex gap-2">
+                                    <input
+                                        type="text"
+                                        placeholder="e.g. 9876543210 or SM-BK-9831"
+                                        value={lookupQuery}
+                                        onChange={(e) => setLookupQuery(e.target.value)}
+                                        className="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs font-bold text-slate-900 outline-none focus:border-[#16A34A]"
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={async () => {
+                                            if (!lookupQuery.trim()) return;
+                                            setLookupLoading(true);
+                                            setLookupResult(null);
+                                            try {
+                                                const res = await api.get(`/bookings/guest-lookup?query=${encodeURIComponent(lookupQuery.trim())}`);
+                                                if (res?.success && res.data && res.data.length > 0) {
+                                                    const b = res.data[0];
+                                                    setLookupResult({
+                                                        found: true,
+                                                        id: b.id || b.bookingId,
+                                                        status: b.status || 'CONFIRMED',
+                                                        venue: b.turfName || 'SportMatrix Turf Arena',
+                                                        date: `${b.slotDate || 'Date'} · ${b.slotTime || 'Time'}`,
+                                                        amount: `₹${Number(b.amount || 0).toLocaleString('en-IN')}`,
+                                                        customerName: b.customerName
+                                                    });
+                                                } else {
+                                                    setLookupResult({ notFound: true });
+                                                }
+                                            } catch (err) {
+                                                setLookupResult({ notFound: true });
+                                            } finally {
+                                                setLookupLoading(false);
+                                            }
+                                        }}
+                                        disabled={lookupLoading}
+                                        className="px-4 py-2.5 bg-slate-900 hover:bg-slate-800 text-[#C8FF2E] font-black text-xs rounded-xl cursor-pointer"
+                                    >
+                                        {lookupLoading ? 'Finding...' : 'Search'}
+                                    </button>
+                                </div>
+                            </div>
+
+                            {lookupResult && lookupResult.found && (
+                                <div className="bg-emerald-50 border border-emerald-200 p-4 rounded-2xl space-y-2 text-xs animate-in fade-in">
+                                    <div className="flex items-center justify-between font-black text-emerald-950">
+                                        <span className="bg-emerald-200 text-emerald-900 px-2 py-0.5 rounded-full text-[10px]">STATUS: {lookupResult.status}</span>
+                                        <span className="font-mono text-emerald-700 text-sm font-bold">{lookupResult.amount}</span>
+                                    </div>
+                                    <p className="text-slate-800 font-bold">{lookupResult.venue}</p>
+                                    <p className="text-slate-600 font-medium">{lookupResult.date}</p>
+                                    <p className="text-slate-500 text-[11px]">Booked by: <strong>{lookupResult.customerName}</strong></p>
+                                    <div className="pt-2 border-t border-emerald-200 flex justify-end">
+                                        <span className="text-[10px] font-mono text-emerald-800 font-bold">REF: {lookupResult.id}</span>
+                                    </div>
+                                </div>
+                            )}
+
+                            {lookupResult && lookupResult.notFound && (
+                                <div className="bg-rose-50 border border-rose-200 p-4 rounded-2xl text-xs text-rose-800 font-bold text-center animate-in fade-in">
+                                    ❌ No booking found for "{lookupQuery}". Please check the phone number or booking reference ID.
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            )}
         </nav>
     )
 }

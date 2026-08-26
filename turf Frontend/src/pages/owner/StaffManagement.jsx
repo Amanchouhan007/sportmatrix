@@ -56,7 +56,8 @@ export default function StaffManagement() {
         setIsLoading(true)
         try {
             const res = await getStaff()
-            setStaff((res.data || []).map(s => ({
+            const list = res?.data || (Array.isArray(res) ? res : []);
+            setStaff(list.map(s => ({
                 id: s.id,
                 name: s.fullName,
                 email: s.email,
@@ -73,6 +74,7 @@ export default function StaffManagement() {
             setIsLoading(false)
         }
     }, [addToast])
+
 
     useEffect(() => { fetchStaff() }, [fetchStaff])
 

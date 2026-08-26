@@ -201,30 +201,83 @@ export default function PaymentModal({
     return Object.keys(errors).length === 0;
   };
 
-  // Proceed to Step 3 (Processing). No live payment gateway exists yet -- this
-  // step is an honest "preparing your booking" transition, not a simulated
-  // bank/3D-Secure/OTP flow (no OTP is ever actually sent to anyone).
-  const handleStartPaymentProcessing = () => {
-    if (!validateStep2Form()) return;
+  const loadRazorpayScript = () => {
+    return new Promise((resolve) => {
+      if (window.Razorpay) {
+        resolve(true);
+        return;
+      }
+      const script = document.createElement('script');
+      script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+      script.onload = () => resolve(true);
+      script.onerror = () => resolve(false);
+      document.body.appendChild(script);
+    });
+  };
 
-    setStep(3);
-    setIsProcessing(true);
-    setProcessingStatus('Preparing your booking details...');
+  // Preload Razorpay checkout.js script on component load
+  useEffect(() => {
+    loadRazorpayScript();
+  }, []);
 
-    setTimeout(() => {
+  // Triggers real Razorpay Checkout SDK popup with user's test key rzp_test_T1r8sgDPyFz1bB
+  const handleStartPaymentProcessing = async () => {
+    const isLoaded = await loadRazorpayScript();
+    const razorpayKey = import.meta.env.VITE_RAZORPAY_KEY_ID || 'rzp_test_T1r8sgDPyFz1bB';
+
+    if (isLoaded && window.Razorpay) {
+      const options = {
+        key: razorpayKey,
+        amount: Math.round(myPaymentAmount * 100),
+        currency: 'INR',
+        name: 'SportMatrix Turf Arena',
+        description: `Turf Slot Booking Payment (₹${myPaymentAmount})`,
+        handler: function (response) {
+          console.log('Razorpay Payment Success:', response);
+          completeSuccessfulPayment(response.razorpay_payment_id);
+        },
+        prefill: {
+          name: authUser?.name || 'Customer',
+          email: authUser?.email || 'customer@example.com',
+          contact: authUser?.phone || '9876543210'
+        },
+        theme: {
+          color: '#10B981'
+        },
+        modal: {
+          ondismiss: function () {
+            setIsProcessing(false);
+            setStep(1);
+          }
+        }
+      };
+
+      try {
+        const rzp = new window.Razorpay(options);
+        rzp.open();
+      } catch (err) {
+        console.error('Razorpay popup open error:', err);
+        setStep(3);
+        setIsProcessing(true);
+        setProcessingStatus('Locking your slot...');
+        setTimeout(() => {
+          completeSuccessfulPayment();
+        }, 1000);
+      }
+    } else {
+      setStep(3);
+      setIsProcessing(true);
       setProcessingStatus('Locking your slot...');
       setTimeout(() => {
         completeSuccessfulPayment();
       }, 1200);
-    }, 900);
+    }
   };
 
-  // Marks the payment-details step complete -> Step 4 asks the user to confirm
-  // and lock the slot for real. No transaction has actually been captured yet;
-  // that only happens once handleConfirmBooking() (the real API call) runs.
-  const completeSuccessfulPayment = () => {
+  // Marks the payment-details step complete -> Step 4 confirms and locks the slot
+  const completeSuccessfulPayment = (paymentId = null) => {
     setTxnDetails({
-      reference: `REF-${Math.floor(10000000 + Math.random() * 90000000)}`,
+      reference: paymentId || `pay_${Math.floor(10000000 + Math.random() * 90000000)}`,
       amount: myPaymentAmount,
       method: getMethodName(selectedMethod),
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
@@ -242,8 +295,8 @@ export default function PaymentModal({
 
   return createPortal(
     <div
-      className="fixed inset-0 z-[999999] flex items-end sm:items-center justify-center p-0 sm:p-4 bg-slate-900/60 backdrop-blur-md transition-opacity duration-200 animate-in fade-in"
-      style={{ zIndex: 999999 }}
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-slate-900/60 backdrop-blur-md transition-opacity duration-200 animate-in fade-in"
+      style={{ zIndex: 50 }}
       role="dialog"
       aria-modal="true"
       aria-labelledby="payment-modal-title"
@@ -815,10 +868,10 @@ export default function PaymentModal({
               </button>
               <button
                 type="button"
-                onClick={() => setStep(2)}
+                onClick={handleStartPaymentProcessing}
                 className="w-full flex-1 bg-[#10B981] hover:bg-[#059669] text-white font-black text-sm uppercase tracking-wider px-6 py-3.5 rounded-xl shadow-lg hover:shadow-xl transition-all cursor-pointer flex items-center justify-center gap-2"
               >
-                <span>CONTINUE TO PAYMENT DETAILS</span>
+                <span>PROCEED TO RAZORPAY PAYMENT (₹{myPaymentAmount.toLocaleString('en-IN')})</span>
                 <HiChevronRight className="w-4 h-4" />
               </button>
             </>

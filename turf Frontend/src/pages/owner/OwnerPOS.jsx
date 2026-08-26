@@ -6,52 +6,36 @@ import Input from '../../components/ui/Input'
 import Select from '../../components/ui/Select'
 import CustomDatePicker from '../../components/ui/CustomDatePicker'
 import Badge from '../../components/ui/Badge'
+import Modal from '../../components/ui/Modal'
 import { useToast } from '../../components/ui/Toast'
+import api from '../../services/api'
+import { getBranchSports } from '../../services/sportsService'
+import { getInventory, createInventoryItem } from '../../services/inventoryService'
+
+import { getSlots } from '../../services/slotService'
+import { getMyTurfs } from '../../services/branchService'
 import { processPayment } from '../../services/paymentLogService'
+
+
 import { 
     HiPlus, HiTrash, HiPrinter, HiDownload, HiRefresh, HiUser, 
     HiShoppingCart, HiTag, HiCheckCircle, HiExclamationCircle, 
     HiClock, HiCalendar, HiCurrencyRupee, HiCheck, HiShieldCheck
 } from 'react-icons/hi'
 
-// ── Master Data & Configuration ──
+
+// ── Master Data & Configuration (Pure Dynamic MySQL Driven) ──
 const sportsList = [
-    { id: 'football', name: 'Football', icon: '⚽' },
-    { id: 'cricket', name: 'Cricket', icon: '🏏' },
-    { id: 'badminton', name: 'Badminton', icon: '🏸' },
-    { id: 'tennis', name: 'Tennis', icon: '🎾' },
+    { id: 'cricket', name: 'Cricket', icon: '🏏' }
 ]
 
 const courtsBySport = {
-    Football: [
-        { id: 'c1', name: 'Court A (Main Turf)', status: 'Active' },
-        { id: 'c2', name: 'Court B (5v5 Arena)', status: 'Active' },
-        { id: 'c3', name: 'Court C (7v7 Pro Ground)', status: 'Maintenance' },
-    ],
     Cricket: [
-        { id: 'c4', name: 'Box Cricket Pitch 1', status: 'Active' },
-        { id: 'c5', name: 'Box Cricket Pitch 2', status: 'Active' },
-    ],
-    Badminton: [
-        { id: 'c6', name: 'Wooden Court 1', status: 'Active' },
-        { id: 'c7', name: 'Synthetic Court 2', status: 'Active' },
-    ],
-    Tennis: [
-        { id: 'c8', name: 'Hard Court 1', status: 'Active' },
+        { id: 'c1', name: 'Box Cricket Pitch 1', status: 'Active' }
     ]
 }
 
-const timeSlots = [
-    { id: 's1', time: '06:00 AM', status: 'Available', isPeak: false, rate: 800 },
-    { id: 's2', time: '07:00 AM', status: 'Booked', isPeak: false, rate: 800 },
-    { id: 's3', time: '08:00 AM', status: 'Available', isPeak: false, rate: 800 },
-    { id: 's4', time: '09:00 AM', status: 'Maintenance', isPeak: false, rate: 800 },
-    { id: 's5', time: '05:00 PM', status: 'Available', isPeak: true, rate: 1200 },
-    { id: 's6', time: '06:00 PM', status: 'Available', isPeak: true, rate: 1200 },
-    { id: 's7', time: '07:00 PM', status: 'Booked', isPeak: true, rate: 1200 },
-    { id: 's8', time: '08:00 PM', status: 'Available', isPeak: true, rate: 1200 },
-    { id: 's9', time: '09:00 PM', status: 'Available', isPeak: true, rate: 1000 },
-]
+const timeSlots = []
 
 const extraServicesList = [
     { id: 'floodlights', label: 'Flood Lights', price: 100, icon: '💡' },
@@ -61,54 +45,11 @@ const extraServicesList = [
     { id: 'changingroom', label: 'Changing Room', price: 50, icon: '👕' },
     { id: 'water', label: 'Drinking Water', price: 0, icon: '💧' },
     { id: 'refreshments', label: 'Refreshments', price: 100, icon: '🥤' },
-    { id: 'parking', label: 'Parking', price: 0, icon: '🅿️' },
+    { id: 'parking', label: 'Parking', price: 0, icon: '🅿️' }
 ]
 
-const mockCustomerDatabase = {
-    '9876543210': {
-        name: 'Rahul Sharma',
-        email: 'rahul.sharma@example.com',
-        type: 'Member',
-        membershipId: 'MEM-2026-88',
-        bookingsCount: 14,
-        status: 'Active Pass',
-        outstanding: 0
-    },
-    '9826012345': {
-        name: 'Vikramaditya Roy',
-        email: 'vikram.roy@corporatemail.com',
-        type: 'Corporate',
-        membershipId: 'CORP-IPL-09',
-        bookingsCount: 28,
-        status: 'Corporate VIP',
-        outstanding: 500
-    },
-    '9009988776': {
-        name: 'Aman Varma',
-        email: 'aman.varma@gmail.com',
-        type: 'Regular',
-        membershipId: 'REG-104',
-        bookingsCount: 5,
-        status: 'Verified Player',
-        outstanding: 0
-    }
-}
+const inventoryOptions = []
 
-const inventoryOptions = [
-    { id: 'item1', name: 'Cold Drink (Coke/Sprite)', price: 40, icon: '🥤', category: 'Snacks & Drinks' },
-    { id: 'item2', name: 'Diet Coke Can', price: 45, icon: '🥤', category: 'Snacks & Drinks' },
-    { id: 'item3', name: 'Pepsi Can', price: 40, icon: '🥤', category: 'Snacks & Drinks' },
-    { id: 'item5', name: 'Energy Drink (Red Bull)', price: 110, icon: '⚡', category: 'Snacks & Drinks' },
-    { id: 'item8', name: 'Mineral Water (500ml)', price: 20, icon: '💧', category: 'Snacks & Drinks' },
-    { id: 'item16', name: 'Potato Chips (Masala)', price: 20, icon: '🥔', category: 'Snacks & Drinks' },
-    { id: 'item22', name: 'Snickers (Energy Bar)', price: 50, icon: '🍫', category: 'Snacks & Drinks' },
-
-    { id: 'item26', name: 'Football Rental', price: 150, icon: '⚽', category: 'Gear & Rentals' },
-    { id: 'item27', name: 'Cricket Bat Rental', price: 250, icon: '🏏', category: 'Gear & Rentals' },
-    { id: 'item29', name: 'Jersey Rental', price: 100, icon: '👕', category: 'Gear & Rentals' },
-    { id: 'item34', name: 'Cosco Cricket Ball', price: 40, icon: '🏏', category: 'Gear & Rentals' },
-    { id: 'item41', name: 'Pain Relief Spray (Volini)', price: 120, icon: '💨', category: 'Gear & Rentals' },
-]
 
 export default function OwnerPOS() {
     const { addToast } = useToast()
@@ -120,20 +61,22 @@ export default function OwnerPOS() {
 
     // ── Walk-In Quick Booking Form State ──
     const [booking, setBooking] = useState({
-        sport: 'Football',
-        court: 'Court A (Main Turf)',
+        sport: 'Cricket',
+        court: 'Box Cricket Pitch 1',
         date: new Date().toISOString().split('T')[0],
-        slot: '06:00 PM',
+
+        slot: '',
         duration: 60, // 30, 60, 90, 120 mins
         players: 10,
         bookingType: 'Walk-In', // Walk-In | Online | Phone Booking | Corporate | Membership
-        billingRate: 1200,
+        billingRate: 0,
         discountType: 'None', // None | Flat | Percentage | Promo Code
         discountValue: 0,
         promoCode: '',
-        selectedExtras: ['floodlights'],
+        selectedExtras: [],
         notes: ''
     })
+
 
     // ── Customer Profile State ──
     const [customer, setCustomer] = useState({
@@ -153,26 +96,81 @@ export default function OwnerPOS() {
     const [paymentMethod, setPaymentMethod] = useState('UPI') // Cash | UPI | Card | Wallet | Bank Transfer | Split Payment
     const [advanceAmount, setAdvanceAmount] = useState(0)
 
+    // ── Add Custom Product / Ball Modal State ──
+    const [isAddProductOpen, setIsAddProductOpen] = useState(false)
+    const [newProduct, setNewProduct] = useState({
+        name: '',
+        category: 'Gear & Rentals',
+        itemType: 'Sell', // Sell | Rental
+        price: '',
+        stock: '20'
+    })
+
+    const handleCreateCustomProduct = async (e) => {
+        e.preventDefault()
+        if (!newProduct.name || !newProduct.price) {
+            addToast({ title: 'Validation Error', message: 'Item name and price are required', type: 'warning' })
+            return
+        }
+
+        try {
+            const branchId = selectedTurfId || localStorage.getItem('selectedBranchId') || 'br_indore_01'
+            const payload = {
+                branchId,
+                name: `${newProduct.name} ${newProduct.itemType === 'Rental' ? '(Rental)' : '(Sale)'}`,
+                category: newProduct.category,
+                price: Number(newProduct.price),
+                stock: Number(newProduct.stock || 20),
+                threshold: 5
+            }
+
+            await createInventoryItem(payload)
+            addToast({ title: 'Product Added', message: `${newProduct.name} saved to MySQL inventory!`, type: 'success' })
+            setIsAddProductOpen(false)
+            setNewProduct({ name: '', category: 'Gear & Rentals', itemType: 'Sell', price: '', stock: '20' })
+
+            // Refresh live inventory from MySQL
+            getInventory()
+                .then(r => {
+                    const list = r?.data || (Array.isArray(r) ? r : [])
+                    if (Array.isArray(list)) setDbInventory(list)
+                })
+                .catch(() => {})
+        } catch (err) {
+            addToast({ title: 'Error Adding Item', message: err.message || 'Failed to create item in MySQL', type: 'error' })
+        }
+    }
+
+
     // ── Automations ──
 
-    // 1. Auto search customer when mobile number changes
-    const handlePhoneChange = (phoneVal) => {
+    // 1. Auto search customer when mobile number changes via MySQL Database
+    const handlePhoneChange = async (phoneVal) => {
         setCustomer(prev => ({ ...prev, phone: phoneVal }))
         const clean = phoneVal.trim()
-        if (mockCustomerDatabase[clean]) {
-            const found = mockCustomerDatabase[clean]
-            setCustomer({
-                phone: clean,
-                name: found.name,
-                email: found.email,
-                type: found.type,
-                membershipId: found.membershipId,
-                isExisting: true,
-                bookingsCount: found.bookingsCount,
-                status: found.status,
-                outstanding: found.outstanding
-            })
-            addToast({ title: 'Customer Recognized', message: `Found ${found.name} (${found.type})`, type: 'success' })
+        if (clean.length >= 10) {
+            try {
+                const res = await api.get(`/crm/customer-lookup?phone=${clean}`)
+                if (res && res.found && res.data) {
+                    const found = res.data
+                    setCustomer({
+                        phone: clean,
+                        name: found.name || '',
+                        email: found.email || '',
+                        type: found.type || 'Regular',
+                        membershipId: found.membershipId || '',
+                        isExisting: true,
+                        bookingsCount: found.bookingsCount || 1,
+                        status: found.status || 'Verified Player',
+                        outstanding: found.outstanding || 0
+                    })
+                    addToast({ title: 'Customer Recognized', message: `Found ${found.name} (${found.type})`, type: 'success' })
+                    return
+                }
+            } catch (e) {
+                console.warn('Customer lookup error:', e)
+            }
+
         } else if (clean.length < 10) {
             setCustomer(prev => ({
                 ...prev,
@@ -187,15 +185,188 @@ export default function OwnerPOS() {
         }
     }
 
-    // 2. Available courts based on selected sport
+
+    // ── Live MySQL Database Driven State ──
+    const [myTurfs, setMyTurfs] = useState([])
+    const [selectedTurfId, setSelectedTurfId] = useState(() => localStorage.getItem('selectedBranchId') || '')
+    const [dbSports, setDbSports] = useState([])
+    const [dbSlots, setDbSlots] = useState([])
+    const [dbInventory, setDbInventory] = useState([])
+
+    // 1. Load logged-in owner's real MySQL turfs/branches
+    useEffect(() => {
+        getMyTurfs()
+            .then(res => {
+                const list = res?.data || (Array.isArray(res) ? res : [])
+                if (Array.isArray(list) && list.length > 0) {
+                    setMyTurfs(list)
+                    const activeExists = list.find(t => t.id === selectedTurfId)
+                    if (!activeExists) {
+                        const firstId = list[0].id
+                        setSelectedTurfId(firstId)
+                        localStorage.setItem('selectedBranchId', firstId)
+                    }
+                }
+            })
+            .catch(e => console.warn('getMyTurfs error:', e.message))
+    }, [])
+
+    // 2. Load live Branch Sports and Inventory Items when selectedTurfId changes
+    useEffect(() => {
+        if (!selectedTurfId) return
+        getBranchSports(selectedTurfId)
+            .then(res => {
+                const list = res?.data || (Array.isArray(res) ? res : [])
+                if (Array.isArray(list) && list.length > 0) {
+                    setDbSports(list)
+                    const cricketObj = list.find(s => (s.sport?.name || s.name || '').toLowerCase() === 'cricket') || list[0]
+                    const sName = cricketObj.sport?.name || cricketObj.name || 'Cricket'
+                    setBooking(prev => ({
+                        ...prev,
+                        sport: sName,
+                        sportId: cricketObj.sportId || cricketObj.id,
+                        court: sName === 'Cricket' ? 'Box Cricket Pitch 1' : 'Court 1 (Main Turf)'
+                    }))
+                }
+            })
+            .catch(() => {})
+
+        getInventory()
+            .then(res => {
+                const list = res?.data || (Array.isArray(res) ? res : [])
+                if (Array.isArray(list) && list.length > 0) {
+                    setDbInventory(list)
+                }
+            })
+            .catch(() => {})
+    }, [selectedTurfId])
+
+    // 3. Load live Time Slots from MySQL based on selected date & turf
+    useEffect(() => {
+        if (selectedTurfId && booking.date) {
+            getSlots({ branchId: selectedTurfId, date: booking.date })
+                .then(res => {
+                    const list = res?.data || (Array.isArray(res) ? res : [])
+                    if (Array.isArray(list) && list.length > 0) {
+                        const mappedSlots = list.map(s => {
+                            const startTimeStr = s.startTime ? (s.startTime.includes(':') ? s.startTime.substring(0, 5) : s.startTime) : '06:00'
+                            const [h, m] = startTimeStr.split(':').map(Number)
+                            const period = h >= 12 ? 'PM' : 'AM'
+                            const h12 = h % 12 || 12
+                            const formattedTime = `${String(h12).padStart(2, '0')}:${String(m || 0).padStart(2, '0')} ${period}`
+                            const status = s.status === 'BOOKED' ? 'Booked' : s.status === 'BLOCKED' ? 'Maintenance' : 'Available'
+                            return {
+                                id: s.id,
+                                time: formattedTime,
+                                status,
+                                isPeak: !!s.isPeak,
+                                rate: s.regularPrice || 1200
+                            }
+                        })
+                        setDbSlots(mappedSlots)
+                    }
+                })
+                .catch(() => {})
+        }
+    }, [selectedTurfId, booking.date])
+
+
+    const activeSportsList = useMemo(() => {
+        if (dbSports.length > 0) {
+            return dbSports.map(bs => ({
+                id: bs.sportId || bs.id,
+                name: bs.sport?.name || bs.name || 'Sport',
+                icon: (bs.sport?.name || bs.name || '').toLowerCase().includes('cricket') ? '🏏' : '⚽'
+            }))
+        }
+        return sportsList
+    }, [dbSports])
+
+    // Available courts based on selected sport
     const availableCourts = useMemo(() => {
-        return courtsBySport[booking.sport] || []
-    }, [booking.sport])
+        if (dbSports.length > 0) {
+            const found = dbSports.find(bs => (bs.sport?.name || bs.name) === booking.sport)
+            const count = found?.totalCourts || 2
+            const courtArr = []
+            for (let i = 1; i <= count; i++) {
+                courtArr.push({ id: `c_${i}`, name: `Pitch ${i} (${found?.sport?.name || booking.sport})`, status: 'Active' })
+            }
+            return courtArr
+        }
+        return courtsBySport[booking.sport] || courtsBySport['Cricket'] || []
+    }, [dbSports, booking.sport])
+
+    // Court & Turf options combined with Owner's real MySQL Turfs
+    const courtOptions = useMemo(() => {
+        if (myTurfs.length > 0) {
+            const opts = []
+            myTurfs.forEach(t => {
+                const tName = t.branchName || t.name || 'Turf'
+                const count = t.sports?.[0]?.totalCourts || 2
+                for (let i = 1; i <= Math.max(1, count); i++) {
+                    const courtName = count > 1 ? `${tName} - Pitch ${i}` : tName
+                    opts.push({
+                        value: `${t.id}:::${courtName}`,
+                        label: `🏟️ ${tName} (${t.city || 'Indore'}) - Pitch ${i}`,
+                        turfId: t.id,
+                        courtName
+                    })
+                }
+            })
+            return opts
+        }
+        return availableCourts.map(c => ({
+            value: `default:::${c.name}`,
+            label: `${c.name}`,
+            turfId: selectedTurfId,
+            courtName: c.name
+        }))
+    }, [myTurfs, availableCourts, selectedTurfId])
+
+    const currentCourtValue = useMemo(() => {
+        const matched = courtOptions.find(o => o.turfId === selectedTurfId && o.courtName === booking.court)
+        if (matched) return matched.value
+        const firstForTurf = courtOptions.find(o => o.turfId === selectedTurfId)
+        if (firstForTurf) return firstForTurf.value
+        return courtOptions[0]?.value || ''
+    }, [courtOptions, selectedTurfId, booking.court])
+
+    const handleCourtSelectChange = (val) => {
+        const [tId, cName] = val.split(':::')
+        if (tId && tId !== 'default' && tId !== selectedTurfId) {
+            setSelectedTurfId(tId)
+            localStorage.setItem('selectedBranchId', tId)
+            addToast({ title: 'Venue Selected', message: `Selected venue: ${cName || val}`, type: 'info' })
+        }
+        setBooking(prev => ({
+            ...prev,
+            court: cName || val
+        }))
+    }
+
+    const activeTimeSlots = useMemo(() => {
+        if (dbSlots.length > 0) {
+            return dbSlots
+        }
+        return timeSlots
+    }, [dbSlots])
+
+    const activeInventoryOptions = useMemo(() => {
+        if (dbInventory.length > 0) {
+            return dbInventory.map(item => ({
+                id: item.id,
+                name: item.name,
+                price: Number(item.price || 0),
+                category: item.category || 'Gear & Rentals',
+                icon: item.category === 'Snacks & Drinks' ? '🥤' : '🏏'
+            }))
+        }
+        return inventoryOptions
+    }, [dbInventory])
 
     // Auto-update court when sport changes
     const handleSportChange = (newSport) => {
-        const courts = courtsBySport[newSport] || []
-        const defaultCourt = courts[0]?.name || ''
+        const defaultCourt = availableCourts[0]?.name || ''
         setBooking(prev => ({
             ...prev,
             sport: newSport,
@@ -203,8 +374,9 @@ export default function OwnerPOS() {
         }))
     }
 
+
     // ── Smart Validation: Check Consecutive Slot Availability for Multi-Hour Bookings ──
-    const checkSlotAvailabilityForDuration = (startSlotTime, hours, slotsArray = timeSlots) => {
+    const checkSlotAvailabilityForDuration = (startSlotTime, hours, slotsArray = activeTimeSlots) => {
         const startIndex = slotsArray.findIndex(s => s.time === startSlotTime)
         if (startIndex === -1) return { isValid: false, reason: 'Invalid starting slot selected' }
 
@@ -228,6 +400,7 @@ export default function OwnerPOS() {
 
         return { isValid: true, requiredSlots }
     }
+
 
     // Auto-update billing rate when slot changes with consecutive slot check
     const handleSlotSelect = (slotObj) => {
@@ -267,12 +440,13 @@ export default function OwnerPOS() {
 
     // ── Calculations ──
 
-    // Base court price calculated from billing rate and duration
+    // Base court price calculated from billing rate and duration (only when slot is selected)
     const baseCourtPrice = useMemo(() => {
+        if (!booking.slot) return 0
         const rate = Number(booking.billingRate) || 0
         const durationMins = Number(booking.duration) || 60
         return Math.round((durationMins / 60) * rate)
-    }, [booking.billingRate, booking.duration])
+    }, [booking.slot, booking.billingRate, booking.duration])
 
     // Selected Extra Services Total
     const selectedExtrasList = useMemo(() => {
@@ -296,15 +470,14 @@ export default function OwnerPOS() {
         return 0
     }, [booking.discountType, booking.discountValue, booking.promoCode, baseCourtPrice])
 
-    // Subtotal, Tax & Totals
-    const currentBookingSubtotal = Math.max(0, baseCourtPrice + extrasTotal - discountAmount)
-    
-    // Total including cart items
+    // Subtotal & Totals (18% GST completely removed)
+    const currentBookingSubtotal = booking.slot ? Math.max(0, baseCourtPrice + extrasTotal - discountAmount) : 0
     const inventoryCartSubtotal = cart.reduce((acc, item) => acc + (item.price * item.qty), 0)
     const grandSubtotal = currentBookingSubtotal + inventoryCartSubtotal
-    const gstTax = Math.round(grandSubtotal * 0.18)
-    const grandTotal = grandSubtotal + gstTax
+    const gstTax = 0
+    const grandTotal = grandSubtotal
     const remainingBalance = paymentStatus === 'Partial' ? Math.max(0, grandTotal - Number(advanceAmount)) : paymentStatus === 'Pending' ? grandTotal : 0
+
 
     // Check if current selected court is under maintenance
     const currentCourtObj = availableCourts.find(c => c.name === booking.court)
@@ -440,14 +613,40 @@ export default function OwnerPOS() {
         }
 
         try {
-            await processPayment({
+            const selectedBranchId = localStorage.getItem('selectedBranchId') || ''
+            const res = await api.post('/billing/pos-checkout', {
+                branchId: selectedBranchId,
+                sportId: booking.sportId || null,
+                courtName: booking.court,
+                slotDate: booking.date,
+                slotTime: booking.slot,
+                duration: booking.duration,
                 customerName: customerName,
-                amount: grandTotal,
-                paymentMethod: paymentMethod || 'UPI'
+                customerPhone: customer.phone,
+                customerEmail: customer.email,
+                customerType: customer.type,
+                paymentMethod: paymentMethod || 'UPI',
+                paymentStatus: paymentStatus,
+                advanceAmount: Number(advanceAmount) || 0,
+                cartItems: cart,
+                discountAmount: discountAmount,
+                totalAmount: grandTotal,
+                notes: booking.notes
             })
+            if (res && res.data && res.data.invoiceNumber) {
+                billData.id = res.data.invoiceNumber
+            }
         } catch (e) {
-            console.warn('POS MySQL sync note:', e.message)
+            console.warn('POS MySQL checkout sync note:', e.message)
+            try {
+                await processPayment({
+                    customerName: customerName,
+                    amount: grandTotal,
+                    paymentMethod: paymentMethod || 'UPI'
+                })
+            } catch (err) {}
         }
+
 
         setLastBill(billData)
         setIsSuccess(true)
@@ -575,7 +774,7 @@ export default function OwnerPOS() {
                     {/* LEFT PANEL (~66% / col-span-2) */}
                     <div className="lg:col-span-2 space-y-6">
                         {/* Tab Category Bar */}
-                        <div className="flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between bg-white p-2 rounded-2xl border border-surface-200/60 shadow-soft shrink-0">
+                        <div className="flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between bg-white p-3 rounded-2xl border border-surface-200/60 shadow-soft shrink-0">
                             <div className="flex gap-2 overflow-x-auto">
                                 {categories.map(cat => (
                                     <button
@@ -591,6 +790,7 @@ export default function OwnerPOS() {
                                 ))}
                             </div>
 
+
                             {(activeTab === 'Gear & Rentals' || activeTab === 'Snacks & Drinks') && (
                                 <div className="px-2 w-full sm:w-44 shrink-0">
                                     <input
@@ -603,6 +803,7 @@ export default function OwnerPOS() {
                                 </div>
                             )}
                         </div>
+
 
                         {activeTab === 'Sports' ? (
                             /* QUICK WALK-IN BOOKING FORM CARD */
@@ -624,17 +825,15 @@ export default function OwnerPOS() {
                                         label="Sport"
                                         value={booking.sport}
                                         onChange={(e) => handleSportChange(e.target.value)}
-                                        options={sportsList.map(s => ({ value: s.name, label: `${s.icon} ${s.name}` }))}
+                                        options={activeSportsList.map(s => ({ value: s.name, label: `${s.icon} ${s.name}` }))}
                                     />
                                     <Select
                                         label="Court / Turf"
-                                        value={booking.court}
-                                        onChange={(e) => setBooking({ ...booking, court: e.target.value })}
-                                        options={availableCourts.map(c => ({
-                                            value: c.name,
-                                            label: `${c.name} ${c.status === 'Maintenance' ? '(Under Maintenance)' : ''}`
-                                        }))}
+                                        value={currentCourtValue}
+                                        onChange={(e) => handleCourtSelectChange(e.target.value)}
+                                        options={courtOptions.map(o => ({ value: o.value, label: o.label }))}
                                     />
+
                                 </div>
 
                                 {/* BOOKING DATE & BOOKING TYPE */}
@@ -666,10 +865,11 @@ export default function OwnerPOS() {
                                         <span className="text-[10px] text-surface-400 font-semibold">Click to select slot</span>
                                     </label>
                                     <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2">
-                                        {timeSlots.map(slotObj => {
+                                        {activeTimeSlots.map(slotObj => {
                                             const isSelected = booking.slot === slotObj.time
                                             const isBooked = slotObj.status === 'Booked'
                                             const isMaint = slotObj.status === 'Maintenance'
+
                                             
                                             // Check consecutive slot availability for current selected duration hours
                                             const hoursNeeded = booking.duration / 60
@@ -799,37 +999,7 @@ export default function OwnerPOS() {
                                     </div>
                                 </div>
 
-                                {/* 8. EXTRA SERVICES (Multi-select Checkboxes) */}
-                                <div>
-                                    <label className="block text-xs font-bold text-surface-700 mb-2 uppercase tracking-wider">
-                                        Extra Add-on Services
-                                    </label>
-                                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                                        {extraServicesList.map(service => {
-                                            const isChecked = booking.selectedExtras.includes(service.id)
-                                            return (
-                                                <button
-                                                    key={service.id}
-                                                    type="button"
-                                                    onClick={() => handleToggleExtra(service.id)}
-                                                    className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer flex items-center justify-between ${
-                                                        isChecked
-                                                            ? 'bg-emerald-50 border-emerald-400 text-emerald-900 font-extrabold shadow-sm'
-                                                            : 'bg-white border-surface-200 text-surface-700 hover:bg-surface-50 font-bold'
-                                                    }`}
-                                                >
-                                                    <div className="flex items-center gap-1.5 text-xs truncate">
-                                                        <span>{service.icon}</span>
-                                                        <span className="truncate">{service.label}</span>
-                                                    </div>
-                                                    <span className="text-[10px] text-emerald-600 font-black ml-1">
-                                                        {service.price > 0 ? `+₹${service.price}` : 'Free'}
-                                                    </span>
-                                                </button>
-                                            )
-                                        })}
-                                    </div>
-                                </div>
+
 
                                 {/* 9. NOTES */}
                                 <div>
@@ -873,19 +1043,27 @@ export default function OwnerPOS() {
                         ) : (
                             /* INVENTORY LIST GRID FOR GEAR / SNACKS */
                             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2.5">
+                                {/* Always visible Add New Custom Product Card */}
+                                <div
+                                    onClick={() => {
+                                        setNewProduct(prev => ({ ...prev, category: activeTab }))
+                                        setIsAddProductOpen(true)
+                                    }}
+                                    className="bg-emerald-50/80 hover:bg-emerald-100 rounded-2xl border-2 border-dashed border-emerald-400 p-2.5 cursor-pointer transition-all duration-200 flex flex-col items-center justify-center h-28 text-center group shadow-2xs"
+                                >
+                                    <div className="w-7 h-7 rounded-full bg-emerald-600 text-white flex items-center justify-center font-black text-sm shadow-sm group-hover:scale-110 transition-transform">
+                                        +
+                                    </div>
+                                    <span className="text-[10.5px] font-black text-emerald-950 mt-1.5 leading-tight">Add New Product</span>
+                                    <span className="text-[9px] text-emerald-700 font-bold mt-0.5">Sell ball, rent gear...</span>
+                                </div>
+
                                 {(() => {
-                                    const filtered = inventoryOptions.filter(
+                                    const filtered = activeInventoryOptions.filter(
                                         i => i.category === activeTab &&
                                             i.name.toLowerCase().includes(searchQuery.toLowerCase())
                                     )
-                                    if (filtered.length === 0) {
-                                        return (
-                                            <div className="col-span-full text-center py-12 text-surface-400 bg-white rounded-2xl border border-surface-200/50 p-6 shadow-soft">
-                                                <span className="text-3xl block">🔍</span>
-                                                <p className="text-xs font-bold mt-2 text-surface-600">No matching items found</p>
-                                            </div>
-                                        )
-                                    }
+
                                     return filtered.map(item => (
                                         <div
                                             key={item.id}
@@ -904,6 +1082,7 @@ export default function OwnerPOS() {
                                     ))
                                 })()}
                             </div>
+
                         )}
                     </div>
 
@@ -989,80 +1168,72 @@ export default function OwnerPOS() {
                                     <h3 className="text-sm font-black text-surface-900 tracking-tight flex items-center gap-1.5">
                                         <HiShoppingCart /> checkout basket
                                     </h3>
-                                    <Badge variant="primary">{cart.length + (activeTab === 'Sports' ? 1 : 0)} items</Badge>
+                                    <Badge variant="primary">{cart.length + (booking.slot ? 1 : 0)} items</Badge>
                                 </div>
 
                                 {/* Itemized booking summary in basket */}
                                 <div className="space-y-3 max-h-[260px] overflow-y-auto pr-1 scrollbar-hide">
-                                    {/* Active Walk-in Booking Summary Item */}
-                                    {activeTab === 'Sports' && (
-                                        <div className="p-3 bg-emerald-50/70 rounded-2xl border border-emerald-200 text-xs font-semibold space-y-1.5">
-                                            <div className="flex justify-between items-start">
-                                                <div>
-                                                    <span className="font-black text-emerald-950 text-xs block">{booking.sport} - {booking.court}</span>
-                                                    <span className="text-[10px] text-emerald-700 font-bold block">{booking.slot} ({booking.duration} Mins) • {booking.players} Players</span>
-                                                </div>
-                                                <span className="font-black text-emerald-800 text-xs">₹{baseCourtPrice}</span>
-                                            </div>
-
-                                            {selectedExtrasList.length > 0 && (
-                                                <div className="text-[10px] text-surface-600 border-t border-emerald-200/60 pt-1 space-y-0.5">
-                                                    {selectedExtrasList.map(e => (
-                                                        <div key={e.id} className="flex justify-between">
-                                                            <span>+ {e.label}</span>
-                                                            <span>₹{e.price}</span>
+                                    {cart.length === 0 && !booking.slot ? (
+                                        <div className="text-center py-6 text-surface-400 bg-surface-50/60 rounded-2xl border border-dashed border-surface-200 p-4">
+                                            <span className="text-2xl block">🛒</span>
+                                            <p className="text-xs font-bold mt-1 text-surface-600">Checkout Basket is Empty</p>
+                                            <p className="text-[10px] text-surface-400 mt-0.5">Select a time slot or add items to checkout</p>
+                                        </div>
+                                    ) : (
+                                        <>
+                                            {/* Active Walk-in Booking Summary Item */}
+                                            {booking.slot && (
+                                                <div className="p-3 bg-emerald-50/70 rounded-2xl border border-emerald-200 text-xs font-semibold space-y-1.5">
+                                                    <div className="flex justify-between items-start">
+                                                        <div>
+                                                            <span className="font-black text-emerald-950 text-xs block">{booking.sport} - {booking.court}</span>
+                                                            <span className="text-[10px] text-emerald-700 font-bold block">{booking.slot} ({booking.duration} Mins) • {booking.players} Players</span>
                                                         </div>
-                                                    ))}
+                                                        <span className="font-black text-emerald-800 text-xs">₹{baseCourtPrice}</span>
+                                                    </div>
+
+                                                    {discountAmount > 0 && (
+                                                        <div className="flex justify-between text-[10px] text-emerald-700 font-extrabold border-t border-emerald-200/60 pt-1">
+                                                            <span>Discount Applied ({booking.discountType})</span>
+                                                            <span>-₹{discountAmount}</span>
+                                                        </div>
+                                                    )}
                                                 </div>
                                             )}
 
-                                            {discountAmount > 0 && (
-                                                <div className="flex justify-between text-[10px] text-emerald-700 font-extrabold border-t border-emerald-200/60 pt-1">
-                                                    <span>Discount Applied ({booking.discountType})</span>
-                                                    <span>-₹{discountAmount}</span>
+                                            {/* Inventory Cart Items */}
+                                            {cart.map(item => (
+                                                <div key={item.id} className="flex justify-between items-center p-3 bg-surface-50 rounded-2xl border border-surface-150 text-xs font-semibold">
+                                                    <div className="space-y-0.5 flex-1 min-w-0 pr-2">
+                                                        <p className="text-surface-900 font-extrabold truncate leading-tight">{item.name}</p>
+                                                        <p className="text-[10px] text-surface-400 uppercase tracking-wider">{item.category} • ₹{item.price}</p>
+                                                    </div>
+                                                    <div className="flex items-center gap-2.5">
+                                                        <div className="flex items-center border border-surface-200 rounded-xl overflow-hidden bg-white shadow-soft font-bold">
+                                                            <button onClick={() => handleUpdateCartQty(item.id, -1)} className="px-2 py-0.5 hover:bg-surface-50">-</button>
+                                                            <span className="px-2 text-surface-700">{item.qty}</span>
+                                                            <button onClick={() => handleUpdateCartQty(item.id, 1)} className="px-2 py-0.5 hover:bg-surface-50">+</button>
+                                                        </div>
+                                                        <button onClick={() => handleRemoveCartItem(item.id)} className="text-red-500 hover:bg-red-50 p-1 rounded-xl">
+                                                            <HiTrash className="w-3.5 h-3.5" />
+                                                        </button>
+                                                    </div>
                                                 </div>
-                                            )}
-                                        </div>
+                                            ))}
+                                        </>
                                     )}
-
-                                    {/* Inventory Cart Items */}
-                                    {cart.map(item => (
-                                        <div key={item.id} className="flex justify-between items-center p-3 bg-surface-50 rounded-2xl border border-surface-150 text-xs font-semibold">
-                                            <div className="space-y-0.5 flex-1 min-w-0 pr-2">
-                                                <p className="text-surface-900 font-extrabold truncate leading-tight">{item.name}</p>
-                                                <p className="text-[10px] text-surface-400 uppercase tracking-wider">{item.category} • ₹{item.price}</p>
-                                            </div>
-                                            <div className="flex items-center gap-2.5">
-                                                <div className="flex items-center border border-surface-200 rounded-xl overflow-hidden bg-white shadow-soft font-bold">
-                                                    <button onClick={() => handleUpdateCartQty(item.id, -1)} className="px-2 py-0.5 hover:bg-surface-50">-</button>
-                                                    <span className="px-2 text-surface-700">{item.qty}</span>
-                                                    <button onClick={() => handleUpdateCartQty(item.id, 1)} className="px-2 py-0.5 hover:bg-surface-50">+</button>
-                                                </div>
-                                                <button onClick={() => handleRemoveCartItem(item.id)} className="text-red-500 hover:bg-red-50 p-1 rounded-xl">
-                                                    <HiTrash className="w-3.5 h-3.5" />
-                                                </button>
-                                            </div>
-                                        </div>
-                                    ))}
                                 </div>
                             </div>
 
                             {/* COMPACT BOOKING & PRICE SUMMARY */}
                             <div className="border-t border-surface-100 pt-3 space-y-3">
                                 <div className="text-xs space-y-1.5 font-semibold text-surface-600 border-b border-surface-100 pb-3">
-                                    <div className="flex justify-between">
-                                        <span>Subtotal</span>
-                                        <span className="text-surface-800 font-bold">₹{grandSubtotal}</span>
-                                    </div>
-                                    <div className="flex justify-between">
-                                        <span>GST (18%)</span>
-                                        <span className="text-surface-800 font-bold">₹{gstTax}</span>
-                                    </div>
                                     <div className="flex justify-between text-sm font-black text-surface-900 pt-1">
                                         <span>Grand Total</span>
                                         <span className="text-emerald-600 text-base">₹{grandTotal}</span>
                                     </div>
                                 </div>
+
 
                                 {/* PAYMENT SETTLEMENT SECTION */}
                                 <div className="space-y-3">
@@ -1082,15 +1253,34 @@ export default function OwnerPOS() {
                                             value={paymentMethod}
                                             onChange={(e) => setPaymentMethod(e.target.value)}
                                             options={[
-                                                { value: 'UPI', label: '📱 UPI' },
-                                                { value: 'Cash', label: '💵 Cash' },
-                                                { value: 'Card', label: '💳 Card' },
-                                                { value: 'Wallet', label: '👛 Wallet' },
-                                                { value: 'Bank Transfer', label: '🏦 Bank Transfer' },
-                                                { value: 'Split Payment', label: '🔀 Split Payment' }
+                                                { value: 'Cash', label: '💵 Cash (Venue)' },
+                                                { value: 'UPI', label: '📱 Venue UPI / QR Scan' }
                                             ]}
                                         />
+
                                     </div>
+
+                                    {(paymentMethod === 'UPI' || paymentMethod === 'Venue QR') && (
+                                        <div className="p-3.5 bg-emerald-50/90 rounded-2xl border border-emerald-200 text-center space-y-2 animate-in fade-in duration-300">
+                                            <div className="text-[11px] font-black text-emerald-950 uppercase tracking-wider flex items-center justify-center gap-1.5">
+                                                <span>📱</span> Venue QR Code Payment (₹{grandTotal})
+                                            </div>
+                                            <div className="bg-white p-2 rounded-xl border border-emerald-200 inline-block shadow-sm">
+                                                <img
+                                                    src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=upi://pay?pa=7987654321@paytm&pn=Turf%20Venue&am=${grandTotal}&cu=INR`}
+                                                    alt="Venue Payment QR"
+                                                    className="w-28 h-28 mx-auto rounded-md"
+                                                />
+                                            </div>
+                                            <div className="text-[10.5px] font-bold text-emerald-900">
+                                                Scan & Pay to Venue UPI: <span className="font-black text-emerald-950 bg-emerald-100 px-1.5 py-0.5 rounded">turfowner@upi</span>
+                                            </div>
+                                            <div className="text-[9.5px] text-emerald-700 font-bold border-t border-emerald-200/60 pt-1 mt-1">
+                                                ⚡ Direct 0% Commission Payment (100% Venue Owner Share)
+                                            </div>
+                                        </div>
+                                    )}
+
 
                                     {paymentStatus === 'Partial' && (
                                         <div className="p-2.5 bg-amber-50 rounded-xl border border-amber-200 space-y-2">
@@ -1150,11 +1340,10 @@ export default function OwnerPOS() {
                     </div>
 
                     <div className="text-[10px] space-y-1 text-right border-b border-dashed pb-3 mb-3">
-                        <p>Subtotal: ₹{lastBill.bookingSummary.subtotal}</p>
-                        <p>GST (18%): ₹{lastBill.bookingSummary.tax}</p>
                         <p className="text-sm font-bold mt-1">GRAND TOTAL: ₹{lastBill.bookingSummary.total}</p>
                         {lastBill.bookingSummary.remaining > 0 && <p className="text-rose-600 font-bold">BALANCE REMAINING: ₹{lastBill.bookingSummary.remaining}</p>}
                     </div>
+
 
                     <div className="text-center text-[10px] space-y-0.5 text-gray-500 uppercase tracking-widest mt-6">
                         <p>--- THANK YOU FOR SPORTING WITH US ---</p>
@@ -1162,7 +1351,89 @@ export default function OwnerPOS() {
                     </div>
                 </div>
             )}
+
+            {/* ── Add New Custom Product / Equipment Modal ── */}
+
+            <Modal
+                isOpen={isAddProductOpen}
+                onClose={() => setIsAddProductOpen(false)}
+                title="➕ Add Custom Product / Equipment to MySQL"
+                size="md"
+            >
+                <form onSubmit={handleCreateCustomProduct} className="space-y-4 text-xs font-medium">
+                    <p className="text-slate-500 font-semibold">
+                        Add cricket balls, rental bats, water bottles or custom snacks to sell directly at POS.
+                    </p>
+
+                    <div>
+                        <label className="block text-slate-700 font-bold mb-1">Product / Item Name *</label>
+                        <Input
+                            placeholder="e.g. Cosco Cricket Ball, SG Leather Ball, Grips..."
+                            value={newProduct.name}
+                            onChange={(e) => setNewProduct({ ...newProduct, name: e.target.value })}
+                            required
+                        />
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-3">
+                        <div>
+                            <label className="block text-slate-700 font-bold mb-1">Category</label>
+                            <Select
+                                value={newProduct.category}
+                                onChange={(e) => setNewProduct({ ...newProduct, category: e.target.value })}
+                                options={[
+                                    { value: 'Gear & Rentals', label: '🏏 Gear & Rentals' },
+                                    { value: 'Snacks & Drinks', label: '🥤 Snacks & Drinks' }
+                                ]}
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-slate-700 font-bold mb-1">Transaction Type</label>
+                            <Select
+                                value={newProduct.itemType}
+                                onChange={(e) => setNewProduct({ ...newProduct, itemType: e.target.value })}
+                                options={[
+                                    { value: 'Sell', label: '🛒 Sale (Bechna)' },
+                                    { value: 'Rental', label: '🔑 Rental (Kiraye par Dena)' }
+                                ]}
+                            />
+                        </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-3">
+                        <div>
+                            <label className="block text-slate-700 font-bold mb-1">Price (₹) *</label>
+                            <Input
+                                type="number"
+                                placeholder="e.g. 50"
+                                value={newProduct.price}
+                                onChange={(e) => setNewProduct({ ...newProduct, price: e.target.value })}
+                                required
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-slate-700 font-bold mb-1">Initial Stock Quantity</label>
+                            <Input
+                                type="number"
+                                placeholder="20"
+                                value={newProduct.stock}
+                                onChange={(e) => setNewProduct({ ...newProduct, stock: e.target.value })}
+                            />
+                        </div>
+                    </div>
+
+                    <div className="flex justify-end gap-2 pt-4 border-t border-slate-200">
+                        <Button type="button" variant="outline" onClick={() => setIsAddProductOpen(false)}>
+                            Cancel
+                        </Button>
+                        <Button type="submit" className="bg-emerald-600 hover:bg-emerald-700 font-black">
+                            Save Item to MySQL
+                        </Button>
+                    </div>
+                </form>
+            </Modal>
         </div>
     )
 }
+
 

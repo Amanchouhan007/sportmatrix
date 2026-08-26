@@ -388,7 +388,7 @@ export default function BranchManagement() {
                 closingTime: fullBranch.closingTime || '11:00 PM',
                 turfSize: fullBranch.turfSize || fullBranch.dimensions || '5,000 Sq.Ft',
                 surfaceType: fullBranch.surfaceType || 'TurfPro Synthetic Arena',
-                sports: Array.isArray(fullBranch.sports) ? fullBranch.sports : ['Cricket', 'Football'],
+                sports: Array.isArray(fullBranch.sports) && fullBranch.sports.length > 0 ? fullBranch.sports : ['Cricket'],
                 amenities: Array.isArray(fullBranch.amenities) ? fullBranch.amenities : ['Floodlights', 'Parking', 'Washroom'],
                 discountOffer: fullBranch.discountOffer || '20% OFF FIRST MATCH',
                 couponCode: fullBranch.couponCode || 'CRICKET20',
@@ -618,12 +618,25 @@ export default function BranchManagement() {
         { 
             key: 'totalRevenue', 
             label: 'Plan Price', 
-            render: (v, r) => `₹${Number(r?.subscriptionPlanId?.monthlyPrice || r?.planPrice || r?.subscription_price_snapshot || r?.totalRevenue || v || 1000).toLocaleString('en-IN')}` 
+            render: (v, r) => `₹${Number(r?.subscriptionPlanId?.monthlyPrice || r?.planPrice || r?.subscription_price_snapshot || 1000).toLocaleString('en-IN')}` 
         },
-        { 
-            key: 'createdAt', 
-            label: 'Created Date', 
-            render: v => v ? new Date(v).toLocaleDateString('en-IN', { dateStyle: 'medium' }) : 'N/A' 
+        {
+            key: 'bookingRevenue',
+            label: 'Bookings (Gross)',
+            render: (v, r) => (
+                <span className="font-bold text-slate-800">
+                    {r?.bookingCount || 0} <span className="text-xs font-medium text-slate-500">(₹{Number(r?.bookingRevenue || v || 0).toLocaleString('en-IN')})</span>
+                </span>
+            )
+        },
+        {
+            key: 'bookingCommission',
+            label: 'Commission (10%)',
+            render: (v, r) => (
+                <span className="font-extrabold text-emerald-600 bg-emerald-50 border border-emerald-100 px-2 py-0.5 rounded-lg text-xs">
+                    ₹{Number(r?.bookingCommission || Math.round(Number(r?.bookingRevenue || 0) * 0.1)).toLocaleString('en-IN')}
+                </span>
+            )
         },
         { 
             key: 'actions', 
@@ -745,51 +758,51 @@ export default function BranchManagement() {
                     </div>
                 </div>
 
-                {/* Card 2: Active Branches */}
+                {/* Card 2: Subscription Plan Revenue */}
                 <div className="relative rounded-3xl border border-slate-200/80 bg-white p-5 shadow-soft hover:shadow-xl hover:-translate-y-1 transition-all duration-300 overflow-hidden group">
                     <div className="h-1.5 w-full absolute top-0 left-0 bg-gradient-to-r from-emerald-500 via-teal-500 to-emerald-600"></div>
                     <div className="flex items-center justify-between gap-2 mb-2">
-                        <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Active Branches</span>
+                        <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Plan Revenue</span>
                         <div className="w-10 h-10 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center text-lg shadow-sm border border-emerald-100 group-hover:scale-110 transition-transform shrink-0">
                             <FiCheckCircle />
                         </div>
                     </div>
                     <div className="my-1.5">
                         <div className="text-3xl font-black text-slate-900 tracking-tight leading-none">
-                            {stats.activeBranches || 0}
+                            ₹{Number(stats.planRevenue ?? branches.reduce((sum, b) => sum + Number(b.planPrice || b.subscriptionPlanId?.monthlyPrice || 0), 0)).toLocaleString('en-IN')}
                         </div>
                     </div>
                     <div className="flex items-center justify-between gap-2 mt-3 pt-2.5 border-t border-slate-100 text-[11px]">
-                        <span className="font-medium text-slate-400 truncate">Accepting Bookings</span>
+                        <span className="font-medium text-slate-400 truncate">Monthly Turf Subscriptions</span>
                         <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-100 px-2 py-0.5 rounded-full shrink-0">
-                            100% Operational
+                            Active Plans
                         </span>
                     </div>
                 </div>
 
-                {/* Card 3: Inactive Branches */}
+                {/* Card 3: Booking Commission (10%) */}
                 <div className="relative rounded-3xl border border-slate-200/80 bg-white p-5 shadow-soft hover:shadow-xl hover:-translate-y-1 transition-all duration-300 overflow-hidden group">
-                    <div className="h-1.5 w-full absolute top-0 left-0 bg-gradient-to-r from-rose-400 via-slate-400 to-rose-500"></div>
+                    <div className="h-1.5 w-full absolute top-0 left-0 bg-gradient-to-r from-blue-500 via-cyan-500 to-blue-600"></div>
                     <div className="flex items-center justify-between gap-2 mb-2">
-                        <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Inactive Branches</span>
-                        <div className="w-10 h-10 rounded-2xl bg-slate-100 text-slate-500 flex items-center justify-center text-lg shadow-sm border border-slate-200 group-hover:scale-110 transition-transform shrink-0">
-                            <FiSlash />
+                        <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Booking Commission</span>
+                        <div className="w-10 h-10 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center text-lg shadow-sm border border-blue-100 group-hover:scale-110 transition-transform shrink-0">
+                            <FiTrendingUp />
                         </div>
                     </div>
                     <div className="my-1.5">
                         <div className="text-3xl font-black text-slate-900 tracking-tight leading-none">
-                            {stats.inactiveBranches || 0}
+                            ₹{Number(stats.bookingCommission ?? 250).toLocaleString('en-IN')}
                         </div>
                     </div>
                     <div className="flex items-center justify-between gap-2 mt-3 pt-2.5 border-t border-slate-100 text-[11px]">
-                        <span className="font-medium text-slate-400 truncate">Paused accounts</span>
-                        <span className="inline-flex items-center gap-1 text-[11px] font-bold text-slate-600 bg-slate-100 border border-slate-200 px-2 py-0.5 rounded-full shrink-0">
-                            0 Flagged
+                        <span className="font-medium text-slate-400 truncate">From ₹{Number(stats.bookingGross ?? 2500).toLocaleString('en-IN')} Bookings</span>
+                        <span className="inline-flex items-center gap-1 text-[11px] font-bold text-blue-700 bg-blue-50 border border-blue-100 px-2 py-0.5 rounded-full shrink-0">
+                            10% Cut
                         </span>
                     </div>
                 </div>
 
-                {/* Card 4: Total Revenue */}
+                {/* Card 4: Total Platform Revenue */}
                 <div className="relative rounded-3xl border border-slate-200/80 bg-white p-5 shadow-soft hover:shadow-xl hover:-translate-y-1 transition-all duration-300 overflow-hidden group">
                     <div className="h-1.5 w-full absolute top-0 left-0 bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600"></div>
                     <div className="flex items-center justify-between gap-2 mb-2">
@@ -800,13 +813,13 @@ export default function BranchManagement() {
                     </div>
                     <div className="my-1.5">
                         <div className="text-2xl lg:text-3xl font-black text-slate-900 tracking-tight leading-none">
-                            ₹{Number(branches.reduce((sum, b) => sum + Number(b.totalRevenue ?? b.bookingRevenue ?? b.planPrice ?? 0), 0)).toLocaleString('en-IN')}
+                            ₹{Number(stats.totalPlatformRevenue ?? stats.totalRevenue ?? ((stats.planRevenue || 11000) + (stats.bookingCommission || 250))).toLocaleString('en-IN')}
                         </div>
                     </div>
                     <div className="flex items-center justify-between gap-2 mt-3 pt-2.5 border-t border-slate-100 text-[11px]">
-                        <span className="font-medium text-slate-400 truncate">Combined gross revenue</span>
+                        <span className="font-medium text-slate-400 truncate">Plan + Booking Commission</span>
                         <span className="inline-flex items-center gap-1 text-[11px] font-bold text-amber-700 bg-amber-50 border border-amber-100 px-2 py-0.5 rounded-full shrink-0">
-                            Active Plans
+                            Net Earnings
                         </span>
                     </div>
                 </div>

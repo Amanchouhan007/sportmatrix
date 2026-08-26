@@ -1,19 +1,20 @@
 export default function DataTable({ columns = [], data = [], onRowClick, emptyMessage = "No records found" }) {
     return (
-        <div className="overflow-x-auto overflow-y-hidden rounded-2xl border-2 border-slate-200/90 shadow-md bg-white">
+        <div className="overflow-x-auto rounded-xl border border-slate-200/80 shadow-soft bg-white pb-2">
             <table className="w-full text-xs text-left border-collapse min-w-[700px]">
                 <thead>
-                    <tr className="bg-slate-900 text-slate-100 border-b-2 border-slate-800">
+                    <tr className="bg-slate-50 text-slate-600 border-b border-slate-200/80">
                         {columns.map((col) => (
                             <th 
                                 key={col.key} 
-                                className="px-5 py-4 text-[10.5px] font-black text-slate-200 uppercase tracking-widest select-none"
+                                className="px-5 py-3 text-[11px] font-black uppercase tracking-wider select-none"
                             >
                                 {col.label}
                             </th>
                         ))}
                     </tr>
                 </thead>
+
                 <tbody className="divide-y divide-slate-200/80">
                     {data.map((row, i) => (
                         <tr 

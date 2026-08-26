@@ -238,7 +238,8 @@ export default function TournamentDetailPage() {
     const rulesArray = Array.isArray(rules) ? rules : getDefaultRules(sport)
     const timeline = getDefaultTimeline(sport)
     const perks = getDefaultPerks(sport)
-    const isOpen = (t.status === 'Approved' || t.status === 'Active' || t.status === 'Upcoming' || t.status === 'Registration Open') && spotsLeft > 0
+    const tStatus = (t.status || '').toUpperCase()
+    const isOpen = (['APPROVED', 'ACTIVE', 'UPCOMING', 'REGISTRATION_OPEN', 'RUNNING'].includes(tStatus) || t.status === 'Approved') && spotsLeft > 0
 
     const formatDate = (dateVal) => {
         if (!dateVal) return ''
@@ -415,7 +416,7 @@ export default function TournamentDetailPage() {
                                             </span>
                                         </div>
                                         <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
-                                            {teamsList.filter(tm => tm.status === 'Approved').map((tm, i) => (
+                                            {teamsList.filter(tm => ['APPROVED', 'CONFIRMED', 'Approved', 'Confirmed'].includes(tm.status || '')).map((tm, i) => (
                                                 <div key={tm.id || i} className="flex items-center gap-2.5 px-3 py-2.5 bg-slate-50 hover:bg-green-50 border border-[#E5E7EB] hover:border-green-200 rounded-xl text-xs transition-all cursor-default shadow-xs">
                                                     <span className="w-5 h-5 rounded-full bg-white border border-[#E5E7EB] text-[#16A34A] flex items-center justify-center text-[9px] font-black shrink-0">
                                                         {String(i + 1).padStart(2, '0')}

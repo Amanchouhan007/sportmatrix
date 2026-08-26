@@ -137,21 +137,24 @@ export default function SlotManagement() {
             const loadPageData = async () => {
                 setIsPageLoading(true)
                 try {
-                    const branchesRes = await getBranches({ ownerId: user._id })
-                    if (branchesRes && branchesRes.success && branchesRes.data && branchesRes.data.branches) {
-                        const branchList = branchesRes.data.branches
+                    const branchesRes = await getBranches()
+                    let branchList = branchesRes?.data?.data?.branches || branchesRes?.data?.branches || branchesRes?.branches || (Array.isArray(branchesRes?.data?.data) ? branchesRes.data.data : (Array.isArray(branchesRes?.data) ? branchesRes.data : []))
+                    if (Array.isArray(branchList) && branchList.length > 0) {
                         setBranches(branchList)
 
-                        let activeBranch = selectedBranchId || user.branchId
-                        if (branchList.length > 0) {
-                            const exists = branchList.some(b => b._id === activeBranch)
-                            if (!exists) {
-                                activeBranch = branchList[0]._id
-                            }
+                        let activeBranch = selectedBranchId || user.branchId || (branchList[0] ? (branchList[0].id || branchList[0]._id) : '')
+                        const exists = branchList.some(b => (b.id || b._id) === activeBranch)
+                        if (!exists && branchList[0]) {
+                            activeBranch = branchList[0].id || branchList[0]._id
                         }
                         if (activeBranch) {
                             setSelectedBranchId(activeBranch)
+                            localStorage.setItem('selectedBranchId', activeBranch)
                         }
+                    } else {
+                        const fallbackBranch = selectedBranchId || user?.branchId || 'br_1787426001925_85151'
+                        setSelectedBranchId(fallbackBranch)
+                        localStorage.setItem('selectedBranchId', fallbackBranch)
                     }
                 } catch (error) {
                     console.error('Failed to load branches', error)
@@ -205,8 +208,9 @@ export default function SlotManagement() {
                 branchId: selectedBranchId,
                 date: date
             })
-            if (slotsRes && slotsRes.success) {
-                setSlots(slotsRes.data)
+            const slotList = slotsRes?.data || (Array.isArray(slotsRes) ? slotsRes : [])
+            if (Array.isArray(slotList)) {
+                setSlots(slotList)
             }
         } catch (error) {
             console.error('Failed to load slots', error)
@@ -317,13 +321,29 @@ export default function SlotManagement() {
     // Client-side filtering logic
     const filteredSlots = useMemo(() => {
         return slots.filter(slot => {
-            const matchesSport = !selectedSport || (slot.sportId && slot.sportId._id === selectedSport)
+            const slotSportId = typeof slot.sportId === 'object' ? (slot.sportId?.id || slot.sportId?._id) : slot.sportId
+            const matchesSport = !selectedSport || (slotSportId === selectedSport)
             const matchesCourt = !selectedCourt || slot.courtName === selectedCourt
             const styles = getStatusStyles(slot)
             const matchesStatus = !selectedStatus || styles.status === selectedStatus
             return matchesSport && matchesCourt && matchesStatus
         })
     }, [slots, selectedSport, selectedCourt, selectedStatus, getStatusStyles])
+
+    // KPI Summary statistics
+    const stats = useMemo(() => {
+        const total = slots.length
+        const available = slots.filter(s => s.status === 'AVAILABLE').length
+        const booked = slots.filter(s => s.status === 'BOOKED').length
+        const blocked = slots.filter(s => s.status === 'BLOCKED').length
+        const totalRevenue = slots.reduce((acc, s) => {
+            if (s.status === 'BOOKED') {
+                return acc + Number(s.price || s.peakPrice || s.regularPrice || 1000)
+            }
+            return acc
+        }, 0)
+        return { total, available, booked, blocked, totalRevenue }
+    }, [slots])
 
     // Select slot handler
     const handleSelectSlot = (slot) => {
@@ -600,43 +620,101 @@ export default function SlotManagement() {
                 </div>
             )}
 
-            {/* Header */}
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white/70 backdrop-blur-md p-6 rounded-3xl border border-surface-200/50 shadow-soft">
-                <div>
-                    <h1 className="text-2xl font-black text-surface-900 tracking-tight flex items-center gap-2">
-                        Timetable & Slot Controller
-                    </h1>
-                    <p className="text-surface-500 text-sm mt-0.5 font-medium">Create active booking slots, configure peak rates, or block specific play windows</p>
+            {/* Header & Stats Banner */}
+            <div className="space-y-4">
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 p-6 rounded-3xl text-white shadow-xl border border-slate-800">
+                    <div>
+                        <div className="flex items-center gap-2">
+                            <span className="px-3 py-1 bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 rounded-full text-xs font-black uppercase tracking-wider">
+                                ⚡ Live Timetable Engine
+                            </span>
+                            <span className="text-xs text-slate-400 font-medium">Auto-synced with Customer Bookings</span>
+                        </div>
+                        <h1 className="text-2xl font-black tracking-tight text-white mt-1.5 flex items-center gap-2">
+                            📅 Timetable & Slot Controller
+                        </h1>
+                        <p className="text-slate-400 text-xs mt-0.5 font-medium">
+                            Configure peak rates, lock play windows, or register custom court slots for your turf.
+                        </p>
+                    </div>
+                    <div className="flex gap-3">
+                        <Button variant="secondary" onClick={() => setHolidayModal(true)} className="bg-slate-800 hover:bg-slate-700 text-white border border-slate-700 cursor-pointer">
+                            Manage Holidays
+                        </Button>
+                        <Button onClick={() => setCreateModal(true)} className="bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black shadow-lg shadow-emerald-500/20 cursor-pointer">
+                            <HiPlus className="w-5 h-5 mr-1" /> + Create Slot
+                        </Button>
+                    </div>
                 </div>
-                <div className="flex gap-3">
-                    <Button variant="secondary" onClick={() => setHolidayModal(true)} className="cursor-pointer">
-                        Manage Holidays
-                    </Button>
-                    <Button onClick={() => setCreateModal(true)} className="shadow-lg shadow-primary-500/10 cursor-pointer">
-                        <HiPlus className="w-5 h-5 mr-1" /> Create Slot
-                    </Button>
+
+                {/* KPI Summary Cards Bar */}
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                    <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between">
+                        <div>
+                            <span className="text-[10px] font-black uppercase tracking-wider text-slate-400">Total Day Slots</span>
+                            <div className="text-xl font-black text-slate-900 mt-0.5">{stats.total} Slots</div>
+                        </div>
+                        <div className="w-10 h-10 rounded-xl bg-slate-100 text-slate-700 flex items-center justify-center font-black text-base">
+                            ⏱️
+                        </div>
+                    </div>
+                    <div className="bg-emerald-50/70 p-4 rounded-2xl border border-emerald-200/80 shadow-sm flex items-center justify-between">
+                        <div>
+                            <span className="text-[10px] font-black uppercase tracking-wider text-emerald-700">Available Bookable</span>
+                            <div className="text-xl font-black text-emerald-950 mt-0.5">{stats.available} Open</div>
+                        </div>
+                        <div className="w-10 h-10 rounded-xl bg-emerald-500 text-slate-950 flex items-center justify-center font-black text-base shadow-sm">
+                            ✓
+                        </div>
+                    </div>
+                    <div className="bg-blue-50/70 p-4 rounded-2xl border border-blue-200/80 shadow-sm flex items-center justify-between">
+                        <div>
+                            <span className="text-[10px] font-black uppercase tracking-wider text-blue-700">Reserved Bookings</span>
+                            <div className="text-xl font-black text-blue-950 mt-0.5">{stats.booked} Reserved</div>
+                        </div>
+                        <div className="w-10 h-10 rounded-xl bg-blue-600 text-white flex items-center justify-center font-black text-base shadow-sm">
+                            🔒
+                        </div>
+                    </div>
+                    <div className="bg-amber-50/70 p-4 rounded-2xl border border-amber-200/80 shadow-sm flex items-center justify-between">
+                        <div>
+                            <span className="text-[10px] font-black uppercase tracking-wider text-amber-800">Est. Booking Revenue</span>
+                            <div className="text-xl font-black text-amber-950 mt-0.5">₹{stats.totalRevenue.toLocaleString('en-IN')}</div>
+                        </div>
+                        <div className="w-10 h-10 rounded-xl bg-amber-500 text-slate-950 flex items-center justify-center font-black text-base shadow-sm">
+                            💰
+                        </div>
+                    </div>
                 </div>
             </div>
 
             {/* Timetable Controller Panel */}
             <Card className="p-6">
                 <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-4 mb-6 border-b border-surface-100 pb-6">
-                    <div className="flex flex-wrap items-center gap-4">
-                        <input
-                            type="date"
-                            value={date}
-                            onChange={e => setDate(e.target.value)}
-                            className="px-4 py-2.5 bg-surface-50 border border-surface-200 rounded-2xl text-sm font-semibold outline-none focus:border-emerald-500 transition-colors shadow-soft"
-                        />
+                    <div className="flex flex-wrap items-center gap-3">
+                        <div className="flex items-center gap-2 bg-slate-900 text-white px-3 py-2 rounded-2xl font-bold text-xs shadow-sm">
+                            <span className="text-emerald-400">📅</span>
+                            <input
+                                type="date"
+                                value={date}
+                                onChange={e => setDate(e.target.value)}
+                                className="bg-transparent text-white font-bold outline-none cursor-pointer text-xs"
+                            />
+                        </div>
+
                         <Select
                             placeholder="All Sports"
                             value={selectedSport}
                             onChange={(e) => setSelectedSport(e.target.value)}
                             options={[
                                 { value: '', label: 'All Sports' },
-                                ...branchSports.map(s => ({ value: s.sportId?._id || '', label: s.sportId?.name || '' }))
+                                ...branchSports.map(s => {
+                                    const sId = typeof s.sportId === 'object' ? (s.sportId?.id || s.sportId?._id) : (s.sportId || s.id || s._id);
+                                    const sName = typeof s.sportId === 'object' ? s.sportId?.name : (s.name || 'Cricket');
+                                    return { value: sId || '', label: `🏏 ${sName}` };
+                                })
                             ]}
-                            className="w-48 shadow-soft"
+                            className="w-44 shadow-soft text-xs"
                         />
                         <Select
                             placeholder="All Courts"
@@ -646,7 +724,7 @@ export default function SlotManagement() {
                                 { value: '', label: 'All Courts' },
                                 ...filterCourtOptions
                             ]}
-                            className="w-48 shadow-soft"
+                            className="w-44 shadow-soft text-xs"
                         />
                         <Select
                             placeholder="All Statuses"
@@ -654,26 +732,25 @@ export default function SlotManagement() {
                             onChange={(e) => setSelectedStatus(e.target.value)}
                             options={[
                                 { value: '', label: 'All Statuses' },
-                                { value: 'AVAILABLE', label: 'Available' },
-                                { value: 'BOOKED', label: 'Booked' },
-                                { value: 'BLOCKED', label: 'Blocked' },
-                                { value: 'COMPLETED', label: 'Completed' }
+                                { value: 'AVAILABLE', label: '✓ Available' },
+                                { value: 'BOOKED', label: '🔒 Booked' },
+                                { value: 'BLOCKED', label: '⛔ Blocked' },
+                                { value: 'COMPLETED', label: '🏁 Completed' }
                             ]}
-                            className="w-48 shadow-soft"
+                            className="w-44 shadow-soft text-xs"
                         />
                     </div>
 
                     {/* Visual color legend */}
-                    <div className="flex gap-4 text-xs font-semibold text-surface-500 bg-surface-50 px-4 py-2.5 rounded-2xl border border-surface-200/60 shadow-soft flex-wrap">
-                        <span className="flex items-center gap-1.5"><span className="w-3.5 h-3.5 rounded-lg bg-emerald-50 border border-emerald-250 text-emerald-600 flex items-center justify-center font-black">✓</span> Available</span>
-                        <span className="flex items-center gap-1.5"><span className="w-3.5 h-3.5 rounded-lg bg-blue-50 border border-blue-200" /> Booked</span>
-                        <span className="flex items-center gap-1.5"><span className="w-3.5 h-3.5 rounded-lg bg-red-50 border border-red-200" /> Blocked</span>
-                        <span className="flex items-center gap-1.5"><span className="w-3.5 h-3.5 rounded-lg bg-surface-150 border border-surface-300" /> Completed</span>
+                    <div className="flex gap-3 text-xs font-black text-slate-700 bg-slate-100/80 px-4 py-2 rounded-2xl border border-slate-200 shadow-soft flex-wrap">
+                        <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-full bg-emerald-500 border border-emerald-600" /> Available</span>
+                        <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-full bg-blue-600 border border-blue-700" /> Booked</span>
+                        <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-full bg-rose-500 border border-rose-600" /> Blocked</span>
                     </div>
                 </div>
 
                 {/* Advanced Grid */}
-                <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4">
                     {isSlotsLoading ? (
                         Array.from({ length: 12 }).map((_, i) => (
                             <div key={i} className="bg-surface-50 border border-surface-200 rounded-3xl p-4 h-36 flex flex-col justify-between skeleton-pulse">
@@ -689,43 +766,79 @@ export default function SlotManagement() {
                             </div>
                         ))
                     ) : slots.length === 0 ? (
-                        <div className="col-span-full py-8">
+                        <div className="col-span-full py-12">
                             <EmptyState
-                                title="No Slots Found"
-                                description="No active booking slots are generated for this date. Check if active sports are configured."
+                                title="No Active Slots Configured"
+                                description="No active booking slots were found for this date. Ensure active sports are configured in Sports Setup."
                             />
                         </div>
                     ) : filteredSlots.length === 0 ? (
-                        <div className="col-span-full py-8 text-center text-surface-400 font-semibold text-sm border border-dashed border-surface-200 rounded-3xl">
-                            No slots match the selected filters.
+                        <div className="col-span-full py-12 text-center text-slate-500 font-bold text-sm border-2 border-dashed border-slate-200 rounded-3xl bg-slate-50">
+                            🔍 No slots match your selected filters (Sport / Court / Status).
                         </div>
                     ) : (
                         filteredSlots.map((slot) => {
                             const styles = getStatusStyles(slot)
+                            const isBooked = styles.status === 'BOOKED'
+                            const isBlocked = styles.status === 'BLOCKED'
+                            const isCompleted = styles.status === 'COMPLETED'
+                            const isPeak = slot.isPeakHour
+
+                            let cardBg = 'bg-emerald-50/40 border-emerald-200 hover:border-emerald-500 hover:shadow-lg hover:shadow-emerald-500/10'
+                            let badgeBg = 'bg-emerald-500 text-slate-950 font-black'
+                            let badgeText = `₹${slot.isPeakHour ? slot.peakPrice : slot.regularPrice}`
+
+                            if (isBooked) {
+                                cardBg = 'bg-blue-50/80 border-blue-300 shadow-sm'
+                                badgeBg = 'bg-blue-600 text-white font-black'
+                                badgeText = '🔒 RESERVED'
+                            } else if (isBlocked) {
+                                cardBg = 'bg-rose-50/70 border-rose-200'
+                                badgeBg = 'bg-rose-600 text-white font-black'
+                                badgeText = '⛔ BLOCKED'
+                            } else if (isCompleted) {
+                                cardBg = 'bg-slate-100 border-slate-200 opacity-60'
+                                badgeBg = 'bg-slate-400 text-white font-bold'
+                                badgeText = '🏁 PAST'
+                            }
 
                             return (
                                 <div
                                     key={slot._id}
                                     onClick={() => handleSelectSlot(slot)}
-                                    className={`group p-4 border rounded-3xl cursor-pointer text-center transition-all duration-300 flex flex-col justify-between h-36 ${styles.bgStyle}`}
+                                    className={`group p-4 border-2 rounded-2xl cursor-pointer transition-all duration-200 flex flex-col justify-between h-40 ${cardBg}`}
                                 >
-                                    <div className="flex justify-between items-center mb-1">
-                                        <HiOutlineClock className={`w-4 h-4 ${styles.status === 'BOOKED' ? 'text-blue-500' : styles.status === 'BLOCKED' ? 'text-red-400' : styles.status === 'COMPLETED' ? 'text-surface-400' : 'text-emerald-500'}`} />
-                                        <span className="text-xs font-black text-surface-800">{formatTo12Hour(slot.startTime)}</span>
-                                    </div>
-                                    <div className="mt-2 text-left">
-                                        <p className="text-[10px] text-surface-400 font-extrabold uppercase tracking-wider">
-                                            {styles.status === 'BOOKED' ? 'Reserved' : styles.status === 'BLOCKED' ? 'Blocked Reason' : styles.status === 'COMPLETED' ? 'Archive' : 'Rate Status'}
-                                        </p>
-                                        <p className={`text-sm font-extrabold truncate ${styles.textColor}`}>{styles.statusText}</p>
-                                    </div>
-                                    <div className="flex justify-between items-center mt-2 border-t border-surface-100/30 pt-2">
-                                        <span className="text-[10px] text-surface-450 font-bold">{slot.courtName}</span>
-                                        {styles.status === 'AVAILABLE' && (
-                                            <div className="text-[10px] text-emerald-600 font-bold opacity-0 group-hover:opacity-100 transition-opacity">
-                                                Configure →
-                                            </div>
+                                    {/* Slot Header: Time & Peak Badge */}
+                                    <div className="flex items-center justify-between border-b border-slate-200/60 pb-2">
+                                        <div className="flex items-center gap-1.5">
+                                            <HiOutlineClock className={`w-4 h-4 ${isBooked ? 'text-blue-600' : isBlocked ? 'text-rose-500' : 'text-emerald-600'}`} />
+                                            <span className="text-xs font-black text-slate-900 tracking-tight">
+                                                {formatTo12Hour(slot.startTime)}
+                                            </span>
+                                        </div>
+                                        {isPeak && !isBooked && !isBlocked && (
+                                            <span className="text-[10px] bg-amber-500/20 text-amber-800 border border-amber-500/30 px-1.5 py-0.5 rounded-md font-black">
+                                                🔥 Peak
+                                            </span>
                                         )}
+                                    </div>
+
+                                    {/* Middle Section: Status / Price Card */}
+                                    <div className="my-2">
+                                        <div className="text-[10px] font-black uppercase tracking-wider text-slate-400 mb-0.5">
+                                            {isBooked ? 'Customer Reservation' : isBlocked ? 'Status' : isPeak ? 'Peak Hour Rate' : 'Regular Rate'}
+                                        </div>
+                                        <div className={`text-base font-black truncate ${isBooked ? 'text-blue-900' : isBlocked ? 'text-rose-700' : 'text-emerald-950'}`}>
+                                            {isBooked ? (styles.statusText || 'Booked') : `₹${slot.isPeakHour ? slot.peakPrice : slot.regularPrice} / hr`}
+                                        </div>
+                                    </div>
+
+                                    {/* Footer: Court Name & Action */}
+                                    <div className="flex items-center justify-between border-t border-slate-200/60 pt-2 text-[11px]">
+                                        <span className="font-extrabold text-slate-600">{slot.courtName || 'Court 1'}</span>
+                                        <span className="text-[10px] font-black text-emerald-600 group-hover:underline">
+                                            {isBooked ? 'View Details' : 'Manage →'}
+                                        </span>
                                     </div>
                                 </div>
                             )
@@ -910,7 +1023,7 @@ export default function SlotManagement() {
                                 <div>
                                     <h5 className="font-black text-sm text-emerald-950 leading-tight">{newSlot.slotName || 'Custom Slot'}</h5>
                                     <span className="text-[10px] text-emerald-700 font-extrabold">
-                                        {branchSports.find(s => (s.sportId?._id || s.sportId || s._id) === newSlot.sportId)?.name || 'Sport'} • {newSlot.courtName || 'Court'}
+                                        {branchSports.find(s => (s.sportId?.id || s.sportId?._id || s.sportId || s.id || s._id) === newSlot.sportId)?.name || 'Cricket'} • {newSlot.courtName || 'Court 1'}
                                     </span>
                                 </div>
                             </div>
@@ -989,10 +1102,14 @@ export default function SlotManagement() {
                                 label="Sport *"
                                 value={newSlot.sportId}
                                 onChange={(e) => setNewSlot({ ...newSlot, sportId: e.target.value })}
-                                options={[
-                                    { value: 'cricket', label: '🏏 Cricket' },
-                                    { value: 'football', label: '⚽ Football' }
-                                ]}
+                                options={branchSports.length > 0 ? branchSports.map(bs => {
+                                    const sId = typeof bs.sportId === 'object' ? (bs.sportId?.id || bs.sportId?._id) : (bs.sportId || bs.id || bs._id);
+                                    const sName = typeof bs.sportId === 'object' ? bs.sportId?.name : (bs.name || 'Cricket');
+                                    return {
+                                        value: sId,
+                                        label: `🏏 ${sName}`
+                                    };
+                                }) : [{ value: 'sp_master_02', label: '🏏 Cricket' }]}
                             />
                             <Select
                                 label="Apply to Field/Court *"

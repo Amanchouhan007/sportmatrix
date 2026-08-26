@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import DataTable from '../../components/ui/DataTable'
 import Button from '../../components/ui/Button'
 import Badge from '../../components/ui/Badge'
@@ -6,16 +6,35 @@ import Card from '../../components/ui/Card'
 import Modal from '../../components/ui/Modal'
 import { useToast } from '../../components/ui/Toast'
 import { HiUserGroup, HiPhone, HiMail, HiCheckCircle, HiXCircle, HiEye, HiCurrencyRupee } from 'react-icons/hi'
-import { MASTER_TEAMS } from '../../services/tournamentStore'
+import api from '../../services/api'
 
 export default function TournamentRegistrationsPage() {
     const { addToast } = useToast()
-    const [teams, setTeams] = useState(MASTER_TEAMS)
+    const [teams, setTeams] = useState([])
     const [viewRosterModal, setViewRosterModal] = useState({ open: false, team: null })
 
-    const handleUpdateStatus = (teamId, newStatus) => {
-        setTeams(teams.map(t => t.id === teamId ? { ...t, status: newStatus } : t))
-        addToast({ title: 'Status Updated', message: `Team status changed to ${newStatus}.`, type: 'success' })
+    useEffect(() => {
+        const fetchTeams = async () => {
+            try {
+                const res = await api.get('/tournaments/teams')
+                const list = res.data || (Array.isArray(res) ? res : [])
+                setTeams(Array.isArray(list) ? list : [])
+            } catch (err) {
+                console.warn('Error fetching teams:', err)
+                setTeams([])
+            }
+        }
+        fetchTeams()
+    }, [])
+
+    const handleUpdateStatus = async (teamId, newStatus) => {
+        try {
+            await api.put(`/tournaments/teams/${teamId}/status`, { status: newStatus.toUpperCase() });
+            setTeams(teams.map(t => t.id === teamId ? { ...t, status: newStatus } : t))
+            addToast({ title: 'Status Updated', message: `Team status changed to ${newStatus}.`, type: 'success' })
+        } catch (err) {
+            addToast({ title: 'Update Failed', message: err.message || 'Could not update team status.', type: 'error' })
+        }
     }
 
     const columns = [

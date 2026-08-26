@@ -28,8 +28,11 @@ export default function CustomerTournaments() {
         }
     }
 
-    const activeTournaments = tournaments.filter(t => ['Approved', 'Active'].includes(t.status))
-    const pastTournaments = tournaments.filter(t => ['Completed', 'Cancelled'].includes(t.status))
+    const ACTIVE_STATUSES = ['approved', 'active', 'running', 'registration_open', 'upcoming']
+    const PAST_STATUSES = ['completed', 'cancelled', 'rejected', 'suspended']
+
+    const activeTournaments = tournaments.filter(t => ACTIVE_STATUSES.includes((t.status || '').toLowerCase()))
+    const pastTournaments = tournaments.filter(t => PAST_STATUSES.includes((t.status || '').toLowerCase()))
 
     return (
         <div className="space-y-8">

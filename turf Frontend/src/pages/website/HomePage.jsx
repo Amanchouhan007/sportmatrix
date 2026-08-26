@@ -91,7 +91,7 @@ export default function HomePage() {
             const rawBranches = res?.data?.branches || res?.branches || []
             if (Array.isArray(rawBranches) && rawBranches.length > 0) {
                 const mapped = rawBranches.map((b, idx) => {
-                    let parsedSports = ['Cricket', 'Football'];
+                    let parsedSports = ['Cricket'];
                     try {
                         if (Array.isArray(b.sports) && b.sports.length > 0) {
                             parsedSports = b.sports.map(s => typeof s === 'string' ? s : (s?.name || 'Cricket'));
@@ -691,7 +691,7 @@ const resolveOriginCoordinates = (locString, userGPS, explicitCoords) => {
                             { id: 'fallback-2', title: 'Indore Turf Cricket Cup', sport: 'Cricket', prize: '₹75,000', entryFee: '3000', maxTeams: 12, registrations: 6, status: 'Approved' }
                         ]).slice(0, 4).map((t, idx) => {
                             const spotsLeft = (t.maxTeams || 16) - (t.registrations || 0)
-                            const isOpen = t.status === 'Approved'
+                            const isOpen = ['APPROVED', 'ACTIVE', 'REGISTRATION_OPEN', 'UPCOMING'].includes((t.status || '').toUpperCase()) || t.status === 'Approved'
                             const statusColor = spotsLeft <= 3 ? 'border-amber-200 bg-amber-50 text-amber-700' : 'border-green-200 bg-green-50 text-[#16A34A]'
                             const statusText = !isOpen ? t.status : (spotsLeft <= 3 ? 'Few Slots Left' : 'Registration Open')
                             return (

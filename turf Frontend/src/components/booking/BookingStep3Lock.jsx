@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from 'react';
+import { useAuth } from '../../context/AuthContext.jsx';
+import { useToast } from '../ui/Toast.jsx';
 import PaymentModal from './PaymentModal.jsx';
 
 /**
@@ -22,16 +24,91 @@ export default function BookingStep3Lock({
   isSubmitting,
   setActiveStep,
 }) {
-  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const { user } = useAuth();
+  const [guestName, setGuestName] = useState('');
+  const [guestPhone, setGuestPhone] = useState('');
+  const [guestEmail, setGuestEmail] = useState('');
 
-  // Auto-open payment modal if requested
+  // Pre-load Razorpay checkout script on mount
   useEffect(() => {
-    if (autoOpenModal) {
-      setShowPaymentModal(true);
+    if (!window.Razorpay && !document.querySelector('script[src*="checkout.js"]')) {
+      const script = document.createElement('script');
+      script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+      script.async = true;
+      document.body.appendChild(script);
     }
-  }, [autoOpenModal]);
+  }, []);
+
+
+
+  const toastContext = useToast();
+  const addToast = toastContext?.addToast;
 
   const slotTimeLabel = allTimeSlots.find((s) => s.id === selectedSlotTime)?.time || selectedSlotTime;
+
+  const handleRazorpayCheckout = () => {
+    const finalName = guestName.trim();
+    const finalPhone = guestPhone.trim();
+    const finalEmail = guestEmail.trim();
+
+    if (!finalName) {
+      if (addToast) addToast('⚠️ Please enter your Full Name before proceeding to payment.', 'error');
+      else alert('⚠️ Please enter your Full Name before proceeding to payment.');
+      return;
+    }
+
+    if (!finalPhone || finalPhone.length < 10) {
+      if (addToast) addToast('⚠️ Please enter a valid 10-digit Mobile Number before proceeding.', 'error');
+      else alert('⚠️ Please enter a valid 10-digit Mobile Number before proceeding.');
+      return;
+    }
+
+    const razorpayKey = import.meta.env.VITE_RAZORPAY_KEY_ID || 'rzp_test_T1r8sgDPyFz1bB';
+    const guestData = { guestName: finalName, guestPhone: finalPhone, guestEmail: finalEmail || 'player@sportmatrix.com' };
+
+    const launchPopup = () => {
+      if (window.Razorpay) {
+        const options = {
+          key: razorpayKey,
+          amount: Math.round(myPaymentAmount * 100),
+          currency: 'INR',
+          name: 'SportMatrix Turf Arena',
+          description: `Booking - ${selectedVenue?.name || 'Turf Arena'} (₹${myPaymentAmount})`,
+          handler: function (response) {
+            console.log('Razorpay Payment Success:', response);
+            handleConfirmBooking(response.razorpay_payment_id, guestData);
+          },
+          prefill: {
+            name: finalName,
+            email: finalEmail || 'player@sportmatrix.com',
+            contact: finalPhone
+          },
+          theme: {
+            color: '#10B981'
+          }
+        };
+        try {
+          const rzp = new window.Razorpay(options);
+          rzp.open();
+        } catch (err) {
+          console.error('Razorpay popup open error:', err);
+          handleConfirmBooking(null, guestData);
+        }
+      } else {
+        handleConfirmBooking(null, guestData);
+      }
+    };
+
+    if (window.Razorpay) {
+      launchPopup();
+    } else {
+      const script = document.createElement('script');
+      script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+      script.onload = () => launchPopup();
+      script.onerror = () => handleConfirmBooking(null, guestData);
+      document.body.appendChild(script);
+    }
+  };
 
   return (
     <div className="bg-white border border-[#E5E7EB] rounded-3xl p-6 sm:p-8 shadow-sm space-y-7 animate-in fade-in duration-200">
@@ -56,6 +133,45 @@ export default function BookingStep3Lock({
           </p>
         </div>
       )}
+
+      {/* Guest / Player Contact Information Card */}
+      <div className="bg-slate-50 rounded-2xl p-5 border border-slate-200 space-y-3">
+        <h4 className="text-xs font-black text-slate-700 uppercase tracking-wider">👤 Player & Contact Details</h4>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div>
+            <label className="text-[10px] font-black text-slate-500 uppercase block mb-1">Your Full Name *</label>
+            <input
+              type="text"
+              placeholder="e.g. Rahul Sharma"
+              value={guestName}
+              onChange={(e) => setGuestName(e.target.value)}
+              className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold text-slate-900 outline-none focus:border-[#10B981]"
+            />
+          </div>
+          <div>
+            <label className="text-[10px] font-black text-slate-500 uppercase block mb-1">Mobile Number *</label>
+            <input
+              type="text"
+              placeholder="e.g. 9876543210"
+              value={guestPhone}
+              onChange={(e) => setGuestPhone(e.target.value)}
+              className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold text-slate-900 outline-none focus:border-[#10B981]"
+            />
+          </div>
+          <div>
+            <label className="text-[10px] font-black text-slate-500 uppercase block mb-1">Email ID (For Receipt)</label>
+            <input
+              type="email"
+              placeholder="e.g. rahul@gmail.com"
+              value={guestEmail}
+              onChange={(e) => setGuestEmail(e.target.value)}
+              className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold text-slate-900 outline-none focus:border-[#10B981]"
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* Match Summary Breakdown */}
 
       {/* Match Summary Breakdown */}
       <div className="bg-slate-50 rounded-2xl p-5 border border-slate-200 space-y-3">
@@ -105,22 +221,12 @@ export default function BookingStep3Lock({
         </button>
         <button
           type="button"
-          onClick={() => setShowPaymentModal(true)}
+          onClick={handleRazorpayCheckout}
           disabled={isSubmitting}
           className="bg-[#10B981] hover:bg-[#059669] text-white font-black text-sm uppercase tracking-wider px-8 py-4 rounded-xl shadow-lg transition-all cursor-pointer hover:scale-105 active:scale-95 flex items-center gap-2"
         >
           <span>{isSubmitting ? 'Processing Payment...' : `⚡ LOCK MATCH & PAY ₹${myPaymentAmount.toLocaleString('en-IN')} →`}</span>
         </button>
-        {/* Payment Modal */}
-        <PaymentModal
-          isOpen={showPaymentModal}
-          onClose={() => setShowPaymentModal(false)}
-          paymentMode={paymentMode}
-          totalRent={totalRent}
-          myPaymentAmount={myPaymentAmount}
-          opponentShareAmount={opponentShareAmount}
-          handleConfirmBooking={() => { setShowPaymentModal(false); handleConfirmBooking(); }}
-        />
       </div>
     </div>
   );

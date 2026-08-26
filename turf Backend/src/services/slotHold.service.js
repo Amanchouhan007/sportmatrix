@@ -14,8 +14,8 @@ class SlotHoldService {
      * Creates a temporary hold on a resolved (real) slot id.
      */
     static async createHold({ slotId, branchId, slotDate, startTime, endTime, heldByUserId, durationMinutes = 5 }) {
-        // Clear out any hold on this slot that has already expired, so a new hold can proceed.
-        await prisma.slotHold.deleteMany({ where: { slotId, expiresAt: { lte: new Date() } } });
+        // Clear out any existing hold on this slot so the user can re-lock seamlessly
+        await prisma.slotHold.deleteMany({ where: { slotId } });
 
         try {
             const hold = await prisma.slotHold.create({

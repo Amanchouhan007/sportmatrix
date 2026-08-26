@@ -53,7 +53,7 @@ export default function AllTurfsPage() {
                             location: b.fullAddress || `${(b.city || 'Indore').toUpperCase()} Turf Complex`,
                             city: (b.city || 'Indore').charAt(0).toUpperCase() + (b.city || 'Indore').slice(1),
                             sport: (Array.isArray(b.sports) && b.sports[0]) ? (typeof b.sports[0] === 'string' ? b.sports[0] : (b.sports[0]?.name || 'Cricket')) : 'Cricket',
-                            sports: Array.isArray(b.sports) && b.sports.length > 0 ? b.sports.map(s => typeof s === 'string' ? s : (s?.name || 'Cricket')) : ['Cricket', 'Football'],
+                            sports: Array.isArray(b.sports) && b.sports.length > 0 ? b.sports.map(s => typeof s === 'string' ? s : (s?.name || 'Cricket')) : ['Cricket'],
                             rating: resolvedRating,
                             reviews: 120 + (idx * 25),
                             price: resolvedPrice,

@@ -20,26 +20,28 @@ export default function BillingHistory() {
     useEffect(() => {
         api.get('/billing/history')
             .then(res => {
-                if (res.data && res.data.success && Array.isArray(res.data.data)) {
-                    const mapped = res.data.data.map(b => ({
-                        id: b.id || b.paymentId || `INV-${b.id}`,
-                        customer: b.user || b.customerName || b.customer || 'Customer',
+                const list = res?.data || (Array.isArray(res) ? res : []);
+                if (Array.isArray(list)) {
+                    const mapped = list.map(b => ({
+                        id: b.id || b.paymentId || b.invoiceNumber || `INV-${b.id}`,
+                        customer: b.customerName || b.user?.fullName || b.user || b.customer || 'Customer',
                         type: b.type || 'Turf Booking',
                         amount: b.amount ? `₹${Number(b.amount).toLocaleString('en-IN')}` : '₹0',
-                        method: b.method || b.payment_mode || 'UPI',
+                        method: b.method || b.paymentMethod || b.payment_mode || 'UPI',
                         status: b.status === 'CONFIRMED' || b.status === 'COMPLETED' ? 'Completed' : 'Pending',
-                        date: b.date ? b.date.split('T')[0] : (b.created_at ? b.created_at.split('T')[0] : 'Today')
-                    }))
-                    setBillingHistory(mapped)
+                        date: b.date ? String(b.date).split('T')[0] : (b.createdAt ? String(b.createdAt).split('T')[0] : 'Today')
+                    }));
+                    setBillingHistory(mapped);
                 } else {
-                    setBillingHistory([])
+                    setBillingHistory([]);
                 }
             })
             .catch(e => {
-                console.warn('Fetch billing history note:', e.message)
-                setBillingHistory([])
-            })
-    }, [])
+                console.warn('Fetch billing history note:', e.message);
+                setBillingHistory([]);
+            });
+    }, []);
+
 
     return (
         <div className="space-y-4">

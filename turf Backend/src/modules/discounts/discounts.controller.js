@@ -260,20 +260,35 @@ const validatePromoCode = async (req, res) => {
         const code = String(promoCode).trim().toUpperCase();
         const grossAmount = Number(amount) || 0;
 
-        // Real Database Check: Has this user booked any previous matches on the platform?
-        let isFirstMatch = true;
+        // Real Database Check: Has this user/phone booked any previous matches on the platform?
+        const userPhone = req.body.phone || req.body.mobileNumber || req.body.guestPhone || req.user?.mobile || req.user?.phone;
+        const userId = req.user?.id && !req.user.id.startsWith('usr_guest_') ? req.user.id : null;
+
         let previousCount = 0;
-        if (req.user && req.user.id) {
-            previousCount = await prisma.match.count({
-                where: {
-                    captainAId: req.user.id,
-                    matchStatus: { in: ['CONFIRMED', 'COMPLETED', 'SLOT_HELD'] }
-                }
-            });
-            if (previousCount > 0) {
-                isFirstMatch = false;
-            }
+        const bookingOr = [];
+        const matchOr = [];
+        const matchPayOr = [];
+
+        if (userId) {
+            bookingOr.push({ userId });
+            matchOr.push({ captainAId: userId });
+            matchPayOr.push({ userId });
         }
+        if (userPhone) {
+            bookingOr.push({ mobileNumber: userPhone });
+            matchPayOr.push({ playerPhone: userPhone });
+        }
+
+        if (bookingOr.length > 0 || matchOr.length > 0 || matchPayOr.length > 0) {
+            const [bCount, mCount, mpCount] = await Promise.all([
+                bookingOr.length > 0 ? prisma.booking.count({ where: { OR: bookingOr, status: { in: ['COMPLETED', 'CONFIRMED', 'PENDING'] } } }) : 0,
+                matchOr.length > 0 ? prisma.match.count({ where: { OR: matchOr, matchStatus: { in: ['CONFIRMED', 'COMPLETED', 'SLOT_HELD'] } } }) : 0,
+                matchPayOr.length > 0 ? prisma.matchPayment.count({ where: { OR: matchPayOr, paymentStatus: { in: ['COMPLETED', 'PAID', 'PENDING'] } } }) : 0
+            ]);
+            previousCount = bCount + mCount + mpCount;
+        }
+
+        const isFirstMatch = previousCount === 0;
 
         // 1. Check in MySQL discount_offer table
         const offer = await prisma.discountOffer.findFirst({

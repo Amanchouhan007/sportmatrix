@@ -32,14 +32,8 @@ export default function SportsManagement() {
     const [selectedBranchId, setSelectedBranchId] = useState(localStorage.getItem('selectedBranchId') || '')
 
     // Sports state
-    const DEFAULT_MASTER_SPORTS = [
-        { _id: 'sp-1', id: 'sp-1', name: 'Cricket', icon: '🏏' }
-    ]
-    const DEFAULT_SPORTS = [
-        { _id: 'br-sp-1', name: 'Cricket', icon: '🏏', regularPrice: 1000, peakPrice: 1500, status: 'ACTIVE', totalCourts: 2, totalBookings: 45 }
-    ]
-    const [masterSports, setMasterSports] = useState(DEFAULT_MASTER_SPORTS)
-    const [sports, setSports] = useState(DEFAULT_SPORTS)
+    const [masterSports, setMasterSports] = useState([])
+    const [sports, setSports] = useState([])
 
     // Loaders
     const [isPageLoading, setIsPageLoading] = useState(true)
@@ -75,11 +69,7 @@ export default function SportsManagement() {
     const [mediaList, setMediaList] = useState(() => {
         try {
             const saved = localStorage.getItem('turf_media_custom')
-            return saved ? JSON.parse(saved) : [
-                { id: 'm1', type: 'image', url: '/images/turf1.png', title: 'Main Arena Floodlight View', isCover: true },
-                { id: 'm2', type: 'image', url: '/images/turf2.png', title: 'Synthetic Grass Pitch', isCover: false },
-                { id: 'm3', type: 'video', url: 'https://www.w3schools.com/html/mov_bbb.mp4', title: 'Full Arena Night Drone View', poster: '/images/turf3.png', isCover: false }
-            ]
+            return saved ? JSON.parse(saved) : []
         } catch (e) {
             return []
         }
@@ -162,17 +152,15 @@ export default function SportsManagement() {
         addToast({ message: 'Main cover photo updated for turf page!', type: 'success' })
     }
 
-    const persistMedia = (list) => {
+    const persistMedia = async (list) => {
         try {
             localStorage.setItem('turf_media_custom', JSON.stringify(list))
             if (selectedBranchId) {
                 localStorage.setItem(`turf_media_${selectedBranchId}`, JSON.stringify(list))
-            }
-            for (let i = 1; i <= 20; i++) {
-                localStorage.setItem(`turf_media_${i}`, JSON.stringify(list))
+                await updateBranch(selectedBranchId, { images: list }).catch(() => {})
             }
         } catch (e) {
-            console.error('Error saving media:', e)
+            console.error('Error saving media to DB:', e)
         }
     }
 
@@ -180,8 +168,8 @@ export default function SportsManagement() {
         const nextState = !isUmpireEnabled
         setIsUmpireEnabled(nextState)
         localStorage.setItem('turf_umpire_enabled', String(nextState))
-        for (let i = 1; i <= 20; i++) {
-            localStorage.setItem(`turf_umpire_enabled_${i}`, String(nextState))
+        if (selectedBranchId) {
+            localStorage.setItem(`turf_umpire_enabled_${selectedBranchId}`, String(nextState))
         }
         addToast({
             title: nextState ? 'Umpire Service Activated ✓' : 'Umpire Service Disabled 🚫',
@@ -191,34 +179,40 @@ export default function SportsManagement() {
             type: nextState ? 'success' : 'info'
         })
     }
+
     const [currentSport, setCurrentSport] = useState({
         _id: '',
         sportId: '',
         name: '',
-        icon: '⚽',
-        price: '',
-        peakPrice: '',
+        icon: '🏏',
+        price: '1000',
+        peakPrice: '1500',
         status: 'ACTIVE',
         courts: 1,
         openingTime: '06:00',
-        closingTime: '22:00',
+        closingTime: '23:00',
         slotDuration: 60,
         originalStatus: 'ACTIVE'
     })
 
-    // Reset current sport form state
+    // Reset current sport form state with branch default pricing & un-added sports
     const resetForm = () => {
+        const branchObj = branches.find(b => (b.id || b._id) === selectedBranchId)
+        const baseP = Number(branchObj?.minPriceHourly || branchObj?.pricePerHour) || 1000
+        const unaddedSports = masterSports.filter(m => !sports.some(s => (s.sportId?.id || s.sportId?._id || s.sportId) === (m.id || m._id)))
+        const defaultSelected = unaddedSports.find(s => (s.name || '').toLowerCase().includes('cricket')) || unaddedSports[0] || masterSports[0]
+
         setCurrentSport({
             _id: '',
-            sportId: '',
-            name: '',
-            icon: '⚽',
-            price: '',
-            peakPrice: '',
+            sportId: defaultSelected ? (defaultSelected.id || defaultSelected._id) : '',
+            name: defaultSelected ? defaultSelected.name : '',
+            icon: defaultSelected ? defaultSelected.icon : '🏏',
+            price: String(baseP),
+            peakPrice: String(Math.round(baseP * 1.5)),
             status: 'ACTIVE',
             courts: 1,
-            openingTime: '06:00',
-            closingTime: '22:00',
+            openingTime: branchObj?.openingTime ? String(branchObj.openingTime).substring(0, 5) : '06:00',
+            closingTime: branchObj?.closingTime ? String(branchObj.closingTime).substring(0, 5) : '23:00',
             slotDuration: 60,
             originalStatus: 'ACTIVE'
         })
@@ -233,7 +227,8 @@ export default function SportsManagement() {
                     // Fetch master sports (always, regardless of branch count)
                     const masterRes = await getMasterSports()
                     if (masterRes && masterRes.success && Array.isArray(masterRes.data) && masterRes.data.length > 0) {
-                        setMasterSports(masterRes.data)
+                        const cricketList = masterRes.data.filter(s => (s.name || '').toLowerCase().includes('cricket'))
+                        setMasterSports(cricketList.length > 0 ? cricketList : [{ id: 'sp_master_02', name: 'Cricket', icon: '🏏' }])
                     }
 
                     // Fetch branches and active branch sports
@@ -515,6 +510,8 @@ export default function SportsManagement() {
             openingTime: sport.openingTime || '06:00',
             closingTime: sport.closingTime || '22:00',
             slotDuration: sport.slotDuration || 60,
+            corporateFullDayPrice: sport.corporateFullDayPrice ? String(sport.corporateFullDayPrice) : '',
+            weeklyDiscountPercent: sport.weeklyDiscountPercent ? String(sport.weeklyDiscountPercent) : '',
             originalStatus: sport.status
         })
         setEditMode(true)
@@ -771,6 +768,12 @@ export default function SportsManagement() {
                                         <span className="text-surface-400 font-semibold uppercase block tracking-wider text-right">Peak Hour Rate</span>
                                         <span className="text-sm font-extrabold text-amber-600 block text-right">₹{sport.peakPrice}/hr</span>
                                     </div>
+                                    {sport.corporateFullDayPrice && (
+                                        <div className="col-span-2 pt-1.5 border-t border-slate-100 flex items-center justify-between text-[11px]">
+                                            <span className="text-emerald-700 font-bold">🏢 Corp Full-Day: ₹{sport.corporateFullDayPrice}</span>
+                                            <span className="text-purple-700 font-bold">⚡ Weekly Disc: {sport.weeklyDiscountPercent || 15}%</span>
+                                        </div>
+                                    )}
                                 </div>
 
                                 {/* Card Actions */}
@@ -827,10 +830,9 @@ export default function SportsManagement() {
                                     icon: selected ? selected.icon : ''
                                 }))
                             }}
-                            options={masterSports.map(s => ({
-                                value: s.id || s._id,
-                                label: `${s.icon} ${s.name}`
-                            }))}
+                            options={[
+                                { value: 'sp_master_02', label: '🏏 Cricket' }
+                            ]}
                         />
                     </div>
 
@@ -852,17 +854,42 @@ export default function SportsManagement() {
                     </div>
 
                     <div className="grid grid-cols-2 gap-4">
-                        <Input 
-                            label="Opening Time" 
-                            type="time" 
+                        <Select 
+                            label="Opening Time (AM / PM)" 
                             value={currentSport.openingTime} 
-                            onChange={(e) => setCurrentSport({ ...currentSport, openingTime: e.target.value })} 
+                            onChange={(e) => setCurrentSport({ ...currentSport, openingTime: e.target.value })}
+                            options={[
+                                { value: '05:00', label: '05:00 AM (Early Morning)' },
+                                { value: '06:00', label: '06:00 AM (Morning)' },
+                                { value: '07:00', label: '07:00 AM (Morning)' },
+                                { value: '08:00', label: '08:00 AM (Morning)' },
+                                { value: '09:00', label: '09:00 AM (Morning)' },
+                                { value: '10:00', label: '10:00 AM (Morning)' },
+                                { value: '11:00', label: '11:00 AM (Morning)' },
+                                { value: '12:00', label: '12:00 PM (Noon)' },
+                                { value: '13:00', label: '01:00 PM (Afternoon)' },
+                                { value: '14:00', label: '02:00 PM (Afternoon)' },
+                                { value: '15:00', label: '03:00 PM (Afternoon)' },
+                                { value: '16:00', label: '04:00 PM (Evening)' },
+                                { value: '17:00', label: '05:00 PM (Evening)' },
+                                { value: '18:00', label: '06:00 PM (Evening)' }
+                            ]}
                         />
-                        <Input 
-                            label="Closing Time" 
-                            type="time" 
+                        <Select 
+                            label="Closing Time (AM / PM)" 
                             value={currentSport.closingTime} 
-                            onChange={(e) => setCurrentSport({ ...currentSport, closingTime: e.target.value })} 
+                            onChange={(e) => setCurrentSport({ ...currentSport, closingTime: e.target.value })}
+                            options={[
+                                { value: '18:00', label: '06:00 PM (Evening)' },
+                                { value: '19:00', label: '07:00 PM (Evening)' },
+                                { value: '20:00', label: '08:00 PM (Night)' },
+                                { value: '21:00', label: '09:00 PM (Night)' },
+                                { value: '22:00', label: '10:00 PM (Night)' },
+                                { value: '23:00', label: '11:00 PM (Night)' },
+                                { value: '24:00', label: '12:00 AM (Midnight)' },
+                                { value: '01:00', label: '01:00 AM (Late Night)' },
+                                { value: '02:00', label: '02:00 AM (Late Night)' }
+                            ]}
                         />
                     </div>
 
@@ -895,6 +922,29 @@ export default function SportsManagement() {
                                 { value: 'INACTIVE', label: 'Inactive' }
                             ]}
                         />
+                    </div>
+
+                    {/* Corporate & Bulk Event Pricing Section */}
+                    <div className="bg-slate-50 border border-slate-200 p-3.5 rounded-2xl space-y-3">
+                        <div className="text-xs font-black text-slate-900 flex items-center gap-1.5">
+                            🏢 Corporate & Bulk Event Custom Rates
+                        </div>
+                        <div className="grid grid-cols-2 gap-3">
+                            <Input 
+                                label="Corporate Full-Day Package (₹)" 
+                                type="number" 
+                                placeholder="e.g. 12000" 
+                                value={currentSport.corporateFullDayPrice || ''} 
+                                onChange={(e) => setCurrentSport({ ...currentSport, corporateFullDayPrice: e.target.value })} 
+                            />
+                            <Input 
+                                label="Weekly Match Discount (%)" 
+                                type="number" 
+                                placeholder="e.g. 15" 
+                                value={currentSport.weeklyDiscountPercent || ''} 
+                                onChange={(e) => setCurrentSport({ ...currentSport, weeklyDiscountPercent: e.target.value })} 
+                            />
+                        </div>
                     </div>
 
                     <div className="flex gap-3 justify-end pt-4 border-t border-surface-100">

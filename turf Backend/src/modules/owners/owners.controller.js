@@ -38,6 +38,8 @@ const saveBase64Image = (base64String, prefix = 'owner_profile') => {
 
 const formatOwner = (o) => {
     if (!o) return null;
+    const branchesList = Array.isArray(o.branches) ? o.branches : [];
+    const branchesCount = Array.isArray(o.branches) ? o.branches.length : (o._count?.branches ?? 0);
     return {
         id: o.id,
         _id: o.id,
@@ -60,6 +62,16 @@ const formatOwner = (o) => {
         activePlanId: o.activePlanId || '',
         totalCommissionEarned: o.totalCommissionEarned,
         totalRevenueGenerated: o.totalRevenueGenerated,
+        branches: branchesCount,
+        branchesList: branchesList.map(b => ({
+            id: b.id,
+            branchName: b.branchName,
+            branchCode: b.branchCode,
+            city: b.city,
+            area: b.area,
+            status: b.status,
+            fullAddress: b.fullAddress
+        })),
         createdBy: o.createdBy || '',
         updatedBy: o.updatedBy || '',
         createdAt: o.createdAt,
@@ -227,6 +239,19 @@ const getOwners = async (req, res) => {
             prisma.owner.count({ where }),
             prisma.owner.findMany({
                 where,
+                include: {
+                    branches: {
+                        select: {
+                            id: true,
+                            branchName: true,
+                            branchCode: true,
+                            city: true,
+                            area: true,
+                            status: true,
+                            fullAddress: true
+                        }
+                    }
+                },
                 orderBy: { createdAt: 'desc' },
                 skip: (pageNum - 1) * limitNum,
                 take: limitNum
@@ -256,7 +281,12 @@ const getOwners = async (req, res) => {
  */
 const getOwnerById = async (req, res) => {
     try {
-        const owner = await prisma.owner.findUnique({ where: { id: req.params.id } });
+        const owner = await prisma.owner.findUnique({
+            where: { id: req.params.id },
+            include: {
+                branches: true
+            }
+        });
         if (!owner) {
             return res.status(404).json({ success: false, message: 'Owner not found' });
         }

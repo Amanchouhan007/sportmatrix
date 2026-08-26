@@ -58,25 +58,33 @@ export default function BookingManagement() {
             const [summaryRes, historyRes] = await Promise.all([getBookingSummary(), getBookingHistory()])
             setSummary(summaryRes.data || { todayCount: 0, weekCount: 0, monthCount: 0, totalRevenue: 0 })
 
-            const formatted = (historyRes.data || []).map(r => {
-                const startTime = formatTime(r.start_time)
-                const endTime = formatTime(r.end_time)
-                const status = STATUS_LABELS[r.booking_status] || r.booking_status
+            const formatted = (historyRes?.data || (Array.isArray(historyRes) ? historyRes : [])).map(r => {
+                const startTime = formatTime(r.start_time || r.startTime || r.timeSlot || '18:00')
+                const endTime = formatTime(r.end_time || r.endTime || '19:00')
+                const rawSt = r.booking_status || r.status || 'CONFIRMED'
+                const status = STATUS_LABELS[rawSt] || rawSt
+                const gross = Number(r.gross_amount || r.amount || r.totalPrice || r.finalPrice || 0)
+                const comm = Number(r.commission_amount || r.commission || Math.round(gross * 0.1))
+                const net = Number(r.owner_amount || r.ownerAmount || (gross - comm))
+
                 return {
-                    id: r.booking_id,
-                    customer: r.customer_name || 'Guest',
-                    phone: r.mobile_number || '',
-                    sport: r.sport_name || 'Turf Match',
-                    court: r.court_name || '',
-                    date: r.slot_date ? new Date(r.slot_date).toISOString().split('T')[0] : '',
+                    id: r.bookingCode || r.booking_id || r.id || `BK-${r.id}`,
+                    customer: r.customer_name || r.customerName || r.user?.name || 'Guest',
+                    phone: r.mobile_number || r.mobileNumber || r.customerPhone || '',
+                    sport: r.sport_name || r.sportName || r.slot?.sport?.name || 'Turf Match',
+                    court: r.court_name || r.courtName || r.slot?.courtName || 'Court 1',
+                    date: r.slot_date ? new Date(r.slot_date).toISOString().split('T')[0] : (r.slotDate ? new Date(r.slotDate).toISOString().split('T')[0] : 'Today'),
                     time: startTime,
                     slotRange: startTime && endTime ? `${startTime}–${endTime}` : startTime,
-                    amount: `₹${Number(r.amount || 0).toLocaleString('en-IN')}`,
+                    amount: `₹${gross.toLocaleString('en-IN')}`,
+                    commission: `₹${comm.toLocaleString('en-IN')}`,
+                    netShare: `₹${net.toLocaleString('en-IN')}`,
                     status,
-                    rawStatus: r.booking_status,
+                    rawStatus: rawSt,
                     notes: r.notes || ''
                 }
             })
+
             setBookings(formatted)
         } catch (err) {
             addToast({ title: 'Load Failed', message: err.message || 'Failed to load bookings.', type: 'error' })
@@ -141,7 +149,9 @@ export default function BookingManagement() {
         { key: 'sport', label: 'Sport' },
         { key: 'date', label: 'Date' },
         { key: 'time', label: 'Time' },
-        { key: 'amount', label: 'Amount' },
+        { key: 'amount', label: 'Gross Total' },
+        { key: 'commission', label: 'Comm (10%)' },
+        { key: 'netShare', label: 'Owner Net Share' },
         {
             key: 'status',
             label: 'Status',
@@ -190,9 +200,9 @@ export default function BookingManagement() {
                 <Card className="p-4 border border-surface-200/80 shadow-soft bg-white hover:border-emerald-200 transition-colors">
                     <div className="flex items-center justify-between">
                         <div>
-                            <p className="text-[11px] font-bold text-surface-400 uppercase tracking-wider">This Week</p>
-                            <p className="text-2xl font-extrabold text-emerald-600 mt-0.5">{summary.weekCount}</p>
-                            <p className="text-[10px] text-surface-500 font-semibold mt-0.5">Bookings</p>
+                            <p className="text-[11px] font-bold text-surface-400 uppercase tracking-wider">Gross Revenue</p>
+                            <p className="text-2xl font-extrabold text-slate-900 mt-0.5">₹{Number(summary.grossRevenue || summary.totalRevenue || 0).toLocaleString('en-IN')}</p>
+                            <p className="text-[10px] text-slate-500 font-semibold mt-0.5">Customer Payments</p>
                         </div>
                         <div className="w-10 h-10 rounded-2xl bg-emerald-50 flex items-center justify-center text-emerald-600">
                             <HiTicket className="w-5 h-5" />
@@ -203,11 +213,11 @@ export default function BookingManagement() {
                 <Card className="p-4 border border-surface-200/80 shadow-soft bg-white hover:border-emerald-200 transition-colors">
                     <div className="flex items-center justify-between">
                         <div>
-                            <p className="text-[11px] font-bold text-surface-400 uppercase tracking-wider">This Month</p>
-                            <p className="text-2xl font-extrabold text-surface-900 mt-0.5">{summary.monthCount}</p>
-                            <p className="text-[10px] text-surface-500 font-semibold mt-0.5">Bookings</p>
+                            <p className="text-[11px] font-bold text-surface-400 uppercase tracking-wider">Platform Comm (10%)</p>
+                            <p className="text-2xl font-extrabold text-rose-600 mt-0.5">₹{Number(summary.totalCommission || Math.round((summary.grossRevenue || 0) * 0.1)).toLocaleString('en-IN')}</p>
+                            <p className="text-[10px] text-rose-500 font-semibold mt-0.5">Super Admin Cut</p>
                         </div>
-                        <div className="w-10 h-10 rounded-2xl bg-indigo-50 flex items-center justify-center text-indigo-600">
+                        <div className="w-10 h-10 rounded-2xl bg-rose-50 flex items-center justify-center text-rose-600">
                             <HiClock className="w-5 h-5" />
                         </div>
                     </div>
@@ -216,9 +226,9 @@ export default function BookingManagement() {
                 <Card className="p-4 border border-surface-200/80 shadow-soft bg-white hover:border-emerald-200 transition-colors">
                     <div className="flex items-center justify-between">
                         <div>
-                            <p className="text-[11px] font-bold text-surface-400 uppercase tracking-wider">Revenue</p>
-                            <p className="text-2xl font-extrabold text-surface-900 mt-0.5">₹{Number(summary.totalRevenue).toLocaleString('en-IN')}</p>
-                            <p className="text-[10px] text-emerald-600 font-bold mt-0.5">Collected</p>
+                            <p className="text-[11px] font-bold text-surface-400 uppercase tracking-wider">Owner Net Share</p>
+                            <p className="text-2xl font-extrabold text-emerald-600 mt-0.5">₹{Number(summary.ownerNetRevenue || summary.totalRevenue || 0).toLocaleString('en-IN')}</p>
+                            <p className="text-[10px] text-emerald-600 font-bold mt-0.5">Turf Payout</p>
                         </div>
                         <div className="w-10 h-10 rounded-2xl bg-amber-50 flex items-center justify-center text-amber-500">
                             <HiCurrencyRupee className="w-5 h-5" />

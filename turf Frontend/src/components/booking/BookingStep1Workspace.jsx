@@ -174,9 +174,10 @@ export default function BookingStep1Workspace({
                             const rangePosition = index - selectedIndex + 1
 
                             const isBooked = slot.status === 'booked'
+                            const isPast = slot.status === 'past'
                             const isMaintenance = slot.status === 'maintenance'
                             const isStaffUnavail = slot.status === 'staff_unavailable'
-                            const isDisabled = isBooked || isMaintenance || isStaffUnavail
+                            const isDisabled = isBooked || isPast || isMaintenance || isStaffUnavail
 
                             // Check if starting at this slot can fulfill durationHours
                             const canFulfillConsecutive = Array.from({ length: durationHours }).every((_, i) => {
@@ -197,22 +198,26 @@ export default function BookingStep1Workspace({
                                     }}
                                     className={`py-3.5 px-3 rounded-[22px] text-center flex flex-col items-center justify-center gap-1 min-h-[76px] transition-all duration-200 ${isSlotInSelectedRange
                                             ? 'bg-[#10B981] text-white border-2 border-[#059669] shadow-lg shadow-emerald-500/20 scale-[1.02] cursor-pointer'
-                                            : isBooked
-                                                ? 'bg-slate-100 text-slate-500 border border-slate-200 opacity-90 cursor-not-allowed'
-                                                : isMaintenance
-                                                    ? 'bg-[#FEFCE8] text-[#854D0E] border-2 border-[#FDE047] cursor-not-allowed'
-                                                    : isStaffUnavail
-                                                        ? 'bg-[#F1F5F9] text-slate-600 border-2 border-slate-200 cursor-not-allowed'
-                                                        : !canFulfillConsecutive && durationHours > 1
-                                                            ? 'bg-slate-50 border border-slate-200 text-slate-400 opacity-60 cursor-not-allowed'
-                                                            : 'bg-[#ECFDF5] border-2 border-[#10B981] hover:bg-emerald-100/60 text-slate-900 cursor-pointer shadow-xs'
+                                            : isPast
+                                                ? 'bg-slate-50 text-slate-300 border border-slate-100 opacity-60 cursor-not-allowed'
+                                                : isBooked
+                                                    ? 'bg-slate-100 text-slate-500 border border-slate-200 opacity-90 cursor-not-allowed'
+                                                    : isMaintenance
+                                                        ? 'bg-[#FEFCE8] text-[#854D0E] border-2 border-[#FDE047] cursor-not-allowed'
+                                                        : isStaffUnavail
+                                                            ? 'bg-[#F1F5F9] text-slate-600 border-2 border-slate-200 cursor-not-allowed'
+                                                            : !canFulfillConsecutive && durationHours > 1
+                                                                ? 'bg-slate-50 border border-slate-200 text-slate-400 opacity-60 cursor-not-allowed'
+                                                                : 'bg-[#ECFDF5] border-2 border-[#10B981] hover:bg-emerald-100/60 text-slate-900 cursor-pointer shadow-xs'
                                         }`}
                                 >
-                                    <span className={`text-sm sm:text-base font-black tracking-tight ${isSlotInSelectedRange ? 'text-white' : isBooked ? 'text-slate-500 line-through' : isMaintenance ? 'text-[#854D0E]' : isStaffUnavail ? 'text-slate-700' : 'text-[#111827]'}`}>
+                                    <span className={`text-sm sm:text-base font-black tracking-tight ${isSlotInSelectedRange ? 'text-white' : isPast ? 'text-slate-300' : isBooked ? 'text-slate-500 line-through' : isMaintenance ? 'text-[#854D0E]' : isStaffUnavail ? 'text-slate-700' : 'text-[#111827]'}`}>
                                         {slot.time}
                                     </span>
 
-                                    {isMaintenance ? (
+                                    {isPast ? (
+                                        <span className="text-[10px] font-semibold text-slate-300">Past</span>
+                                    ) : isMaintenance ? (
                                         <span className="text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full bg-[#FEF08A] text-[#854D0E] border border-[#FACC15] flex items-center gap-1">
                                             🛠️ MAINTENANCE
                                         </span>
@@ -241,8 +246,8 @@ export default function BookingStep1Workspace({
                     </div>
                 </div>
 
-                {/* Verified Umpire Add-on Selector -- SHOWN ONLY IF TURF HAS AN ACTIVE UMPIRE */}
-                {selectedVenue?.hasActiveUmpire !== false && (
+                {/* Verified Umpire Add-on Selector -- SHOWN ONLY IF TURF HAS AN ACTIVE UMPIRE ASSIGNED */}
+                {Boolean(selectedVenue?.hasActiveUmpire === true || selectedVenue?.hasUmpireService === true) && (
                     <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-emerald-500/10 via-teal-500/5 to-[#ECFDF5] border-2 border-emerald-200 flex items-center justify-between gap-4">
                         <div className="flex items-center gap-3">
                             <div className="w-11 h-11 rounded-2xl bg-white border border-emerald-300 flex items-center justify-center text-xl shadow-xs shrink-0">

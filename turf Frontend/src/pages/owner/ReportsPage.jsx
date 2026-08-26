@@ -23,12 +23,12 @@ export default function ReportsPage() {
     const loadReports = useCallback(() => {
         api.get('/billing/history')
             .then(res => {
-                if (res && res.success && Array.isArray(res.data) && res.data.length > 0) {
+                const list = res?.data || (Array.isArray(res) ? res : []);
+                if (Array.isArray(list) && list.length > 0) {
                     const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
                     const dayMap = { Sun: 0, Mon: 0, Tue: 0, Wed: 0, Thu: 0, Fri: 0, Sat: 0 };
-                    // Real weekly buckets from the actual payment dates, not a fabricated growth pattern.
                     const weekMap = {};
-                    res.data.forEach(b => {
+                    list.forEach(b => {
                         const d = b.createdAt || b.created_at || b.date ? new Date(b.createdAt || b.created_at || b.date) : new Date();
                         dayMap[days[d.getDay()]] = (dayMap[days[d.getDay()]] || 0) + (Number(b.amount) || 0);
                         const weekKey = `${d.getFullYear()}-W${Math.ceil((((d - new Date(d.getFullYear(), 0, 1)) / 86400000) + new Date(d.getFullYear(), 0, 1).getDay() + 1) / 7)}`;
@@ -42,6 +42,7 @@ export default function ReportsPage() {
                 }
             })
             .catch(() => { setRevenueData([]); setBookingTrend([]); });
+
 
         getSportsReport().then(rows => {
             const total = rows.reduce((s, r) => s + r.bookingsCount, 0);

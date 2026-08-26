@@ -8,7 +8,8 @@ import Input from '../../components/ui/Input'
 import Select from '../../components/ui/Select'
 import { useToast } from '../../components/ui/Toast'
 import { HiPlus, HiStar, HiExternalLink, HiPencil, HiTrash } from 'react-icons/hi'
-import { getSponsors, createSponsor, updateSponsor, deleteSponsor, getPublicTournaments } from '../../services/tournamentService'
+import { getSponsors, createSponsor, updateSponsor, deleteSponsor } from '../../services/tournamentService'
+import api from '../../services/api'
 import { uploadMedia } from '../../services/uploadService'
 
 const TIER_OPTIONS = [
@@ -35,10 +36,10 @@ export default function TournamentSponsorsPage({ role = 'owner' }) {
         try {
             const [sponsorRes, tournamentRes] = await Promise.all([
                 getSponsors(),
-                getPublicTournaments({})
+                api.get('/tournaments')
             ])
             setSponsors(sponsorRes.data || [])
-            setTournaments(tournamentRes.data || [])
+            setTournaments(tournamentRes?.data || [])
         } catch (err) {
             addToast({ title: 'Load Failed', message: err.message || 'Failed to load sponsors.', type: 'error' })
         } finally {

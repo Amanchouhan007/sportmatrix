@@ -25,6 +25,19 @@ export const getBranches = async (filters = {}) => {
 };
 
 /**
+ * Fetch all turfs/branches belonging to the logged in owner/staff
+ */
+export const getMyTurfs = async () => {
+    try {
+        const response = await api.get('/turfs/my-turfs');
+        return response;
+    } catch (error) {
+        throw new Error(error.response?.data?.message || error.message || 'Failed to fetch owner turfs.');
+    }
+};
+
+
+/**
  * Get details of a single branch by ID
  */
 export const getBranchById = async (id) => {

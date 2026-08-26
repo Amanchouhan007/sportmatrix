@@ -1,0 +1,17 @@
+# Dependencies
+node_modules/
+**/node_modules/
+
+# Environment files & Secrets
+.env
+.env.*
+!*.env.example
+turf Backend/.env
+turf Frontend/.env
+
+# Build outputs
+dist/
+build/
+
+# Logs
+*.log

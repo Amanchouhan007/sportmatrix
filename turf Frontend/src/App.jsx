@@ -126,6 +126,7 @@ export default function App() {
               <Route path="/turfs/:id" element={<WebsiteLayout><TurfDetailPage /></WebsiteLayout>} />
               <Route path="/turf/:id" element={<WebsiteLayout><TurfDetailPage /></WebsiteLayout>} />
               <Route path="/booking/:id" element={<WebsiteLayout><SlotBookingPage /></WebsiteLayout>} />
+              <Route path="/booking" element={<Navigate to="/turfs" replace />} />
               <Route path="/guest/book" element={<WebsiteLayout><GuestBookingPage /></WebsiteLayout>} />
               <Route path="/tournaments" element={<WebsiteLayout><TournamentListPage /></WebsiteLayout>} />
               <Route path="/tournaments/:id" element={<WebsiteLayout><TournamentDetailPage /></WebsiteLayout>} />

@@ -6,16 +6,16 @@
 const express = require('express');
 const router = express.Router();
 const MatchPaymentController = require('./matchPayment.controller');
-const { verifyToken, authorizeRoles } = require('../../middleware/auth.middleware');
+const { verifyToken, optionalToken, authorizeRoles } = require('../../middleware/auth.middleware');
 
 // Dare Challenges Database API (Strictly backed by DB tables)
 router.get('/open-dares', MatchPaymentController.getOpenDares);
 router.post('/open-dares', MatchPaymentController.createDareChallenge);
 router.delete('/open-dares/:id', MatchPaymentController.deleteDareChallenge);
 
-// Match Booking & Slot Holds -- requires a logged-in captain
-router.post('/create', verifyToken, MatchPaymentController.createMatchBooking);
-router.post('/verify', verifyToken, MatchPaymentController.verifyPayment);
+// Match Booking & Slot Holds -- optionalToken allows guests and logged-in users to book
+router.post('/create', optionalToken, MatchPaymentController.createMatchBooking);
+router.post('/verify', optionalToken, MatchPaymentController.verifyPayment);
 
 
 // Invites & Share Payments -- invite lookup is token-gated (public), paying requires auth

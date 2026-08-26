@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
-import { HiCheck, HiCreditCard, HiUsers, HiOutlineCheckCircle } from 'react-icons/hi'
+import { HiCheck, HiCreditCard, HiUsers, HiOutlineCheckCircle, HiArrowLeft } from 'react-icons/hi'
 import { useToast } from '../../components/ui/Toast'
 import { useAuth } from '../../context/AuthContext'
 import api from '../../services/api'
@@ -18,6 +18,7 @@ import Modal from '../../components/ui/Modal'
 import TurfGalleryModal from '../../components/booking/TurfGalleryModal'
 import VenueSwitchModal from '../../components/booking/VenueSwitchModal'
 import AuthModal from '../../components/booking/AuthModal'
+import CorporateBookingModal from '../../components/website/CorporateBookingModal'
 
 const DEFAULT_COURT_NAME = 'Court 1'
 
@@ -31,10 +32,12 @@ const to12Hour = (hhmm) => {
 
 /** Maps a real Slot API status onto the UI's slot-card status vocabulary. */
 const mapSlotStatus = (status) => {
-    if (status === 'AVAILABLE') return 'available'
-    if (status === 'BOOKED') return 'booked'
-    if (status === 'BLOCKED') return 'maintenance'
-    return 'booked'
+    if (!status) return 'available'
+    const s = String(status).toUpperCase()
+    if (s === 'BOOKED' || s === 'HELD') return 'booked'
+    if (s === 'BLOCKED' || s === 'MAINTENANCE') return 'maintenance'
+    if (s === 'STAFF_UNAVAILABLE') return 'staff_unavailable'
+    return 'available'
 }
 
 // Generate upcoming 8 days starting from today
@@ -114,6 +117,8 @@ export default function SlotBookingPage() {
                 sports: turf.sports,
                 dimensions: turf.dimensions,
                 squareFeet: turf.turfSize,
+                hasActiveUmpire: turf.hasActiveUmpire || false,
+                activeUmpire: turf.activeUmpire || null,
                 image: turf.image || '/images/turf1.png',
                 gallery: turf.images?.length ? turf.images : [turf.image].filter(Boolean),
             })
@@ -127,7 +132,7 @@ export default function SlotBookingPage() {
         }).then((sportsRes) => {
             if (cancelled || !sportsRes) return
             const activeSport = (sportsRes.data || []).find(s => s.status === 'ACTIVE')
-            if (activeSport) setActiveBranchSport(activeSport)
+            setActiveBranchSport(activeSport || null)
         }).catch((err) => {
             if (!cancelled) setVenueError(err?.message || 'Failed to load turf details.')
         }).finally(() => {
@@ -139,6 +144,7 @@ export default function SlotBookingPage() {
 
     // Modals
     const [isVenueModalOpen, setIsVenueModalOpen] = useState(false)
+    const [isCorpModalOpen, setIsCorpModalOpen] = useState(false)
     const [isAuthModalOpen, setIsAuthModalOpen] = useState(false)
     const [authModalTab, setAuthModalTab] = useState('login')
     const [authEmail, setAuthEmail] = useState('')
@@ -170,6 +176,7 @@ export default function SlotBookingPage() {
     // (which merges persisted bookings with the branch's configured hours/pricing).
     const [rawSlots, setRawSlots] = useState([])
     const [slotsLoading, setSlotsLoading] = useState(false)
+    const [refreshTrigger, setRefreshTrigger] = useState(0)
 
     useEffect(() => {
         if (!selectedVenue || !activeBranchSport || !selectedDateObj) return
@@ -193,7 +200,7 @@ export default function SlotBookingPage() {
         })
 
         return () => { cancelled = true }
-    }, [selectedVenue?.id, activeBranchSport, selectedDateObj?.fullDateString])
+    }, [selectedVenue?.id, activeBranchSport, selectedDateObj?.fullDateString, refreshTrigger])
 
     const allTimeSlots = useMemo(() => {
         const now = new Date()
@@ -210,7 +217,7 @@ export default function SlotBookingPage() {
                 return {
                     id: s.startTime,
                     time: to12Hour(s.startTime),
-                    status: isPassedToday ? 'booked' : mapSlotStatus(s.status),
+                    status: isPassedToday ? 'past' : mapSlotStatus(s.status),
                     price: s.price,
                     endTime: s.endTime,
                     isPassed: isPassedToday
@@ -329,9 +336,11 @@ export default function SlotBookingPage() {
             })
             if (firstValidSlot) {
                 setSelectedSlotTime(firstValidSlot.id)
+            } else {
+                setSelectedSlotTime('')
             }
         }
-    }, [durationHours])
+    }, [durationHours, allTimeSlots])
 
     let discountAmount = 0
     if (appliedOffer && grossRent >= (appliedOffer.minPrice || 0)) {
@@ -370,7 +379,8 @@ export default function SlotBookingPage() {
         api.post('/discounts/validate-promo', {
             promoCode: cleanCode,
             branchId: selectedVenue?.id,
-            amount: grossRent
+            amount: grossRent,
+            phone: user?.mobile || user?.phone
         }).then(res => {
             if (res?.success && res?.data) {
                 const data = res.data;
@@ -385,9 +395,11 @@ export default function SlotBookingPage() {
                 setCouponInput(cleanCode);
                 if (addToast) addToast(res.message || `Promo code ${cleanCode} applied!`, 'success');
             } else {
+                setAppliedOffer(null);
                 if (addToast) addToast(res?.message || 'Invalid promo code', 'error');
             }
         }).catch(err => {
+            setAppliedOffer(null);
             const errorMsg = err?.response?.data?.message || err?.message || 'Invalid promo code for this turf.';
             if (addToast) addToast(errorMsg, 'error');
         });
@@ -407,17 +419,16 @@ export default function SlotBookingPage() {
     }, [searchParams, promoApplied, availableOffers])
 
     // Booking Lock Submission Handler -- creates a real Match via the backend's
-    // atomic slot-hold + payment engine (no fabricated booking ID or fake delay).
-    const handleConfirmBooking = async () => {
-        if (!user) {
-            setIsAuthModalOpen(true)
-            if (addToast) addToast('Please sign in to lock this slot.', 'error')
-            return
-        }
+    // atomic slot-hold + payment engine. Supports both logged-in and guest users.
+    const handleConfirmBooking = async (paymentId = null, guestDetails = null) => {
         if (!selectedVenue || !activeBranchSport || !currentSlotObj) {
             if (addToast) addToast('Select a valid slot before continuing.', 'error')
             return
         }
+
+        const captainName = guestDetails?.guestName?.trim() || user?.name || 'Valued Player'
+        const captainPhone = guestDetails?.guestPhone?.trim() || user?.mobile || user?.phone || '9876543210'
+        const captainEmail = guestDetails?.guestEmail?.trim() || user?.email || 'player@sportmatrix.com'
 
         setIsSubmitting(true)
         try {
@@ -426,8 +437,9 @@ export default function SlotBookingPage() {
                 branchId: selectedVenue.id,
                 sportId: activeBranchSport.sportId?.id || activeBranchSport.sportId,
                 courtName: DEFAULT_COURT_NAME,
-                captainName: user.name,
-                captainPhone: user.mobile || '',
+                captainName,
+                captainPhone,
+                customerEmail: captainEmail,
                 paymentMode,
                 durationHours,
                 slotDate: selectedDateObj.fullDateString,
@@ -462,6 +474,7 @@ export default function SlotBookingPage() {
             })
             setIsPaymentConfirmed(true)
             setActiveStep(4)
+            setRefreshTrigger(prev => prev + 1)
             if (addToast) addToast('⚡ Match Slot Locked! Complete payment to the venue to confirm.', 'success')
         } catch (err) {
             if (addToast) addToast(err.message || 'Failed to lock this slot. It may have just been taken.', 'error')
@@ -550,6 +563,33 @@ export default function SlotBookingPage() {
             <div className="max-w-7xl mx-auto space-y-6">
 
                 {/* ═══════════════════════════════════════════════════
+                    BACK BUTTON & VENUE BREADCRUMB BAR
+                ═══════════════════════════════════════════════════ */}
+                <div className="flex items-center justify-between gap-4 mb-2">
+                    <button
+                        type="button"
+                        onClick={() => {
+                            if (activeStep > 1 && activeStep < 4) {
+                                setActiveStep(prev => prev - 1);
+                            } else {
+                                navigate(selectedVenue?.id ? `/turf/${selectedVenue.id}` : '/turfs');
+                            }
+                        }}
+                        className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white border border-slate-200 text-slate-800 hover:text-[#16A34A] hover:border-emerald-300 font-black text-xs uppercase tracking-wider shadow-xs transition-all hover:scale-[1.02] active:scale-[0.98] cursor-pointer"
+                    >
+                        <HiArrowLeft className="w-4 h-4 text-[#16A34A]" />
+                        <span>{activeStep > 1 && activeStep < 4 ? `Back to Step ${activeStep - 1}` : 'Back to Turf Details'}</span>
+                    </button>
+
+                    <div className="hidden sm:flex items-center gap-2">
+                        <span className="text-xs font-bold text-slate-500">Booking Turf:</span>
+                        <span className="text-xs font-black text-[#111827] uppercase bg-slate-200/70 px-3 py-1 rounded-xl">
+                            {selectedVenue?.name || 'Sports Arena'}
+                        </span>
+                    </div>
+                </div>
+
+                {/* ═══════════════════════════════════════════════════
                     TOP STEP NAVIGATION BAR (Modern Step Indicator)
                 ═══════════════════════════════════════════════════ */}
                 <div className="bg-white border border-[#E2E8F0] rounded-2xl p-2.5 shadow-xs flex items-center justify-between gap-2 overflow-x-auto no-scrollbar">
@@ -621,6 +661,23 @@ export default function SlotBookingPage() {
                                         addToast={addToast}
                                     />
                                 )}
+
+                                {/* Corporate & Bulk Booking Banner Card */}
+                                <div className="bg-gradient-to-br from-slate-900 via-slate-850 to-[#0F172A] border border-slate-700/80 p-4 rounded-2xl text-white space-y-2.5 shadow-lg">
+                                    <div className="flex items-center gap-2 text-[#C8FF2E] font-black text-xs uppercase tracking-wider">
+                                        🏢 Corporate / Bulk Event?
+                                    </div>
+                                    <p className="text-[11px] text-slate-300 leading-snug">
+                                        Planning a company tournament, weekly team match, or bulk booking? Get GST tax invoices & custom discounts.
+                                    </p>
+                                    <button
+                                        type="button"
+                                        onClick={() => setIsCorpModalOpen(true)}
+                                        className="w-full py-2.5 bg-[#C8FF2E] hover:bg-[#b8f51a] text-slate-950 font-black text-xs uppercase tracking-wider rounded-xl shadow-[0_4px_16px_rgba(200,255,46,0.25)] transition-all transform hover:scale-[1.01] cursor-pointer"
+                                    >
+                                        Request Corporate Quote →
+                                    </button>
+                                </div>
                             </div>
 
                             {/* ── RIGHT MAIN WORKSPACE (Col-Span 8 ~67% Width) ── */}
@@ -700,6 +757,7 @@ export default function SlotBookingPage() {
                         selectedDateObj={selectedDateObj}
                         selectedSlotTime={selectedSlotTime}
                         allTimeSlots={allTimeSlots}
+                        durationHours={durationHours}
                         paymentMode={paymentMode}
                         totalRent={totalRent}
                         myPaymentAmount={myPaymentAmount}
@@ -757,6 +815,13 @@ export default function SlotBookingPage() {
                     authError={authError}
                     handleAuthLoginSubmit={handleAuthLoginSubmit}
                     handleRegisterSubmit={handleRegisterSubmit}
+                />
+
+                <CorporateBookingModal
+                    isOpen={isCorpModalOpen}
+                    onClose={() => setIsCorpModalOpen(false)}
+                    preselectedTurf={selectedVenue}
+                    preselectedCity={selectedVenue?.city || 'Indore'}
                 />
             </div>
         </div>

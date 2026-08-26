@@ -6,6 +6,7 @@ const {
     getProfile, 
     updateProfile, 
     changePassword,
+    forgotPassword,
     getAllUsers,
     updateUserStatus,
     adminResetUserPassword,
@@ -19,6 +20,7 @@ const router = express.Router();
 router.post('/register', register);
 router.post('/login', login);
 router.post('/logout', logout);
+router.post('/forgot-password', forgotPassword);
 
 // Super Admin User Management Routes
 router.get('/users', verifyToken, authorizeRoles(['SUPER_ADMIN']), getAllUsers);

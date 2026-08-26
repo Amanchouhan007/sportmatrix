@@ -45,19 +45,21 @@ export default function ContactPage() {
         setSubmitting(true)
         try {
             const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5005/api/v1';
-            await fetch(`${API_URL}/crm/leads`, {
+            const res = await fetch(`${API_URL}/crm/inquiry`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    fullName: form.name,
+                    name: form.name,
                     email: form.email,
-                    notes: `Subject: ${form.subject || 'General Inquiry'} | Message: ${form.message}`,
-                    source: 'Contact Page Inquiry',
-                    status: 'NEW'
+                    subject: form.subject || 'General Inquiry',
+                    message: form.message
                 })
             });
+            const data = await res.json();
+            const ticketId = data.ticketId || `TKT-${Math.floor(100000 + Math.random() * 900000)}`;
+
             const details = {
-                ticketId: `TKT-${Math.floor(100000 + Math.random() * 900000)}`,
+                ticketId,
                 name: form.name,
                 email: form.email,
                 subject: form.subject || 'General Inquiry',
@@ -66,7 +68,7 @@ export default function ContactPage() {
             setSentData(details)
             setSentSuccessModal(true)
             if (addToast) {
-                addToast('Your inquiry message has been submitted successfully!', 'success')
+                addToast('Your inquiry message has been submitted! Email sent to support@kiaantechnology.com', 'success')
             }
             setForm({ name: '', email: '', subject: '', message: '' })
         } catch (err) {

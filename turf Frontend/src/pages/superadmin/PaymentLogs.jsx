@@ -289,17 +289,17 @@ export default function PaymentLogs() {
             iconBg: 'bg-blue-500 text-white'
         },
         {
-            label: 'Total Revenue',
+            label: 'Total Booking Revenue',
             value: isStatsLoading ? '—' : fmtINR(stats?.summary?.totalRevenue),
-            change: `Net platform earnings`,
+            change: `Gross booking payment volume`,
             trend: 'up', icon: <HiCash />,
             cardBg: 'bg-white/85 backdrop-blur-[18px] border-t-2 border-[#16A34A]',
             iconBg: 'bg-[#16A34A] text-white'
         },
         {
-            label: 'Total Commission',
+            label: 'Total Platform Commission',
             value: isStatsLoading ? '—' : fmtINR(stats?.summary?.totalCommission),
-            change: 'Platform commission',
+            change: '10% commission revenue earned',
             trend: 'up', icon: <HiCreditCard />,
             cardBg: 'bg-white/85 backdrop-blur-[18px] border-t-2 border-purple-500',
             iconBg: 'bg-purple-500 text-white'
@@ -644,6 +644,7 @@ export default function PaymentLogs() {
                             <tr className="bg-[#0F172A] text-white text-xs font-black uppercase tracking-wider h-[58px]">
                                 <th className="px-5 py-4 rounded-l-2xl">Payment ID</th>
                                 <th className="px-5 py-4">User</th>
+                                <th className="px-5 py-4">Turf / Venue</th>
                                 <th className="px-5 py-4">Type</th>
                                 <th className="text-right px-5 py-4">Amount</th>
                                 <th className="text-right px-5 py-4">Commission</th>
@@ -656,7 +657,7 @@ export default function PaymentLogs() {
                             {isTableLoading && logs.length === 0 ? (
                                 Array.from({ length: 6 }).map((_, i) => (
                                     <tr key={i} className="animate-pulse h-[68px]">
-                                        {Array.from({ length: 8 }).map((__, j) => (
+                                        {Array.from({ length: 9 }).map((__, j) => (
                                             <td key={j} className="px-5 py-4">
                                                 <div className="h-4 bg-slate-100 rounded-lg w-full" />
                                             </td>
@@ -665,7 +666,7 @@ export default function PaymentLogs() {
                                 ))
                             ) : logs.length === 0 ? (
                                 <tr>
-                                    <td colSpan={8} className="text-center py-16 text-slate-400 text-sm font-medium">
+                                    <td colSpan={9} className="text-center py-16 text-slate-400 text-sm font-medium">
                                         <div className="flex flex-col items-center gap-2">
                                             <HiCreditCard className="w-10 h-10 opacity-20" />
                                             <span>No payment logs found{hasActiveFilters ? ' matching your filters' : ''}.</span>
@@ -698,6 +699,12 @@ export default function PaymentLogs() {
                                                         {log.userId.mobile}
                                                     </div>
                                                 )}
+                                            </div>
+                                        </td>
+                                        <td className="px-5 py-4">
+                                            <div className="flex items-center gap-1.5 text-xs font-bold text-slate-800">
+                                                <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />
+                                                <span className="truncate max-w-[150px]">{log.branchName || 'E2E Test Arena'}</span>
                                             </div>
                                         </td>
                                         <td className="px-5 py-4">

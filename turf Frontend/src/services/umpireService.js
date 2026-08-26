@@ -3,8 +3,8 @@ import api from './api';
 export const getUmpireProfile = async () => {
     try {
         const res = await api.get('/umpire/profile');
-        if (res && res.data && res.data.success) {
-            return res.data.data;
+        if (res && res.success) {
+            return res.data;
         }
     } catch (e) {
         console.warn('getUmpireProfile API error:', e.message);
@@ -15,8 +15,8 @@ export const getUmpireProfile = async () => {
 export const updateUmpireProfile = async (profileData) => {
     try {
         const res = await api.put('/umpire/profile', profileData);
-        if (res && res.data && res.data.success) {
-            return res.data;
+        if (res && res.success) {
+            return res;
         }
     } catch (e) {
         console.warn('updateUmpireProfile API error:', e.message);
@@ -27,14 +27,15 @@ export const updateUmpireProfile = async (profileData) => {
 export const getUmpireMatches = async () => {
     try {
         const res = await api.get('/umpire/matches');
-        if (res && res.data && res.data.success && Array.isArray(res.data.data)) {
-            return res.data.data;
+        if (res && res.success && Array.isArray(res.data)) {
+            return res.data;
         }
     } catch (e) {
         console.warn('getUmpireMatches API error:', e.message);
     }
     return [];
 };
+
 
 export const recordToss = async (data) => {
     try {

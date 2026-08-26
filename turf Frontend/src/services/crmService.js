@@ -254,6 +254,15 @@ export const OFFER_TEMPLATES = [
     }
 ]
 
+export const convertCorporateBookingAsync = async (payload) => {
+    try {
+        const res = await api.post('/crm/convert-corporate-booking', payload);
+        return res?.data || res;
+    } catch (e) {
+        throw new Error(e.response?.data?.message || e.message || 'Failed to convert corporate booking.');
+    }
+};
+
 export const generateWhatsAppLink = (phone, text) => {
     const cleanPhone = phone ? phone.replace(/\D/g, '') : ''
     const encodedText = encodeURIComponent(text)

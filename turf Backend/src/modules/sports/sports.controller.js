@@ -90,7 +90,17 @@ const getBranchSports = async (req, res) => {
             }
         }
 
-        return res.status(200).json({ success: true, data: rows.map(formatBranchSport) });
+        const dataWithBookings = await Promise.all(rows.map(async (bs) => {
+            const bookingsCount = await prisma.booking.count({
+                where: { slot: { branchId: bs.branchId, sportId: bs.sportId } }
+            }).catch(() => 0);
+            return {
+                ...formatBranchSport(bs),
+                totalBookings: bookingsCount
+            };
+        }));
+
+        return res.status(200).json({ success: true, data: dataWithBookings });
     } catch (error) {
         console.error('Fetch branch sports error:', error);
         return res.status(500).json({ success: false, message: 'Internal Server Error fetching branch sports.' });
