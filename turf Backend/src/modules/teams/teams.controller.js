@@ -30,6 +30,8 @@ const getTeams = async (req, res) => {
     }
 };
 
+
+
 const createTeam = async (req, res) => {
     const { branchId, name, teamName, sport, membersCount } = req.body;
     const resolvedName = teamName || name;

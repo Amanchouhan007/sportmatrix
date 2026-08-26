@@ -77,7 +77,6 @@ const sidebarConfig = {
         { label: 'POS Billing', icon: <HiCreditCard />, path: '/admin/pos' },
         { label: 'Billing History', icon: <HiClipboardList />, path: '/admin/billing-history' },
         { label: 'Teams', icon: <HiUserGroup />, path: '/admin/teams' },
-        { label: 'Wallet', icon: <HiWallet />, path: '/admin/wallet' },
         { label: 'Reports', icon: <HiChartBar />, path: '/admin/reports' },
         { label: 'Inventory', icon: <HiCube />, path: '/admin/inventory' },
         { label: 'Maintenance', icon: <HiWrench />, path: '/admin/maintenance' },

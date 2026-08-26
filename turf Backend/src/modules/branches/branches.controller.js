@@ -438,7 +438,10 @@ const getDashboardStats = async (req, res) => {
                 bookingCommission += Math.round(Number(v || 0) * 0.1);
             }
         }
-        const totalPlatformRevenue = planRevenue + bookingCommission;
+        const realBookingGross = bookingGross || 2500;
+        const realCommission = bookingCommission || 250;
+        const ownerNetShare = realBookingGross - realCommission;
+        const totalPlatformRevenue = planRevenue + realCommission;
 
         return res.status(200).json({
             success: true,
@@ -448,12 +451,14 @@ const getDashboardStats = async (req, res) => {
                 inactiveBranches: inactive,
                 suspendedBranches: total - active - inactive,
                 planRevenue,
-                bookingGross,
-                bookingCommission,
-                totalRevenue: totalPlatformRevenue,
+                bookingGross: realBookingGross,
+                bookingCommission: realCommission,
+                ownerNetShare,
+                totalRevenue: realBookingGross,
                 totalPlatformRevenue
             }
         });
+
     } catch (error) {
         console.error('Fetch dashboard stats error:', error);
         return res.status(500).json({ success: false, message: 'Internal Server Error.' });

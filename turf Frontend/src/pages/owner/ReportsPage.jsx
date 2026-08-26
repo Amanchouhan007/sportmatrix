@@ -23,14 +23,17 @@ export default function ReportsPage() {
     const loadReports = useCallback(() => {
         api.get('/billing/history')
             .then(res => {
-                const list = res?.data || (Array.isArray(res) ? res : []);
-                if (Array.isArray(list) && list.length > 0) {
+                const raw = res?.data?.data || res?.data || (Array.isArray(res) ? res : []);
+                const list = Array.isArray(raw) ? raw : [];
+                if (list.length > 0) {
                     const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
                     const dayMap = { Sun: 0, Mon: 0, Tue: 0, Wed: 0, Thu: 0, Fri: 0, Sat: 0 };
                     const weekMap = {};
                     list.forEach(b => {
                         const d = b.createdAt || b.created_at || b.date ? new Date(b.createdAt || b.created_at || b.date) : new Date();
-                        dayMap[days[d.getDay()]] = (dayMap[days[d.getDay()]] || 0) + (Number(b.amount) || 0);
+                        const grossAmt = Number(b.amount || b.grossTotal || 0);
+                        const netAmt = Number(b.netShare || b.ownerAmount || Math.round(grossAmt * 0.9));
+                        dayMap[days[d.getDay()]] = (dayMap[days[d.getDay()]] || 0) + netAmt;
                         const weekKey = `${d.getFullYear()}-W${Math.ceil((((d - new Date(d.getFullYear(), 0, 1)) / 86400000) + new Date(d.getFullYear(), 0, 1).getDay() + 1) / 7)}`;
                         weekMap[weekKey] = (weekMap[weekKey] || 0) + 1;
                     });
@@ -42,6 +45,8 @@ export default function ReportsPage() {
                 }
             })
             .catch(() => { setRevenueData([]); setBookingTrend([]); });
+
+
 
 
         getSportsReport().then(rows => {

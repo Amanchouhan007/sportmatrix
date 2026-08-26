@@ -205,7 +205,7 @@ export default function BranchManagement() {
                 email: isOwnerRole ? (user?.email || '') : ''
             };
             const res = await getDashboardStats(statsFilters);
-            const statsData = (res && res.data) || (res && res.totalBranches !== undefined ? res : null);
+            const statsData = res?.data?.data || res?.data || (res && res.totalBranches !== undefined ? res : null);
             if (statsData) {
                 setStats(statsData);
             }
@@ -802,27 +802,29 @@ export default function BranchManagement() {
                     </div>
                 </div>
 
-                {/* Card 4: Total Platform Revenue */}
+                {/* Card 4: Net Owner Revenue */}
                 <div className="relative rounded-3xl border border-slate-200/80 bg-white p-5 shadow-soft hover:shadow-xl hover:-translate-y-1 transition-all duration-300 overflow-hidden group">
                     <div className="h-1.5 w-full absolute top-0 left-0 bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600"></div>
                     <div className="flex items-center justify-between gap-2 mb-2">
-                        <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Total Revenue</span>
+                        <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Owner Net Revenue</span>
                         <div className="w-10 h-10 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center text-lg shadow-sm border border-amber-100 group-hover:scale-110 transition-transform shrink-0">
                             <FiTrendingUp />
                         </div>
                     </div>
                     <div className="my-1.5">
                         <div className="text-2xl lg:text-3xl font-black text-slate-900 tracking-tight leading-none">
-                            ₹{Number(stats.totalPlatformRevenue ?? stats.totalRevenue ?? ((stats.planRevenue || 11000) + (stats.bookingCommission || 250))).toLocaleString('en-IN')}
+                            ₹{Number(stats.ownerNetShare ?? 2250).toLocaleString('en-IN')}
                         </div>
                     </div>
                     <div className="flex items-center justify-between gap-2 mt-3 pt-2.5 border-t border-slate-100 text-[11px]">
-                        <span className="font-medium text-slate-400 truncate">Plan + Booking Commission</span>
+                        <span className="font-medium text-slate-400 truncate">Net Share (After 10% Platform Cut)</span>
                         <span className="inline-flex items-center gap-1 text-[11px] font-bold text-amber-700 bg-amber-50 border border-amber-100 px-2 py-0.5 rounded-full shrink-0">
-                            Net Earnings
+                            Gross: ₹{Number(stats.bookingGross ?? 2500).toLocaleString('en-IN')}
                         </span>
                     </div>
                 </div>
+
+
             </div>
 
             {/* Modern Unified Toolbar (Search + Filters + Summary) */}

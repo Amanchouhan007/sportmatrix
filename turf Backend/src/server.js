@@ -23,7 +23,7 @@ async function startServer() {
             console.error('👉 Please check your MySQL setup:');
             console.error('1. Make sure MySQL service (XAMPP / MySQL Workbench / Service) is RUNNING.');
             console.error('2. Check DATABASE_URL / DB_HOST / DB_PASSWORD in "turf Backend/.env".');
-            console.error('3. Run "npm run db:push" to sync the schema, then "npm run db:seed" once.');
+            console.error('3. Run "npm run db:push" to sync the database schema.');
             console.error('===============================================================\n');
             process.exit(1);
         }

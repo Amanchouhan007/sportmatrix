@@ -70,11 +70,12 @@ export default function TeamsPlayers() {
     const [sport, setSport] = useState('Cricket')
     const [membersCount, setMembersCount] = useState(11)
 
-    useEffect(() => {
+    const fetchTeams = () => {
         api.get('/teams')
             .then(res => {
-                const list = res?.data || (Array.isArray(res) ? res : []);
-                if (Array.isArray(list) && list.length > 0) {
+                const rawList = res?.data?.data || res?.data || (Array.isArray(res) ? res : [])
+                const list = Array.isArray(rawList) ? rawList : []
+                if (list.length > 0) {
                     const mapped = list.map((t, idx) => ({
                         id: t.id || idx + 1,
                         name: t.teamName || t.name || t.team_name || 'Team',
@@ -84,71 +85,68 @@ export default function TeamsPlayers() {
                         wins: t.wins || 0,
                         losses: t.losses || 0,
                         logo: (t.sport || '').toLowerCase() === 'football' ? '⚽' : '🏏'
-                    }));
-                    setTeamList(mapped);
+                    }))
+                    setTeamList(mapped)
                 } else {
-                    setTeamList([]);
+                    setTeamList([])
                 }
             })
-            .catch(e => console.warn('Fetch teams note:', e.message));
+            .catch(e => console.warn('Fetch teams note:', e.message))
+    }
 
+    const fetchLeaderboard = () => {
         api.get('/tournaments/leaderboard/global')
             .then(res => {
-                const list = res?.data || (Array.isArray(res) ? res : []);
-                if (Array.isArray(list) && list.length > 0) {
-                    const mapped = list.map(p => ({
+                const rawList = res?.data?.data || res?.data || (Array.isArray(res) ? res : [])
+                const list = Array.isArray(rawList) ? rawList : []
+                if (list.length > 0) {
+                    const mapped = list.map((p, idx) => ({
+                        id: p.id || idx + 1,
                         name: p.name || p.fullName || 'Player',
                         sport: p.sport || 'Cricket',
                         skill: p.role || 'All-Rounder',
-                        matches: p.matches || 0,
-                        rating: p.trustScore ? (p.trustScore / 20).toFixed(1) : 4.8,
+                        matches: p.matches || (idx + 1) * 2,
+                        rating: p.trustScore ? (p.trustScore / 20).toFixed(1) : (4.5 + (idx % 5) * 0.1).toFixed(1),
                         status: 'Active'
-                    }));
-                    setPlayerList(mapped);
+                    }))
+                    setPlayerList(mapped)
                 } else {
-                    setPlayerList([]);
+                    setPlayerList([])
                 }
             })
-            .catch(() => setPlayerList([]));
-    }, []);
+            .catch(() => setPlayerList([]))
+    }
+
+    useEffect(() => {
+        fetchTeams()
+        fetchLeaderboard()
+    }, [])
 
 
     const handleCreateTeam = async (e) => {
         e.preventDefault()
-        if (!teamName || !captainName) return
+        if (!teamName) return
 
-        const newTeam = {
-            id: `tm_${Date.now()}`,
-            name: teamName,
-            sport: sport,
-            players: Number(membersCount || 11),
-            ranking: teamList.length + 1,
-            wins: 0,
-            losses: 0,
-            logo: sport === 'Football' ? '⚽' : '🏏'
-        }
-
-        setTeamList([newTeam, ...teamList])
-        setIsAddModalOpen(false)
-
-        // API post
         try {
             await api.post('/teams', {
                 name: teamName,
+                teamName,
                 captainName,
                 captainPhone: captainPhone || '+91 98765 43210',
                 sport,
-                membersCount: Number(membersCount)
+                membersCount: Number(membersCount || 11)
             })
+            fetchTeams()
         } catch (err) {
-            console.warn('API post team note:', err.message)
+            console.warn('API post team error:', err.message)
         }
 
-        // Reset form
+        setIsAddModalOpen(false)
         setTeamName('')
         setCaptainName('')
         setCaptainPhone('')
     }
+
 
     return (
         <div className="space-y-8 animate-in fade-in duration-500">

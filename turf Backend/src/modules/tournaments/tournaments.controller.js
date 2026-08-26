@@ -543,12 +543,17 @@ const getLeaderboard = async (req, res) => {
 
 const getGlobalLeaderboard = async (req, res) => {
     try {
-        const players = await prisma.scorecard.findMany({ orderBy: [{ ppsScore: 'desc' }, { matches: 'desc' }], take: 100 });
+        const players = await prisma.scorecard.findMany({ 
+            orderBy: [{ ppsScore: 'desc' }, { matches: 'desc' }], 
+            take: 100 
+        });
         return res.status(200).json({ success: true, data: players });
     } catch (error) {
         return res.status(500).json({ success: false, message: error.message });
     }
 };
+
+
 
 // ==========================================
 // SPONSORS

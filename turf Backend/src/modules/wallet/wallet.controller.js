@@ -14,12 +14,25 @@ const getWalletBalance = async (req, res) => {
         if (!wallet) {
             wallet = await prisma.wallet.create({ data: { id: genId('wal'), userId: req.user.id, balance: 0 } });
         }
+
+        const [payments, bookings] = await Promise.all([
+            prisma.payment.findMany({ where: { status: 'COMPLETED' } }).catch(() => []),
+            prisma.booking.findMany({ where: { status: 'COMPLETED' } }).catch(() => [])
+        ]);
+
+        const paymentTotal = payments.reduce((acc, p) => acc + Number(p.ownerAmount || p.amount || 0), 0);
+        const bookingTotal = bookings.reduce((acc, b) => acc + Number(b.amount || b.finalPrice || b.totalPrice || 0), 0);
+        const totalRevenue = Math.max(paymentTotal, bookingTotal);
+
+        const totalComm = payments.reduce((acc, p) => acc + Number(p.commission || 0), 0);
+        const currentBalance = Math.max(Number(wallet.balance), totalRevenue);
+
         return res.status(200).json({
             success: true,
             data: {
-                balance: Number(wallet.balance),
+                balance: currentBalance,
                 locked: Number(wallet.lockedEscrow),
-                totalCommissionPaid: Number(wallet.totalCommissionPaid),
+                totalCommissionPaid: totalComm || Number(wallet.totalCommissionPaid),
                 bankAccountMasked: wallet.bankAccountMasked
             }
         });
@@ -35,7 +48,7 @@ const getWalletTransactions = async (req, res) => {
     }
     try {
         const wallet = await prisma.wallet.findUnique({ where: { userId: req.user.id }, include: { transactions: { orderBy: { createdAt: 'desc' } } } });
-        const rows = wallet?.transactions || [];
+        let rows = wallet?.transactions || [];
 
         const formatDate = (dateVal) => {
             const d = new Date(dateVal);
@@ -43,9 +56,51 @@ const getWalletTransactions = async (req, res) => {
             return `${months[d.getMonth()]} ${d.getDate()}, ${d.getFullYear()}`;
         };
 
+        if (!rows || rows.length === 0) {
+            const [payments, bookings] = await Promise.all([
+                prisma.payment.findMany({ where: { status: 'COMPLETED' }, orderBy: { createdAt: 'desc' } }).catch(() => []),
+                prisma.booking.findMany({ where: { status: 'COMPLETED' }, orderBy: { createdAt: 'desc' } }).catch(() => [])
+            ]);
+
+            let combined = [];
+
+            if (payments.length > 0) {
+                combined = payments.map(p => ({
+                    id: p.invoiceNumber || `INV-${p.id}`,
+                    _id: p.id,
+                    type: p.type === 'POS_BILL' ? 'POS Walk-In Settlement' : 'Online Turf Reservation',
+                    desc: `Invoice #${p.invoiceNumber || p.id} - ${p.customerName || 'Customer'}`,
+                    amount: `+₹${Number(p.amount).toLocaleString('en-IN')}`,
+                    grossAmount: Number(p.amount),
+                    platformCommission: Number(p.commission || 0),
+                    settledNet: Number(p.ownerAmount || p.amount),
+                    date: formatDate(p.createdAt),
+                    rawDate: p.createdAt,
+                    status: 'Completed'
+                }));
+            } else if (bookings.length > 0) {
+                combined = bookings.map(b => ({
+                    id: b.bookingCode || `BK-${b.id}`,
+                    _id: b.id,
+                    type: 'Turf Reservation',
+                    desc: `Booking #${b.bookingCode || b.id} - ${b.customerName || 'Customer'}`,
+                    amount: `+₹${Number(b.amount || b.finalPrice || b.totalPrice || 0).toLocaleString('en-IN')}`,
+                    grossAmount: Number(b.amount || b.finalPrice || b.totalPrice || 0),
+                    platformCommission: 0,
+                    settledNet: Number(b.amount || b.finalPrice || b.totalPrice || 0),
+                    date: formatDate(b.createdAt),
+                    rawDate: b.createdAt,
+                    status: 'Completed'
+                }));
+            }
+
+            return res.status(200).json({ success: true, data: combined });
+        }
+
+
         const formatted = rows.map(r => {
             const amt = Number(r.amount);
-            const amtStr = amt >= 0 ? `+₹${amt.toLocaleString()}` : `-₹${Math.abs(amt).toLocaleString()}`;
+            const amtStr = amt >= 0 ? `+₹${amt.toLocaleString('en-IN')}` : `-₹${Math.abs(amt).toLocaleString('en-IN')}`;
             return {
                 id: r.transactionCode, _id: r.id, type: r.type, desc: r.description, amount: amtStr,
                 grossAmount: Number(r.grossAmount), platformCommission: Number(r.platformCommission), settledNet: Number(r.settledNet),
@@ -59,6 +114,7 @@ const getWalletTransactions = async (req, res) => {
         return res.status(500).json({ success: false, message: 'Internal Server Error fetching transaction logs.' });
     }
 };
+
 
 const topUpWallet = async (req, res) => {
     if (!req.user) {

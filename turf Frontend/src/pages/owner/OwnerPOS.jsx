@@ -353,16 +353,24 @@ export default function OwnerPOS() {
 
     const activeInventoryOptions = useMemo(() => {
         if (dbInventory.length > 0) {
-            return dbInventory.map(item => ({
-                id: item.id,
-                name: item.name,
-                price: Number(item.price || 0),
-                category: item.category || 'Gear & Rentals',
-                icon: item.category === 'Snacks & Drinks' ? '🥤' : '🏏'
-            }))
+            return dbInventory
+                .filter(item => {
+                    const cat = (item.category || '').toLowerCase()
+                    if (activeTab === 'Gear & Rentals') return cat.includes('gear') || cat.includes('rental')
+                    if (activeTab === 'Snacks & Drinks') return cat.includes('snack') || cat.includes('drink') || cat.includes('beverage') || cat.includes('food')
+                    return true
+                })
+                .map(item => ({
+                    id: item.id,
+                    name: item.name,
+                    price: Number(item.price || 0),
+                    category: item.category || 'Gear & Rentals',
+                    icon: (item.category || '').toLowerCase().includes('snack') || (item.category || '').toLowerCase().includes('drink') ? '🥤' : '🏏'
+                }))
         }
         return inventoryOptions
-    }, [dbInventory])
+    }, [dbInventory, activeTab])
+
 
     // Auto-update court when sport changes
     const handleSportChange = (newSport) => {
@@ -1260,26 +1268,32 @@ export default function OwnerPOS() {
 
                                     </div>
 
-                                    {(paymentMethod === 'UPI' || paymentMethod === 'Venue QR') && (
-                                        <div className="p-3.5 bg-emerald-50/90 rounded-2xl border border-emerald-200 text-center space-y-2 animate-in fade-in duration-300">
-                                            <div className="text-[11px] font-black text-emerald-950 uppercase tracking-wider flex items-center justify-center gap-1.5">
-                                                <span>📱</span> Venue QR Code Payment (₹{grandTotal})
+                                    {(paymentMethod === 'UPI' || paymentMethod === 'Venue QR') && (() => {
+                                        const activeTurf = myTurfs.find(t => t.id === selectedTurfId) || myTurfs[0] || {}
+                                        const venueUpiId = activeTurf.upiId || activeTurf.paymentUpiId || activeTurf.upi || 'owner@upi'
+                                        const venueQrSrc = activeTurf.qrCodeUrl || activeTurf.upiQrUrl || activeTurf.qrCode || `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=upi://pay?pa=${venueUpiId}&pn=${encodeURIComponent(activeTurf.name || 'Turf Venue')}&am=${grandTotal}&cu=INR`
+                                        return (
+                                            <div className="p-3.5 bg-emerald-50/90 rounded-2xl border border-emerald-200 text-center space-y-2 animate-in fade-in duration-300">
+                                                <div className="text-[11px] font-black text-emerald-950 uppercase tracking-wider flex items-center justify-center gap-1.5">
+                                                    <span>📱</span> Venue QR Code Payment (₹{grandTotal})
+                                                </div>
+                                                <div className="bg-white p-2 rounded-xl border border-emerald-200 inline-block shadow-sm">
+                                                    <img
+                                                        src={venueQrSrc}
+                                                        alt="Venue Payment QR"
+                                                        className="w-28 h-28 mx-auto rounded-md object-contain"
+                                                    />
+                                                </div>
+                                                <div className="text-[10.5px] font-bold text-emerald-900">
+                                                    Scan & Pay to Venue UPI: <span className="font-black text-emerald-950 bg-emerald-100 px-1.5 py-0.5 rounded">{venueUpiId}</span>
+                                                </div>
+                                                <div className="text-[9.5px] text-emerald-700 font-bold border-t border-emerald-200/60 pt-1 mt-1">
+                                                    ⚡ Direct 0% Commission Payment (100% Venue Owner Share)
+                                                </div>
                                             </div>
-                                            <div className="bg-white p-2 rounded-xl border border-emerald-200 inline-block shadow-sm">
-                                                <img
-                                                    src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=upi://pay?pa=7987654321@paytm&pn=Turf%20Venue&am=${grandTotal}&cu=INR`}
-                                                    alt="Venue Payment QR"
-                                                    className="w-28 h-28 mx-auto rounded-md"
-                                                />
-                                            </div>
-                                            <div className="text-[10.5px] font-bold text-emerald-900">
-                                                Scan & Pay to Venue UPI: <span className="font-black text-emerald-950 bg-emerald-100 px-1.5 py-0.5 rounded">turfowner@upi</span>
-                                            </div>
-                                            <div className="text-[9.5px] text-emerald-700 font-bold border-t border-emerald-200/60 pt-1 mt-1">
-                                                ⚡ Direct 0% Commission Payment (100% Venue Owner Share)
-                                            </div>
-                                        </div>
-                                    )}
+                                        )
+                                    })()}
+
 
 
                                     {paymentStatus === 'Partial' && (
@@ -1427,7 +1441,7 @@ export default function OwnerPOS() {
                             Cancel
                         </Button>
                         <Button type="submit" className="bg-emerald-600 hover:bg-emerald-700 font-black">
-                            Save Item to MySQL
+                            Save Item
                         </Button>
                     </div>
                 </form>

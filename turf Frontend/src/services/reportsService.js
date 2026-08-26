@@ -3,7 +3,11 @@ import api from './api';
 const unwrap = async (promise, fallback) => {
     try {
         const res = await promise;
-        return (res && res.success) ? res.data : fallback;
+        const body = res?.data || res;
+        if (body && (body.success !== false)) {
+            return body.data !== undefined ? body.data : body;
+        }
+        return fallback;
     } catch {
         return fallback;
     }
@@ -16,12 +20,14 @@ export const getSportsReport = () => unwrap(api.get('/reports/sports'), []);
 export const getOccupancyHeatmap = async () => {
     try {
         const res = await api.get('/reports/occupancy-heatmap');
-        if (res && res.success) return { data: res.data, xLabels: res.xLabels, yLabels: res.yLabels };
+        const body = res?.data || res;
+        if (body && body.data) return { data: body.data, xLabels: body.xLabels || [], yLabels: body.yLabels || [] };
     } catch {
         // fall through
     }
     return { data: [], xLabels: [], yLabels: [] };
 };
+
 
 /** Real per-day settled revenue for the last 30 days. */
 export const getDailyReport = () => unwrap(api.get('/reports/daily'), []);

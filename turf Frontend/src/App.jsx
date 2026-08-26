@@ -192,7 +192,7 @@ export default function App() {
 
                 <Route path="teams" element={<TeamsPlayers />} />
                 <Route path="players" element={<TeamsPlayers />} />
-                <Route path="wallet" element={<WalletPage />} />
+                <Route path="wallet" element={<Navigate to="/admin" replace />} />
                 <Route path="reports" element={<ReportsPage />} />
                 <Route path="inventory" element={<InventoryPage />} />
                 <Route path="maintenance" element={<MaintenancePage />} />

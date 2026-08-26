@@ -32,7 +32,7 @@ export default function WalletPage() {
   const fetchWalletData = useCallback(() => {
     api.get('/wallet/me')
       .then(res => {
-        const d = res?.data || res
+        const d = res?.data?.data || res?.data || res
         if (d) {
           setBalance(d.balance || 0)
           setTotalCommissionPaid(d.totalCommissionPaid || 0)
@@ -43,13 +43,14 @@ export default function WalletPage() {
 
     api.get('/wallet/transactions')
       .then(res => {
-        const list = res?.data || (Array.isArray(res) ? res : [])
-        if (Array.isArray(list)) {
+        const rawList = res?.data?.data || res?.data || (Array.isArray(res) ? res : [])
+        const list = Array.isArray(rawList) ? rawList : []
+        if (list.length > 0) {
           const mapped = list.map(t => ({
             id: t.id || `TXN-${t._id || t.id}`,
             type: t.type || 'Booking',
-            amount: `+₹${(t.grossAmount || t.amount || 0).toLocaleString('en-IN')}`,
-            rawAmount: t.amount,
+            amount: typeof t.amount === 'string' ? t.amount : `+₹${(t.grossAmount || t.amount || 0).toLocaleString('en-IN')}`,
+            rawAmount: t.grossAmount || t.amount,
             commission: `-₹${Math.abs(t.platformCommission || t.commission || 0).toLocaleString('en-IN')}`,
             net: `₹${(t.settledNet || t.ownerAmount || t.amount || 0).toLocaleString('en-IN')}`,
             date: t.date || (t.createdAt ? String(t.createdAt).split('T')[0] : 'Today'),
@@ -63,6 +64,7 @@ export default function WalletPage() {
       })
       .catch(() => setTransactionsList([]))
   }, [])
+
 
 
   useEffect(() => { fetchWalletData() }, [fetchWalletData])
