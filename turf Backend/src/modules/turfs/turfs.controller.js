@@ -7,14 +7,29 @@ const prisma = require('../../config/prisma');
  */
 const formatPublicTurf = (b) => {
     const activeBranchSports = (b.branchSports || []).filter(bs => bs.status === 'ACTIVE');
+    
+    // Compute true minimum regular price from active sports
+    let minSportPrice = null;
+    if (activeBranchSports.length > 0) {
+        const validPrices = activeBranchSports
+            .map(bs => Number(bs.regularPrice || bs.pricePerHour || 0))
+            .filter(p => p > 0);
+        if (validPrices.length > 0) {
+            minSportPrice = Math.min(...validPrices);
+        }
+    }
+
+    const effectiveMinPrice = minSportPrice !== null ? minSportPrice : Number(b.minPriceHourly || 1000);
+
     const mappedSports = activeBranchSports.length > 0
         ? activeBranchSports.map(bs => ({
             id: bs.sport?.id || bs.sportId,
             name: bs.sport?.name || 'Cricket',
-            price: Number(bs.pricePerHour || b.minPriceHourly || 700),
-            peakPrice: Number(bs.peakHourPrice || Math.round(Number(bs.pricePerHour || b.minPriceHourly || 700) * 1.5))
+            price: Number(bs.regularPrice || bs.pricePerHour || effectiveMinPrice),
+            regularPrice: Number(bs.regularPrice || bs.pricePerHour || effectiveMinPrice),
+            peakPrice: Number(bs.peakPrice || bs.peakHourPrice || Math.round(Number(bs.regularPrice || effectiveMinPrice) * 1.5))
         }))
-        : [{ name: 'Cricket', price: Number(b.minPriceHourly || 700), peakPrice: Math.round(Number(b.minPriceHourly || 700) * 1.5) }];
+        : [{ name: 'Cricket', price: effectiveMinPrice, regularPrice: effectiveMinPrice, peakPrice: Math.round(effectiveMinPrice * 1.5) }];
 
     return {
         id: b.id,
@@ -23,8 +38,9 @@ const formatPublicTurf = (b) => {
         city: b.city || '',
         location: b.fullAddress || b.city || '',
         address: b.fullAddress || '',
-        price: Number(b.minPriceHourly),
-        pricePerHour: Number(b.minPriceHourly),
+        price: effectiveMinPrice,
+        pricePerHour: effectiveMinPrice,
+        minPriceHourly: effectiveMinPrice,
         openingTime: b.openingTime,
         closingTime: b.closingTime,
         dimensions: b.dimensionsSqFt ? `${b.dimensionsSqFt} Sq.Ft` : '',

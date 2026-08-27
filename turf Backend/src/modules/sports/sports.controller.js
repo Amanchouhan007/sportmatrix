@@ -144,6 +144,18 @@ const activateBranchSport = async (req, res) => {
             include: { sport: true }
         });
 
+        // Sync parent branch record so customer cards and catalog APIs match
+        if (regularPrice) {
+            await prisma.branch.update({
+                where: { id: branchId },
+                data: {
+                    minPriceHourly: Number(regularPrice),
+                    openingTime: openingTime || undefined,
+                    closingTime: closingTime || undefined
+                }
+            }).catch(e => console.error('Error syncing branch minPriceHourly:', e));
+        }
+
         return res.status(201).json({ success: true, data: formatBranchSport(created), message: 'Sport activated successfully' });
     } catch (error) {
         console.error('Activate branch sport error:', error);
@@ -176,6 +188,18 @@ const updateBranchSport = async (req, res) => {
             },
             include: { sport: true }
         });
+
+        // Sync parent branch record so customer cards and catalog APIs match
+        if (regularPrice !== undefined) {
+            await prisma.branch.update({
+                where: { id: existing.branchId },
+                data: {
+                    minPriceHourly: Number(regularPrice),
+                    openingTime: openingTime ? String(openingTime) : undefined,
+                    closingTime: closingTime ? String(closingTime) : undefined
+                }
+            }).catch(e => console.error('Error syncing branch minPriceHourly:', e));
+        }
 
         return res.status(200).json({ success: true, data: formatBranchSport(updated), message: 'Sport updated successfully' });
     } catch (error) {

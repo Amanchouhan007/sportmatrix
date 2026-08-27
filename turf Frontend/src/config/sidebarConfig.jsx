@@ -112,7 +112,6 @@ const sidebarConfig = {
         { label: 'My Matches', icon: <HiTrophy />, path: '/customer/matches' },
         { label: 'Leaderboards', icon: <HiStar />, path: '/customer/leaderboard' },
         { label: 'Tournaments', icon: <HiDocumentText />, path: '/customer/tournaments' },
-        { label: 'Wallet', icon: <HiWallet />, path: '/customer/wallet' },
         { label: 'Profile', icon: <HiUser />, path: '/customer/profile' },
     ],
 }

@@ -46,11 +46,12 @@ const handleProfileImageUpload = (req, res, next) => {
     });
 };
 
-// Owner REST Endpoints -- Super Admin only (owner PII + account management)
+// Owner REST Endpoints
 const requireSuperAdmin = [verifyToken, authorizeRoles(['SUPER_ADMIN'])];
+const requireAuthRoles = [verifyToken, authorizeRoles(['SUPER_ADMIN', 'OWNER', 'STAFF'])];
 
-router.get('/', ...requireSuperAdmin, getOwners);
-router.get('/:id', ...requireSuperAdmin, getOwnerById);
+router.get('/', ...requireAuthRoles, getOwners);
+router.get('/:id', ...requireAuthRoles, getOwnerById);
 
 // Create Owner (Supports Profile Image upload)
 router.post('/', ...requireSuperAdmin, handleProfileImageUpload, validateCreateOwner, createOwner);

@@ -6,6 +6,7 @@ import Button from '../../components/ui/Button'
 import { useNavigate } from 'react-router-dom'
 import { getPublicTournaments, getTeams } from '../../services/tournamentService'
 import { getUpcomingBookings } from '../../services/bookingService'
+import { getDiscountOffers } from '../../services/discountService'
 import api from '../../services/api'
 import { useAuth } from '../../context/AuthContext'
 import useRealtime from '../../utils/useRealtime'
@@ -15,7 +16,7 @@ export default function CustomerDashboard() {
     const navigate = useNavigate()
 
     const [stats, setStats] = useState({ activeTournaments: 0, activeTeams: 0, matchesPlayed: 0 })
-    const [walletBalance, setWalletBalance] = useState(0)
+    const [offersCount, setOffersCount] = useState(0)
     const [myBookings, setMyBookings] = useState([])
 
     const fetchDashboardData = useCallback(async () => {
@@ -53,17 +54,17 @@ export default function CustomerDashboard() {
         }
 
         try {
-            const walletRes = await api.get('/wallet/me')
-            if (walletRes && walletRes.success && walletRes.data) {
-                setWalletBalance(walletRes.data.balance || 0)
+            const offersRes = await getDiscountOffers({ status: 'Active' })
+            if (offersRes?.success && offersRes.data?.offers) {
+                setOffersCount(offersRes.data.offers.length)
             }
         } catch (err) {
-            // Non-fatal: wallet card just shows 0
+            // Non-fatal fallback
         }
     }, [])
 
     useEffect(() => { fetchDashboardData() }, [fetchDashboardData])
-    useRealtime(['booking:new', 'booking:cancelled', 'wallet:updated', 'payment:settled'], () => fetchDashboardData())
+    useRealtime(['booking:new', 'booking:cancelled', 'payment:settled'], () => fetchDashboardData())
 
     const upcomingBookings = myBookings.filter(b => b.status === 'Confirmed' || b.status === 'Pending' || b.status === 'HELD')
 
@@ -78,7 +79,7 @@ export default function CustomerDashboard() {
                 <StatCard label="Total Bookings" value={myBookings.length.toString()} icon="📅" colorTheme="blue" />
                 <StatCard label="Active Teams" value={stats.activeTeams.toString()} icon="👥" colorTheme="emerald" />
                 <StatCard label="Active Tournaments" value={stats.activeTournaments.toString()} icon="🏆" colorTheme="purple" />
-                <StatCard label="Wallet Balance" value={`₹${walletBalance.toLocaleString('en-IN')}`} icon="💰" colorTheme="amber" />
+                <StatCard label="Active Offers" value={offersCount.toString()} icon="🏷️" colorTheme="amber" />
             </div>
 
             <Card>

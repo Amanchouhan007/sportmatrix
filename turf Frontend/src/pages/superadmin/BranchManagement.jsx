@@ -11,7 +11,7 @@ import StatCard from '../../components/ui/StatCard'
 import ConfirmDialog from '../../components/ui/ConfirmDialog'
 import { useToast } from '../../components/ui/Toast'
 import { useAuth } from '../../context/AuthContext'
-import { FiEdit2, FiTrash2, FiPower, FiSearch, FiBriefcase, FiCheckCircle, FiSlash, FiTrendingUp, FiEye, FiMapPin, FiUser, FiDownload, FiChevronLeft, FiChevronRight, FiFilter } from 'react-icons/fi'
+import { FiTrash2, FiPower, FiSearch, FiBriefcase, FiCheckCircle, FiSlash, FiTrendingUp, FiEye, FiMapPin, FiUser, FiDownload, FiChevronLeft, FiChevronRight, FiFilter } from 'react-icons/fi'
 import { getOwners, createOwner } from '../../services/ownerService'
 import { getAllPlans } from '../../services/subscriptionPlanService'
 import {
@@ -427,22 +427,22 @@ export default function BranchManagement() {
         } else {
             setEditingBranch(null)
             setOwnerSearchText('')
-            setIsQuickAddOwnerOpen(true)
+            setIsQuickAddOwnerOpen(false)
             setFormData({
                 branchName: '',
                 branchCode: '',
                 description: '',
                 ownerId: '',
                 subscriptionPlanId: subscriptionPlans[0]?._id || '',
-                pricePerHour: 1000,
-                openingTime: '06:00 AM',
-                closingTime: '11:00 PM',
-                turfSize: '5,000 Sq.Ft',
-                surfaceType: 'TurfPro Synthetic Arena',
-                sports: ['Cricket', 'Football'],
-                amenities: ['Floodlights', 'Parking', 'Washroom'],
-                discountOffer: '20% OFF FIRST MATCH',
-                couponCode: 'CRICKET20',
+                pricePerHour: '',
+                openingTime: '',
+                closingTime: '',
+                turfSize: '',
+                surfaceType: '',
+                sports: [],
+                amenities: [],
+                discountOffer: '',
+                couponCode: '',
                 country: 'India',
                 state: '',
                 city: '',
@@ -604,7 +604,7 @@ export default function BranchManagement() {
         { 
             key: 'subscriptionPlanId', 
             label: 'Subscription Plan', 
-            render: v => v?.planName || 'N/A' 
+            render: (v, r) => r?.planName || r?.subscriptionPlan?.planName || (typeof v === 'object' ? v?.planName : String(v || 'Standard'))
         },
         { 
             key: 'status', 
@@ -618,7 +618,7 @@ export default function BranchManagement() {
         { 
             key: 'totalRevenue', 
             label: 'Plan Price', 
-            render: (v, r) => `₹${Number(r?.subscriptionPlanId?.monthlyPrice || r?.planPrice || r?.subscription_price_snapshot || 1000).toLocaleString('en-IN')}` 
+            render: (v, r) => `₹${Number(r?.subscriptionPlan?.monthlyPrice || r?.subscriptionPlanId?.monthlyPrice || r?.planPrice || r?.subscription_price_snapshot || 1000).toLocaleString('en-IN')}` 
         },
         {
             key: 'bookingRevenue',
@@ -644,7 +644,6 @@ export default function BranchManagement() {
             render: (_, r) => (
                 <div className="flex gap-2">
                     <Button size="sm" variant="ghost" onClick={() => handleViewBranch(r)} title="View Details"><FiEye /></Button>
-                    <Button size="sm" variant="ghost" onClick={() => handleOpenModal(r)}><FiEdit2 /></Button>
                     <Button 
                         size="sm" 
                         variant="ghost" 
@@ -1006,13 +1005,6 @@ export default function BranchManagement() {
                                         <FiEye className="w-3.5 h-3.5" />
                                     </button>
                                     <button
-                                        onClick={() => handleOpenModal(r)}
-                                        className="w-8 h-8 rounded-lg bg-slate-100 hover:bg-indigo-500 text-surface-600 hover:text-white border border-surface-200/60 hover:border-indigo-500 transition-all duration-200 flex items-center justify-center cursor-pointer"
-                                        title="Edit Branch"
-                                    >
-                                        <FiEdit2 className="w-3.5 h-3.5" />
-                                    </button>
-                                    <button
                                         onClick={() => setConfirm({ open: true, type: 'status', id: r._id })}
                                         className="w-8 h-8 rounded-lg bg-slate-100 hover:bg-amber-500 text-surface-600 hover:text-white border border-surface-200/60 hover:border-amber-500 transition-all duration-200 flex items-center justify-center cursor-pointer"
                                         title="Toggle Status"
@@ -1084,7 +1076,7 @@ export default function BranchManagement() {
             <Modal 
                 isOpen={modal} 
                 onClose={() => setModal(false)} 
-                title={editingBranch ? "Edit Branch" : "Add New Branch"}
+                title="Add New Branch"
                 size="lg"
             >
                 <div className="pt-2 max-h-[70vh] overflow-y-auto pr-2 space-y-6">

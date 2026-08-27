@@ -52,9 +52,10 @@ export default function TournamentCreatePage({ role = 'owner' }) {
 
     const [masterSports, setMasterSports] = useState([])
     const [categories, setCategories] = useState([])
+    const [ownerTurfs, setOwnerTurfs] = useState([])
 
     useEffect(() => {
-        // Load sports from owner's active branches first, fallback to turf master sports
+        // Load sports & real turfs from owner's active branches
         Promise.all([
             api.get('/branches').catch(() => null),
             api.get('/sports/master').catch(() => null)
@@ -63,6 +64,17 @@ export default function TournamentCreatePage({ role = 'owner' }) {
             const branchesList = (branchesRes && branchesRes.success && Array.isArray(branchesRes.data?.branches))
                 ? branchesRes.data.branches
                 : (branchesRes && Array.isArray(branchesRes.data)) ? branchesRes.data : []
+
+            // Extract real owner turfs/venues (Venue-wise, no court-wise fluff)
+            const turfsList = branchesList.map(b => ({
+                id: b.id || b._id || b.branchId,
+                name: b.branchName || b.name || b.turfName || 'My Turf Venue',
+                city: b.city || ''
+            }))
+            setOwnerTurfs(turfsList)
+            if (turfsList.length > 0) {
+                setForm(prev => ({ ...prev, courtName: prev.courtName || turfsList[0].name }))
+            }
 
             // Extract sports configured on owner's real turfs/branches
             const activeBranchSports = []
@@ -355,12 +367,24 @@ export default function TournamentCreatePage({ role = 'owner' }) {
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <Input
-                            label="Select Turf / Court"
-                            placeholder="e.g. Turf Court 1 (Main Pitch)"
-                            value={form.courtName}
-                            onChange={(e) => setForm({ ...form, courtName: e.target.value })}
-                        />
+                        {ownerTurfs.length > 0 ? (
+                            <Select
+                                label="Select Turf Venue *"
+                                value={form.courtName}
+                                onChange={(e) => setForm({ ...form, courtName: e.target.value })}
+                                options={ownerTurfs.map(t => ({
+                                    value: t.name,
+                                    label: t.city ? `${t.name} (${t.city})` : t.name
+                                }))}
+                            />
+                        ) : (
+                            <Input
+                                label="Select Turf Venue *"
+                                placeholder="Enter Turf Venue Name"
+                                value={form.courtName}
+                                onChange={(e) => setForm({ ...form, courtName: e.target.value })}
+                            />
+                        )}
 
                         <Input
                             label="Match Duration (Minutes)"

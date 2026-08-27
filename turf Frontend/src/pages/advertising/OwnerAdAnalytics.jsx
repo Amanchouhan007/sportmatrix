@@ -158,7 +158,7 @@ export default function OwnerAdAnalytics() {
                         <FiEye className="text-purple-500" /> Views & Clicks by Campaign
                     </h3>
                     <div className="h-64">
-                        <ResponsiveContainer width="100%" height="100%" minWidth={0}>
+                        <ResponsiveContainer width="100%" height={240} minWidth={0}>
                             <BarChart data={viewsClicksByCampaign} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                                 <CartesianGrid strokeDasharray="3 3" stroke="#E2E8F0" />
                                 <XAxis dataKey="name" stroke="#64748B" tick={{ fontSize: 10 }} />
@@ -177,7 +177,7 @@ export default function OwnerAdAnalytics() {
                         <FiDollarSign className="text-emerald-500" /> Revenue by Campaign (₹)
                     </h3>
                     <div className="h-64">
-                        <ResponsiveContainer width="100%" height="100%" minWidth={0}>
+                        <ResponsiveContainer width="100%" height={240} minWidth={0}>
                             <BarChart data={revenueByCampaign} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                                 <CartesianGrid strokeDasharray="3 3" stroke="#E2E8F0" />
                                 <XAxis dataKey="name" stroke="#64748B" tick={{ fontSize: 10 }} />

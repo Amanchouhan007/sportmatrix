@@ -9,19 +9,26 @@ const formatBranch = (b, statsObj = { revenue: 0, count: 0, commission: 0 }) => 
     const bookingCommission = typeof statsObj === 'object' ? (statsObj?.commission || Math.round(bookingRevenue * 0.1)) : Math.round(bookingRevenue * 0.1);
     const planPrice = Number(b.subscriptionPlan?.monthlyPrice || 0);
 
-    const sports = b.branchSports && b.branchSports.length > 0
-        ? b.branchSports.map(bs => ({
-            id: bs.id,
-            sportId: bs.sportId,
-            name: bs.sport?.name || bs.name,
-            icon: bs.sport?.icon || bs.icon || '🏏',
-            regularPrice: Number(bs.regularPrice),
-            peakPrice: Number(bs.peakPrice),
-            slotDuration: bs.slotDuration,
-            totalCourts: bs.totalCourts,
-            status: bs.status
-        }))
-        : [];
+    const activeSports = (b.branchSports || []).filter(bs => bs.status === 'ACTIVE');
+    let minSportPrice = null;
+    if (activeSports.length > 0) {
+        const validPrices = activeSports.map(bs => Number(bs.regularPrice || 0)).filter(p => p > 0);
+        if (validPrices.length > 0) minSportPrice = Math.min(...validPrices);
+    }
+    const effectiveMinPrice = minSportPrice !== null ? minSportPrice : Number(b.minPriceHourly || 1000);
+
+    const sports = (b.branchSports || []).map(bs => ({
+        id: bs.id,
+        _id: bs.id,
+        sportId: bs.sportId,
+        name: bs.sport?.name || bs.name,
+        icon: bs.sport?.icon || bs.icon || '🏏',
+        regularPrice: Number(bs.regularPrice),
+        peakPrice: Number(bs.peakPrice),
+        slotDuration: bs.slotDuration,
+        totalCourts: bs.totalCourts,
+        status: bs.status
+    }));
 
     return {
         id: b.id,
@@ -30,9 +37,11 @@ const formatBranch = (b, statsObj = { revenue: 0, count: 0, commission: 0 }) => 
         branchCode: b.branchCode,
         description: b.description || '',
         ownerId: b.owner ? { _id: b.owner.id, id: b.owner.id, fullName: b.owner.fullName } : null,
-        subscriptionPlanId: b.subscriptionPlan
+        subscriptionPlanId: b.subscriptionPlanId || b.subscriptionPlan?.id || '',
+        subscriptionPlan: b.subscriptionPlan
             ? { _id: b.subscriptionPlan.id, id: b.subscriptionPlan.id, planName: b.subscriptionPlan.planName, monthlyPrice: planPrice, monthly_price: planPrice }
             : null,
+        planName: b.subscriptionPlan?.planName || 'Standard Plan',
         planPrice,
         plan_price: planPrice,
         bookingRevenue,
@@ -50,9 +59,9 @@ const formatBranch = (b, statsObj = { revenue: 0, count: 0, commission: 0 }) => 
         mobile: b.mobile,
         alternateMobile: b.alternateMobile || '',
         gstNumber: b.gstNumber || '',
-        pricePerHour: Number(b.minPriceHourly),
-        price: Number(b.minPriceHourly),
-        minPriceHourly: Number(b.minPriceHourly),
+        pricePerHour: effectiveMinPrice,
+        price: effectiveMinPrice,
+        minPriceHourly: effectiveMinPrice,
         openingTime: b.openingTime,
         closingTime: b.closingTime,
         turfSize: `${b.dimensionsSqFt || 0} Sq.Ft`,
