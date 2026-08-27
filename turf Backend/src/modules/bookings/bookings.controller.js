@@ -252,22 +252,32 @@ const getBookingHistory = async (req, res) => {
 
     try {
         const { branchId } = req.query;
-        const userPhone = req.user.mobile || req.user.phone;
-        const cleanPhone = userPhone ? userPhone.replace(/\D/g, '').slice(-10) : '';
+        let bookingWhere = {};
+        let matchPayWhere = {};
 
-        const bookingWhere = {
-            OR: [
-                { userId: req.user.id },
-                ...(cleanPhone ? [{ mobileNumber: { contains: cleanPhone } }] : [])
-            ]
-        };
-
-        const matchPayWhere = {
-            OR: [
-                { userId: req.user.id },
-                ...(cleanPhone ? [{ playerPhone: { contains: cleanPhone } }] : [])
-            ]
-        };
+        if (req.user.role === 'CUSTOMER') {
+            const userPhone = req.user.mobile || req.user.phone;
+            const cleanPhone = userPhone ? userPhone.replace(/\D/g, '').slice(-10) : '';
+            bookingWhere = {
+                OR: [
+                    { userId: req.user.id },
+                    ...(cleanPhone ? [{ mobileNumber: { contains: cleanPhone } }] : [])
+                ]
+            };
+            matchPayWhere = {
+                OR: [
+                    { userId: req.user.id },
+                    ...(cleanPhone ? [{ playerPhone: { contains: cleanPhone } }] : [])
+                ]
+            };
+        } else {
+            // STAFF, OWNER, SUPER_ADMIN - scope by branch
+            const branchFilter = await resolveBranchFilterForUser(req, branchId);
+            if (branchFilter.branchId) {
+                bookingWhere = { slot: { branchId: branchFilter.branchId } };
+                matchPayWhere = { match: { branchId: branchFilter.branchId } };
+            }
+        }
 
         const [bookings, matchPayments] = await Promise.all([
             prisma.booking.findMany({
@@ -282,34 +292,42 @@ const getBookingHistory = async (req, res) => {
             })
         ]);
 
+        const existingCodes = new Set(bookings.map(b => (b.bookingCode || '').toLowerCase()));
+        const existingNamesAndAmounts = new Set(bookings.map(b => `${(b.customerName || '').toLowerCase()}_${Number(b.amount || 0)}`));
+
         const formatted = bookings.map(formatBooking);
         for (const mp of matchPayments) {
-            formatted.push({
-                booking_id: mp.id,
-                id: mp.id,
-                bookingCode: `MATCH-${mp.matchId.substring(0, 10)}`,
-                user_id: mp.userId,
-                customer_name: mp.playerName || req.user.name,
-                mobile_number: mp.playerPhone || userPhone,
-                amount: Number(mp.amount || 0),
-                gross_amount: Number(mp.amount || 0),
-                commission_rate: 10,
-                commission_amount: Number(mp.commissionAmount || 0),
-                owner_amount: Number(mp.ownerAmount || 0),
-                duration: mp.match?.financialSnapshot?.durationHours || 1,
-                booking_status: mp.paymentStatus === 'COMPLETED' ? 'COMPLETED' : 'HELD',
-                status: mp.paymentStatus === 'COMPLETED' ? 'COMPLETED' : 'HELD',
-                booked_on: mp.createdAt,
-                branch_id: mp.match?.branchId || null,
-                slot_date: mp.createdAt.toISOString().substring(0, 10),
-                start_time: '18:00',
-                end_time: '19:00',
-                court_name: 'Court 1',
-                sport_name: mp.match?.sport?.name || 'Cricket',
-                sport_icon: mp.match?.sport?.icon || '🏏',
-                checkInStatus: 'PENDING',
-                notes: 'E2E Match Slot Booking'
-            });
+            const codeKey = `match-${(mp.matchId || '').substring(0, 10)}`.toLowerCase();
+            const nameAmountKey = `${(mp.playerName || '').toLowerCase()}_${Number(mp.amount || 0)}`;
+
+            if (!existingCodes.has(codeKey) && !existingNamesAndAmounts.has(nameAmountKey)) {
+                formatted.push({
+                    booking_id: mp.id,
+                    id: mp.id,
+                    bookingCode: `MATCH-${(mp.matchId || mp.id).substring(0, 10)}`,
+                    user_id: mp.userId,
+                    customer_name: mp.playerName || 'Player',
+                    mobile_number: mp.playerPhone || '',
+                    amount: Number(mp.amount || 0),
+                    gross_amount: Number(mp.amount || 0),
+                    commission_rate: 10,
+                    commission_amount: Number(mp.commissionAmount || Math.round(Number(mp.amount || 0) * 0.1)),
+                    owner_amount: Number(mp.ownerAmount || (Number(mp.amount || 0) * 0.9)),
+                    duration: mp.match?.financialSnapshot?.durationHours || 1,
+                    booking_status: mp.paymentStatus === 'COMPLETED' ? 'COMPLETED' : 'HELD',
+                    status: mp.paymentStatus === 'COMPLETED' ? 'COMPLETED' : 'HELD',
+                    booked_on: mp.createdAt,
+                    branch_id: mp.match?.branchId || null,
+                    slot_date: mp.createdAt.toISOString().substring(0, 10),
+                    start_time: '18:00',
+                    end_time: '19:00',
+                    court_name: 'Court 1',
+                    sport_name: mp.match?.sport?.name || 'Cricket',
+                    sport_icon: mp.match?.sport?.icon || '🏏',
+                    checkInStatus: 'PENDING',
+                    notes: 'E2E Match Slot Booking'
+                });
+            }
         }
 
         formatted.sort((a, b) => new Date(b.booked_on) - new Date(a.booked_on));

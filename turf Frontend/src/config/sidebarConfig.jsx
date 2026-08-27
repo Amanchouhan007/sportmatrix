@@ -88,16 +88,6 @@ const sidebarConfig = {
         { label: 'Dashboard', icon: <HiHome />, path: '/staff' },
         {
             isCollapsible: true,
-            label: 'Advertising Management',
-            icon: <HiMegaphone />,
-            pathPrefix: '/staff/ads',
-            children: [
-                { label: 'My Advertisements', icon: <HiMegaphone />, path: '/staff/ads' },
-                { label: 'Advertisement Analytics', icon: <HiChartBar />, path: '/staff/ads/analytics' },
-            ]
-        },
-        {
-            isCollapsible: true,
             label: 'Tournament Management',
             icon: <HiTrophy />,
             pathPrefix: '/staff/tournaments',

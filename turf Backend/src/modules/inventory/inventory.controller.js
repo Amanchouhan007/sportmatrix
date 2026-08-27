@@ -18,9 +18,18 @@ const formatItem = (r) => {
     };
 };
 
-const resolveOwnerBranchIds = async (user) => {
+const resolveBranchScopeForUser = async (user, branchId) => {
+    if (user.role === 'SUPER_ADMIN') {
+        return branchId ? { branchId } : {};
+    }
+    if (user.role === 'STAFF') {
+        const staffUser = await prisma.user.findUnique({ where: { id: user.id }, select: { staffBranchId: true } });
+        if (staffUser?.staffBranchId) return { branchId: staffUser.staffBranchId };
+    }
+    if (branchId) return { branchId };
     const branches = await prisma.branch.findMany({ where: { ownerUserId: user.id }, select: { id: true } });
-    return branches.map(b => b.id);
+    if (branches.length > 0) return { branchId: { in: branches.map(b => b.id) } };
+    return {};
 };
 
 const getInventory = async (req, res) => {
@@ -30,13 +39,7 @@ const getInventory = async (req, res) => {
     }
 
     try {
-        const where = {};
-        if (branchId) {
-            where.branchId = branchId;
-        } else if (req.user.role !== 'SUPER_ADMIN') {
-            where.branchId = { in: await resolveOwnerBranchIds(req.user) };
-        }
-
+        const where = await resolveBranchScopeForUser(req.user, branchId);
         const rows = await prisma.inventory.findMany({ where, orderBy: { itemName: 'asc' } });
         return res.status(200).json({ success: true, data: rows.map(formatItem) });
     } catch (error) {

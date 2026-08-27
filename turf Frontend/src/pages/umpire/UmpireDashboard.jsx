@@ -115,6 +115,8 @@ export default function UmpireDashboard() {
                 if (prof.full_name) setMyUmpireName(prof.full_name);
                 if (prof.upi_id) setMyUpiId(prof.upi_id);
                 if (prof.on_duty_status !== undefined) setIsOnDuty(Boolean(prof.on_duty_status));
+                if (prof.officiating_grounds) setOfficiatingLocations(prof.officiating_grounds);
+                if (prof.match_fee) setMyMatchFee(Number(prof.match_fee));
             }
         });
 
@@ -128,8 +130,8 @@ export default function UmpireDashboard() {
                         id: m.id || m.matchId || m.match_code,
                         matchCode: m.matchId || m.id || m.match_code,
                         title: m.title || `${teamA} vs ${teamB}`,
-                        turf: m.turf || m.venue || 'E2E Test Arena (Indore)',
-                        turfLocation: m.turfLocation || 'Indore',
+                        turf: m.turf || m.venue || matchObj.branch?.branchName || m.branchName || 'Turf Venue',
+                        turfLocation: m.turfLocation || matchObj.branch?.city || '',
                         date: m.date || (matchObj.createdAt ? new Date(matchObj.createdAt).toLocaleDateString() : 'Today'),
                         time: m.time || (matchObj.createdAt ? new Date(matchObj.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Today'),
                         matchType: m.matchType || matchObj.paymentMode || 'DARE MATCH',
@@ -166,7 +168,7 @@ export default function UmpireDashboard() {
                     return {
                         id: m.id || m.matchId || m.match_code,
                         matchTitle: m.matchTitle || `${teamA} vs ${teamB}`,
-                        turf: m.turf || 'E2E Test Arena (Indore)',
+                        turf: m.turf || matchObj.branch?.branchName || m.branchName || 'Turf Venue',
                         date: m.date || (m.certifiedAt ? new Date(m.certifiedAt).toLocaleDateString() : 'Recently'),
                         time: m.time || (m.certifiedAt ? new Date(m.certifiedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Recently'),
                         officiatedBy: `${myUmpireName || 'Official Umpire'}`,
@@ -552,7 +554,7 @@ export default function UmpireDashboard() {
                             </span>
                         </div>
                         <p className="text-[11px] text-slate-400 font-medium truncate">
-                            🏟️ {officiatingLocations || 'E2E Test Arena (Indore)'}
+                            🏟️ {officiatingLocations || 'Venue Not Assigned'}
                         </p>
                         <div className="flex items-center justify-between text-[10px] font-mono pt-1 border-t border-slate-700/50">
                             <span className="text-slate-400">UPI QR:</span>
@@ -653,7 +655,7 @@ export default function UmpireDashboard() {
                                 {activeTab === 'rules' && '📖 Box Cricket Umpiring Rules'}
                             </h2>
                             <p className="text-[11px] text-slate-500 font-medium hidden sm:block">
-                                🏟️ {officiatingLocations || 'E2E Test Arena (Indore)'}
+                                🏟️ {officiatingLocations || 'Venue Not Assigned'}
                             </p>
                         </div>
                     </div>

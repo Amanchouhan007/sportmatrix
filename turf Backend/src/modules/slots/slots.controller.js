@@ -237,7 +237,46 @@ const getSlots = async (req, res) => {
                 });
             }
 
+            const activeMaintenance = await prisma.maintenanceTask.findMany({
+                where: {
+                    branchId,
+                    status: { in: ['OPEN', 'SCHEDULED', 'IN_PROGRESS'] }
+                }
+            }).catch(() => []);
+
+            if (activeMaintenance.length > 0) {
+                allSlots = allSlots.map(s => {
+                    const matchingTask = activeMaintenance.find(m => {
+                        if (m.targetDeadline) {
+                            const taskDateStr = new Date(m.targetDeadline).toISOString().split('T')[0];
+                            if (taskDateStr !== dateStr) return false;
+                        }
+                        const area = (m.turfArea || '').toLowerCase().trim();
+                        const cName = (s.courtName || '').toLowerCase().trim();
+                        const isCourtMatch = !area || area === 'facility' || area === 'all' || area.includes('branch') || cName.includes(area) || area.includes(cName);
+                        if (!isCourtMatch) return false;
+
+                        // Optional time-slot level check if specific time (e.g. 7:00 PM) is mentioned in turfArea or issueDescription
+                        const timeMatches = ((m.turfArea || '') + ' ' + (m.issueDescription || '')).match(/(?:1[0-2]|0?[1-9]):[0-5][0-9]\s*(?:AM|PM)?/gi);
+                        if (timeMatches && timeMatches.length > 0) {
+                            const slotTimeStr = (s.startTime || '').toLowerCase().replace(/\s+/g, '');
+                            const hasTimeMatch = timeMatches.some(t => {
+                                const cleanT = t.toLowerCase().replace(/\s+/g, '');
+                                return slotTimeStr.includes(cleanT) || cleanT.includes(slotTimeStr);
+                            });
+                            if (!hasTimeMatch) return false;
+                        }
+
+                        return true;
+                    });
+                    if (matchingTask) {
+                        return { ...s, status: 'MAINTENANCE', maintenanceReason: matchingTask.issueDescription };
+                    }
+                    return s;
+                });
+            }
         }
+
 
         allSlots.sort((a, b) => (a.courtName + a.startTime).localeCompare(b.courtName + b.startTime));
 

@@ -24,11 +24,13 @@ export default function StaffMaintenance() {
             const res = await getMaintenanceTickets()
             setTasks((res.data || []).map(t => ({
                 id: t.id,
+                venue: t.branchName || 'Turf Venue',
                 task: t.issueDescription,
-                area: t.turfArea,
-                priority: PRIORITY_FROM_BACKEND[t.priorityLevel] || t.priorityLevel,
-                due: t.targetDeadline ? new Date(t.targetDeadline).toLocaleDateString('en-IN') : '',
-                status: STATUS_FROM_BACKEND[t.status] || t.status
+                area: t.turfArea || 'Main Court',
+                specialist: t.assignedSpecialist || 'Staff Technician',
+                priority: PRIORITY_FROM_BACKEND[t.priorityLevel] || t.priorityLevel || 'Medium',
+                due: t.targetDeadline ? new Date(t.targetDeadline).toLocaleDateString('en-IN') : 'Scheduled',
+                status: STATUS_FROM_BACKEND[t.status] || t.status || 'Open'
             })))
         } catch (err) {
             addToast({ title: 'Load Failed', message: err.message || 'Failed to load maintenance tasks.', type: 'error' })
@@ -57,7 +59,7 @@ export default function StaffMaintenance() {
         setBusyId(taskId)
         try {
             await updateMaintenanceTicket(taskId, { status: 'COMPLETED' })
-            addToast({ title: 'Task Completed', message: `Task ${taskId} has been completed`, type: 'success' })
+            addToast({ title: 'Task Completed', message: `Task ${taskId} completed! Turf slots unblocked.`, type: 'success' })
             fetchTasks()
         } catch (err) {
             addToast({ title: 'Update Failed', message: err.message || 'Could not complete this task.', type: 'error' })
@@ -72,7 +74,12 @@ export default function StaffMaintenance() {
     }
 
     const taskColumns = [
-        { key: 'id', label: 'ID' },
+        { key: 'id', label: 'Task ID' },
+        { 
+            key: 'venue', 
+            label: 'Turf Venue',
+            render: v => <span className="font-bold text-slate-800">🏟️ {v}</span>
+        },
         { key: 'task', label: 'Task' },
         { key: 'area', label: 'Area' },
         {
@@ -80,7 +87,7 @@ export default function StaffMaintenance() {
             label: 'Priority',
             render: v => <Badge variant={v === 'Urgent' ? 'danger' : v === 'Medium' ? 'warning' : 'default'}>{v}</Badge>
         },
-        { key: 'due', label: 'Due' },
+        { key: 'due', label: 'Due Date' },
         {
             key: 'status',
             label: 'Status',
@@ -105,14 +112,11 @@ export default function StaffMaintenance() {
                         </Button>
                     )
                 }
-                if (r.status === 'Completed') {
-                    return (
-                        <Button size="sm" variant="outline" onClick={() => handleView(r)}>
-                            👁️ View
-                        </Button>
-                    )
-                }
-                return null
+                return (
+                    <Button size="sm" variant="outline" onClick={() => handleView(r)}>
+                        👁️ View
+                    </Button>
+                )
             }
         },
     ]
@@ -120,15 +124,15 @@ export default function StaffMaintenance() {
     return (
         <div className="space-y-6">
             <div>
-                <h1 className="text-2xl font-bold text-surface-900">Maintenance Tasks</h1>
-                <p className="text-surface-500 text-sm mt-1">Your assigned maintenance duties</p>
+                <h1 className="text-2xl font-bold text-surface-900">Maintenance Tasks & Shift Duties</h1>
+                <p className="text-surface-500 text-sm mt-1">Assigned maintenance duties for your assigned turf branch</p>
             </div>
 
             <div className="bg-white rounded-xl shadow-sm border border-surface-200 overflow-hidden pt-4">
                 {isLoading ? (
                     <div className="py-10 text-center text-slate-400 text-sm font-semibold">Loading tasks...</div>
                 ) : tasks.length === 0 ? (
-                    <div className="py-10 text-center text-slate-400 text-sm font-semibold">No maintenance tasks assigned.</div>
+                    <div className="py-10 text-center text-slate-400 text-sm font-semibold">No maintenance tasks assigned for this branch.</div>
                 ) : (
                     <DataTable columns={taskColumns} data={tasks} />
                 )}
@@ -138,28 +142,39 @@ export default function StaffMaintenance() {
             <Modal
                 isOpen={isViewOpen}
                 onClose={() => setIsViewOpen(false)}
-                title="Task Details"
+                title="Maintenance Task Details"
             >
                 {selectedTask && (
                     <div className="space-y-5">
-                        {/* Header with ID and Status */}
                         <div className="flex items-center justify-between pb-4 border-b border-surface-100">
                             <div>
                                 <p className="text-xs text-surface-400 uppercase tracking-wider">Task ID</p>
                                 <p className="text-lg font-bold text-surface-900">{selectedTask.id}</p>
                             </div>
-                            <Badge variant="success" dot>{selectedTask.status}</Badge>
+                            <Badge variant={selectedTask.status === 'Completed' ? 'success' : selectedTask.status === 'In Progress' ? 'primary' : 'warning'} dot>
+                                {selectedTask.status}
+                            </Badge>
                         </div>
 
-                        {/* Task Info */}
                         <div className="grid grid-cols-2 gap-4">
                             <div className="bg-surface-50 rounded-xl p-4">
-                                <p className="text-xs text-surface-400 uppercase tracking-wider mb-1">🔧 Task</p>
+                                <p className="text-xs text-surface-400 uppercase tracking-wider mb-1">🏟️ Turf Venue</p>
+                                <p className="text-sm font-semibold text-surface-900">{selectedTask.venue}</p>
+                            </div>
+                            <div className="bg-surface-50 rounded-xl p-4">
+                                <p className="text-xs text-surface-400 uppercase tracking-wider mb-1">📍 Area / Court</p>
+                                <p className="text-sm font-semibold text-surface-900">{selectedTask.area}</p>
+                            </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="bg-surface-50 rounded-xl p-4">
+                                <p className="text-xs text-surface-400 uppercase tracking-wider mb-1">🔧 Task Description</p>
                                 <p className="text-sm font-semibold text-surface-900">{selectedTask.task}</p>
                             </div>
                             <div className="bg-surface-50 rounded-xl p-4">
-                                <p className="text-xs text-surface-400 uppercase tracking-wider mb-1">📍 Area</p>
-                                <p className="text-sm font-semibold text-surface-900">{selectedTask.area}</p>
+                                <p className="text-xs text-surface-400 uppercase tracking-wider mb-1">👤 Assigned Specialist</p>
+                                <p className="text-sm font-semibold text-surface-900">{selectedTask.specialist}</p>
                             </div>
                         </div>
 
@@ -171,18 +186,11 @@ export default function StaffMaintenance() {
                                 </Badge>
                             </div>
                             <div className="bg-surface-50 rounded-xl p-4">
-                                <p className="text-xs text-surface-400 uppercase tracking-wider mb-1">📅 Due Date</p>
+                                <p className="text-xs text-surface-400 uppercase tracking-wider mb-1">📅 Target Deadline</p>
                                 <p className="text-sm font-semibold text-surface-900">{selectedTask.due}</p>
                             </div>
                         </div>
 
-                        {/* Status Highlight */}
-                        <div className="bg-gradient-to-r from-green-50 to-emerald-50 rounded-xl p-4 flex items-center justify-between">
-                            <p className="text-sm text-surface-600 font-medium">✅ Current Status</p>
-                            <Badge variant="success" dot>{selectedTask.status}</Badge>
-                        </div>
-
-                        {/* Close Button */}
                         <div className="flex justify-end pt-2">
                             <Button variant="outline" onClick={() => setIsViewOpen(false)}>Close</Button>
                         </div>

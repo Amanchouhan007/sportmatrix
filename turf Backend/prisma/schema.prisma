@@ -1417,21 +1417,21 @@ model UmpireProfile {
   user                    User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   licenseNumber           String                 @unique @map("license_number") @db.VarChar(50) // e.g. UMP-IND-409
-  fullName                String                 @map("full_name") @db.VarChar(100)            // e.g. Rajesh Sisodiya
-  certificationLevel      String                 @default("BCCI / Turf Certified Level-2") @map("certification_level") @db.VarChar(100)
-  officiatingLocations    String                 @default("Spike Turf & Royal Ground (Indore)") @map("officiating_locations") @db.VarChar(200)
-  city                    String                 @default("Indore") @map("city") @db.VarChar(100)
+  fullName                String                 @map("full_name") @db.VarChar(100)
+  certificationLevel      String?                @map("certification_level") @db.VarChar(100)
+  officiatingLocations    String?                @map("officiating_locations") @db.VarChar(200)
+  city                    String?                @map("city") @db.VarChar(100)
   
   // Direct UPI QR Setup
-  upiId                   String                 @default("rajesh.umpire@okhdfcbank") @map("upi_id") @db.VarChar(100)
+  upiId                   String?                @map("upi_id") @db.VarChar(100)
   qrImageUrl              String?                @map("qr_image_url") @db.VarChar(255)
   dutyFeePerMatch         Decimal                @default(300.00) @map("duty_fee_per_match") @db.Decimal(10, 2)
   
   isOnDuty                Boolean                @default(true) @map("is_on_duty") // ON DUTY / OFF DUTY
   leaderboardTier         LeaderboardTier        @default(PAID_UMPIRE) @map("leaderboard_tier") // 1.5x Points
-  totalMatchesOfficiated  Int                    @default(5) @map("total_matches_officiated")
-  totalCertifiedScorecards Int                   @default(5) @map("total_certified_scorecards")
-  rating                  Decimal                @default(4.90) @map("rating") @db.Decimal(3, 2)
+  totalMatchesOfficiated  Int                    @default(0) @map("total_matches_officiated")
+  totalCertifiedScorecards Int                   @default(0) @map("total_certified_scorecards")
+  rating                  Decimal                @default(5.00) @map("rating") @db.Decimal(3, 2)
   status                  UserStatus             @default(ACTIVE) @map("status")
 
   createdAt               DateTime               @default(now()) @map("created_at")
