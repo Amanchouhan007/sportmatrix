@@ -599,12 +599,12 @@ export default function BranchManagement() {
         { 
             key: 'ownerId', 
             label: 'Owner Name', 
-            render: v => v?.fullName || 'N/A' 
+            render: v => typeof v === 'object' ? (v?.fullName || v?.name || 'N/A') : (typeof v === 'string' ? v : 'N/A')
         },
         { 
             key: 'subscriptionPlanId', 
             label: 'Subscription Plan', 
-            render: v => v?.planName || 'N/A' 
+            render: v => typeof v === 'object' ? (v?.planName || v?.name || 'N/A') : (typeof v === 'string' ? v : 'N/A')
         },
         { 
             key: 'status', 
@@ -959,7 +959,7 @@ export default function BranchManagement() {
                                 {/* Plan */}
                                 <div className="col-span-2">
                                     <span className="px-2.5 py-1 rounded-xl bg-purple-50 text-purple-700 border border-purple-200/80 text-[11px] font-bold whitespace-nowrap inline-block">
-                                        {r.subscriptionPlanId?.planName || 'Standard'}
+                                        {typeof r.subscriptionPlanId === 'object' ? (r.subscriptionPlanId?.planName || r.subscriptionPlanId?.name || 'Standard') : (typeof r.subscriptionPlanId === 'string' ? r.subscriptionPlanId : 'Standard')}
                                     </span>
                                 </div>
 

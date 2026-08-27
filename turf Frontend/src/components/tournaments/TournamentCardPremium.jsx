@@ -25,10 +25,23 @@ export default function TournamentCardPremium({ tournament }) {
         return str || '0';
     })();
     
+    const rawBanner = tournament?.banner || tournament?.bannerImage || tournament?.banner_image || tournament?.image || tournament?.bannerUrl || tournament?.logo;
+    const formattedImage = (() => {
+        if (!rawBanner || typeof rawBanner !== 'string' || !rawBanner.trim()) {
+            return 'https://images.unsplash.com/photo-1540747913346-19e32dc3e97e?auto=format&fit=crop&q=80&w=800';
+        }
+        const trimmed = rawBanner.trim();
+        if (trimmed.startsWith('data:image/') || trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
+            return trimmed;
+        }
+        const API_BASE = import.meta.env.VITE_API_URL ? import.meta.env.VITE_API_URL.replace('/api/v1', '') : 'http://localhost:5005';
+        return `${API_BASE}${trimmed.startsWith('/') ? '' : '/'}${trimmed}`;
+    })();
+    
     const t = {
         id: tournament?.id || tournament?._id,
         title: tournament?.title || tournament?.name || 'Tournament',
-        image: tournament?.banner || tournament?.image || '/images/turf1.png',
+        image: formattedImage,
         rating: tournament?.rating || 5.0,
         maxTeams: tournament?.maxTeams || tournament?.max_teams || 16,
         registeredTeams: tournament?.registrations || tournament?.registeredTeams || tournament?.registered_teams || 0,
@@ -59,6 +72,10 @@ export default function TournamentCardPremium({ tournament }) {
                     src={t.image} 
                     alt={t.title} 
                     className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+                    onError={(e) => {
+                        e.currentTarget.onerror = null;
+                        e.currentTarget.src = 'https://images.unsplash.com/photo-1540747913346-19e32dc3e97e?auto=format&fit=crop&q=80&w=800';
+                    }}
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-[#111827]/80 via-transparent to-black/20" />
                 
@@ -137,9 +154,9 @@ export default function TournamentCardPremium({ tournament }) {
                 {/* Prizes & Fee */}
                 <div className="flex justify-between items-center mb-4 pb-3 border-b border-[#E5E7EB]">
                     <div>
-                        <div className="text-[9px] font-bold text-[#6B7280] uppercase tracking-wider mb-0.5">Prize Pool</div>
-                        <div className="text-sm font-black text-[#111827] flex items-center gap-1">
-                            🏆 {t.prize}
+                        <div className="text-[9px] font-bold text-[#6B7280] uppercase tracking-wider mb-0.5">Format</div>
+                        <div className="text-xs font-black text-[#111827]">
+                            {t.format || 'Knockout'}
                         </div>
                     </div>
                     <div className="text-right">

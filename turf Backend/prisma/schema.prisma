@@ -1065,7 +1065,7 @@ model Tournament {
   // Section 1: Tournament Identity & Sport
   title                   String             @map("title") @db.VarChar(150) // e.g. "Monsoon Cricket Super Cup 2026"
   description             String?            @map("description") @db.Text
-  bannerImage             String?            @map("banner_image") @db.VarChar(255)
+  bannerImage             String?            @map("banner_image") @db.Text
   organizerName           String             @default("SportMatrix Events Team") @map("organizer_name") @db.VarChar(100)
   organizerContactNumber  String             @default("+91 98765 43210") @map("organizer_contact_number") @db.VarChar(20)
   tournamentRules         String?            @map("tournament_rules") @db.Text

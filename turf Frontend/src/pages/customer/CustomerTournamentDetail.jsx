@@ -30,7 +30,7 @@ export default function CustomerTournamentDetail() {
                 const fRes = await getFixtures(id)
                 if (fRes.success && Array.isArray(fRes.data)) setFixtures(fRes.data)
             } catch (e) { /* ignore */ }
-            
+
             try {
                 const lRes = await getLeaderboard(id)
                 if (lRes.success && Array.isArray(lRes.data)) setLeaderboard(lRes.data)
@@ -119,11 +119,10 @@ export default function CustomerTournamentDetail() {
                     <button
                         key={tab}
                         onClick={() => setActiveTab(tab)}
-                        className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors capitalize ${
-                            activeTab === tab 
-                                ? 'border-primary-500 text-primary-600' 
-                                : 'border-transparent text-surface-500 hover:text-surface-700'
-                        }`}
+                        className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors capitalize ${activeTab === tab
+                            ? 'border-primary-500 text-primary-600'
+                            : 'border-transparent text-surface-500 hover:text-surface-700'
+                            }`}
                     >
                         {tab}
                     </button>
@@ -137,7 +136,7 @@ export default function CustomerTournamentDetail() {
                         <BracketComponent rounds={bracketRounds} />
                     </div>
                 )}
-                
+
                 {activeTab === 'leaderboard' && (
                     <div>
                         {leaderboard.length > 0 ? (

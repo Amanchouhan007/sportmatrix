@@ -225,8 +225,18 @@ export default function TournamentDetailPage() {
 
     const t = tournament
     const sport = t.sport || t.sport_name || 'Sports'
-    const name = t.name || t.title || 'Tournament'
-    const image = t.banner || '/images/turf1.png'
+    const rawBanner = t.banner || t.bannerImage || t.banner_image || t.image || t.bannerUrl || t.logo;
+    const image = (() => {
+        if (!rawBanner || typeof rawBanner !== 'string' || !rawBanner.trim()) {
+            return 'https://images.unsplash.com/photo-1540747913346-19e32dc3e97e?auto=format&fit=crop&q=80&w=800';
+        }
+        const trimmed = rawBanner.trim();
+        if (trimmed.startsWith('data:image/') || trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
+            return trimmed;
+        }
+        const API_BASE = import.meta.env.VITE_API_URL ? import.meta.env.VITE_API_URL.replace('/api/v1', '') : 'http://localhost:5005';
+        return `${API_BASE}${trimmed.startsWith('/') ? '' : '/'}${trimmed}`;
+    })();
     const entryFee = t.entryFee || t.entry_fee || 500
     const prize = t.prize || t.prizePool || t.prize_pool || String((t.winner_prize || 0) + (t.runner_prize || 0)) || '50,000'
     const format = t.format || 'Knockout'

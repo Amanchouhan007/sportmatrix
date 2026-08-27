@@ -64,13 +64,26 @@ export default function Select({
         return () => document.removeEventListener('mousedown', handleClickOutside)
     }, [isOpen])
 
+    // Helper to safely convert any object/value to a printable string for React JSX
+    const sanitizeText = (val) => {
+        if (val === null || val === undefined) return '';
+        if (typeof val === 'string' || typeof val === 'number') return String(val);
+        if (typeof val === 'object') {
+            return val.label || val.planName || val.name || val.title || val.fullName || val.id || val._id || '';
+        }
+        return String(val);
+    };
+
     // Parse options from either `options` prop or `<option>` JSX children
     const parsedOptions = (options && options.length > 0)
         ? options.map(opt => {
             if (typeof opt === 'object' && opt !== null) {
+                const rawVal = opt.value !== undefined ? opt.value : (opt.id ?? opt._id ?? opt.label ?? opt.name);
+                const valStr = (typeof rawVal === 'object' && rawVal !== null) ? (rawVal?._id || rawVal?.id || '') : rawVal;
+                const rawLbl = opt.label !== undefined ? opt.label : (opt.name ?? opt.planName ?? opt.value ?? valStr);
                 return {
-                    value: opt.value !== undefined ? opt.value : (opt.id ?? opt.label ?? opt.name),
-                    label: opt.label !== undefined ? opt.label : (opt.name ?? opt.value ?? String(opt))
+                    value: valStr,
+                    label: sanitizeText(rawLbl)
                 }
             }
             return { value: opt, label: String(opt) }
@@ -84,14 +97,16 @@ export default function Select({
                 const val = child.props?.value !== undefined ? child.props.value : child.props?.children
                 const lbl = child.props?.children !== undefined ? child.props.children : val
                 return {
-                    value: val,
-                    label: lbl
+                    value: (typeof val === 'object' && val !== null) ? (val?._id || val?.id || '') : val,
+                    label: sanitizeText(lbl)
                 }
             })
             .filter(Boolean)
 
     // Currently selected option object
-    const selectedOpt = parsedOptions.find(o => String(o.value) === String(value)) || (value ? { value, label: value } : parsedOptions[0])
+    const targetVal = (typeof value === 'object' && value !== null) ? (value?._id || value?.id || '') : value;
+    const foundOpt = parsedOptions.find(o => String(o.value) === String(targetVal));
+    const selectedOpt = foundOpt || (value ? { value: targetVal, label: sanitizeText(value) || placeholder || 'Select...' } : parsedOptions[0]);
 
     const handleSelect = (optValue) => {
         if (disabled) return

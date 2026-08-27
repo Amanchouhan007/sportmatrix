@@ -1,7 +1,31 @@
+const fs = require('fs');
+const path = require('path');
 const prisma = require('../../config/prisma');
 const { emitToBranch } = require('../../realtime/socket');
 
 const genId = (prefix) => `${prefix}_${Date.now()}_${Math.floor(Math.random() * 100000)}`;
+
+const saveBase64Image = (base64Str) => {
+    if (!base64Str || typeof base64Str !== 'string' || !base64Str.startsWith('data:image/')) {
+        return base64Str || null;
+    }
+    try {
+        const matches = base64Str.match(/^data:image\/([a-zA-Z0-9]+);base64,(.+)$/);
+        if (!matches) return base64Str;
+        const ext = matches[1] === 'jpeg' ? 'jpg' : matches[1];
+        const buffer = Buffer.from(matches[2], 'base64');
+        const fileName = `tournament_banner_${Date.now()}_${Math.floor(Math.random() * 10000)}.${ext}`;
+        const uploadDir = path.join(__dirname, '../../../../public/uploads');
+        if (!fs.existsSync(uploadDir)) {
+            fs.mkdirSync(uploadDir, { recursive: true });
+        }
+        fs.writeFileSync(path.join(uploadDir, fileName), buffer);
+        return `/uploads/${fileName}`;
+    } catch (err) {
+        console.error('Base64 banner save error:', err);
+        return base64Str;
+    }
+};
 
 const STATUS_MAP_IN = {
     'Pending Approval': 'PENDING_APPROVAL', 'Approved': 'APPROVED', 'Rejected': 'REJECTED',
@@ -157,12 +181,13 @@ const createTournament = async (req, res) => {
 
         const initialStatus = (req.user.role === 'OWNER' || req.user.role === 'SUPER_ADMIN') ? 'APPROVED' : 'PENDING_APPROVAL';
         const prizePool = `₹${(Number(winnerPrize) + Number(runnerPrize) + Number(thirdPrize)).toLocaleString()}`;
+        const savedBannerPath = saveBase64Image(banner);
 
         const tournament = await prisma.tournament.create({
             data: {
                 id: genId('t'),
                 branchId: targetBranchId, sportId, categoryId: categoryId || null,
-                title: tournamentTitle, bannerImage: banner || null, description: description || null, tournamentRules: rules || null,
+                title: tournamentTitle, bannerImage: savedBannerPath, description: description || null, tournamentRules: rules || null,
                 turfCourtName: courtName || undefined,
                 startDate: new Date(startDate), endDate: new Date(endDate),
                 registrationLastDate: registrationLastDate ? new Date(registrationLastDate) : new Date(endDate),

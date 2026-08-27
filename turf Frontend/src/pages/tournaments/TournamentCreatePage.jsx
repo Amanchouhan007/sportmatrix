@@ -205,6 +205,18 @@ export default function TournamentCreatePage({ role = 'owner' }) {
         }
     }
 
+    const entryFee = Number(form.entryFee) || 0;
+    const maxTeams = Number(form.maxTeams) || 0;
+    const minTeams = Number(form.minTeams) || 0;
+    const winnerPrize = Number(form.winnerPrize) || 0;
+    const runnerPrize = Number(form.runnerPrize) || 0;
+    const thirdPrize = Number(form.thirdPrize) || 0;
+
+    const totalPrizePool = winnerPrize + runnerPrize + thirdPrize;
+    const maxCollection = entryFee * maxTeams;
+    const minCollection = entryFee * minTeams;
+    const maxProfit = maxCollection - totalPrizePool;
+
     return (
         <div className="max-w-5xl mx-auto space-y-8 animate-in fade-in duration-500 pb-20">
             {/* Header */}
@@ -436,6 +448,43 @@ export default function TournamentCreatePage({ role = 'owner' }) {
                             value={form.thirdPrize}
                             onChange={(e) => setForm({ ...form, thirdPrize: e.target.value })}
                         />
+                    </div>
+
+                    {/* Live Financial Breakdown & Dynamic Prize Pool Summary */}
+                    <div className="mt-4 p-4.5 bg-gradient-to-r from-emerald-50/90 via-teal-50/60 to-emerald-50/90 border border-emerald-200 rounded-2xl space-y-3 shadow-xs">
+                        <div className="flex items-center justify-between border-b border-emerald-200/70 pb-2.5">
+                            <span className="text-xs font-black uppercase text-emerald-900 tracking-wider flex items-center gap-2">
+                                <HiTrophy className="text-amber-500 w-4 h-4" /> Live Prize Pool & Team Revenue Calculation
+                            </span>
+                            <span className="text-[10px] font-extrabold px-3 py-1 bg-emerald-600 text-white rounded-full shadow-xs tracking-wider uppercase">
+                                Realtime Calculation
+                            </span>
+                        </div>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                            {/* Total Prize Pool */}
+                            <div className="bg-white p-3.5 rounded-xl border border-amber-200 shadow-xs space-y-1">
+                                <span className="text-[10px] font-extrabold text-amber-700 uppercase tracking-wider block">Total Prize Pool</span>
+                                <span className="text-xl font-black text-amber-600 tabular-nums block">₹{totalPrizePool.toLocaleString('en-IN')}</span>
+                                <span className="text-[9px] font-bold text-surface-400 block truncate">1st + 2nd + 3rd Prize</span>
+                            </div>
+
+                            {/* Total Revenue Collection */}
+                            <div className="bg-white p-3.5 rounded-xl border border-emerald-200 shadow-xs space-y-1">
+                                <span className="text-[10px] font-extrabold text-emerald-800 uppercase tracking-wider block">Total Revenue ({maxTeams || 0} Teams)</span>
+                                <span className="text-xl font-black text-emerald-700 tabular-nums block">₹{maxCollection.toLocaleString('en-IN')}</span>
+                                <span className="text-[9px] font-bold text-surface-400 block truncate">{maxTeams || 0} Teams × ₹{(entryFee || 0).toLocaleString('en-IN')}</span>
+                            </div>
+
+                            {/* Net Margin */}
+                            <div className={`bg-white p-3.5 rounded-xl border shadow-xs space-y-1 ${maxProfit >= 0 ? 'border-emerald-300' : 'border-rose-300'}`}>
+                                <span className="text-[10px] font-extrabold text-surface-600 uppercase tracking-wider block">Est. Net Profit</span>
+                                <span className={`text-xl font-black tabular-nums block ${maxProfit >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
+                                    {maxProfit >= 0 ? `+₹${maxProfit.toLocaleString('en-IN')}` : `-₹${Math.abs(maxProfit).toLocaleString('en-IN')}`}
+                                </span>
+                                <span className="text-[9px] font-bold text-surface-400 block truncate">Total Revenue - Prize Pool</span>
+                            </div>
+                        </div>
                     </div>
                 </Card>
 

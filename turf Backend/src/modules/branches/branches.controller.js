@@ -77,41 +77,46 @@ const formatBranch = (b, statsObj = { revenue: 0, count: 0, commission: 0 }) => 
  */
 const getBookingRevenueByBranch = async (branchIds) => {
     if (!branchIds || !branchIds.length) return {};
-    const [bookings, matchPayments] = await Promise.all([
-        prisma.booking.findMany({
-            where: { status: { in: ['COMPLETED', 'PENDING'] }, slot: { branchId: { in: branchIds } } },
-            select: { amount: true, slotId: true, slot: { select: { branchId: true } } }
-        }),
-        prisma.matchPayment.findMany({
-            where: { paymentStatus: { in: ['COMPLETED', 'PENDING'] }, match: { branchId: { in: branchIds } } },
-            select: { amount: true, match: { select: { branchId: true, slotId: true } } }
-        })
-    ]);
+    try {
+        const [bookings, matchPayments] = await Promise.all([
+            prisma.booking.findMany({
+                where: { status: { in: ['COMPLETED', 'PENDING'] }, slot: { branchId: { in: branchIds } } },
+                select: { amount: true, slotId: true, slot: { select: { branchId: true } } }
+            }),
+            prisma.matchPayment.findMany({
+                where: { paymentStatus: { in: ['COMPLETED', 'PENDING'] }, match: { branchId: { in: branchIds } } },
+                select: { amount: true, match: { select: { branchId: true, slotId: true } } }
+            })
+        ]);
 
-    const processedSlotIds = new Set();
-    const map = {};
-    for (const b of bookings) {
-        const bId = b.slot?.branchId;
-        if (!bId) continue;
-        if (b.slotId) processedSlotIds.add(b.slotId);
-        if (!map[bId]) map[bId] = { revenue: 0, count: 0, commission: 0 };
-        const amt = Number(b.amount || 0);
-        map[bId].revenue += amt;
-        map[bId].count += 1;
-        map[bId].commission += Math.round(amt * 0.1);
+        const processedSlotIds = new Set();
+        const map = {};
+        for (const b of bookings) {
+            const bId = b.slot?.branchId;
+            if (!bId) continue;
+            if (b.slotId) processedSlotIds.add(b.slotId);
+            if (!map[bId]) map[bId] = { revenue: 0, count: 0, commission: 0 };
+            const amt = Number(b.amount || 0);
+            map[bId].revenue += amt;
+            map[bId].count += 1;
+            map[bId].commission += Math.round(amt * 0.1);
+        }
+        for (const mp of matchPayments) {
+            const bId = mp.match?.branchId;
+            if (!bId) continue;
+            if (mp.match?.slotId && processedSlotIds.has(mp.match.slotId)) continue;
+            if (mp.match?.slotId) processedSlotIds.add(mp.match.slotId);
+            if (!map[bId]) map[bId] = { revenue: 0, count: 0, commission: 0 };
+            const amt = Number(mp.amount || 0);
+            map[bId].revenue += amt;
+            map[bId].count += 1;
+            map[bId].commission += Math.round(amt * 0.1);
+        }
+        return map;
+    } catch (err) {
+        console.error('Error fetching branch booking revenue:', err);
+        return {};
     }
-    for (const mp of matchPayments) {
-        const bId = mp.match?.branchId;
-        if (!bId) continue;
-        if (mp.match?.slotId && processedSlotIds.has(mp.match.slotId)) continue;
-        if (mp.match?.slotId) processedSlotIds.add(mp.match.slotId);
-        if (!map[bId]) map[bId] = { revenue: 0, count: 0, commission: 0 };
-        const amt = Number(mp.amount || 0);
-        map[bId].revenue += amt;
-        map[bId].count += 1;
-        map[bId].commission += Math.round(amt * 0.1);
-    }
-    return map;
 };
 
 /**
