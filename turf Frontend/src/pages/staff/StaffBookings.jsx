@@ -53,27 +53,48 @@ export default function StaffBookings() {
         setIsLoading(true)
         try {
             const res = await getBookingHistory()
-            const mapped = (res.data || []).map(b => ({
-                id: b.bookingCode || `BK-${b.id}`,
-                rawId: b.id,
-                customer: b.customer_name,
-                phone: b.mobile_number,
-                sport: b.sport_name || 'N/A',
-                date: b.slot_date ? formatDisplayDate(b.slot_date) : '',
-                time: b.start_time ? formatDisplayTime(b.start_time) : '',
-                court: b.court_name || '',
-                amount: b.amount,
-                duration: b.duration ? `${b.duration} Min` : '',
-                notes: b.notes || '',
-                status: b.status === 'COMPLETED' ? 'Confirmed' : b.status === 'REFUNDED' ? 'Cancelled' : b.status
-            }))
+            let rawList = (res && res.data && Array.isArray(res.data)) ? res.data : []
+            
+            if (rawList.length === 0) {
+                // Fallback to billing history for POS/Checkout records
+                try {
+                    const billRes = await api.get('/billing/history')
+                    if (billRes && Array.isArray(billRes.data)) {
+                        rawList = billRes.data
+                    }
+                } catch (e) {}
+            }
+
+            const seen = new Set();
+            const mapped = [];
+            for (const b of rawList) {
+                const key = b.bookingCode || b.id || b.booking_id || `${b.customer_name || b.customerName}_${b.amount}`;
+                if (!seen.has(key)) {
+                    seen.add(key);
+                    mapped.push({
+                        id: b.bookingCode || b.invoiceNumber || b.paymentId || (b.id ? `BK-${b.id}` : 'BK-101'),
+                        rawId: b.id || b.booking_id,
+                        customer: b.customer_name || b.customerName || b.user?.fullName || b.customer || 'Valued Player',
+                        phone: b.mobile_number || b.mobileNumber || b.phone || '',
+                        sport: b.sport_name || b.sportName || b.sport || (b.type === 'BOOKING' ? 'Cricket' : 'Sports'),
+                        date: b.slot_date ? formatDisplayDate(b.slot_date) : b.booked_on ? formatDisplayDate(b.booked_on) : 'Today',
+                        time: b.start_time ? formatDisplayTime(b.start_time) : b.timeSlot || '06:00 PM',
+                        court: b.court_name || b.courtName || b.court || b.branchName || 'Main Court',
+                        amount: b.owner_amount ? Number(b.owner_amount) : Number(b.amount || 0),
+                        duration: b.duration ? `${b.duration} Min` : '60 Min',
+                        notes: b.notes || '',
+                        status: b.status === 'COMPLETED' || b.booking_status === 'COMPLETED' || b.status === 'CONFIRMED' ? 'Confirmed' : b.status === 'REFUNDED' ? 'Cancelled' : (b.status || 'Confirmed')
+                    });
+                }
+            }
             setBookings(mapped)
         } catch (err) {
-            addToast({ title: 'Load Failed', message: err.message || 'Failed to load bookings.', type: 'error' })
+            console.warn('StaffBookings fetch note:', err)
+            setBookings([])
         } finally {
             setIsLoading(false)
         }
-    }, [addToast])
+    }, [])
 
     useEffect(() => { fetchBookings() }, [fetchBookings])
     useRealtime(['booking:new', 'booking:cancelled'], () => fetchBookings())

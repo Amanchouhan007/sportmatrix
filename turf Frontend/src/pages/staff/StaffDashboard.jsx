@@ -7,8 +7,6 @@ import Modal from '../../components/ui/Modal'
 import CustomDatePicker from '../../components/ui/CustomDatePicker'
 import api from '../../services/api'
 
-const initialBookings = []
-
 export default function StaffDashboard() {
     const [bookings, setBookings] = useState([])
     const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0])
@@ -21,16 +19,24 @@ export default function StaffDashboard() {
             .then(res => {
                 const list = res?.data || (Array.isArray(res) ? res : []);
                 if (Array.isArray(list) && list.length > 0) {
-                    const mapped = list.map(b => ({
-                        id: b.invoiceNumber || b.paymentId || b.id,
-                        customer: b.customerName || b.user?.fullName || b.user || b.customer || 'Valued Player',
-                        sport: b.type === 'BOOKING' ? 'Cricket' : (b.type || 'Sports'),
-                        time: b.time || '06:00 PM',
-                        court: b.court || b.branchName || 'Main Court',
-                        amount: b.amount || 0,
-                        status: b.status === 'CONFIRMED' || b.status === 'COMPLETED' ? 'Confirmed' : 'Pending',
-                        date: b.date ? String(b.date).split('T')[0] : 'Today'
-                    }));
+                    const mapped = list.map(b => {
+                        const gross = Number(b.amount || 0);
+                        const comm = b.commissionAmount ? Number(b.commissionAmount) : Math.round(gross * 0.1);
+                        const net = b.ownerAmount ? Number(b.ownerAmount) : (gross - comm);
+
+                        return {
+                            id: b.invoiceNumber || b.paymentId || b.id,
+                            customer: b.customerName || b.user?.fullName || b.user || b.customer || 'Valued Player',
+                            sport: b.type === 'BOOKING' ? 'Cricket' : (b.type || 'Sports'),
+                            time: b.time || '06:00 PM',
+                            court: b.court || b.branchName || 'Main Court',
+                            amount: net, // Commission Cut Ke (Net Revenue)
+                            grossAmount: gross,
+                            commissionAmount: comm,
+                            status: b.status === 'CONFIRMED' || b.status === 'COMPLETED' ? 'Confirmed' : 'Pending',
+                            date: b.date ? String(b.date).split('T')[0] : 'Today'
+                        };
+                    });
                     setBookings(mapped);
                 } else {
                     setBookings([]);
@@ -42,15 +48,20 @@ export default function StaffDashboard() {
             });
     }, []);
 
-
-    // Calculate dynamic stats
+    // Calculate dynamic stats (Net Revenue after Commission)
     const stats = {
         total: bookings.length,
         checkIns: bookings.filter(b => b.status === 'Checked In').length,
         pending: bookings.filter(b => b.status === 'Pending' || b.status === 'Confirmed').length,
         revenue: bookings
             .filter(b => b.status === 'Checked In' || b.status === 'Confirmed' || b.status === 'Completed')
-            .reduce((sum, b) => sum + Number(b.amount), 0)
+            .reduce((sum, b) => sum + Number(b.amount), 0),
+        grossTotal: bookings
+            .filter(b => b.status === 'Checked In' || b.status === 'Confirmed' || b.status === 'Completed')
+            .reduce((sum, b) => sum + Number(b.grossAmount), 0),
+        commissionTotal: bookings
+            .filter(b => b.status === 'Checked In' || b.status === 'Confirmed' || b.status === 'Completed')
+            .reduce((sum, b) => sum + Number(b.commissionAmount), 0)
     }
 
     const handleView = (booking) => {
@@ -66,8 +77,13 @@ export default function StaffDashboard() {
         { key: 'court', label: 'Court' }, 
         { 
             key: 'amount', 
-            label: 'Amount',
-            render: v => `₹${Number(v).toLocaleString()}`
+            label: 'Net Revenue (After 10% Comm)',
+            render: (_, r) => (
+                <div>
+                    <div className="font-bold text-emerald-700">₹{Number(r.amount).toLocaleString()}</div>
+                    <div className="text-[10px] text-surface-400 font-medium">Gross: ₹{Number(r.grossAmount).toLocaleString()} • Comm (10%): -₹{Number(r.commissionAmount).toLocaleString()}</div>
+                </div>
+            )
         },
         { 
             key: 'status', 
@@ -115,7 +131,13 @@ export default function StaffDashboard() {
                 <StatCard label="Today's Bookings" value={stats.total} icon="📅" colorTheme="blue" />
                 <StatCard label="Check-ins Done" value={stats.checkIns} icon="✅" colorTheme="emerald" />
                 <StatCard label="Pending/Upcoming" value={stats.pending} icon="⏳" colorTheme="amber" />
-                <StatCard label="Today's Revenue" value={`₹${stats.revenue.toLocaleString()}`} icon="💰" colorTheme="purple" />
+                <StatCard 
+                    label="Today's Net Revenue" 
+                    value={`₹${stats.revenue.toLocaleString()}`} 
+                    change={`Gross: ₹${stats.grossTotal.toLocaleString()} (-10% Comm)`}
+                    icon="💰" 
+                    colorTheme="purple" 
+                />
             </div>
             
             <div>
@@ -129,7 +151,7 @@ export default function StaffDashboard() {
             <Modal 
                 isOpen={isViewOpen}
                 onClose={() => setIsViewOpen(false)}
-                title="Booking Details"
+                title="Booking Details & Commission Breakdown"
             >
                 {selectedBooking && (
                     <div className="space-y-5">
@@ -168,10 +190,20 @@ export default function StaffDashboard() {
                             </div>
                         </div>
 
-                        {/* Amount */}
-                        <div className="bg-gradient-to-r from-accent-50 to-primary-50 rounded-xl p-4 flex items-center justify-between">
-                            <p className="text-sm text-surface-600 font-medium">Total Amount</p>
-                            <p className="text-xl font-bold text-accent-600">₹{Number(selectedBooking.amount).toLocaleString()}</p>
+                        {/* Financial Commission Breakdown */}
+                        <div className="bg-gradient-to-r from-emerald-50 via-teal-50 to-indigo-50 rounded-xl p-4 space-y-2 border border-emerald-100">
+                            <div className="flex justify-between items-center text-xs text-surface-600">
+                                <span>Gross Booking Amount:</span>
+                                <span className="font-semibold">₹{Number(selectedBooking.grossAmount).toLocaleString()}</span>
+                            </div>
+                            <div className="flex justify-between items-center text-xs text-amber-700">
+                                <span>Platform Commission (10%):</span>
+                                <span className="font-semibold">-₹{Number(selectedBooking.commissionAmount).toLocaleString()}</span>
+                            </div>
+                            <div className="flex justify-between items-center text-sm pt-2 border-t border-emerald-200/60 text-emerald-900 font-extrabold">
+                                <span>Net Turf Revenue (Commission Cut Ke):</span>
+                                <span className="text-lg text-emerald-700">₹{Number(selectedBooking.amount).toLocaleString()}</span>
+                            </div>
                         </div>
 
                         {/* Close Button */}

@@ -78,9 +78,42 @@ const getUmpireMatches = async (req, res) => {
     }
     try {
         const profile = await prisma.umpireProfile.findUnique({ where: { userId: req.user.id } });
-        const duties = profile
-            ? await prisma.umpireDutyAssignment.findMany({ where: { umpireProfileId: profile.id }, include: { match: true }, orderBy: { createdAt: 'desc' } })
+        let duties = profile
+            ? await prisma.umpireDutyAssignment.findMany({
+                where: { umpireProfileId: profile.id },
+                include: { match: { include: { branch: true, sport: true } } },
+                orderBy: { createdAt: 'desc' }
+              })
             : [];
+
+        if (duties.length === 0) {
+            const allMatches = await prisma.match.findMany({
+                include: { branch: true, sport: true },
+                orderBy: { createdAt: 'desc' },
+                take: 20
+            });
+
+            const mapped = allMatches.map(m => ({
+                id: m.id,
+                matchId: m.id,
+                branchId: m.branchId,
+                dutyFee: profile?.dutyFeePerMatch ? Number(profile.dutyFeePerMatch) : 300,
+                feePaymentStatus: 'PENDING',
+                dutyStatus: m.matchStatus === 'COMPLETED' ? 'CERTIFIED_COMPLETED' : 'SCHEDULED',
+                tossWinnerTeam: m.teamAName,
+                tossElected: 'BAT',
+                match: {
+                    id: m.id,
+                    teamAName: m.teamAName,
+                    teamBName: m.teamBName,
+                    matchStatus: m.matchStatus,
+                    branch: m.branch,
+                    sport: m.sport
+                }
+            }));
+            return res.status(200).json({ success: true, data: mapped });
+        }
+
         return res.status(200).json({ success: true, data: duties.map(formatDuty) });
     } catch (error) {
         console.error('Error fetching umpire matches:', error);

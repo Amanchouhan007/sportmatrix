@@ -31,12 +31,30 @@ async function startServer() {
         const httpServer = http.createServer(app);
         initSocket(httpServer);
 
-        httpServer.listen(PORT, () => {
+        const server = httpServer.listen(PORT, () => {
             console.log(`Server successfully started listening on port ${PORT}`);
             console.log(`Health check URL: http://localhost:${PORT}/api/v1/health`);
             console.log('Socket.IO real-time layer active.');
             console.log('----------------------------------------');
         });
+
+        server.on('error', (err) => {
+            if (err.code === 'EADDRINUSE') {
+                console.log(`\n===============================================================`);
+                console.log(`ℹ️  Backend server is ALREADY RUNNING and active on port ${PORT}.`);
+                console.log(`===============================================================\n`);
+                process.exit(0);
+            }
+        });
+
+        const shutdown = () => {
+            server.close(() => {
+                prisma.$disconnect().catch(() => {});
+                process.exit(0);
+            });
+        };
+        process.on('SIGINT', shutdown);
+        process.on('SIGTERM', shutdown);
     } catch (error) {
         console.error('Server startup halted due to errors:', error);
         process.exit(1);

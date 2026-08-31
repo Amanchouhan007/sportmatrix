@@ -82,7 +82,11 @@ const formatTournament = (r) => ({
 
 const getOwnerBranchIds = async (user) => {
     if (!user || user.role === 'SUPER_ADMIN') return null;
-    if (user.role === 'STAFF' && user.staffBranchId) return [user.staffBranchId];
+    if (user.role === 'STAFF') {
+        const staffUser = await prisma.user.findUnique({ where: { id: user.id } }).catch(() => null);
+        const targetBranchId = staffUser?.staffBranchId || user.staffBranchId || user.branchId;
+        if (targetBranchId) return [targetBranchId];
+    }
     const branches = await prisma.branch.findMany({
         where: { OR: [{ ownerUserId: user.id }, { owner: { userId: user.id } }, { ownerId: user.id }] },
         select: { id: true }

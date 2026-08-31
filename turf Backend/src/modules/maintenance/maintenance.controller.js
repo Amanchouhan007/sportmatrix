@@ -4,11 +4,23 @@ const { emitToBranch } = require('../../realtime/socket');
 const genId = () => `mt_${Date.now()}_${Math.floor(Math.random() * 100000)}`;
 
 const formatTask = (t) => ({
-    id: t.id, _id: t.id, branchId: t.branchId,
-    issueDescription: t.issueDescription, turfArea: t.turfArea,
-    assignedSpecialist: t.assignedSpecialist, priority: t.priorityLevel,
-    priorityLevel: t.priorityLevel, targetDeadline: t.targetDeadline,
-    status: t.status, notes: t.notes, createdAt: t.createdAt
+    id: t.id,
+    _id: t.id,
+    branchId: t.branchId,
+    branchName: t.branch?.branchName || t.branch?.name || '',
+    issueDescription: t.issueDescription,
+    task: t.issueDescription,
+    turfArea: t.turfArea,
+    area: t.turfArea,
+    assignedSpecialist: t.assignedSpecialist,
+    assignedTo: t.assignedSpecialist,
+    priority: t.priorityLevel,
+    priorityLevel: t.priorityLevel,
+    targetDeadline: t.targetDeadline,
+    due: t.targetDeadline,
+    status: t.status,
+    notes: t.notes,
+    createdAt: t.createdAt
 });
 
 const resolveOwnerBranchIds = async (user) => {
@@ -24,9 +36,20 @@ const getTickets = async (req, res) => {
         const { branchId } = req.query;
         const where = {};
         if (branchId) where.branchId = branchId;
+        else if (req.user.role === 'STAFF') {
+            const staffUser = await prisma.user.findUnique({ where: { id: req.user.id } });
+            const targetBranchId = staffUser?.staffBranchId || req.user.staffBranchId || req.user.branchId;
+            if (targetBranchId) {
+                where.branchId = targetBranchId;
+            }
+        }
         else if (req.user.role !== 'SUPER_ADMIN') where.branchId = { in: await resolveOwnerBranchIds(req.user) };
 
-        const rows = await prisma.maintenanceTask.findMany({ where, orderBy: { createdAt: 'desc' } });
+        const rows = await prisma.maintenanceTask.findMany({
+            where,
+            include: { branch: { select: { id: true, branchName: true, city: true } } },
+            orderBy: { createdAt: 'desc' }
+        });
         return res.status(200).json({ success: true, data: rows.map(formatTask) });
     } catch (error) {
         return res.status(500).json({ success: false, message: error.message });
@@ -34,7 +57,7 @@ const getTickets = async (req, res) => {
 };
 
 const assertBranchAccess = async (branchId, user) => {
-    if (user.role === 'SUPER_ADMIN') return true;
+    if (user.role === 'SUPER_ADMIN' || user.role === 'STAFF') return true;
     const branch = await prisma.branch.findUnique({ where: { id: branchId } });
     return !!branch && branch.ownerUserId === user.id;
 };
