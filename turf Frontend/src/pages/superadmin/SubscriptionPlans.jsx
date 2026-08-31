@@ -164,6 +164,61 @@ export default function SubscriptionPlans() {
         }))
     }
 
+    const handleMonthlyFieldChange = (field, value) => {
+        setFormData(prev => {
+            const nextMonthly = { ...prev.monthlyPricing, [field]: value }
+            const nextYearly = { ...prev.yearlyPricing }
+
+            if (field === 'price') {
+                const numVal = Number(value)
+                if (value !== '' && !isNaN(numVal) && numVal >= 0) {
+                    nextYearly.price = String(Math.round(numVal * 10))
+                } else {
+                    nextYearly.price = ''
+                }
+            } else if (field === 'branchLimit') {
+                nextYearly.branchLimit = value
+            } else if (field === 'sportsLimit') {
+                nextYearly.sportsLimit = value
+            } else if (field === 'bookingLimit') {
+                const numBook = Number(value)
+                if (value !== '' && !isNaN(numBook)) {
+                    nextYearly.bookingLimit = numBook > 0 ? String(numBook * 12) : value
+                } else {
+                    nextYearly.bookingLimit = ''
+                }
+            } else if (field === 'activeUsersLimit') {
+                nextYearly.activeUsersLimit = value
+            }
+
+            return {
+                ...prev,
+                monthlyPricing: nextMonthly,
+                yearlyPricing: nextYearly
+            }
+        })
+    }
+
+    const handleYearlyFieldChange = (field, value) => {
+        setFormData(prev => {
+            const nextYearly = { ...prev.yearlyPricing, [field]: value }
+            const nextMonthly = { ...prev.monthlyPricing }
+
+            if (field === 'price') {
+                const numVal = Number(value)
+                if (value !== '' && !isNaN(numVal) && numVal >= 0) {
+                    nextMonthly.price = String(Math.round(numVal / 10))
+                }
+            }
+
+            return {
+                ...prev,
+                monthlyPricing: nextMonthly,
+                yearlyPricing: nextYearly
+            }
+        })
+    }
+
     const handleSave = async () => {
         if (!formData.planName.trim()) {
             addToast({ title: 'Validation Error', message: 'Plan Name is required', type: 'error' })
@@ -213,15 +268,14 @@ export default function SubscriptionPlans() {
         try {
             if (editingPlan) {
                 await updatePlan(editingPlan._id || editingPlan.id, payload)
-                addToast({ title: 'Updated', message: 'Plan updated successfully', type: 'success' })
-                setIsModalOpen(false)
-                fetchPlans()
+                addToast({ title: 'Updated', message: 'Plan updated dynamically across all client pricing pages!', type: 'success' })
             } else {
                 await createPlan(payload)
                 addToast({ title: 'Created', message: 'New plan created successfully', type: 'success' })
-                setIsModalOpen(false)
-                fetchPlans()
             }
+            setIsModalOpen(false)
+            await fetchPlans()
+            window.dispatchEvent(new Event('subscription_plans_updated'))
         } catch (err) {
             addToast({ title: 'Save Failed', message: err.response?.data?.message || err.message || 'Failed to save plan', type: 'error' })
         } finally {
@@ -600,10 +654,7 @@ export default function SubscriptionPlans() {
                                 type="number"
                                 placeholder="0" 
                                 value={formData.monthlyPricing.price}
-                                onChange={e => setFormData({
-                                    ...formData,
-                                    monthlyPricing: { ...formData.monthlyPricing, price: e.target.value }
-                                })}
+                                onChange={e => handleMonthlyFieldChange('price', e.target.value)}
                                 disabled={isSaving}
                             />
                             <Input 
@@ -611,10 +662,7 @@ export default function SubscriptionPlans() {
                                 type="number"
                                 placeholder="-1 for Unlimited" 
                                 value={formData.monthlyPricing.branchLimit}
-                                onChange={e => setFormData({
-                                    ...formData,
-                                    monthlyPricing: { ...formData.monthlyPricing, branchLimit: e.target.value }
-                                })}
+                                onChange={e => handleMonthlyFieldChange('branchLimit', e.target.value)}
                                 disabled={isSaving}
                             />
                         </div>
@@ -624,10 +672,7 @@ export default function SubscriptionPlans() {
                                 type="number"
                                 placeholder="-1 for Unlimited" 
                                 value={formData.monthlyPricing.sportsLimit}
-                                onChange={e => setFormData({
-                                    ...formData,
-                                    monthlyPricing: { ...formData.monthlyPricing, sportsLimit: e.target.value }
-                                })}
+                                onChange={e => handleMonthlyFieldChange('sportsLimit', e.target.value)}
                                 disabled={isSaving}
                             />
                             <Input 
@@ -635,10 +680,7 @@ export default function SubscriptionPlans() {
                                 type="number"
                                 placeholder="-1 for Unlimited" 
                                 value={formData.monthlyPricing.bookingLimit}
-                                onChange={e => setFormData({
-                                    ...formData,
-                                    monthlyPricing: { ...formData.monthlyPricing, bookingLimit: e.target.value }
-                                })}
+                                onChange={e => handleMonthlyFieldChange('bookingLimit', e.target.value)}
                                 disabled={isSaving}
                             />
                             <Input 
@@ -646,10 +688,7 @@ export default function SubscriptionPlans() {
                                 type="number"
                                 placeholder="-1 for Unlimited" 
                                 value={formData.monthlyPricing.activeUsersLimit}
-                                onChange={e => setFormData({
-                                    ...formData,
-                                    monthlyPricing: { ...formData.monthlyPricing, activeUsersLimit: e.target.value }
-                                })}
+                                onChange={e => handleMonthlyFieldChange('activeUsersLimit', e.target.value)}
                                 disabled={isSaving}
                             />
                         </div>
@@ -672,10 +711,7 @@ export default function SubscriptionPlans() {
                                 type="number"
                                 placeholder="0" 
                                 value={formData.yearlyPricing.price}
-                                onChange={e => setFormData({
-                                    ...formData,
-                                    yearlyPricing: { ...formData.yearlyPricing, price: e.target.value }
-                                })}
+                                onChange={e => handleYearlyFieldChange('price', e.target.value)}
                                 disabled={isSaving}
                             />
                             <Input 
@@ -683,10 +719,7 @@ export default function SubscriptionPlans() {
                                 type="number"
                                 placeholder="-1 for Unlimited" 
                                 value={formData.yearlyPricing.branchLimit}
-                                onChange={e => setFormData({
-                                    ...formData,
-                                    yearlyPricing: { ...formData.yearlyPricing, branchLimit: e.target.value }
-                                })}
+                                onChange={e => handleYearlyFieldChange('branchLimit', e.target.value)}
                                 disabled={isSaving}
                             />
                         </div>
@@ -696,10 +729,7 @@ export default function SubscriptionPlans() {
                                 type="number"
                                 placeholder="-1 for Unlimited" 
                                 value={formData.yearlyPricing.sportsLimit}
-                                onChange={e => setFormData({
-                                    ...formData,
-                                    yearlyPricing: { ...formData.yearlyPricing, sportsLimit: e.target.value }
-                                })}
+                                onChange={e => handleYearlyFieldChange('sportsLimit', e.target.value)}
                                 disabled={isSaving}
                             />
                             <Input 
@@ -707,10 +737,7 @@ export default function SubscriptionPlans() {
                                 type="number"
                                 placeholder="-1 for Unlimited" 
                                 value={formData.yearlyPricing.bookingLimit}
-                                onChange={e => setFormData({
-                                    ...formData,
-                                    yearlyPricing: { ...formData.yearlyPricing, bookingLimit: e.target.value }
-                                })}
+                                onChange={e => handleYearlyFieldChange('bookingLimit', e.target.value)}
                                 disabled={isSaving}
                             />
                             <Input 
@@ -718,10 +745,7 @@ export default function SubscriptionPlans() {
                                 type="number"
                                 placeholder="-1 for Unlimited" 
                                 value={formData.yearlyPricing.activeUsersLimit}
-                                onChange={e => setFormData({
-                                    ...formData,
-                                    yearlyPricing: { ...formData.yearlyPricing, activeUsersLimit: e.target.value }
-                                })}
+                                onChange={e => handleYearlyFieldChange('activeUsersLimit', e.target.value)}
                                 disabled={isSaving}
                             />
                         </div>

@@ -9,6 +9,7 @@ import { HiTrophy } from 'react-icons/hi2'
 import Badge from '../../components/ui/Badge'
 import CustomSelect from '../../components/ui/CustomSelect'
 import { useToast } from '../../components/ui/Toast'
+import { useAuth } from '../../context/AuthContext'
 import MatchScoreVerificationModal from '../../components/booking/MatchScoreVerificationModal'
 import { getLeaderboardPlayers, addOrUpdateLeaderboardPlayer, calculatePPS, fetchGlobalLeaderboard } from '../../services/leaderboardService'
 
@@ -17,6 +18,7 @@ const mockLeaderboardPlayers = []
 export default function PlayerLeaderboardPage() {
     const navigate = useNavigate()
     const { addToast } = useToast()
+    const { user } = useAuth()
 
     // Default to 'All Indore'
     const [selectedCity, setSelectedCity] = useState('All Indore')
@@ -344,7 +346,17 @@ export default function PlayerLeaderboardPage() {
 
                         <button
                             type="button"
-                            onClick={() => navigate('/umpire')}
+                            onClick={() => {
+                                if (!user) {
+                                    if (addToast) addToast('🔐 Umpire Login Required: Please sign in with your official referee credentials.', 'info')
+                                    navigate('/login', { state: { from: '/umpire' } })
+                                } else if (['UMPIRE', 'SUPER_ADMIN', 'ADMIN', 'OWNER', 'STAFF'].includes((user.role || '').toUpperCase())) {
+                                    navigate('/umpire')
+                                } else {
+                                    if (addToast) addToast('🔒 Access Restricted: Official Certified Umpire credentials required.', 'warning')
+                                    navigate('/login', { state: { from: '/umpire' } })
+                                }
+                            }}
                             className="bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-xs uppercase tracking-wider px-4 py-3 rounded-2xl shadow-md transition-all cursor-pointer flex items-center gap-2 hover:scale-105"
                         >
                             <span>⚖️</span>

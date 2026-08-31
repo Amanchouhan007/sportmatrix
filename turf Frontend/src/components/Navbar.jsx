@@ -78,11 +78,11 @@ export default function Navbar() {
                     }
                 }}>
                     <div className="relative">
-                        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#16A34A] to-emerald-600 flex items-center justify-center font-black text-white text-sm shadow-md shadow-emerald-500/20">SM</div>
+                        <img src="/kiaan_logo.jpg" alt="Kiaan Technologies Turf" className="w-10 h-10 rounded-xl object-cover shadow-md border border-amber-300/40" />
                     </div>
                     <div className="flex flex-col">
-                        <span className="text-xl font-black text-[#111827] tracking-[-0.05em] leading-none uppercase italic">SportMatrix<span className="text-[#16A34A] text-2xl font-black">.</span></span>
-                        <span className="text-[8px] font-black text-[#6B7280] tracking-[0.4em] uppercase -mt-0.5">ELITE_COMMAND</span>
+                        <span className="text-lg font-black text-[#111827] tracking-tight leading-none uppercase">KIAAN'S TURF<span className="text-[#16A34A] text-xl font-black">.</span></span>
+                        <span className="text-[8px] font-black text-emerald-700 tracking-[0.2em] uppercase mt-0.5">KIAAN TECHNOLOGIES</span>
                     </div>
                 </div>
 

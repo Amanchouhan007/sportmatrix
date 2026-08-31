@@ -424,7 +424,17 @@ export default function CustomerLeaderboard() {
 
                     <button
                         type="button"
-                        onClick={() => navigate('/umpire')}
+                        onClick={() => {
+                            if (!user) {
+                                if (addToast) addToast('🔐 Umpire Login Required: Please sign in with your official referee credentials.', 'info')
+                                navigate('/login', { state: { from: '/umpire' } })
+                            } else if (['UMPIRE', 'SUPER_ADMIN', 'ADMIN', 'OWNER', 'STAFF'].includes((user.role || '').toUpperCase())) {
+                                navigate('/umpire')
+                            } else {
+                                if (addToast) addToast('🔒 Access Restricted: Official Certified Umpire credentials required.', 'warning')
+                                navigate('/login', { state: { from: '/umpire' } })
+                            }
+                        }}
                         className="bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-xs uppercase tracking-wider px-4 py-3 rounded-2xl shadow-md transition-all cursor-pointer flex items-center gap-2 hover:scale-105"
                     >
                         <span>⚖️</span>

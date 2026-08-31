@@ -11,7 +11,7 @@ import StatCard from '../../components/ui/StatCard'
 import ConfirmDialog from '../../components/ui/ConfirmDialog'
 import { useToast } from '../../components/ui/Toast'
 import { useAuth } from '../../context/AuthContext'
-import { FiEdit2, FiTrash2, FiPower, FiSearch, FiBriefcase, FiCheckCircle, FiSlash, FiTrendingUp, FiEye, FiMapPin, FiUser, FiDownload, FiChevronLeft, FiChevronRight, FiFilter } from 'react-icons/fi'
+import { FiTrash2, FiPower, FiSearch, FiBriefcase, FiCheckCircle, FiSlash, FiTrendingUp, FiEye, FiMapPin, FiUser, FiMail, FiEdit2, FiDownload, FiChevronLeft, FiChevronRight, FiFilter } from 'react-icons/fi'
 import { getOwners, createOwner } from '../../services/ownerService'
 import { getAllPlans } from '../../services/subscriptionPlanService'
 import {
@@ -427,22 +427,22 @@ export default function BranchManagement() {
         } else {
             setEditingBranch(null)
             setOwnerSearchText('')
-            setIsQuickAddOwnerOpen(true)
+            setIsQuickAddOwnerOpen(false)
             setFormData({
                 branchName: '',
                 branchCode: '',
                 description: '',
                 ownerId: '',
                 subscriptionPlanId: subscriptionPlans[0]?._id || '',
-                pricePerHour: 1000,
-                openingTime: '06:00 AM',
-                closingTime: '11:00 PM',
-                turfSize: '5,000 Sq.Ft',
-                surfaceType: 'TurfPro Synthetic Arena',
-                sports: ['Cricket', 'Football'],
-                amenities: ['Floodlights', 'Parking', 'Washroom'],
-                discountOffer: '20% OFF FIRST MATCH',
-                couponCode: 'CRICKET20',
+                pricePerHour: '',
+                openingTime: '',
+                closingTime: '',
+                turfSize: '',
+                surfaceType: '',
+                sports: [],
+                amenities: [],
+                discountOffer: '',
+                couponCode: '',
                 country: 'India',
                 state: '',
                 city: '',
@@ -598,13 +598,32 @@ export default function BranchManagement() {
         { key: 'city', label: 'City' },
         { 
             key: 'ownerId', 
-            label: 'Owner Name', 
-            render: v => typeof v === 'object' ? (v?.fullName || v?.name || 'N/A') : (typeof v === 'string' ? v : 'N/A')
+            label: 'Owner', 
+            render: (v, r) => {
+                const ownerName = typeof v === 'object' ? (v?.fullName || v?.name || 'N/A') : (r?.ownerName || r?.owner_name || (typeof v === 'string' ? v : 'N/A'))
+                const ownerEmail = typeof v === 'object' ? (v?.email) : (r?.ownerEmail || r?.owner_email || (r?.ownerId?.email) || (r?.email) || null)
+                return (
+                    <div className="flex flex-col">
+                        <span className="font-bold text-slate-800 flex items-center gap-1.5">
+                            <FiUser className="w-3.5 h-3.5 text-indigo-500 shrink-0" />
+                            {ownerName}
+                        </span>
+                        {ownerEmail ? (
+                            <span className="text-[11px] font-medium text-slate-500 flex items-center gap-1 mt-0.5">
+                                <FiMail className="w-3 h-3 text-slate-400 shrink-0" />
+                                {ownerEmail}
+                            </span>
+                        ) : (
+                            <span className="text-[10px] text-slate-400 italic">No email linked</span>
+                        )}
+                    </div>
+                )
+            }
         },
         { 
             key: 'subscriptionPlanId', 
             label: 'Subscription Plan', 
-            render: v => typeof v === 'object' ? (v?.planName || v?.name || 'N/A') : (typeof v === 'string' ? v : 'N/A')
+            render: (v, r) => r?.planName || r?.subscriptionPlan?.planName || (typeof v === 'object' ? (v?.planName || v?.name || 'N/A') : String(v || 'Standard'))
         },
         { 
             key: 'status', 
@@ -618,7 +637,7 @@ export default function BranchManagement() {
         { 
             key: 'totalRevenue', 
             label: 'Plan Price', 
-            render: (v, r) => `₹${Number(r?.subscriptionPlanId?.monthlyPrice || r?.planPrice || r?.subscription_price_snapshot || 1000).toLocaleString('en-IN')}` 
+            render: (v, r) => `₹${Number(r?.subscriptionPlan?.monthlyPrice || r?.subscriptionPlanId?.monthlyPrice || r?.planPrice || r?.subscription_price_snapshot || 1000).toLocaleString('en-IN')}` 
         },
         {
             key: 'bookingRevenue',
@@ -642,14 +661,14 @@ export default function BranchManagement() {
             key: 'actions', 
             label: 'Actions', 
             render: (_, r) => (
-                <div className="flex gap-2">
+                <div className="flex gap-1.5 items-center">
                     <Button size="sm" variant="ghost" onClick={() => handleViewBranch(r)} title="View Details"><FiEye /></Button>
-                    <Button size="sm" variant="ghost" onClick={() => handleOpenModal(r)}><FiEdit2 /></Button>
+                    <Button size="sm" variant="ghost" className="text-blue-600 hover:text-blue-800 hover:bg-blue-50" onClick={() => handleOpenModal(r)} title="Edit Branch"><FiEdit2 /></Button>
                     <Button 
                         size="sm" 
                         variant="ghost" 
                         className={r.status === 'ACTIVE' ? 'text-warning-600' : 'text-success-600'}
-                        onClick={() => setConfirm({ open: true, type: 'status', id: r._id })}
+                        onClick={() => setConfirm({ open: true, type: 'status', id: r._id || r.id })}
                         title="Toggle Status"
                     >
                         <FiPower />
@@ -658,7 +677,7 @@ export default function BranchManagement() {
                         size="sm" 
                         variant="ghost" 
                         className="text-danger-600"
-                        onClick={() => setConfirm({ open: true, type: 'delete', id: r._id })}
+                        onClick={() => setConfirm({ open: true, type: 'delete', id: r._id || r.id })}
                         title="Delete Branch"
                     >
                         <FiTrash2 />
@@ -951,9 +970,19 @@ export default function BranchManagement() {
                                 <div className="col-span-2 truncate min-w-0">
                                     <div className="font-semibold text-surface-800 text-xs flex items-center gap-1 truncate">
                                         <FiUser className="w-3.5 h-3.5 text-indigo-500 shrink-0" />
-                                        <span className="truncate">{r.ownerId?.fullName || 'N/A'}</span>
+                                        <span className="truncate">{typeof r.ownerId === 'object' ? (r.ownerId?.fullName || r.ownerId?.name || 'N/A') : (r.ownerName || r.owner_name || 'N/A')}</span>
                                     </div>
-                                    {r.ownerId?.email && <div className="text-[11px] text-surface-400 truncate">{r.ownerId.email}</div>}
+                                    {(() => {
+                                        const email = (typeof r.ownerId === 'object' && r.ownerId?.email) ? r.ownerId.email : (r.ownerEmail || r.owner_email || r.email || null);
+                                        return email ? (
+                                            <div className="text-[11px] font-medium text-slate-500 flex items-center gap-1 truncate mt-0.5">
+                                                <FiMail className="w-3 h-3 text-slate-400 shrink-0" />
+                                                <span className="truncate">{email}</span>
+                                            </div>
+                                        ) : (
+                                            <div className="text-[10px] text-slate-400 italic">No email linked</div>
+                                        );
+                                    })()}
                                 </div>
 
                                 {/* Plan */}
@@ -996,7 +1025,7 @@ export default function BranchManagement() {
                                     </span>
                                 </div>
 
-                                {/* Actions - Clean Compact 34x34 Action Buttons */}
+                                {/* Actions - Clean Compact Action Buttons including Edit */}
                                 <div className="col-span-2 flex items-center justify-end gap-1.5 pr-1">
                                     <button
                                         onClick={() => handleViewBranch(r)}
@@ -1007,20 +1036,20 @@ export default function BranchManagement() {
                                     </button>
                                     <button
                                         onClick={() => handleOpenModal(r)}
-                                        className="w-8 h-8 rounded-lg bg-slate-100 hover:bg-indigo-500 text-surface-600 hover:text-white border border-surface-200/60 hover:border-indigo-500 transition-all duration-200 flex items-center justify-center cursor-pointer"
+                                        className="w-8 h-8 rounded-lg bg-blue-50 hover:bg-blue-600 text-blue-600 hover:text-white border border-blue-200/80 hover:border-blue-600 transition-all duration-200 flex items-center justify-center cursor-pointer shadow-2xs"
                                         title="Edit Branch"
                                     >
                                         <FiEdit2 className="w-3.5 h-3.5" />
                                     </button>
                                     <button
-                                        onClick={() => setConfirm({ open: true, type: 'status', id: r._id })}
+                                        onClick={() => setConfirm({ open: true, type: 'status', id: r._id || r.id })}
                                         className="w-8 h-8 rounded-lg bg-slate-100 hover:bg-amber-500 text-surface-600 hover:text-white border border-surface-200/60 hover:border-amber-500 transition-all duration-200 flex items-center justify-center cursor-pointer"
                                         title="Toggle Status"
                                     >
                                         <FiPower className="w-3.5 h-3.5" />
                                     </button>
                                     <button
-                                        onClick={() => setConfirm({ open: true, type: 'delete', id: r._id })}
+                                        onClick={() => setConfirm({ open: true, type: 'delete', id: r._id || r.id })}
                                         className="w-8 h-8 rounded-lg bg-slate-100 hover:bg-rose-500 text-surface-600 hover:text-white border border-surface-200/60 hover:border-rose-500 transition-all duration-200 flex items-center justify-center cursor-pointer"
                                         title="Delete Branch"
                                     >
@@ -1084,7 +1113,7 @@ export default function BranchManagement() {
             <Modal 
                 isOpen={modal} 
                 onClose={() => setModal(false)} 
-                title={editingBranch ? "Edit Branch" : "Add New Branch"}
+                title="Add New Branch"
                 size="lg"
             >
                 <div className="pt-2 max-h-[70vh] overflow-y-auto pr-2 space-y-6">

@@ -451,8 +451,45 @@ export default function TurfDetailPage() {
     const [selectedDate, setSelectedDate] = useState(() => selectedDateObj?.fullDateString || '');
     const [selectedSlot, setSelectedSlot] = useState(12); // Default to 6:00 PM
 
+    const [apiSlots, setApiSlots] = useState([]);
+    const [slotsLoading, setSlotsLoading] = useState(false);
+
+    // Fetch real backend slots whenever activeTurf or selectedDateObj changes
+    useEffect(() => {
+        if (!activeTurf?.id || !selectedDateObj?.fullDateString) return;
+        let cancelled = false;
+        setSlotsLoading(true);
+
+        api.get('/slots', {
+            params: {
+                branchId: activeTurf.id,
+                date: selectedDateObj.fullDateString
+            }
+        }).then(res => {
+            if (cancelled) return;
+            if (res?.success && Array.isArray(res.data) && res.data.length > 0) {
+                const formatted = res.data.map((s, idx) => ({
+                    id: s.id || idx,
+                    time: s.startTime ? s.startTime.substring(0, 5) : '06:00',
+                    price: s.price || activeTurf.price || 1200,
+                    status: (s.status || 'AVAILABLE').toLowerCase(),
+                    isPassed: s.isPassed || false
+                }));
+                setApiSlots(formatted);
+            } else {
+                setApiSlots([]);
+            }
+        }).catch(() => {
+            if (!cancelled) setApiSlots([]);
+        }).finally(() => {
+            if (!cancelled) setSlotsLoading(false);
+        });
+
+        return () => { cancelled = true; };
+    }, [activeTurf?.id, selectedDateObj?.fullDateString]);
+
     // Generate dynamic date-specific slots whenever activeTurf or selectedDateObj changes
-    const slots = useMemo(() => {
+    const fallbackSlots = useMemo(() => {
         return generateSlotsForDate(
             activeTurf.price,
             selectedDateObj,
@@ -461,6 +498,8 @@ export default function TurfDetailPage() {
             activeTurf.closingTime || '23:00'
         );
     }, [activeTurf.price, selectedDateObj, activeTurf.id, activeTurf.openingTime, activeTurf.closingTime]);
+
+    const slots = apiSlots.length > 0 ? apiSlots : fallbackSlots;
 
     useEffect(() => {
         if (dateStripRef.current) {

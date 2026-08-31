@@ -52,11 +52,9 @@ export default function WebsiteLayout({ children }) {
                 <div className="w-full px-4 sm:px-6 md:px-8 lg:px-12 h-[64px] flex items-center justify-between gap-4 relative">
                     {/* Brand Logo */}
                     <NavLink to="/" className="flex items-center gap-2.5 group shrink-0">
-                        <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#16A34A] to-emerald-600 flex items-center justify-center font-black text-white text-sm shadow-md group-hover:scale-105 transition-transform">
-                            SM
-                        </div>
-                        <span className="text-xl font-black text-[#111827] tracking-tight leading-none uppercase italic">
-                            SportMatrix<span className="text-[#16A34A] text-2xl font-black">.</span>
+                        <img src="/kiaan_logo.jpg" alt="Kiaan Technologies Turf" className="w-9 h-9 rounded-xl object-cover shadow-md border border-amber-300/40" />
+                        <span className="text-lg font-black text-[#111827] tracking-tight leading-none uppercase">
+                            KIAAN'S TURF<span className="text-[#16A34A] text-xl font-black">.</span>
                         </span>
                     </NavLink>
 
@@ -223,11 +221,14 @@ export default function WebsiteLayout({ children }) {
                 <div className="max-w-7xl mx-auto px-6 py-12">
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-8">
                         <div className="lg:col-span-2 space-y-3">
-                            <div className="flex items-center gap-2">
-                                <div className="w-8 h-8 rounded-xl bg-[#C8FF2E] border border-[#B5F000] flex items-center justify-center font-black text-[#111827] text-xs shadow-sm">SM</div>
-                                <span className="text-lg font-black text-[#111827] tracking-[-0.05em] uppercase italic">SportMatrix<span className="text-[#16A34A]">.</span></span>
+                            <div className="flex items-center gap-2.5">
+                                <img src="/kiaan_logo.jpg" alt="Kiaan Technologies Turf" className="w-9 h-9 rounded-xl object-cover shadow-sm border border-amber-300/40" />
+                                <div className="flex flex-col">
+                                    <span className="text-base font-black text-[#111827] tracking-tight uppercase">KIAAN'S SPORTSTURF</span>
+                                    <span className="text-[9px] font-extrabold text-[#16A34A] uppercase tracking-wider">Kiaan Technologies</span>
+                                </div>
                             </div>
-                            <p className="text-[13px] font-semibold text-[#6B7280] max-w-xs leading-relaxed">The complete digital operating system for sports turfs. Manage everything from one platform.</p>
+                            <p className="text-[13px] font-semibold text-[#6B7280] max-w-xs leading-relaxed">The complete digital sports venue management system by Kiaan Technologies.</p>
                         </div>
                         
                         <div>

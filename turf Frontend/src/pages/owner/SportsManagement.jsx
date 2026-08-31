@@ -45,6 +45,7 @@ export default function SportsManagement() {
     const [modal, setModal] = useState(false)
     const [quickPricingModal, setQuickPricingModal] = useState(false)
     const [editMode, setEditMode] = useState(false)
+    const [bulkRateInput, setBulkRateInput] = useState('')
     const [deleteConfirm, setDeleteConfirm] = useState({ isOpen: false, sport: null })
     const [quickPricingData, setQuickPricingData] = useState({
         sportId: '',
@@ -192,8 +193,43 @@ export default function SportsManagement() {
         openingTime: '06:00',
         closingTime: '23:00',
         slotDuration: 60,
+        customRates: {},
+        pricingMode: 'start_slot',
         originalStatus: 'ACTIVE'
     })
+
+    // Helper to generate hourly slot list between openingTime and closingTime with custom rate overrides
+    const getHourlySlotsList = (openingTime = '06:00', closingTime = '23:00', regP = 1000, peakP = 1500, customRates = {}) => {
+        let startH = parseInt((openingTime || '06:00').split(':')[0], 10)
+        let endH = parseInt((closingTime || '23:00').split(':')[0], 10)
+        if (isNaN(startH)) startH = 6
+        if (isNaN(endH) || endH <= startH) endH = 23
+
+        const slots = []
+        for (let h = startH; h < endH; h++) {
+            const timeKey = `${String(h).padStart(2, '0')}:00`
+            const nextH = h + 1
+            const nextTimeKey = `${String(nextH).padStart(2, '0')}:00`
+            
+            const ampmStart = h >= 12 ? (h === 12 ? '12:00 PM' : `${String(h - 12).padStart(2, '0')}:00 PM`) : `${String(h).padStart(2, '0')}:00 AM`
+            const ampmEnd = nextH >= 12 ? (nextH === 12 ? '12:00 PM' : nextH === 24 ? '12:00 AM' : `${String(nextH - 12).padStart(2, '0')}:00 PM`) : `${String(nextH).padStart(2, '0')}:00 AM`
+            
+            const isPeak = h >= 18 && h < 23
+            const defaultRate = isPeak ? Number(peakP || 1500) : Number(regP || 1000)
+            const rate = customRates[timeKey] !== undefined && customRates[timeKey] !== '' ? Number(customRates[timeKey]) : defaultRate
+
+            slots.push({
+                key: timeKey,
+                nextKey: nextTimeKey,
+                timeLabel: `${ampmStart} - ${ampmEnd}`,
+                isPeak,
+                isCustom: customRates[timeKey] !== undefined && Number(customRates[timeKey]) !== defaultRate,
+                defaultRate,
+                rate
+            })
+        }
+        return slots
+    }
 
     // Reset current sport form state with branch default pricing & un-added sports
     const resetForm = () => {
@@ -214,8 +250,11 @@ export default function SportsManagement() {
             openingTime: branchObj?.openingTime ? String(branchObj.openingTime).substring(0, 5) : '06:00',
             closingTime: branchObj?.closingTime ? String(branchObj.closingTime).substring(0, 5) : '23:00',
             slotDuration: 60,
+            customRates: {},
+            pricingMode: 'start_slot',
             originalStatus: 'ACTIVE'
         })
+        setBulkRateInput('')
     }
 
     // Load branch list and then load initial sports details
@@ -279,6 +318,12 @@ export default function SportsManagement() {
                 setSports(res.data)
             } else {
                 setSports([])
+            }
+
+            const branchesRes = await getBranches().catch(() => null)
+            if (branchesRes) {
+                const branchList = branchesRes?.data?.branches || branchesRes?.branches || (Array.isArray(branchesRes?.data) ? branchesRes.data : [])
+                if (branchList.length > 0) setBranches(branchList)
             }
         } catch (err) {
             console.error('Error loading branch sports:', err)
@@ -371,7 +416,17 @@ export default function SportsManagement() {
                     await changeSportStatus(currentSport._id, currentSport.status)
                 }
 
-                addToast({ message: 'Sport configuration updated successfully.', type: 'success' })
+                // Sync parent branch record so customer catalog APIs match
+                await updateBranch(selectedBranchId, { minPriceHourly: regPrice }).catch(() => {})
+
+                // Persist custom hourly slot rates
+                if (currentSport._id && currentSport.customRates) {
+                    try {
+                        localStorage.setItem(`turf_hourly_rates_${selectedBranchId}_${currentSport._id}`, JSON.stringify(currentSport.customRates))
+                    } catch (e) {}
+                }
+
+                addToast({ message: 'Sport configuration & hourly rates updated successfully.', type: 'success' })
             } else {
                 // Register / Activate new sport
                 await activateSport({
@@ -386,12 +441,14 @@ export default function SportsManagement() {
                     status: currentSport.status
                 })
 
+                await updateBranch(selectedBranchId, { minPriceHourly: regPrice }).catch(() => {})
+
                 addToast({ message: 'Sport configuration activated successfully.', type: 'success' })
             }
 
             setModal(false)
             resetForm()
-            loadBranchSports(selectedBranchId)
+            await loadBranchSports(selectedBranchId)
         } catch (err) {
             console.error('Error saving sport configurations:', err)
             const errorMsg = err.message || err.response?.data?.message || 'Failed to save sport configurations.'
@@ -498,20 +555,28 @@ export default function SportsManagement() {
 
     // Card editing selector
     const handleEdit = (sport) => {
+        const sId = sport._id || sport.id
+        let savedRates = {}
+        try {
+            const cached = localStorage.getItem(`turf_hourly_rates_${selectedBranchId}_${sId}`)
+            if (cached) savedRates = JSON.parse(cached)
+        } catch (e) {}
+
         setCurrentSport({
-            _id: sport._id,
-            sportId: sport.sportId?._id || sport.sportId,
+            _id: sId,
+            sportId: sport.sportId?._id || sport.sportId?.id || sport.sportId,
             name: sport.sportId?.name || sport.name,
             icon: sport.sportId?.icon || sport.icon,
-            price: String(sport.regularPrice),
-            peakPrice: String(sport.peakPrice),
+            price: String(sport.regularPrice || 1000),
+            peakPrice: String(sport.peakPrice || 1500),
             status: sport.status,
             courts: sport.totalCourts,
             openingTime: sport.openingTime || '06:00',
-            closingTime: sport.closingTime || '22:00',
+            closingTime: sport.closingTime || '23:00',
             slotDuration: sport.slotDuration || 60,
             corporateFullDayPrice: sport.corporateFullDayPrice ? String(sport.corporateFullDayPrice) : '',
             weeklyDiscountPercent: sport.weeklyDiscountPercent ? String(sport.weeklyDiscountPercent) : '',
+            customRates: savedRates,
             originalStatus: sport.status
         })
         setEditMode(true)
@@ -812,8 +877,8 @@ export default function SportsManagement() {
             </div>
 
             {/* Creation/Edit Modal */}
-            <Modal isOpen={modal} onClose={() => { setModal(false); resetForm(); }} title={editMode ? 'Edit Sport Configurations' : 'Register New Sport Category'} size="md">
-                <div className="space-y-4">
+            <Modal isOpen={modal} onClose={() => { setModal(false); resetForm(); }} title={editMode ? 'Edit Sport Configurations & Hourly Slot Rates' : 'Register New Sport Category'} size="xl">
+                <div className="space-y-5">
                     <div className="grid grid-cols-1 gap-4">
                         <Select
                             label="Sport"
@@ -838,16 +903,16 @@ export default function SportsManagement() {
 
                     <div className="grid grid-cols-2 gap-4">
                         <Input 
-                            label="Regular Hourly Price (₹)" 
+                            label="Base Regular Hourly Price (₹)" 
                             type="number" 
-                            placeholder="e.g. 800" 
+                            placeholder="e.g. 1000" 
                             value={currentSport.price} 
                             onChange={(e) => setCurrentSport({ ...currentSport, price: e.target.value })} 
                         />
                         <Input 
-                            label="Peak Hourly Price (₹)" 
+                            label="Base Peak Hourly Price (₹)" 
                             type="number" 
-                            placeholder="e.g. 1200" 
+                            placeholder="e.g. 1500" 
                             value={currentSport.peakPrice} 
                             onChange={(e) => setCurrentSport({ ...currentSport, peakPrice: e.target.value })} 
                         />
@@ -891,6 +956,166 @@ export default function SportsManagement() {
                                 { value: '02:00', label: '02:00 AM (Late Night)' }
                             ]}
                         />
+                    </div>
+
+                    {/* ⏱️ INDIVIDUAL HOURLY SLOT TIMING & RATES MATRIX */}
+                    <div className="bg-slate-50 border border-slate-200/90 p-4.5 rounded-2xl space-y-4">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-200/80 pb-3">
+                            <div>
+                                <div className="flex items-center gap-2">
+                                    <span className="text-xs font-black text-slate-900 uppercase tracking-wider flex items-center gap-1.5">
+                                        <span>⏱️</span> Hourly Slot Timing & Pricing Matrix
+                                    </span>
+                                    <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300 text-[10px] font-bold">
+                                        Per-Hour Custom Override
+                                    </span>
+                                </div>
+                                <p className="text-[11px] text-slate-500 font-medium mt-0.5">
+                                    Har specific ghante ka rate set karein ya 1-click me saare slots ka price same karein.
+                                </p>
+                            </div>
+
+                            {/* ⚡ 1-CLICK SET SAME PRICE BAR */}
+                            <div className="flex items-center gap-2 bg-white p-2 rounded-xl border border-slate-200 shadow-2xs shrink-0">
+                                <span className="text-[11px] font-black text-slate-700">⚡ 1-Click Same Price:</span>
+                                <div className="flex items-center gap-1">
+                                    <span className="text-xs font-bold text-slate-400">₹</span>
+                                    <input
+                                        type="number"
+                                        placeholder="2000"
+                                        value={bulkRateInput}
+                                        onChange={(e) => setBulkRateInput(e.target.value)}
+                                        className="w-20 bg-slate-50 border border-slate-300 rounded-lg px-2 py-1 text-xs font-black text-slate-900 focus:outline-none focus:border-emerald-500"
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            const num = Number(bulkRateInput || currentSport.price || 2000);
+                                            if (isNaN(num) || num <= 0) return;
+                                            const slots = getHourlySlotsList(
+                                                currentSport.openingTime,
+                                                currentSport.closingTime,
+                                                currentSport.price,
+                                                currentSport.peakPrice,
+                                                {}
+                                            );
+                                            const newCustomRates = {};
+                                            slots.forEach(s => { newCustomRates[s.key] = num; });
+                                            setCurrentSport(prev => ({
+                                                ...prev,
+                                                price: String(num),
+                                                peakPrice: String(num),
+                                                customRates: newCustomRates
+                                            }));
+                                            addToast({ message: `⚡ Applied ₹${num}/hr to ALL slots in 1 click!`, type: 'success' });
+                                        }}
+                                        className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs px-3 py-1 rounded-lg transition-all cursor-pointer shadow-2xs"
+                                    >
+                                        Apply All
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Multi-Hour Calculation Mode Selector */}
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 bg-white p-3 rounded-xl border border-slate-200 text-xs">
+                            <span className="font-bold text-slate-800 flex items-center gap-1.5">
+                                <span>⚙️</span> Multi-Hour Booking Pricing Rule:
+                            </span>
+                            <div className="flex items-center gap-2">
+                                <select
+                                    value={currentSport.pricingMode || 'start_slot'}
+                                    onChange={(e) => setCurrentSport(prev => ({ ...prev, pricingMode: e.target.value }))}
+                                    className="bg-slate-50 border border-slate-300 text-slate-900 text-xs font-extrabold rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-emerald-500 cursor-pointer"
+                                >
+                                    <option value="start_slot">Start-Slot Rate Multiplier (e.g. ₹2000 × 2 hrs = ₹4000)</option>
+                                    <option value="sum_slots">Sum of Each Hourly Slot (e.g. ₹2000 + ₹2500 = ₹4500)</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        {/* Hourly Slots Grid */}
+                        {(() => {
+                            const slots = getHourlySlotsList(
+                                currentSport.openingTime,
+                                currentSport.closingTime,
+                                currentSport.price,
+                                currentSport.peakPrice,
+                                currentSport.customRates
+                            )
+
+                            return (
+                                <div className="space-y-3.5">
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 max-h-72 overflow-y-auto pr-1">
+                                        {slots.map(s => (
+                                            <div 
+                                                key={s.key}
+                                                className={`p-3 rounded-xl border transition-all ${
+                                                    s.isCustom
+                                                        ? 'bg-purple-50/90 border-purple-300 shadow-xs'
+                                                        : s.isPeak
+                                                            ? 'bg-amber-50/80 border-amber-200'
+                                                            : 'bg-white border-slate-200 shadow-2xs'
+                                                }`}
+                                            >
+                                                <div className="flex items-center justify-between mb-2">
+                                                    <span className="text-xs font-bold text-slate-900 font-mono">{s.timeLabel}</span>
+                                                    <span className={`px-2 py-0.5 rounded-md text-[9px] font-black uppercase ${
+                                                        s.isCustom
+                                                            ? 'bg-purple-600 text-white shadow-2xs'
+                                                            : s.isPeak
+                                                                ? 'bg-amber-100 text-amber-800 border border-amber-300'
+                                                                : 'bg-slate-100 text-slate-700 border border-slate-200'
+                                                    }`}>
+                                                        {s.isCustom ? '⚡ CUSTOM' : (s.isPeak ? '🌙 PEAK' : '☀️ REGULAR')}
+                                                    </span>
+                                                </div>
+
+                                                <div className="flex items-center gap-2">
+                                                    <span className="text-xs font-black text-slate-500">₹</span>
+                                                    <input
+                                                        type="number"
+                                                        placeholder={String(s.defaultRate)}
+                                                        value={currentSport.customRates?.[s.key] !== undefined ? currentSport.customRates[s.key] : ''}
+                                                        onChange={(e) => {
+                                                            const val = e.target.value
+                                                            setCurrentSport(prev => ({
+                                                                ...prev,
+                                                                customRates: {
+                                                                    ...prev.customRates,
+                                                                    [s.key]: val === '' ? undefined : Number(val)
+                                                                }
+                                                            }))
+                                                        }}
+                                                        className="w-full bg-white border border-slate-300 rounded-lg px-2.5 py-1 text-xs font-black text-slate-900 focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20"
+                                                    />
+                                                    <span className="text-[10px] text-slate-500 font-bold shrink-0">/hr</span>
+                                                </div>
+                                                <div className="flex items-center justify-between mt-1.5 text-[10px] text-slate-400">
+                                                    <span>Default: ₹{s.defaultRate}</span>
+                                                    {s.isCustom && (
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => {
+                                                                setCurrentSport(prev => {
+                                                                    const next = { ...prev.customRates }
+                                                                    delete next[s.key]
+                                                                    return { ...prev, customRates: next }
+                                                                })
+                                                            }}
+                                                            className="text-rose-600 hover:underline font-bold cursor-pointer"
+                                                        >
+                                                            Reset
+                                                        </button>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+
+                                </div>
+                            )
+                        })()}
                     </div>
 
                     <div className="grid grid-cols-1 gap-4">

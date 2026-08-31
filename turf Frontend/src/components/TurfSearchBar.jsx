@@ -215,28 +215,49 @@ export default function TurfSearchBar({ onSearch, values, onChange, onClear }) {
         return () => document.removeEventListener('mousedown', handler)
     }, [])
 
-    /* ── Current Location GPS State ── */
+    /* ── Current Location GPS State & Toggle ── */
     const [isLocating, setIsLocating] = useState(false)
+    const [prevSelectedLocation, setPrevSelectedLocation] = useState(location || 'Palasia, Indore')
 
     const handleUseCurrentLocation = (e) => {
         e?.stopPropagation?.()
+
+        const isGpsActive = (locInput && (locInput.includes('Near Me') || locInput.includes('Current Location'))) ||
+                            (location && (location.includes('Near Me') || location.includes('Current Location')))
+
+        // If GPS mode is active, toggle OFF and revert back instantly without page refresh!
+        if (isGpsActive) {
+            const fallback = (prevSelectedLocation && !prevSelectedLocation.includes('Near Me')) ? prevSelectedLocation : 'Palasia, Indore'
+            setLocInput(fallback)
+            setLocOpen(false)
+            emit('location', fallback, true)
+            return
+        }
+
+        // Save current location selection before switching to GPS
+        if (locInput && !locInput.includes('Near Me')) {
+            setPrevSelectedLocation(locInput)
+        }
+
         if (navigator.geolocation) {
             setIsLocating(true)
             navigator.geolocation.getCurrentPosition(
                 (pos) => {
                     setIsLocating(false)
-                    setLocInput('Near Me (Current Location)')
+                    const gpsVal = 'Near Me (Current Location)'
+                    setLocInput(gpsVal)
                     setLocOpen(false)
-                    emit('location', 'Near Me (Current Location)', true, {
+                    emit('location', gpsVal, true, {
                         lat: pos.coords.latitude,
                         lng: pos.coords.longitude
                     })
                 },
                 (err) => {
                     setIsLocating(false)
-                    setLocInput('Indore')
+                    const fallback = prevSelectedLocation || 'Palasia, Indore'
+                    setLocInput(fallback)
                     setLocOpen(false)
-                    emit('location', 'Indore')
+                    emit('location', fallback, true)
                 },
                 { timeout: 8000 }
             )
@@ -281,10 +302,23 @@ export default function TurfSearchBar({ onSearch, values, onChange, onClear }) {
     }
 
     const selectLocation = (loc) => {
+        if (!loc.includes('Near Me')) {
+            setPrevSelectedLocation(loc)
+        }
+        // If clicking already selected location, toggle off to clear filter
+        if (location && location.toLowerCase() === loc.toLowerCase()) {
+            setLocInput('')
+            setLocOpen(false)
+            emit('location', '', true)
+            return
+        }
         setLocInput(loc)
         setLocOpen(false)
-        emit('location', loc)
+        emit('location', loc, true)
     }
+
+    const isGpsActive = (locInput && (locInput.includes('Near Me') || locInput.includes('Current Location'))) ||
+                        (location && (location.includes('Near Me') || location.includes('Current Location')))
 
     const selectDate = (d) => {
         setDateOpen(false)
@@ -340,23 +374,37 @@ export default function TurfSearchBar({ onSearch, values, onChange, onClear }) {
                     </div>
                     {locOpen && (
                         <div className="absolute top-full left-0 w-full md:w-[290px] bg-white border border-[#E2E8F0] text-[#111827] rounded-[22px] mt-2 p-2.5 shadow-[0_20px_50px_rgba(0,0,0,0.18)] z-[99999] max-h-80 overflow-y-auto custom-scrollbar">
-                            {/* Live GPS Near Me Button */}
+                            {/* Live GPS Near Me Button with Toggle / Reset capabilities */}
                             <button
                                 type="button"
                                 onClick={handleUseCurrentLocation}
-                                className="w-full mb-2.5 px-3 py-2.5 rounded-xl bg-gradient-to-r from-emerald-50 to-green-50 hover:from-emerald-100 hover:to-green-100 border border-emerald-200 text-[#065F46] font-black text-xs flex items-center justify-between transition-all cursor-pointer shadow-xs group"
+                                className={`w-full mb-2.5 px-3 py-2.5 rounded-xl border text-xs flex items-center justify-between transition-all cursor-pointer shadow-xs group ${
+                                    isGpsActive
+                                        ? 'bg-gradient-to-r from-emerald-100 to-teal-100 border-emerald-400 text-emerald-950 font-black shadow-md'
+                                        : 'bg-gradient-to-r from-emerald-50 to-green-50 hover:from-emerald-100 hover:to-green-100 border-emerald-200 text-[#065F46] font-black'
+                                }`}
                             >
                                 <div className="flex items-center gap-2.5">
-                                    <span className="w-6 h-6 rounded-lg bg-[#10B981] text-white flex items-center justify-center text-xs shadow-xs group-hover:scale-110 transition-transform shrink-0">
+                                    <span className={`w-6 h-6 rounded-lg flex items-center justify-center text-xs shadow-xs transition-transform shrink-0 ${
+                                        isGpsActive ? 'bg-emerald-700 text-white animate-bounce' : 'bg-[#10B981] text-white group-hover:scale-110'
+                                    }`}>
                                         📍
                                     </span>
                                     <div className="flex flex-col text-left">
-                                        <span className="text-[11px] font-black text-[#065F46]">Use Current Location</span>
-                                        <span className="text-[9px] font-semibold text-emerald-600">Find nearest turfs near me (GPS)</span>
+                                        <span className="text-[11px] font-black">
+                                            {isGpsActive ? 'Using Current Location' : 'Use Current Location'}
+                                        </span>
+                                        <span className="text-[9px] font-semibold text-emerald-700">
+                                            {isGpsActive ? `Click to reset to ${prevSelectedLocation || 'Palasia, Indore'}` : 'Find nearest turfs near me (GPS)'}
+                                        </span>
                                     </div>
                                 </div>
                                 {isLocating ? (
-                                    <span className="text-[10px] font-bold text-emerald-700 animate-pulse">Detecting...</span>
+                                    <span className="text-[10px] font-bold text-emerald-800 animate-pulse">Detecting...</span>
+                                ) : isGpsActive ? (
+                                    <span className="text-[10px] bg-amber-200 text-amber-950 px-2 py-0.5 rounded-full font-black border border-amber-300 hover:bg-amber-300 transition-colors">
+                                        🔄 Reset
+                                    </span>
                                 ) : (
                                     <span className="text-[10px] bg-emerald-200 text-emerald-900 px-2 py-0.5 rounded-full font-bold">GPS ➔</span>
                                 )}

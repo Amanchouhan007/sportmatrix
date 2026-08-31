@@ -226,6 +226,7 @@ export default function App() {
                 <Route path="refunds" element={<StaffRefunds />} />
                 <Route path="maintenance" element={<StaffMaintenance />} />
                 <Route path="equipment" element={<StaffEquipment />} />
+                <Route path="settings" element={<SystemSettings />} />
               </Route>
 
               {/* Customer Dashboard */}

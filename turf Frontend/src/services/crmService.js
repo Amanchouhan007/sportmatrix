@@ -131,24 +131,8 @@ export const getCrmLeads = () => {
             createdAt: c.createdAt ? c.createdAt.split('T')[0] : new Date().toISOString().split('T')[0]
         }))
 
-        // Dynamically pull guest bookings
-        const guestBookings = JSON.parse(localStorage.getItem('guest_bookings') || '[]').map(g => ({
-            id: `lead_gbk_${g.id || Date.now()}`,
-            name: g.customerName || g.name || 'Guest User',
-            phone: g.phone || g.mobileNumber || '',
-            role: 'individual',
-            teamName: `${g.customerName || 'Guest'}'s Squad`,
-            preferredSport: 'Cricket / Football',
-            preferredSlot: `${g.slotTime || 'N/A'} (${g.slotDate || 'N/A'})`,
-            turfBranch: g.turfName || 'N/A',
-            status: 'Guest Booking',
-            totalBookings: 1,
-            notes: `Guest reservation for ${g.turfName || 'Turf'}` + (g.amount ? ` (₹${g.amount})` : ''),
-            createdAt: g.createdAt ? g.createdAt.split('T')[0] : new Date().toISOString().split('T')[0]
-        }))
-
         // Combine all real-time lead sources & filter out demo data
-        const allList = [...customLeads, ...corpLeads, ...bookingLeads, ...guestBookings]
+        const allList = [...customLeads, ...corpLeads, ...bookingLeads]
             .filter(item => !isDemoLead(item))
 
         // Deduplicate leads by unique Phone Number or ID

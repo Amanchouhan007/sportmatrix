@@ -129,11 +129,13 @@ export default function TournamentDashboard({ role = 'owner' }) {
                             Sync Data
                         </button>
 
-                        <Link to={`${basePath}/create`}>
-                            <Button className="w-full sm:w-auto shadow-lg shadow-indigo-500/20 cursor-pointer bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white font-black border-none px-5 py-2.5 rounded-xl">
-                                <HiPlus className="w-4 h-4 mr-1.5" /> CREATE TOURNAMENT
-                            </Button>
-                        </Link>
+                        {role !== 'staff' && (
+                            <Link to={`${basePath}/create`}>
+                                <Button className="w-full sm:w-auto shadow-lg shadow-indigo-500/20 cursor-pointer bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white font-black border-none px-5 py-2.5 rounded-xl">
+                                    <HiPlus className="w-4 h-4 mr-1.5" /> CREATE TOURNAMENT
+                                </Button>
+                            </Link>
+                        )}
                     </div>
                 </div>
             </div>
@@ -144,12 +146,12 @@ export default function TournamentDashboard({ role = 'owner' }) {
                     <span className="flex items-center gap-1.5 text-slate-700 uppercase tracking-wider">
                         <HiBolt className="text-amber-500" /> Quick Action Hub
                     </span>
-                    <span className="text-[11px] text-slate-400 font-medium">7 Module Controls</span>
+                    <span className="text-[11px] text-slate-400 font-medium">{role === 'staff' ? '6 Module Controls' : '7 Module Controls'}</span>
                 </div>
 
-                <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3">
+                <div className={`grid grid-cols-2 sm:grid-cols-3 ${role === 'staff' ? 'lg:grid-cols-6' : 'lg:grid-cols-7'} gap-3`}>
                     {[
-                        { label: 'New Tournament', icon: <HiPlus className="w-5 h-5 text-emerald-600" />, bg: 'bg-emerald-50 hover:bg-emerald-100', border: 'border-emerald-200', path: `${basePath}/create` },
+                        ...(role !== 'staff' ? [{ label: 'New Tournament', icon: <HiPlus className="w-5 h-5 text-emerald-600" />, bg: 'bg-emerald-50 hover:bg-emerald-100', border: 'border-emerald-200', path: `${basePath}/create` }] : []),
                         { label: 'Team Roster', icon: <HiUserGroup className="w-5 h-5 text-indigo-600" />, bg: 'bg-indigo-50 hover:bg-indigo-100', border: 'border-indigo-200', path: `${basePath}/registrations` },
                         { label: 'Auto Fixtures', icon: <HiChartBar className="w-5 h-5 text-blue-600" />, bg: 'bg-blue-50 hover:bg-blue-100', border: 'border-blue-200', path: `${basePath}/fixtures` },
                         { label: 'Live Matches', icon: <HiPlay className="w-5 h-5 text-rose-600" />, bg: 'bg-rose-50 hover:bg-rose-100', border: 'border-rose-200', path: `${basePath}/matches` },

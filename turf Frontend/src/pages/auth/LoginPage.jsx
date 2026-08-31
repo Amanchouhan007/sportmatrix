@@ -222,13 +222,13 @@ export default function LoginPage() {
 
                     {/* Logo & Brand Header */}
                     <div className="flex items-center gap-3.5 mb-6">
-                        <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-[#16A34A] to-emerald-400 flex items-center justify-center font-black text-white text-xl shadow-[0_0_25px_rgba(22,163,74,0.5)] border border-emerald-400/40">
-                            <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
-                                <path d="M12 2L2 7l10 5 10-5-10-5zm0 15l10 5 10-5M2 12l10 5 10-5" />
-                            </svg>
-                        </div>
-                        <span className="text-3xl font-black uppercase tracking-widest italic text-white">
-                            SportMatrix<span className="text-[#C8FF2E]">.</span>
+                        <img 
+                            src="/kiaan_logo.jpg" 
+                            alt="Kiaan Technologies Turf" 
+                            className="w-12 h-12 rounded-2xl object-cover shadow-[0_0_25px_rgba(255,215,0,0.4)] border border-amber-300/40 shrink-0" 
+                        />
+                        <span className="text-2xl font-black uppercase tracking-wider text-white">
+                            KIAAN'S SPORTSTURF<span className="text-[#C8FF2E]">.</span>
                         </span>
                     </div>
 

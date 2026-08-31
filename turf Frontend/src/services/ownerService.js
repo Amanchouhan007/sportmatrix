@@ -174,28 +174,12 @@ export const createOwner = async (ownerData) => {
                 message: resData.message || 'Owner created successfully'
             };
         }
+        throw new Error(resData?.message || 'Failed to create owner.');
     } catch (err) {
         const errMsg = err.response?.data?.message || err.message || 'Failed to create owner';
-        console.warn('Backend POST /owners failed, saving to persistent local storage:', errMsg);
+        console.error('Backend POST /owners error:', errMsg);
+        throw new Error(errMsg);
     }
-
-    ownersState = getLocalOwners();
-    const newOwner = {
-        _id: 'own_' + Date.now(),
-        id: 'own_' + Date.now(),
-        status: 'ACTIVE',
-        branchesCount: 0,
-        totalBookings: 0,
-        totalRevenue: 0,
-        commission: '₹0',
-        joinedDate: new Date().toISOString().split('T')[0],
-        ...ownerData,
-        name: ownerData.fullName || ownerData.name,
-        fullName: ownerData.fullName || ownerData.name
-    };
-    ownersState.unshift(newOwner);
-    saveLocalOwners(ownersState);
-    return { success: true, data: newOwner, message: 'Owner created successfully' };
 };
 
 /**

@@ -16,30 +16,17 @@ export default function ProtectedRoute({ children, allowedRoles }) {
         );
     }
 
-    const targetRole = allowedRoles && allowedRoles.length > 0 ? allowedRoles[0] : 'OWNER';
-
-    // Auto-initialize demo session if accessing protected path directly without token/user
+    // Require active session token and user object
     if (!token || !user) {
-        const demoUser = {
-            id: 'usr_demo',
-            name: 'Turf Admin',
-            email: 'owner@gmail.com',
-            role: targetRole,
-            mobile: '+91 98765 43210'
-        };
-        try {
-            localStorage.setItem('token', 'demo_jwt_token_2026');
-            localStorage.setItem('user', JSON.stringify(demoUser));
-        } catch (e) {}
-    } else if (allowedRoles && allowedRoles.length > 0) {
-        // Auto-sync demo user role to route requirement if navigating directly between role views
-        const currentRoleUpper = (user.role || '').toUpperCase();
-        const isAllowed = allowedRoles.some(r => r.toUpperCase() === currentRoleUpper);
+        return <Navigate to="/login" replace />;
+    }
+
+    // Check role access if allowedRoles is specified
+    if (allowedRoles && allowedRoles.length > 0) {
+        const currentRoleUpper = (user.role || '').toUpperCase().replace(/[-_]/g, '');
+        const isAllowed = allowedRoles.some(r => r.toUpperCase().replace(/[-_]/g, '') === currentRoleUpper || currentRoleUpper === 'SUPERADMIN' || currentRoleUpper === 'ADMIN');
         if (!isAllowed) {
-            const updatedUser = { ...user, role: targetRole };
-            try {
-                localStorage.setItem('user', JSON.stringify(updatedUser));
-            } catch (e) {}
+            return <Navigate to="/" replace />;
         }
     }
 

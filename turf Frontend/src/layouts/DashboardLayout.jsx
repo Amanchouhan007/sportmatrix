@@ -24,13 +24,14 @@ import sidebarConfig from '../config/sidebarConfig'
 import { useAuth } from '../context/AuthContext'
 import Modal from '../components/ui/Modal'
 import Badge from '../components/ui/Badge'
+import api from '../services/api'
 
 const roleLabels = { superadmin: 'Super Admin', owner: 'ADMIN', staff: 'Staff', customer: 'Customer' }
 
 const profileRouteMap = {
     superadmin: '/super-admin/settings',
     owner: '/admin/settings',
-    staff: '/staff',
+    staff: '/staff/settings',
     customer: '/customer/profile'
 }
 
@@ -57,99 +58,76 @@ export default function DashboardLayout({ role = 'owner' }) {
     const { user, logout } = useAuth()
     const menu = sidebarConfig[role] || []
 
-    // Load dynamic real-time notifications from website bookings, owners & corporate proposals
-    const loadLiveNotifications = () => {
+    // Load dynamic real-time notifications from live backend API (Express / Prisma / MySQL)
+    const loadLiveNotifications = async () => {
         try {
             const liveNotifs = []
 
-            // 1. Turf Slot Bookings
-            const rawCust = localStorage.getItem('customer_bookings')
-            const rawGuest = localStorage.getItem('guest_bookings')
-            const cList = rawCust ? JSON.parse(rawCust) : []
-            const gList = rawGuest ? JSON.parse(rawGuest) : []
-            const allBookings = [...(Array.isArray(cList) ? cList : []), ...(Array.isArray(gList) ? gList : [])]
+            // 1. Fetch Real-time Bookings & POS Transactions from Backend
+            try {
+                const res = await api.get('/billing/history')
+                const list = (res && res.data && Array.isArray(res.data)) ? res.data : (Array.isArray(res) ? res : [])
+                if (list.length > 0) {
+                    list.slice(0, 5).forEach((b, idx) => {
+                        const bAmt = Number(b.amount || 0)
+                        const cust = b.customerName || b.user?.fullName || b.customer || 'Valued Player'
+                        const venue = b.branchName || b.court || 'Turf Complex'
+                        const notifPath = role === 'superadmin' ? '/super-admin/payments' : role === 'staff' ? '/staff/bookings' : role === 'customer' ? '/customer/bookings' : '/admin/bookings'
 
-            if (allBookings.length > 0) {
-                allBookings.slice(0, 5).forEach((b, idx) => {
-                    const bAmt = Number(b.amount || b.rent || 1200)
-                    liveNotifs.push({
-                        id: `book-${b.id || idx}`,
-                        title: '⚡ Real Slot Booking',
-                        desc: `${b.venue || b.turfName || 'Indore Turf Complex'} booked by ${b.userName || b.customerName || b.name || 'Valued Player'} (₹${bAmt.toLocaleString('en-IN')})`,
-                        time: 'Recently',
-                        unread: true,
-                        path: role === 'superadmin' ? '/super-admin/payments' : role === 'owner' ? '/admin/bookings' : '/customer/bookings',
-                        dataDetails: {
-                            category: 'Real Turf Booking',
-                            bookingId: b.id || b.bookingId || `BK-${idx + 1}`,
-                            customerName: b.userName || b.customerName || b.name || 'Valued Player',
-                            customerPhone: b.userPhone || b.phone || '+91 98765 43210',
-                            turfVenue: b.venue || b.turfName || 'Indore Turf Complex',
-                            timeSlot: b.time || '06:00 PM - 07:00 PM',
-                            paymentStatus: 'PAID VIA UPI 🟢',
-                            amount: `₹${bAmt.toLocaleString('en-IN')}`,
-                            date: b.date || new Date().toISOString().split('T')[0]
-                        }
-                    })
-                })
-            }
-
-            // 2. Corporate Proposals
-            const rawCorp = localStorage.getItem('corporate_proposals_data')
-            if (rawCorp) {
-                const corpList = JSON.parse(rawCorp)
-                if (Array.isArray(corpList)) {
-                    corpList.slice(0, 3).forEach((c, idx) => {
                         liveNotifs.push({
-                            id: `corp-${c.id || idx}`,
-                            title: '🏢 Corporate Proposal Request',
-                            desc: `${c.companyName || 'Corporate Client'} requested proposal for ${c.eventType || 'Tournament'} (${c.budget || 'Custom Budget'})`,
-                            time: 'Recently',
+                            id: `book-${b.id || b.invoiceNumber || idx}`,
+                            title: '⚡ Real Slot Booking',
+                            desc: `${venue} booked by ${cust} (₹${bAmt.toLocaleString('en-IN')})`,
+                            time: b.createdAt ? new Date(b.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Recently',
                             unread: true,
-                            path: '/super-admin/crm',
+                            path: notifPath,
                             dataDetails: {
-                                category: 'Corporate Lead',
-                                refNo: c.id || `CORP-${idx + 1}`,
-                                ownerName: c.contactName || c.companyName || 'Corporate Client',
-                                businessName: c.companyName || 'Corporate Client',
-                                email: c.email || 'corporate@client.com',
-                                mobile: c.phone || '+91 98765 88888',
-                                status: 'NEW LEAD 🟢',
-                                date: new Date().toISOString().split('T')[0]
+                                category: 'Real Turf Booking',
+                                bookingId: b.invoiceNumber || b.paymentId || `BK-${b.id || idx + 1}`,
+                                customerName: cust,
+                                customerPhone: b.mobileNumber || b.mobile || '+91 98765 43210',
+                                turfVenue: venue,
+                                timeSlot: b.time || '06:00 PM',
+                                paymentStatus: (b.status || 'CONFIRMED').toUpperCase(),
+                                amount: `₹${bAmt.toLocaleString('en-IN')}`,
+                                date: b.date ? String(b.date).split('T')[0] : new Date().toISOString().split('T')[0]
                             }
                         })
                     })
                 }
+            } catch (e) {
+                console.warn('Notification bookings fetch note:', e.message)
             }
 
-            // 3. Real Registered Owners
-            const rawBranches = localStorage.getItem('sa_branches_data')
-            if (rawBranches) {
-                const bList = JSON.parse(rawBranches)
-                if (Array.isArray(bList) && bList.length > 0) {
-                    bList.slice(0, 2).forEach((br, idx) => {
+            // 2. Fetch Real-time Tournaments from Backend
+            try {
+                const resT = await api.get('/tournaments')
+                const tList = (resT && resT.success && Array.isArray(resT.data)) ? resT.data : []
+                if (tList.length > 0) {
+                    tList.slice(0, 3).forEach((t, idx) => {
+                        const notifPath = role === 'superadmin' ? '/super-admin' : role === 'staff' ? '/staff/tournaments/all' : '/admin/tournaments/all'
                         liveNotifs.push({
-                            id: `branch-${br.id || idx}`,
-                            title: '🏢 Active Branch Verified',
-                            desc: `${br.name || 'Turf Branch'} managed by ${br.ownerName || 'Kiaan Technology'} (${br.plan || 'Starter Plan'})`,
-                            time: 'Active',
+                            id: `tourn-${t.id || idx}`,
+                            title: '🏆 Tournament Event',
+                            desc: `${t.title || t.name} (${t.registrations || 0} teams registered)`,
+                            time: 'Live',
                             unread: false,
-                            path: '/super-admin/branches',
+                            path: notifPath,
                             dataDetails: {
-                                category: 'Branch Registration',
-                                refNo: br.code || `BR-${idx + 100}`,
-                                ownerName: br.ownerName || 'Kiaan Technology',
-                                businessName: br.name || 'Indore Turf Complex',
-                                email: br.email || 'owner@turf.com',
-                                mobile: br.phone || '+91 98765 12345',
-                                plan: br.plan || 'Starter Plan',
-                                status: 'ACTIVE & VERIFIED',
-                                date: br.createdDate || '20 Aug 2026'
+                                category: 'Tournament Event',
+                                refNo: t.id || `TRN-${idx + 100}`,
+                                ownerName: t.organizer || 'Turf Management',
+                                businessName: t.title || t.name,
+                                email: 'tournament@sportmatrix.in',
+                                mobile: '+91 98765 12345',
+                                plan: t.category || 'Open Tournament',
+                                status: (t.status || 'ACTIVE').toUpperCase(),
+                                date: t.startDate ? String(t.startDate).split('T')[0] : 'Upcoming'
                             }
                         })
                     })
                 }
-            }
+            } catch (e) {}
 
             setNotifications(liveNotifs)
         } catch (e) {
@@ -159,8 +137,6 @@ export default function DashboardLayout({ role = 'owner' }) {
 
     useEffect(() => {
         loadLiveNotifications()
-        window.addEventListener('storage', loadLiveNotifications)
-        return () => window.removeEventListener('storage', loadLiveNotifications)
     }, [role])
 
     // Auto-expand parent menu if current location matches any child item
@@ -186,7 +162,7 @@ export default function DashboardLayout({ role = 'owner' }) {
     const profileRouteMap = {
         superadmin: '/super-admin/settings',
         owner: '/admin/settings',
-        staff: '/staff',
+        staff: '/staff/settings',
         customer: '/customer/profile',
     }
 
@@ -225,10 +201,10 @@ export default function DashboardLayout({ role = 'owner' }) {
         { label: 'Ad Campaigns', icon: <HiTrophy className="w-4 h-4 text-amber-500" />, path: '/super-admin/ads' },
     ] : [
         { label: 'Add Booking', icon: <HiTicket className="w-4 h-4 text-emerald-600" />, path: role === 'staff' ? '/staff/bookings' : '/admin/pos' },
-        { label: 'Add Turf', icon: <HiLightningBolt className="w-4 h-4 text-[#10B981]" />, path: role === 'staff' ? '/staff' : '/admin/sports' },
-        { label: 'Add Tournament', icon: <HiTrophy className="w-4 h-4 text-amber-500" />, path: `${basePath}/tournaments/all` },
+        ...(role !== 'staff' ? [{ label: 'Add Turf', icon: <HiLightningBolt className="w-4 h-4 text-[#10B981]" />, path: '/admin/sports' }] : []),
+        ...(role !== 'staff' ? [{ label: 'Add Tournament', icon: <HiTrophy className="w-4 h-4 text-amber-500" />, path: `${basePath}/tournaments/all` }] : []),
         { label: 'Add Team', icon: <HiUserGroup className="w-4 h-4 text-blue-500" />, path: role === 'staff' ? '/staff/tournaments/registrations' : '/admin/teams' },
-        { label: 'Create Invoice', icon: <HiDocumentText className="w-4 h-4 text-indigo-500" />, path: role === 'staff' ? '/staff/bookings' : '/admin/pos' },
+        { label: 'Create Invoice', icon: <HiDocumentText className="w-4 h-4 text-indigo-500" />, path: role === 'staff' ? '/staff/bookings?action=invoice' : '/admin/pos' },
     ]
 
     return (
@@ -246,16 +222,18 @@ export default function DashboardLayout({ role = 'owner' }) {
                 {/* Brand Header */}
                 <div className="p-4 h-[72px] flex items-center justify-between border-b border-slate-100 shrink-0">
                     <div className="flex items-center gap-3 min-w-0">
-                        <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-emerald-500 to-green-600 flex items-center justify-center font-black text-white text-base shadow-md shadow-emerald-500/20 shrink-0">
-                            SM
-                        </div>
+                        <img 
+                            src="/kiaan_logo.jpg" 
+                            alt="Kiaan Technologies Turf" 
+                            className="w-10 h-10 rounded-xl object-cover shadow-md border border-amber-300/40 shrink-0" 
+                        />
                         {!isCollapsed && (
                             <div className="flex flex-col min-w-0">
-                                <span className="font-black text-slate-900 text-base tracking-tight uppercase italic leading-none truncate">
-                                    SPORTAMAX<span className="text-[#10B981]">.</span>
+                                <span className="font-black text-slate-900 text-sm tracking-tight uppercase leading-none truncate">
+                                    KIAAN'S TURF<span className="text-[#10B981]">.</span>
                                 </span>
-                                <span className="text-[10px] font-extrabold text-emerald-600 uppercase tracking-widest mt-1">
-                                    {roleLabels[role] || 'ADMIN'}
+                                <span className="text-[9px] font-extrabold text-emerald-700 uppercase tracking-wider mt-1 truncate">
+                                    KIAAN TECHNOLOGIES • {roleLabels[role] || 'ADMIN'}
                                 </span>
                             </div>
                         )}

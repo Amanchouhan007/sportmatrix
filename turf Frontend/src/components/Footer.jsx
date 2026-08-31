@@ -40,12 +40,15 @@ export default function Footer() {
             <div className="max-w-7xl mx-auto px-6 py-16">
                 <div className="grid md:grid-cols-2 lg:grid-cols-7 gap-8">
                     <div className="lg:col-span-2 space-y-5">
-                        <div className="flex items-center gap-2.5 mb-6">
-                            <div className="w-10 h-10 rounded-xl bg-[#C8FF2E] border border-[#B5F000] flex items-center justify-center font-black text-[#111827] text-sm shadow-sm">SM</div>
-                            <span className="text-lg font-black text-[#111827] tracking-tight">SportMatrix</span>
+                        <div className="flex items-center gap-3 mb-6">
+                            <img src="/kiaan_logo.jpg" alt="Kiaan Technologies Turf" className="w-10 h-10 rounded-xl object-cover shadow-sm border border-amber-300/40" />
+                            <div className="flex flex-col">
+                                <span className="text-lg font-black text-[#111827] tracking-tight uppercase">KIAAN'S SPORTSTURF</span>
+                                <span className="text-[9px] font-extrabold text-[#16A34A] uppercase tracking-wider">Kiaan Technologies</span>
+                            </div>
                         </div>
                         <p className="text-sm font-semibold text-[#6B7280] leading-relaxed max-w-xs">
-                            The complete digital operating system for sports turfs. Manage everything from one platform.
+                            The complete enterprise sports venue digital management ecosystem by Kiaan Technologies.
                         </p>
                         <div className="flex gap-4">
                             {['X', 'in', 'gh', 'yt'].map((social) => (
