@@ -108,17 +108,88 @@ export const getCategories = async () => {
 };
 
 /**
- * Fetch all teams (optionally filtered by tournamentId)
+ * Fetch all teams for public discovery
  */
 export const getTeams = async (filters = {}) => {
     try {
-        const res = await api.get('/tournaments/teams', { params: filters });
+        const res = await api.get('/teams', { params: filters });
         if (res && res.success && Array.isArray(res.data)) return res;
         if (Array.isArray(res)) return { success: true, data: res };
         return { success: true, data: [] };
     } catch (error) {
+        console.warn('GET /teams failed:', error.message);
         return { success: true, data: [] };
     }
+};
+
+/**
+ * Fetch authenticated user's joined/created teams
+ */
+export const getMyTeams = async () => {
+    try {
+        const res = await api.get('/teams/my-teams');
+        if (res && res.success && Array.isArray(res.data)) return res;
+        if (Array.isArray(res)) return { success: true, data: res };
+        return { success: true, data: [] };
+    } catch (error) {
+        console.warn('GET /teams/my-teams failed:', error.message);
+        return { success: true, data: [] };
+    }
+};
+
+/**
+ * Create a new team
+ */
+export const createTeam = async (teamData) => {
+    const res = await api.post('/teams', teamData);
+    if (!res || res.success === false) {
+        throw new Error(res?.message || 'Failed to create team.');
+    }
+    return res;
+};
+
+/**
+ * Send request to join a team
+ */
+export const joinTeam = async (teamId) => {
+    const res = await api.post(`/teams/${teamId}/join`);
+    if (!res || res.success === false) {
+        throw new Error(res?.message || 'Failed to join team.');
+    }
+    return res;
+};
+
+/**
+ * Fetch captain's pending join requests for a team
+ */
+export const getJoinRequests = async (teamId) => {
+    const res = await api.get(`/teams/${teamId}/join-requests`);
+    if (!res || res.success === false) {
+        throw new Error(res?.message || 'Failed to fetch join requests.');
+    }
+    return res;
+};
+
+/**
+ * Approve a join request (Captain only)
+ */
+export const approveJoinRequest = async (teamId, requestId) => {
+    const res = await api.post(`/teams/${teamId}/join-requests/${requestId}/approve`);
+    if (!res || res.success === false) {
+        throw new Error(res?.message || 'Failed to approve join request.');
+    }
+    return res;
+};
+
+/**
+ * Reject a join request (Captain only)
+ */
+export const rejectJoinRequest = async (teamId, requestId) => {
+    const res = await api.post(`/teams/${teamId}/join-requests/${requestId}/reject`);
+    if (!res || res.success === false) {
+        throw new Error(res?.message || 'Failed to reject join request.');
+    }
+    return res;
 };
 
 /**

@@ -185,14 +185,7 @@ export const addOrUpdateLeaderboardPlayer = (playerData) => {
             updatedEntry.currentPPS = calculatePPS(updatedEntry, tierMult)
         }
 
-        // Save custom/updated list into localStorage
-        const storedCustom = JSON.parse(localStorage.getItem('indore_custom_leaderboard_players') || '[]')
-        const filteredCustom = storedCustom.filter(p => p.name.trim().toLowerCase() !== key)
-        const newCustomList = [updatedEntry, ...filteredCustom]
-
-        localStorage.setItem('indore_custom_leaderboard_players', JSON.stringify(newCustomList))
-
-        // Trigger event so any open leaderboard UI auto-refreshes!
+        // Dispatch event so any open leaderboard UI auto-refreshes directly from backend DB!
         window.dispatchEvent(new Event('leaderboardUpdated'))
         return updatedEntry
     } catch (e) {

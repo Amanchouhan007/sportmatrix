@@ -333,6 +333,7 @@ const updateBranch = async (req, res) => {
         } = req.body;
 
         const targetPrice = minPriceHourly ?? pricePerHour ?? price;
+        const targetPeakPrice = req.body.peakPricePerHour ?? req.body.peakPrice ?? (targetPrice !== undefined ? Math.round(Number(targetPrice) * 1.5) : undefined);
 
         const updated = await prisma.branch.update({
             where: { id },
@@ -361,6 +362,17 @@ const updateBranch = async (req, res) => {
             },
             include: { owner: true, subscriptionPlan: true, branchSports: { include: { sport: true } } }
         });
+
+        // Sync all BranchSport records for dynamic morning vs evening peak pricing
+        if (targetPrice !== undefined || targetPeakPrice !== undefined) {
+            await prisma.branchSport.updateMany({
+                where: { branchId: id },
+                data: {
+                    regularPrice: targetPrice !== undefined ? Number(targetPrice) : undefined,
+                    peakPrice: targetPeakPrice !== undefined ? Number(targetPeakPrice) : undefined
+                }
+            }).catch(() => {});
+        }
 
         return res.status(200).json({ success: true, message: 'Branch details updated successfully.', data: formatBranch(updated, 0) });
     } catch (error) {

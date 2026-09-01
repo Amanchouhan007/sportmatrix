@@ -162,25 +162,60 @@ class MatchPaymentController {
                 }
 
                 if (req.body.hasVerifiedUmpire || req.body.hasUmpire) {
-                    const branchUmpire = await tx.user.findFirst({
-                        where: { staffBranchId: branchId, role: 'UMPIRE', status: 'ACTIVE' },
-                        include: { umpireProfile: true }
+                    const eligibleUmpires = await tx.user.findMany({
+                        where: {
+                            staffBranchId: branchId,
+                            role: 'UMPIRE',
+                            status: 'ACTIVE',
+                            umpireProfile: {
+                                is: {
+                                    isOnDuty: true
+                                }
+                            }
+                        },
+                        include: {
+                            umpireProfile: {
+                                include: {
+                                    dutyAssignments: {
+                                        where: {
+                                            dutyStatus: { in: ['SCHEDULED', 'LIVE_NOW'] }
+                                        }
+                                    }
+                                }
+                            }
+                        }
                     });
-                    if (branchUmpire && branchUmpire.umpireProfile) {
+
+                    const requestedSlotId = req.body.slotId || (holdResult ? holdResult.slotId : null);
+                    const unconflicted = eligibleUmpires.filter(u => {
+                        if (!u.umpireProfile) return false;
+                        if (!requestedSlotId) return true;
+                        return !u.umpireProfile.dutyAssignments.some(d => d.matchId === matchId);
+                    });
+
+                    unconflicted.sort((a, b) => {
+                        const countA = a.umpireProfile?.dutyAssignments?.length || 0;
+                        const countB = b.umpireProfile?.dutyAssignments?.length || 0;
+                        return countA - countB;
+                    });
+
+                    const selectedUmpire = unconflicted[0];
+
+                    if (selectedUmpire && selectedUmpire.umpireProfile) {
                         await tx.umpireDutyAssignment.create({
                             data: {
                                 id: genId('uda'),
                                 matchId,
                                 branchId,
-                                umpireProfileId: branchUmpire.umpireProfile.id,
-                                dutyFee: Number(branchUmpire.umpireProfile.dutyFeePerMatch || 300),
+                                umpireProfileId: selectedUmpire.umpireProfile.id,
+                                dutyFee: Number(selectedUmpire.umpireProfile.dutyFeePerMatch || 300),
                                 dutyStatus: 'SCHEDULED',
                                 feePaymentStatus: 'PENDING'
                             }
                         });
                         await tx.match.update({
                             where: { id: matchId },
-                            data: { hasUmpireAssigned: true, umpireAddonFee: Number(branchUmpire.umpireProfile.dutyFeePerMatch || 300) }
+                            data: { hasUmpireAssigned: true, umpireAddonFee: Number(selectedUmpire.umpireProfile.dutyFeePerMatch || 300) }
                         });
                     }
                 }

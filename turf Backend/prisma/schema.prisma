@@ -657,8 +657,8 @@ model Match {
   sport                    Sport?           @relation(fields: [sportId], references: [id], onDelete: SetNull)
 
   // Team & Captain Details
-  captainAId               String           @map("captain_a_id") @db.VarChar(50)
-  captainA                 User             @relation("CaptainAMatches", fields: [captainAId], references: [id], onDelete: Restrict)
+  captainAId               String?          @map("captain_a_id") @db.VarChar(50)
+  captainA                 User?            @relation("CaptainAMatches", fields: [captainAId], references: [id], onDelete: SetNull)
   captainBId               String?          @map("captain_b_id") @db.VarChar(50)
   captainB                 User?            @relation("CaptainBMatches", fields: [captainBId], references: [id], onDelete: SetNull)
   teamAName                String           @default("Team A Strikers") @map("team_a_name") @db.VarChar(100)

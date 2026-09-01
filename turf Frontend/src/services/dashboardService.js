@@ -85,3 +85,19 @@ export const getRecentActivities = async (filters = {}) => {
         };
     }
 };
+
+/**
+ * Fetch 100% database-authoritative operational history analytics
+ */
+export const getDashboardHistory = async (filters = {}) => {
+    try {
+        const response = await api.get('/dashboard/history', { params: filters });
+        return response;
+    } catch (error) {
+        console.warn('Backend GET /dashboard/history failed:', error.message);
+        return {
+            success: false,
+            data: { dailyHistory: [], weeklyBreakdown: [], allLogs: [] }
+        };
+    }
+};

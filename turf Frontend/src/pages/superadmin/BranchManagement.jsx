@@ -1269,17 +1269,48 @@ export default function BranchManagement() {
                         />
                     </div>
 
-                    {/* SECTION 4: Pricing & Operating Timings */}
+                    {/* SECTION 4: Dynamic Hourly Pricing & Operating Hours */}
                     <div className="space-y-3">
-                        <h3 className="text-xs font-bold text-primary-600 uppercase tracking-wider border-b border-surface-150 pb-1.5">Section 4: Pricing & Operating Hours</h3>
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                            <Input 
-                                label="Price Per Hour (₹) *" 
-                                placeholder="e.g. 1000"
-                                type="number"
-                                value={formData.pricePerHour}
-                                onChange={e => setFormData({ ...formData, pricePerHour: e.target.value })}
-                            />
+                        <div className="flex items-center justify-between border-b border-surface-150 pb-1.5">
+                            <h3 className="text-xs font-bold text-primary-600 uppercase tracking-wider">
+                                Section 4: Dynamic Hourly Pricing & Operating Hours
+                            </h3>
+                            <span className="text-[10px] font-black uppercase bg-amber-100 text-amber-900 px-2.5 py-0.5 rounded-full border border-amber-300">
+                                ⚡ Time-Based Dynamic Pricing
+                            </span>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-surface-50 p-3.5 rounded-xl border border-surface-200">
+                            <div>
+                                <Input 
+                                    label="🌅 Morning / Off-Peak Rate (₹/hr) *" 
+                                    placeholder="e.g. 800"
+                                    type="number"
+                                    value={formData.pricePerHour}
+                                    onChange={e => {
+                                        const val = e.target.value;
+                                        setFormData({
+                                            ...formData,
+                                            pricePerHour: val,
+                                            peakPricePerHour: formData.peakPricePerHour || (val ? Math.round(Number(val) * 1.5) : '')
+                                        });
+                                    }}
+                                />
+                                <span className="text-[10px] text-surface-500 font-medium mt-1 block">Applied during regular/morning hours (e.g. 06:00 AM - 05:00 PM)</span>
+                            </div>
+                            <div>
+                                <Input 
+                                    label="🌆 Evening / Peak-Hour Rate (₹/hr) *" 
+                                    placeholder="e.g. 1400"
+                                    type="number"
+                                    value={formData.peakPricePerHour || (formData.pricePerHour ? Math.round(Number(formData.pricePerHour) * 1.5) : 1500)}
+                                    onChange={e => setFormData({ ...formData, peakPricePerHour: e.target.value })}
+                                />
+                                <span className="text-[10px] text-amber-700 font-bold mt-1 block">Applied automatically during high-demand evening peak hours</span>
+                            </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                             <Input 
                                 label="Opening Time" 
                                 placeholder="e.g. 06:00 AM"
@@ -1287,11 +1318,39 @@ export default function BranchManagement() {
                                 onChange={e => setFormData({ ...formData, openingTime: e.target.value })}
                             />
                             <Input 
+                                label="Peak Start Time" 
+                                placeholder="e.g. 05:00 PM"
+                                value={formData.peakStartTime || '05:00 PM'}
+                                onChange={e => setFormData({ ...formData, peakStartTime: e.target.value })}
+                            />
+                            <Input 
+                                label="Peak End Time" 
+                                placeholder="e.g. 11:00 PM"
+                                value={formData.peakEndTime || '11:00 PM'}
+                                onChange={e => setFormData({ ...formData, peakEndTime: e.target.value })}
+                            />
+                            <Input 
                                 label="Closing Time" 
                                 placeholder="e.g. 11:00 PM"
                                 value={formData.closingTime}
                                 onChange={e => setFormData({ ...formData, closingTime: e.target.value })}
                             />
+                        </div>
+
+                        {/* Dynamic Pricing Summary Pill */}
+                        <div className="p-3 bg-gradient-to-r from-emerald-50 to-amber-50 rounded-xl border border-emerald-200 flex items-center justify-between text-xs">
+                            <div className="flex items-center gap-2">
+                                <span className="text-base">📈</span>
+                                <div>
+                                    <span className="font-extrabold text-surface-900 block">Dynamic Hourly Rate Schedule</span>
+                                    <span className="text-surface-600 font-medium">
+                                        Morning (06:00 AM - {formData.peakStartTime || '05:00 PM'}): <strong className="text-emerald-700">₹{formData.pricePerHour || 1000}/hr</strong> · Evening Peak ({formData.peakStartTime || '05:00 PM'} - {formData.peakEndTime || '11:00 PM'}): <strong className="text-amber-700">₹{formData.peakPricePerHour || Math.round(Number(formData.pricePerHour || 1000) * 1.5)}/hr</strong>
+                                    </span>
+                                </div>
+                            </div>
+                            <span className="px-2.5 py-1 bg-emerald-600 text-white font-black text-[10px] rounded-lg uppercase tracking-wider shrink-0">
+                                ✓ Dynamic Active
+                            </span>
                         </div>
                     </div>
 
