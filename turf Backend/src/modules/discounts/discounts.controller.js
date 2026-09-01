@@ -281,9 +281,9 @@ const validatePromoCode = async (req, res) => {
 
         if (bookingOr.length > 0 || matchOr.length > 0 || matchPayOr.length > 0) {
             const [bCount, mCount, mpCount] = await Promise.all([
-                bookingOr.length > 0 ? prisma.booking.count({ where: { OR: bookingOr, status: { in: ['COMPLETED', 'CONFIRMED', 'PENDING'] } } }) : 0,
+                bookingOr.length > 0 ? prisma.booking.count({ where: { OR: bookingOr, status: { in: ['COMPLETED', 'HELD', 'PENDING'] } } }) : 0,
                 matchOr.length > 0 ? prisma.match.count({ where: { OR: matchOr, matchStatus: { in: ['CONFIRMED', 'COMPLETED', 'SLOT_HELD'] } } }) : 0,
-                matchPayOr.length > 0 ? prisma.matchPayment.count({ where: { OR: matchPayOr, paymentStatus: { in: ['COMPLETED', 'PAID', 'PENDING'] } } }) : 0
+                matchPayOr.length > 0 ? prisma.matchPayment.count({ where: { OR: matchPayOr, paymentStatus: { in: ['COMPLETED', 'HELD', 'PENDING'] } } }) : 0
             ]);
             previousCount = bCount + mCount + mpCount;
         }

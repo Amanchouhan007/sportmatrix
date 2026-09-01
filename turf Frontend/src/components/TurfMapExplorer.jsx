@@ -12,7 +12,7 @@ export default function TurfMapExplorer() {
     const [turfs, setTurfs] = useState([]);
     const [loading, setLoading] = useState(false);
     const [userLocation, setUserLocation] = useState(null);
-    const [radius, setRadius] = useState(5);
+    const [radius, setRadius] = useState('All');
     const [filters, setFilters] = useState({ sport: '', sort: 'Nearest First' });
     const [hoveredTurfId, setHoveredTurfId] = useState(null);
     const [error, setError] = useState(null);
@@ -36,8 +36,8 @@ export default function TurfMapExplorer() {
             }
             if (filters.sport) params.append('sport', filters.sport);
 
-            const res = await axios.get(`${url}${params.toString()}`, { timeout: 2000 });
-            if (res.data.success) {
+            const res = await axios.get(`${url}${params.toString()}`, { timeout: 10000 });
+            if (res.data.success && Array.isArray(res.data.data) && res.data.data.length > 0) {
                 let fetchedTurfs = res.data.data;
 
                 if (filters.sort === 'Highest Rated') {
@@ -49,6 +49,12 @@ export default function TurfMapExplorer() {
                 }
 
                 setTurfs(fetchedTurfs);
+            } else {
+                // Secondary attempt: get all turfs from main catalog endpoint
+                const catalogRes = await axios.get(`${API_URL}/turfs`, { timeout: 10000 });
+                if (catalogRes.data.success && Array.isArray(catalogRes.data.data)) {
+                    setTurfs(catalogRes.data.data);
+                }
             }
         } catch (err) {
             console.error('Error fetching turfs:', err);

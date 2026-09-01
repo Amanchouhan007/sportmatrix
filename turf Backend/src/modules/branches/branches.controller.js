@@ -241,7 +241,8 @@ const createBranch = async (req, res) => {
         country, state, city, zipCode, fullAddress,
         email, mobile, alternateMobile, gstNumber,
         timezone, currency, logo, images,
-        pricePerHour, openingTime, closingTime, dimensionsSqFt, surfaceType, amenities
+        pricePerHour, openingTime, closingTime, dimensionsSqFt, surfaceType, amenities,
+        latitude, longitude
     } = req.body;
 
     if (!branchName || !email) {
@@ -269,6 +270,9 @@ const createBranch = async (req, res) => {
         if (!plan) {
             return res.status(400).json({ success: false, message: `Subscription plan "${planId}" does not exist.` });
         }
+
+        const resolvedLat = (latitude !== undefined && latitude !== null && !isNaN(Number(latitude))) ? Number(latitude) : 22.7196;
+        const resolvedLng = (longitude !== undefined && longitude !== null && !isNaN(Number(longitude))) ? Number(longitude) : 75.8577;
 
         const branch = await prisma.branch.create({
             data: {
@@ -298,6 +302,8 @@ const createBranch = async (req, res) => {
                 dimensionsSqFt: dimensionsSqFt ? Number(dimensionsSqFt) : undefined,
                 surfaceType: surfaceType || undefined,
                 amenities: Array.isArray(amenities) ? amenities : [],
+                latitude: resolvedLat,
+                longitude: resolvedLng,
                 status: 'ACTIVE'
             },
             include: { owner: true, subscriptionPlan: true }
@@ -329,7 +335,7 @@ const updateBranch = async (req, res) => {
             branchName, description, subscriptionPlanId,
             city, state, country, zipCode, fullAddress, email, mobile, alternateMobile, gstNumber,
             logo, images, amenities, minPriceHourly, pricePerHour, price, openingTime, closingTime,
-            dimensionsSqFt, surfaceType, status
+            dimensionsSqFt, surfaceType, status, latitude, longitude
         } = req.body;
 
         const targetPrice = minPriceHourly ?? pricePerHour ?? price;
@@ -358,6 +364,8 @@ const updateBranch = async (req, res) => {
                 closingTime: closingTime ?? undefined,
                 dimensionsSqFt: dimensionsSqFt !== undefined ? Number(dimensionsSqFt) : undefined,
                 surfaceType: surfaceType ?? undefined,
+                latitude: (latitude !== undefined && latitude !== null) ? Number(latitude) : undefined,
+                longitude: (longitude !== undefined && longitude !== null) ? Number(longitude) : undefined,
                 status: status ?? undefined
             },
             include: { owner: true, subscriptionPlan: true, branchSports: { include: { sport: true } } }

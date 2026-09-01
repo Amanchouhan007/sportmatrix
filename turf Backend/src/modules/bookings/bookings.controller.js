@@ -521,6 +521,60 @@ const lookupGuestBookingsByPhone = async (req, res) => {
     }
 };
 
+const updateCheckInStatus = async (req, res) => {
+    const rawId = req.params.id;
+    const { checkInStatus } = req.body;
+
+    const normalizedStatus = (checkInStatus || '').toUpperCase().replace(/[\s-]/g, '_');
+    let targetStatus;
+    if (['CHECKED_IN', 'CHECKEDIN', 'CHECKIN', 'CHECK_IN'].includes(normalizedStatus)) {
+        targetStatus = 'CHECKED_IN';
+    } else if (['NO_SHOW', 'NOSHOW', 'NO-SHOW'].includes(normalizedStatus)) {
+        targetStatus = 'NO_SHOW';
+    } else if (['PENDING', 'PENDING_CHECK_IN'].includes(normalizedStatus)) {
+        targetStatus = 'PENDING_CHECK_IN';
+    } else {
+        return res.status(400).json({ success: false, message: 'checkInStatus must be CHECKED_IN, NO_SHOW, or PENDING_CHECK_IN.' });
+    }
+
+    try {
+        let bookingId = isNaN(Number(rawId)) ? null : Number(rawId);
+        if (!bookingId) {
+            const found = await prisma.booking.findFirst({
+                where: { OR: [{ bookingCode: rawId }, { id: isNaN(Number(rawId.replace(/\D/g, ''))) ? -1 : Number(rawId.replace(/\D/g, '')) }] }
+            });
+            if (found) bookingId = found.id;
+        }
+
+        if (!bookingId) {
+            return res.status(404).json({ success: false, message: 'Booking not found.' });
+        }
+
+        const updated = await prisma.booking.update({
+            where: { id: bookingId },
+            data: {
+                checkInStatus: targetStatus,
+                checkedInAt: targetStatus === 'CHECKED_IN' ? new Date() : null,
+                checkedInByStaffId: req.user?.id || null
+            }
+        });
+
+        return res.status(200).json({
+            success: true,
+            message: `Booking check-in status updated to ${targetStatus}`,
+            data: {
+                id: updated.bookingCode || `BK-${updated.id}`,
+                bookingId: updated.id,
+                checkInStatus: updated.checkInStatus,
+                checkedInAt: updated.checkedInAt
+            }
+        });
+    } catch (error) {
+        console.error('Update booking check-in status error:', error);
+        return res.status(500).json({ success: false, message: 'Failed to update check-in status: ' + error.message });
+    }
+};
+
 module.exports = {
     createBooking,
     cancelBooking,
@@ -528,6 +582,7 @@ module.exports = {
     getBookingHistory,
     getBookingLedgerSummary,
     updateBookingStatus,
+    updateCheckInStatus,
     createGuestBooking,
     lookupGuestBookingsByPhone
 };

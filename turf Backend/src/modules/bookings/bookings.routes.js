@@ -6,6 +6,7 @@ const {
     getBookingHistory,
     getBookingLedgerSummary,
     updateBookingStatus,
+    updateCheckInStatus,
     createGuestBooking,
     lookupGuestBookingsByPhone
 } = require('./bookings.controller');
@@ -20,6 +21,7 @@ router.get('/guest-lookup', lookupGuestBookingsByPhone);
 
 router.get('/summary', verifyToken, authorizeRoles(['OWNER', 'STAFF', 'SUPER_ADMIN']), getBookingLedgerSummary);
 router.put('/:id/status', verifyToken, authorizeRoles(['OWNER', 'STAFF', 'SUPER_ADMIN']), updateBookingStatus);
+router.put('/:id/check-in', verifyToken, authorizeRoles(['OWNER', 'STAFF', 'SUPER_ADMIN']), updateCheckInStatus);
 
 router.post('/', optionalToken, createBooking);
 router.post('/:id/cancel', verifyToken, cancelBooking);

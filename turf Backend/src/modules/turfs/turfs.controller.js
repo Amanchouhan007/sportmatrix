@@ -5,9 +5,24 @@ const prisma = require('../../config/prisma');
  * data. Never fabricates a fallback venue: an unmatched id is a real 404, and
  * an empty catalog is a real empty array.
  */
+const CITY_DEFAULT_COORDS = {
+    latitude: 22.7196,
+    longitude: 75.8577
+};
+
+const getBranchCoords = (b) => {
+    const lat = (b.latitude !== null && b.latitude !== undefined && !isNaN(Number(b.latitude)))
+        ? Number(b.latitude)
+        : CITY_DEFAULT_COORDS.latitude;
+    const lng = (b.longitude !== null && b.longitude !== undefined && !isNaN(Number(b.longitude)))
+        ? Number(b.longitude)
+        : CITY_DEFAULT_COORDS.longitude;
+    return { lat, lng };
+};
+
 const formatPublicTurf = (b) => {
     const activeBranchSports = (b.branchSports || []).filter(bs => bs.status === 'ACTIVE');
-    
+
     // Compute true minimum regular price from active sports
     let minSportPrice = null;
     if (activeBranchSports.length > 0) {
@@ -31,6 +46,8 @@ const formatPublicTurf = (b) => {
         }))
         : [{ name: 'Cricket', price: effectiveMinPrice, regularPrice: effectiveMinPrice, peakPrice: Math.round(effectiveMinPrice * 1.5) }];
 
+    const coords = getBranchCoords(b);
+
     return {
         id: b.id,
         _id: b.id,
@@ -53,8 +70,8 @@ const formatPublicTurf = (b) => {
         images: b.images || [],
         rating: Number(b.rating),
         reviewsCount: b.reviewCount,
-        latitude: b.latitude !== null && b.latitude !== undefined ? Number(b.latitude) : null,
-        longitude: b.longitude !== null && b.longitude !== undefined ? Number(b.longitude) : null,
+        latitude: coords.lat,
+        longitude: coords.lng,
         status: b.status
     };
 };
@@ -85,20 +102,23 @@ const haversineKm = (lat1, lon1, lat2, lon2) => {
 
 const getTurfsNearby = async (req, res) => {
     try {
-        const { lat, lng, radius = 5 } = req.query;
+        const { lat, lng, radius = 50 } = req.query;
         if (!lat || !lng) {
             return res.status(400).json({ success: false, message: 'Latitude and Longitude are required' });
         }
         const latN = Number(lat), lngN = Number(lng), radiusN = Number(radius);
 
         const branches = await prisma.branch.findMany({
-            where: { status: 'ACTIVE', latitude: { not: null }, longitude: { not: null } },
+            where: { status: 'ACTIVE' },
             include: PUBLIC_INCLUDE
         });
 
         const withDistance = branches
-            .map(b => ({ b, distance: haversineKm(latN, lngN, Number(b.latitude), Number(b.longitude)) }))
-            .filter(x => x.distance <= radiusN)
+            .map(b => {
+                const coords = getBranchCoords(b);
+                return { b, distance: haversineKm(latN, lngN, coords.lat, coords.lng) };
+            })
+            .filter(x => isNaN(radiusN) || radiusN >= 500 || x.distance <= radiusN)
             .sort((a, c) => a.distance - c.distance);
 
         return res.json({
@@ -132,7 +152,7 @@ const searchTurfs = async (req, res) => {
 
 const filterTurfs = async (req, res) => {
     try {
-        const { lat, lng, radius, sport, minPrice, maxPrice, rating, limit = 20 } = req.query;
+        const { lat, lng, radius, sport, minPrice, maxPrice, rating, limit = 50 } = req.query;
 
         const where = { status: 'ACTIVE' };
         if (minPrice) where.minPriceHourly = { ...(where.minPriceHourly || {}), gte: Number(minPrice) };
@@ -146,9 +166,13 @@ const filterTurfs = async (req, res) => {
         if (lat && lng) {
             const latN = Number(lat), lngN = Number(lng);
             results = branches
-                .filter(b => b.latitude !== null && b.longitude !== null)
-                .map(b => ({ b, distance: haversineKm(latN, lngN, Number(b.latitude), Number(b.longitude)) }));
-            if (radius) results = results.filter(x => x.distance <= Number(radius));
+                .map(b => {
+                    const coords = getBranchCoords(b);
+                    return { b, distance: haversineKm(latN, lngN, coords.lat, coords.lng) };
+                });
+            if (radius && radius !== 'All' && !isNaN(Number(radius)) && Number(radius) < 500) {
+                results = results.filter(x => x.distance <= Number(radius));
+            }
             results.sort((a, c) => a.distance - c.distance);
             results = results.map(x => ({ ...formatPublicTurf(x.b), distance: Number(x.distance.toFixed(2)) }));
         } else {

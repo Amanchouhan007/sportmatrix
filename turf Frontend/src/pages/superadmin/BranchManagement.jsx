@@ -118,6 +118,8 @@ export default function BranchManagement() {
         ownerOption: 'EXISTING',
         newOwnerName: '',
         newOwnerBusinessName: '',
+        latitude: '22.7196',
+        longitude: '75.8577',
         status: 'ACTIVE'
     })
 

@@ -87,70 +87,85 @@ export default function HomePage() {
 
     /* ── Fetch Live Branches, Upcoming Tournaments, Subscription Plans & Live Dares ── */
     useEffect(() => {
-        getBranches().then(res => {
-            const rawBranches = res?.data?.branches || res?.branches || []
-            if (Array.isArray(rawBranches) && rawBranches.length > 0) {
-                const mapped = rawBranches.map((b, idx) => {
-                    let parsedSports = ['Cricket'];
+        const mapBranchData = (rawBranches) => {
+            return rawBranches.map((b, idx) => {
+                let parsedSports = ['Cricket'];
+                try {
+                    if (Array.isArray(b.sports) && b.sports.length > 0) {
+                        parsedSports = b.sports.map(s => typeof s === 'string' ? s : (s?.name || 'Cricket'));
+                    } else if (typeof b.sports === 'string' && b.sports.trim().startsWith('[')) {
+                        const arr = JSON.parse(b.sports);
+                        parsedSports = arr.map(s => typeof s === 'string' ? s : (s?.name || 'Cricket'));
+                    }
+                } catch (_) { }
+
+                let parsedAmenities = ['Floodlights', 'Parking', 'Washroom'];
+                try {
+                    if (Array.isArray(b.amenities)) parsedAmenities = b.amenities;
+                    else if (typeof b.amenities === 'string' && b.amenities.trim().startsWith('[')) parsedAmenities = JSON.parse(b.amenities);
+                } catch (_) { }
+
+                let firstImg = b.logo;
+                if (!firstImg && Array.isArray(b.images) && b.images.length > 0) firstImg = b.images[0];
+                if (!firstImg && typeof b.images === 'string' && b.images.startsWith('[')) {
                     try {
-                        if (Array.isArray(b.sports) && b.sports.length > 0) {
-                            parsedSports = b.sports.map(s => typeof s === 'string' ? s : (s?.name || 'Cricket'));
-                        } else if (typeof b.sports === 'string' && b.sports.trim().startsWith('[')) {
-                            const arr = JSON.parse(b.sports);
-                            parsedSports = arr.map(s => typeof s === 'string' ? s : (s?.name || 'Cricket'));
+                        const arr = JSON.parse(b.images);
+                        if (arr.length > 0) firstImg = arr[0];
+                    } catch (_) { }
+                }
+
+                const rawPrice = Number(b.pricePerHour ?? b.price ?? b.minPriceHourly ?? b.price_per_hour);
+                const resolvedPrice = (!isNaN(rawPrice) && rawPrice > 0) ? rawPrice : 1000;
+
+                const rawRating = Number(b.rating);
+                const resolvedRating = (!isNaN(rawRating) && rawRating > 0) ? rawRating : 4.8;
+
+                return {
+                    id: b.id || b._id || (idx + 1),
+                    _id: b.id || b._id,
+                    name: b.branchName || b.name,
+                    location: b.fullAddress || `${b.city || 'Indore'}, ${b.country || 'India'}`,
+                    city: b.city || 'Indore',
+                    rating: resolvedRating,
+                    price: resolvedPrice,
+                    pricePerHour: resolvedPrice,
+                    dimensions: b.turfSize || b.dimensions || b.dimensionsSqft || b.dimensions_sqft || '5,000 Sq.Ft',
+                    surfaceType: b.surfaceType || b.surface_type || 'TurfPro Synthetic Arena',
+                    image: firstImg || `/images/turf${(idx % 5) + 1}.png`,
+                    sports: parsedSports,
+                    amenities: parsedAmenities,
+                    discountOffer: b.discountOffer || b.discount_offer || '20% OFF FIRST MATCH',
+                    couponCode: b.couponCode || b.coupon_code || 'CRICKET20',
+                    lat: Number(b.latitude || (22.7244 + (idx * 0.01))),
+                    lng: Number(b.longitude || (75.8839 + (idx * 0.01)))
+                }
+            })
+        }
+
+        const loadTurfs = () => {
+            const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5005/api/v1';
+            getBranches().then(res => {
+                const rawBranches = res?.data?.branches || res?.branches || (Array.isArray(res?.data) ? res.data : (Array.isArray(res) ? res : []))
+                if (Array.isArray(rawBranches) && rawBranches.length > 0) {
+                    setDynamicTurfs(mapBranchData(rawBranches))
+                } else {
+                    fetch(`${API_URL}/turfs`).then(r => r.json()).then(turfRes => {
+                        if (turfRes?.success && Array.isArray(turfRes?.data) && turfRes.data.length > 0) {
+                            setDynamicTurfs(mapBranchData(turfRes.data))
                         }
-                    } catch (_) {}
-
-                    let parsedAmenities = ['Floodlights', 'Parking', 'Washroom'];
-                    try {
-                        if (Array.isArray(b.amenities)) parsedAmenities = b.amenities;
-                        else if (typeof b.amenities === 'string' && b.amenities.trim().startsWith('[')) parsedAmenities = JSON.parse(b.amenities);
-                    } catch (_) {}
-
-                    let firstImg = b.logo;
-                    if (!firstImg && Array.isArray(b.images) && b.images.length > 0) firstImg = b.images[0];
-                    if (!firstImg && typeof b.images === 'string' && b.images.startsWith('[')) {
-                        try {
-                            const arr = JSON.parse(b.images);
-                            if (arr.length > 0) firstImg = arr[0];
-                        } catch (_) {}
+                    }).catch(() => {})
+                }
+            }).catch(() => {
+                fetch(`${API_URL}/turfs`).then(r => r.json()).then(turfRes => {
+                    if (turfRes?.success && Array.isArray(turfRes?.data) && turfRes.data.length > 0) {
+                        setDynamicTurfs(mapBranchData(turfRes.data))
                     }
+                }).catch(() => {})
+            })
+        }
 
-                    const defaultPricingTable = [1200, 800, 1600, 600, 1000, 1400, 900, 1800];
-                    const defaultRatingsTable = [4.9, 4.7, 4.8, 4.6, 4.9, 4.5, 4.8, 4.9];
-                    const rawPrice = Number(b.pricePerHour ?? b.price ?? b.minPriceHourly ?? b.price_per_hour);
-                    const resolvedPrice = (!isNaN(rawPrice) && rawPrice > 0 && rawPrice !== 700)
-                        ? rawPrice
-                        : (defaultPricingTable[idx % defaultPricingTable.length]);
-
-                    const rawRating = Number(b.rating);
-                    const resolvedRating = (!isNaN(rawRating) && rawRating > 0 && rawRating !== 4.5 && rawRating !== 4.8)
-                        ? rawRating
-                        : (defaultRatingsTable[idx % defaultRatingsTable.length]);
-
-                    return {
-                        id: b.id || b._id || (idx + 1),
-                        _id: b.id || b._id,
-                        name: b.branchName || b.name,
-                        location: b.fullAddress || `${b.city || 'Indore'}, ${b.country || 'India'}`,
-                        city: b.city || 'Indore',
-                        rating: resolvedRating,
-                        price: resolvedPrice,
-                        pricePerHour: resolvedPrice,
-                        dimensions: b.turfSize || b.dimensions || b.dimensionsSqft || b.dimensions_sqft || '5,000 Sq.Ft',
-                        surfaceType: b.surfaceType || b.surface_type || 'TurfPro Synthetic Arena',
-                        image: firstImg || `/images/turf${(idx % 5) + 1}.png`,
-                        sports: parsedSports,
-                        amenities: parsedAmenities,
-                        discountOffer: b.discountOffer || b.discount_offer || '20% OFF FIRST MATCH',
-                        couponCode: b.couponCode || b.coupon_code || 'CRICKET20',
-                        lat: Number(b.latitude || (22.7244 + (idx * 0.01))),
-                        lng: Number(b.longitude || (75.8839 + (idx * 0.01)))
-                    }
-                })
-                setDynamicTurfs(mapped)
-            }
-        }).catch(() => { })
+        loadTurfs()
+        const retryTimer = setTimeout(loadTurfs, 1200)
 
         getPublicTournaments().then(res => {
             if (res?.success && Array.isArray(res?.data)) {
@@ -186,49 +201,49 @@ export default function HomePage() {
         }
     }, [])
 
-/* ── Coordinate Mapping for Dynamic Distance & Nearby Sorting ── */
-const AREA_COORDINATES = {
-    // Indore Areas
-    'vijay nagar': { lat: 22.7533, lng: 75.8937, name: 'Vijay Nagar, Indore' },
-    'palasia': { lat: 22.7244, lng: 75.8839, name: 'Palasia, Indore' },
-    'lig': { lat: 22.7380, lng: 75.8916, name: 'LIG Colony, Indore' },
-    'lig colony': { lat: 22.7380, lng: 75.8916, name: 'LIG Colony, Indore' },
-    'bhawarkua': { lat: 22.6953, lng: 75.8690, name: 'Bhawarkua, Indore' },
-    'bhawarkuan': { lat: 22.6953, lng: 75.8690, name: 'Bhawarkua, Indore' },
-    'navlakha': { lat: 22.7000, lng: 75.8752, name: 'Navlakha, Indore' },
-    'annapurna': { lat: 22.7010, lng: 75.8320, name: 'Annapurna, Indore' },
-    'super corridor': { lat: 22.7650, lng: 75.8300, name: 'Super Corridor, Indore' },
-    'rau': { lat: 22.6300, lng: 75.8050, name: 'Rau, Indore' },
-    'bypass': { lat: 22.7200, lng: 75.9200, name: 'Bypass, Indore' },
-    'rajwada': { lat: 22.7196, lng: 75.8577, name: 'Rajwada, Indore' },
-    'indore': { lat: 22.7196, lng: 75.8577, name: 'Indore' },
-    // Other Cities
-    'mumbai': { lat: 19.0760, lng: 72.8777, name: 'Mumbai' },
-    'andheri': { lat: 19.1136, lng: 72.8697, name: 'Andheri, Mumbai' },
-    'bandra': { lat: 19.0596, lng: 72.8295, name: 'Bandra, Mumbai' },
-    'powai': { lat: 19.1176, lng: 72.9060, name: 'Powai, Mumbai' },
-    'vashi': { lat: 19.0330, lng: 73.0297, name: 'Vashi, Mumbai' },
-    'bangalore': { lat: 12.9716, lng: 77.5946, name: 'Bangalore' },
-    'koramangala': { lat: 12.9352, lng: 77.6245, name: 'Koramangala, Bangalore' },
-    'indiranagar': { lat: 12.9784, lng: 77.6408, name: 'Indiranagar, Bangalore' },
-    'hsr layout': { lat: 12.9121, lng: 77.6446, name: 'HSR Layout, Bangalore' },
-    'delhi': { lat: 28.6139, lng: 77.2090, name: 'Delhi' },
-    'pune': { lat: 18.5204, lng: 73.8567, name: 'Pune' },
-}
+    /* ── Coordinate Mapping for Dynamic Distance & Nearby Sorting ── */
+    const AREA_COORDINATES = {
+        // Indore Areas
+        'vijay nagar': { lat: 22.7533, lng: 75.8937, name: 'Vijay Nagar, Indore' },
+        'palasia': { lat: 22.7244, lng: 75.8839, name: 'Palasia, Indore' },
+        'lig': { lat: 22.7380, lng: 75.8916, name: 'LIG Colony, Indore' },
+        'lig colony': { lat: 22.7380, lng: 75.8916, name: 'LIG Colony, Indore' },
+        'bhawarkua': { lat: 22.6953, lng: 75.8690, name: 'Bhawarkua, Indore' },
+        'bhawarkuan': { lat: 22.6953, lng: 75.8690, name: 'Bhawarkua, Indore' },
+        'navlakha': { lat: 22.7000, lng: 75.8752, name: 'Navlakha, Indore' },
+        'annapurna': { lat: 22.7010, lng: 75.8320, name: 'Annapurna, Indore' },
+        'super corridor': { lat: 22.7650, lng: 75.8300, name: 'Super Corridor, Indore' },
+        'rau': { lat: 22.6300, lng: 75.8050, name: 'Rau, Indore' },
+        'bypass': { lat: 22.7200, lng: 75.9200, name: 'Bypass, Indore' },
+        'rajwada': { lat: 22.7196, lng: 75.8577, name: 'Rajwada, Indore' },
+        'indore': { lat: 22.7196, lng: 75.8577, name: 'Indore' },
+        // Other Cities
+        'mumbai': { lat: 19.0760, lng: 72.8777, name: 'Mumbai' },
+        'andheri': { lat: 19.1136, lng: 72.8697, name: 'Andheri, Mumbai' },
+        'bandra': { lat: 19.0596, lng: 72.8295, name: 'Bandra, Mumbai' },
+        'powai': { lat: 19.1176, lng: 72.9060, name: 'Powai, Mumbai' },
+        'vashi': { lat: 19.0330, lng: 73.0297, name: 'Vashi, Mumbai' },
+        'bangalore': { lat: 12.9716, lng: 77.5946, name: 'Bangalore' },
+        'koramangala': { lat: 12.9352, lng: 77.6245, name: 'Koramangala, Bangalore' },
+        'indiranagar': { lat: 12.9784, lng: 77.6408, name: 'Indiranagar, Bangalore' },
+        'hsr layout': { lat: 12.9121, lng: 77.6446, name: 'HSR Layout, Bangalore' },
+        'delhi': { lat: 28.6139, lng: 77.2090, name: 'Delhi' },
+        'pune': { lat: 18.5204, lng: 73.8567, name: 'Pune' },
+    }
 
-const resolveOriginCoordinates = (locString, userGPS, explicitCoords) => {
-    if (explicitCoords?.lat && explicitCoords?.lng) return explicitCoords
-    if (!locString || locString.toLowerCase().includes('current') || locString.toLowerCase().includes('near me')) {
+    const resolveOriginCoordinates = (locString, userGPS, explicitCoords) => {
+        if (explicitCoords?.lat && explicitCoords?.lng) return explicitCoords
+        if (!locString || locString.toLowerCase().includes('current') || locString.toLowerCase().includes('near me')) {
+            if (userGPS?.lat && userGPS?.lng) return userGPS
+            return { lat: 22.7196, lng: 75.8577 } // default Indore Center
+        }
+        const clean = locString.toLowerCase()
+        for (const [key, coords] of Object.entries(AREA_COORDINATES)) {
+            if (clean.includes(key)) return coords
+        }
         if (userGPS?.lat && userGPS?.lng) return userGPS
-        return { lat: 22.7196, lng: 75.8577 } // default Indore Center
+        return { lat: 22.7196, lng: 75.8577 }
     }
-    const clean = locString.toLowerCase()
-    for (const [key, coords] of Object.entries(AREA_COORDINATES)) {
-        if (clean.includes(key)) return coords
-    }
-    if (userGPS?.lat && userGPS?.lng) return userGPS
-    return { lat: 22.7196, lng: 75.8577 }
-}
 
     const getDistance = (lat1, lon1, lat2, lon2) => {
         if (!lat1 || !lon1 || !lat2 || !lon2) return 9999
@@ -253,19 +268,29 @@ const resolveOriginCoordinates = (locString, userGPS, explicitCoords) => {
             distance: d
         }
     }).filter(t => {
-        if (activeLoc && !activeLoc.toLowerCase().includes('near me') && !activeLoc.toLowerCase().includes('current') && !activeLoc.toLowerCase().includes('all venues')) {
+        if (activeLoc && !activeLoc.toLowerCase().includes('near me') && !activeLoc.toLowerCase().includes('current') && !activeLoc.toLowerCase().includes('all venues') && !activeLoc.toLowerCase().includes('all cities')) {
             const locFilter = activeLoc.toLowerCase().trim()
-            // If user searched for an Indore area, prioritize and show Indore turfs
-            const isIndoreQuery = locFilter.includes('indore') || Object.keys(AREA_COORDINATES).filter(k => AREA_COORDINATES[k].lat > 22 && AREA_COORDINATES[k].lat < 23).some(k => locFilter.includes(k))
-            if (isIndoreQuery) {
-                return t.city.toLowerCase() === 'indore'
+            const cleanLocFilter = locFilter.replace(/[\d\.]+\s*km\s*radius\s*\|?/gi, '').replace(/\d+\.\d+/g, '').trim()
+            if (cleanLocFilter.length > 0 && !cleanLocFilter.includes('radius')) {
+                const isIndoreQuery = cleanLocFilter.includes('indore') || Object.keys(AREA_COORDINATES).filter(k => AREA_COORDINATES[k].lat > 22 && AREA_COORDINATES[k].lat < 23).some(k => cleanLocFilter.includes(k))
+                if (isIndoreQuery) {
+                    if (t.city && t.city.toLowerCase() !== 'indore') return false
+                } else {
+                    const matchCity = t.city && (t.city.toLowerCase().includes(cleanLocFilter) || cleanLocFilter.includes(t.city.toLowerCase()))
+                    const matchLocation = t.location ? t.location.toLowerCase().includes(cleanLocFilter) : false
+                    const matchName = t.name ? t.name.toLowerCase().includes(cleanLocFilter) : false
+                    if (!matchCity && !matchLocation && !matchName) return false
+                }
             }
-            const matchCity = t.city.toLowerCase().includes(locFilter) || locFilter.includes(t.city.toLowerCase())
-            const matchLocation = t.location ? t.location.toLowerCase().includes(locFilter) : false
-            const matchName = t.name ? t.name.toLowerCase().includes(locFilter) : false
-            if (!matchCity && !matchLocation && !matchName) return false
         }
-        if (appliedFilters.sport && !t.sports.some(s => s.toLowerCase() === appliedFilters.sport.toLowerCase())) return false
+        if (appliedFilters.sport && appliedFilters.sport !== 'All Sports' && appliedFilters.sport !== 'All') {
+            const sReq = appliedFilters.sport.toLowerCase()
+            const matchSport = t.sports.some(s => {
+                const sLow = (typeof s === 'string' ? s : s?.name || '').toLowerCase()
+                return sLow.includes(sReq) || sReq.includes(sLow) || (sReq.includes('cricket') && sLow.includes('cricket'))
+            })
+            if (!matchSport) return false
+        }
 
         return true
     }).sort((a, b) => {
@@ -324,7 +349,7 @@ const resolveOriginCoordinates = (locString, userGPS, explicitCoords) => {
     try {
         const saved = JSON.parse(localStorage.getItem('open_challenges') || '[]')
         if (Array.isArray(saved)) localOpenChallenges = saved
-    } catch (_) {}
+    } catch (_) { }
 
     // Dynamic Dare Challenges fetched strictly from database
     const dynamicChallenges = [
@@ -353,7 +378,7 @@ const resolveOriginCoordinates = (locString, userGPS, explicitCoords) => {
 
                     {/* ── SPECIAL CRICKET MODES & USP ATTRACTION TEMPLATES (Immersive Templates with Background Photos, Spec Tables & No Redundant Tags) ── */}
                     <div className="mt-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 sm:gap-5 w-full select-none">
-                        
+
                         {/* 1. 🔥 DARE MATCH™ TEMPLATE */}
                         <div
                             onClick={() => {
@@ -364,7 +389,7 @@ const resolveOriginCoordinates = (locString, userGPS, explicitCoords) => {
                             className="group relative overflow-hidden w-full flex flex-col justify-between p-5 rounded-3xl border-2 border-orange-500/60 hover:border-orange-400 shadow-xl hover:shadow-[0_20px_45px_rgba(249,115,22,0.45)] transition-all duration-500 cursor-pointer hover:-translate-y-2 text-left min-h-[340px]"
                         >
                             {/* Background Photo */}
-                            <div 
+                            <div
                                 className="absolute inset-0 bg-cover bg-center transition-transform duration-700 ease-out group-hover:scale-110"
                                 style={{ backgroundImage: `url('/images/dare_match_template.jpg')` }}
                             />
@@ -420,7 +445,7 @@ const resolveOriginCoordinates = (locString, userGPS, explicitCoords) => {
                             className="group relative overflow-hidden w-full flex flex-col justify-between p-5 rounded-3xl border-2 border-emerald-500/60 hover:border-emerald-400 shadow-xl hover:shadow-[0_20px_45px_rgba(16,185,129,0.45)] transition-all duration-500 cursor-pointer hover:-translate-y-2 text-left min-h-[340px]"
                         >
                             {/* Background Photo */}
-                            <div 
+                            <div
                                 className="absolute inset-0 bg-cover bg-center transition-transform duration-700 ease-out group-hover:scale-110"
                                 style={{ backgroundImage: `url('/images/split_50_template.jpg')` }}
                             />
@@ -476,7 +501,7 @@ const resolveOriginCoordinates = (locString, userGPS, explicitCoords) => {
                             className="group relative overflow-hidden w-full flex flex-col justify-between p-5 rounded-3xl border-2 border-blue-500/60 hover:border-blue-400 shadow-xl hover:shadow-[0_20px_45px_rgba(59,130,246,0.45)] transition-all duration-500 cursor-pointer hover:-translate-y-2 text-left min-h-[340px]"
                         >
                             {/* Background Photo */}
-                            <div 
+                            <div
                                 className="absolute inset-0 bg-cover bg-center transition-transform duration-700 ease-out group-hover:scale-110"
                                 style={{ backgroundImage: `url('/images/squad_split_template.jpg')` }}
                             />
@@ -532,7 +557,7 @@ const resolveOriginCoordinates = (locString, userGPS, explicitCoords) => {
                             className="group relative overflow-hidden w-full flex flex-col justify-between p-5 rounded-3xl border-2 border-lime-500/60 hover:border-lime-400 shadow-xl hover:shadow-[0_20px_45px_rgba(132,204,22,0.45)] transition-all duration-500 cursor-pointer hover:-translate-y-2 text-left min-h-[340px]"
                         >
                             {/* Background Photo */}
-                            <div 
+                            <div
                                 className="absolute inset-0 bg-cover bg-center transition-transform duration-700 ease-out group-hover:scale-110"
                                 style={{ backgroundImage: `url('/images/full_pay_template.jpg')` }}
                             />
@@ -585,7 +610,7 @@ const resolveOriginCoordinates = (locString, userGPS, explicitCoords) => {
                             className="group relative overflow-hidden w-full flex flex-col justify-between p-5 rounded-3xl border-2 border-amber-500/60 hover:border-amber-400 shadow-xl hover:shadow-[0_20px_45px_rgba(245,158,11,0.45)] transition-all duration-500 cursor-pointer hover:-translate-y-2 text-left min-h-[340px]"
                         >
                             {/* Background Photo */}
-                            <div 
+                            <div
                                 className="absolute inset-0 bg-cover bg-center transition-transform duration-700 ease-out group-hover:scale-110"
                                 style={{ backgroundImage: `url('/images/hall_of_fame_template.jpg')` }}
                             />
@@ -751,16 +776,15 @@ const resolveOriginCoordinates = (locString, userGPS, explicitCoords) => {
                             <button
                                 type="button"
                                 onClick={() => setBillingCycle('monthly')}
-                                className={`px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-wider transition-all duration-300 cursor-pointer ${
-                                    billingCycle === 'monthly'
+                                className={`px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-wider transition-all duration-300 cursor-pointer ${billingCycle === 'monthly'
                                         ? 'bg-[#111827] text-white shadow-sm border border-slate-900'
                                         : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100'
-                                }`}
+                                    }`}
                             >
                                 Monthly
                             </button>
 
-                            <div 
+                            <div
                                 onClick={() => setBillingCycle(prev => prev === 'monthly' ? 'yearly' : 'monthly')}
                                 className="w-12 h-6 rounded-full bg-slate-100 border-2 border-slate-300 hover:border-emerald-500 p-0.5 cursor-pointer relative transition-colors shrink-0"
                             >
@@ -770,11 +794,10 @@ const resolveOriginCoordinates = (locString, userGPS, explicitCoords) => {
                             <button
                                 type="button"
                                 onClick={() => setBillingCycle('yearly')}
-                                className={`px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-wider transition-all duration-300 cursor-pointer flex items-center gap-1.5 ${
-                                    billingCycle === 'yearly'
+                                className={`px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-wider transition-all duration-300 cursor-pointer flex items-center gap-1.5 ${billingCycle === 'yearly'
                                         ? 'bg-[#16A34A] text-white shadow-sm border border-emerald-600'
                                         : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100'
-                                }`}
+                                    }`}
                             >
                                 <span>Yearly</span>
                                 <span className="bg-[#C8FF2E] text-[#111827] text-[9.5px] font-black px-2 py-0.5 rounded-full border border-[#aee810] shadow-2xs animate-pulse">
@@ -993,14 +1016,12 @@ const resolveOriginCoordinates = (locString, userGPS, explicitCoords) => {
 
                                 {/* MONTHLY & YEARLY EXCLUSIVE BONUS PERKS HIGHLIGHT BOX */}
                                 {p.activePerks && p.activePerks.length > 0 && (
-                                    <div className={`mb-6 pt-3 pb-3 px-3 border rounded-xl shadow-2xs ${
-                                        p.isYearly 
-                                            ? 'bg-gradient-to-br from-emerald-50/90 to-teal-50 border-emerald-200' 
+                                    <div className={`mb-6 pt-3 pb-3 px-3 border rounded-xl shadow-2xs ${p.isYearly
+                                            ? 'bg-gradient-to-br from-emerald-50/90 to-teal-50 border-emerald-200'
                                             : 'bg-gradient-to-br from-blue-50/90 to-slate-50 border-blue-200'
-                                    }`}>
-                                        <span className={`text-[9.5px] font-black uppercase tracking-wider block mb-1.5 ${
-                                            p.isYearly ? 'text-[#065F46]' : 'text-blue-900'
                                         }`}>
+                                        <span className={`text-[9.5px] font-black uppercase tracking-wider block mb-1.5 ${p.isYearly ? 'text-[#065F46]' : 'text-blue-900'
+                                            }`}>
                                             {p.isYearly ? '🎁 YEARLY EXCLUSIVE BONUS PERKS' : '⚡ MONTHLY INCLUDED BONUS PERKS'}
                                         </span>
                                         <ul className="space-y-1.5">

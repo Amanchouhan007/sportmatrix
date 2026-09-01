@@ -162,11 +162,10 @@ export default function TurfResultsGrid({ turfs, searchValues, recentSearches = 
                                                     setActiveFilter(opt.value);
                                                     setIsSortOpen(false);
                                                 }}
-                                                className={`w-full text-left px-4 py-2.5 text-[11px] font-bold uppercase tracking-wider transition-colors flex items-center justify-between cursor-pointer ${
-                                                    activeFilter === opt.value
+                                                className={`w-full text-left px-4 py-2.5 text-[11px] font-bold uppercase tracking-wider transition-colors flex items-center justify-between cursor-pointer ${activeFilter === opt.value
                                                         ? 'bg-[#C8FF2E] text-[#111827]'
                                                         : 'text-[#6B7280] hover:bg-[#F7F9FC] hover:text-[#111827]'
-                                                }`}
+                                                    }`}
                                             >
                                                 <span>{opt.label}</span>
                                                 {activeFilter === opt.value && (

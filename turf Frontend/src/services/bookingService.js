@@ -53,3 +53,12 @@ export const cancelBooking = async (id) => {
     }
     return res;
 };
+
+/** Update a booking's ground staff check-in status (CHECKED_IN / NO_SHOW / PENDING_CHECK_IN). */
+export const updateCheckInStatus = async (id, checkInStatus) => {
+    const res = await api.put(`/bookings/${id}/check-in`, { checkInStatus });
+    if (!res || res.success === false) {
+        throw new Error(res?.message || 'Failed to update check-in status.');
+    }
+    return res;
+};
