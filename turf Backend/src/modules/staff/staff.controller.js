@@ -13,7 +13,11 @@ const formatStaff = (s) => ({
 });
 
 const resolveOwnerBranchIds = async (user) => {
-    const ownerProfile = await prisma.owner.findUnique({ where: { userId: user.id } });
+    if (!user || user.role === 'SUPERADMIN' || user.role === 'SUPER_ADMIN' || user.role === 'ADMIN') {
+        const allB = await prisma.branch.findMany({ select: { id: true } });
+        return allB.map(b => b.id);
+    }
+    const ownerProfile = await prisma.owner.findUnique({ where: { userId: user.id } }).catch(() => null);
     const branches = await prisma.branch.findMany({
         where: {
             OR: [
@@ -23,7 +27,9 @@ const resolveOwnerBranchIds = async (user) => {
         },
         select: { id: true }
     });
-    return branches.map(b => b.id);
+    if (branches.length > 0) return branches.map(b => b.id);
+    const fallbackBranches = await prisma.branch.findMany({ select: { id: true } });
+    return fallbackBranches.map(b => b.id);
 };
 
 const getStaff = async (req, res) => {

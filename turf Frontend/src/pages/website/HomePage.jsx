@@ -377,7 +377,7 @@ export default function HomePage() {
                     </div>
 
                     {/* ── SPECIAL CRICKET MODES & USP ATTRACTION TEMPLATES (Immersive Templates with Background Photos, Spec Tables & No Redundant Tags) ── */}
-                    <div className="mt-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 sm:gap-5 w-full select-none">
+                    <div className="mt-6 sm:mt-8 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-3.5 sm:gap-4.5 w-full select-none">
 
                         {/* 1. 🔥 DARE MATCH™ TEMPLATE */}
                         <div
@@ -386,7 +386,7 @@ export default function HomePage() {
                                 setIsChallengeVisible(true)
                                 navigate(`/booking/${nearbyId}?mode=dare&pay=opponent`)
                             }}
-                            className="group relative overflow-hidden w-full flex flex-col justify-between p-5 rounded-3xl border-2 border-orange-500/60 hover:border-orange-400 shadow-xl hover:shadow-[0_20px_45px_rgba(249,115,22,0.45)] transition-all duration-500 cursor-pointer hover:-translate-y-2 text-left min-h-[340px]"
+                            className="group relative overflow-hidden w-full flex flex-col justify-between p-4 sm:p-4.5 rounded-3xl border-2 border-orange-500/60 hover:border-orange-400 shadow-xl hover:shadow-[0_20px_45px_rgba(249,115,22,0.45)] transition-all duration-500 cursor-pointer hover:-translate-y-1.5 text-left min-h-[320px]"
                         >
                             {/* Background Photo */}
                             <div
@@ -442,7 +442,7 @@ export default function HomePage() {
                                 const nearbyId = filteredTurfs[0]?.id || 6
                                 navigate(`/booking/${nearbyId}?mode=split50`)
                             }}
-                            className="group relative overflow-hidden w-full flex flex-col justify-between p-5 rounded-3xl border-2 border-emerald-500/60 hover:border-emerald-400 shadow-xl hover:shadow-[0_20px_45px_rgba(16,185,129,0.45)] transition-all duration-500 cursor-pointer hover:-translate-y-2 text-left min-h-[340px]"
+                            className="group relative overflow-hidden w-full flex flex-col justify-between p-4 sm:p-4.5 rounded-3xl border-2 border-emerald-500/60 hover:border-emerald-400 shadow-xl hover:shadow-[0_20px_45px_rgba(16,185,129,0.45)] transition-all duration-500 cursor-pointer hover:-translate-y-1.5 text-left min-h-[320px]"
                         >
                             {/* Background Photo */}
                             <div
@@ -498,7 +498,7 @@ export default function HomePage() {
                                 const nearbyId = filteredTurfs[0]?.id || 6
                                 navigate(`/booking/${nearbyId}?mode=per_player`)
                             }}
-                            className="group relative overflow-hidden w-full flex flex-col justify-between p-5 rounded-3xl border-2 border-blue-500/60 hover:border-blue-400 shadow-xl hover:shadow-[0_20px_45px_rgba(59,130,246,0.45)] transition-all duration-500 cursor-pointer hover:-translate-y-2 text-left min-h-[340px]"
+                            className="group relative overflow-hidden w-full flex flex-col justify-between p-4 sm:p-4.5 rounded-3xl border-2 border-blue-500/60 hover:border-blue-400 shadow-xl hover:shadow-[0_20px_45px_rgba(59,130,246,0.45)] transition-all duration-500 cursor-pointer hover:-translate-y-1.5 text-left min-h-[320px]"
                         >
                             {/* Background Photo */}
                             <div
@@ -554,7 +554,7 @@ export default function HomePage() {
                                 const nearbyId = filteredTurfs[0]?.id || 6
                                 navigate(`/booking/${nearbyId}?mode=full`)
                             }}
-                            className="group relative overflow-hidden w-full flex flex-col justify-between p-5 rounded-3xl border-2 border-lime-500/60 hover:border-lime-400 shadow-xl hover:shadow-[0_20px_45px_rgba(132,204,22,0.45)] transition-all duration-500 cursor-pointer hover:-translate-y-2 text-left min-h-[340px]"
+                            className="group relative overflow-hidden w-full flex flex-col justify-between p-4 sm:p-4.5 rounded-3xl border-2 border-lime-500/60 hover:border-lime-400 shadow-xl hover:shadow-[0_20px_45px_rgba(132,204,22,0.45)] transition-all duration-500 cursor-pointer hover:-translate-y-1.5 text-left min-h-[320px]"
                         >
                             {/* Background Photo */}
                             <div
@@ -607,7 +607,7 @@ export default function HomePage() {
                         {/* 5. 👑 HALL OF FAME™ TEMPLATE */}
                         <div
                             onClick={() => navigate('/leaderboard')}
-                            className="group relative overflow-hidden w-full flex flex-col justify-between p-5 rounded-3xl border-2 border-amber-500/60 hover:border-amber-400 shadow-xl hover:shadow-[0_20px_45px_rgba(245,158,11,0.45)] transition-all duration-500 cursor-pointer hover:-translate-y-2 text-left min-h-[340px]"
+                            className="group relative overflow-hidden w-full flex flex-col justify-between p-4 sm:p-4.5 rounded-3xl border-2 border-amber-500/60 hover:border-amber-400 shadow-xl hover:shadow-[0_20px_45px_rgba(245,158,11,0.45)] transition-all duration-500 cursor-pointer hover:-translate-y-1.5 text-left min-h-[320px]"
                         >
                             {/* Background Photo */}
                             <div

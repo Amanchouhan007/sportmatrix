@@ -8,7 +8,7 @@ import Input from '../../components/ui/Input'
 import Select from '../../components/ui/Select'
 import { useToast } from '../../components/ui/Toast'
 import { HiPlay, HiCheck, HiExclamation } from 'react-icons/hi'
-import { HiTrophy } from 'react-icons/hi2'
+import { HiTrophy, HiArrowTopRightOnSquare } from 'react-icons/hi2'
 import CricketScorerConsole from '../../components/cricket/CricketScorerConsole'
 import { getAllTournamentMatches, updateMatchScore } from '../../services/tournamentService'
 import useRealtime from '../../utils/useRealtime'
@@ -227,10 +227,21 @@ export default function TournamentMatchesPage() {
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white/70 backdrop-blur-md p-6 rounded-3xl border border-surface-200/50 shadow-soft">
                 <div>
                     <h1 className="text-2xl font-black text-surface-900 tracking-tight flex items-center gap-2">
-                        <HiPlay className="text-emerald-500" /> Match Scorecard & Live Management
+                        <HiPlay className="text-emerald-500" /> Match Scorecard &amp; Live Management
                     </h1>
                     <p className="text-surface-500 text-sm mt-0.5 font-medium">Update match scores, runs, goals, disciplinary yellow/red cards, and live results</p>
                 </div>
+                <a
+                    href="/live"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-2 px-5 py-2.5 rounded-2xl text-sm font-bold text-white shadow-md"
+                    style={{ background: 'linear-gradient(135deg,#ff2d55,#c0392b)', textDecoration: 'none' }}
+                >
+                    <span style={{ width:9,height:9,borderRadius:'50%',background:'#fff',display:'inline-block',animation:'pulse 1.2s infinite'}} />
+                    <HiArrowTopRightOnSquare className="text-base" />
+                    Public Live Scorecard
+                </a>
             </div>
 
             {/* Match Datatable */}

@@ -278,6 +278,40 @@ const getSlots = async (req, res) => {
         }
 
 
+        // Real-Time Passed Slot Enforcement (Past dates or past hours on TODAY)
+        const nowObj = new Date();
+        const todayStr = `${nowObj.getFullYear()}-${String(nowObj.getMonth() + 1).padStart(2, '0')}-${String(nowObj.getDate()).padStart(2, '0')}`;
+        const currentHour = nowObj.getHours();
+        const currentMin = nowObj.getMinutes();
+
+        allSlots = allSlots.map(s => {
+            const slotDateStr = s.date || s.slotDate;
+            let isPassed = false;
+
+            if (slotDateStr && slotDateStr < todayStr) {
+                isPassed = true;
+            } else if (slotDateStr === todayStr && s.startTime) {
+                const cleanStr = String(s.startTime).replace(/AM|PM/gi, '').trim();
+                const [hStr, mStr] = cleanStr.split(':');
+                let h = parseInt(hStr, 10);
+                const isPM = String(s.startTime).toUpperCase().includes('PM');
+                const isAM = String(s.startTime).toUpperCase().includes('AM');
+                if (!isNaN(h)) {
+                    if (isPM && h < 12) h += 12;
+                    if (isAM && h === 12) h = 0;
+                    const m = parseInt(mStr || '0', 10);
+                    if (h < currentHour || (h === currentHour && m <= currentMin)) {
+                        isPassed = true;
+                    }
+                }
+            }
+
+            if (isPassed) {
+                return { ...s, status: 'BOOKED', isPassed: true };
+            }
+            return s;
+        });
+
         allSlots.sort((a, b) => (a.courtName + a.startTime).localeCompare(b.courtName + b.startTime));
 
         return res.status(200).json({ success: true, data: allSlots });

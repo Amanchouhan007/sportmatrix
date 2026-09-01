@@ -1,5 +1,22 @@
 const prisma = require('../../config/prisma');
 
+const resolveOwnerBranchIds = async (user) => {
+    if (!user || user.role === 'SUPERADMIN' || user.role === 'SUPER_ADMIN' || user.role === 'ADMIN') return null;
+    const ownerProfile = await prisma.owner.findUnique({ where: { userId: user.id } }).catch(() => null);
+    const branches = await prisma.branch.findMany({
+        where: {
+            OR: [
+                { ownerUserId: user.id },
+                { ownerId: ownerProfile ? ownerProfile.id : 'NO_MATCH' }
+            ]
+        },
+        select: { id: true }
+    });
+    if (branches.length > 0) return branches.map(b => b.id);
+    const fallbackBranches = await prisma.branch.findMany({ select: { id: true } });
+    return fallbackBranches.map(b => b.id);
+};
+
 const getOverviewReport = async (req, res) => {
     try {
         const now = new Date();
@@ -8,6 +25,15 @@ const getOverviewReport = async (req, res) => {
         const startOfYear = new Date(now.getFullYear(), 0, 1);
         const startOfToday = new Date(now.toDateString());
 
+        const branchIds = await resolveOwnerBranchIds(req.user);
+        const isSuperAdmin = branchIds === null;
+
+        // Build scoped payment/booking where clauses
+        const payScope = isSuperAdmin ? {} : branchIds.length > 0
+            ? { booking: { slot: { branchId: { in: branchIds } } } } : { id: -1 };
+        const bkScope = isSuperAdmin ? {} : branchIds.length > 0
+            ? { slot: { branchId: { in: branchIds } } } : { id: -1 };
+
         const [
             totalRevAgg, monthlyRevAgg, prevMonthlyRevAgg, yearlyRevAgg,
             activeBranches, subPlans,
@@ -15,27 +41,28 @@ const getOverviewReport = async (req, res) => {
             totalOwners, totalStaff, totalCustomers, newRegistrations,
             totalBranches, inactiveBranches, suspendedBranches
         ] = await Promise.all([
-            prisma.payment.aggregate({ where: { status: 'COMPLETED' }, _sum: { amount: true } }),
-            prisma.payment.aggregate({ where: { status: 'COMPLETED', createdAt: { gte: startOfMonth } }, _sum: { amount: true } }),
-            prisma.payment.aggregate({ where: { status: 'COMPLETED', createdAt: { gte: startOfPrevMonth, lt: startOfMonth } }, _sum: { amount: true } }),
-            prisma.payment.aggregate({ where: { status: 'COMPLETED', createdAt: { gte: startOfYear } }, _sum: { amount: true } }),
-            prisma.branch.findMany({ where: { status: 'ACTIVE' }, include: { subscriptionPlan: true } }),
+            prisma.payment.aggregate({ where: { ...payScope, status: 'COMPLETED' }, _sum: { amount: true } }),
+            prisma.payment.aggregate({ where: { ...payScope, status: 'COMPLETED', createdAt: { gte: startOfMonth } }, _sum: { amount: true } }),
+            prisma.payment.aggregate({ where: { ...payScope, status: 'COMPLETED', createdAt: { gte: startOfPrevMonth, lt: startOfMonth } }, _sum: { amount: true } }),
+            prisma.payment.aggregate({ where: { ...payScope, status: 'COMPLETED', createdAt: { gte: startOfYear } }, _sum: { amount: true } }),
+            isSuperAdmin ? prisma.branch.findMany({ where: { status: 'ACTIVE' }, include: { subscriptionPlan: true } })
+                : prisma.branch.findMany({ where: { status: 'ACTIVE', id: { in: branchIds } }, include: { subscriptionPlan: true } }),
             prisma.subscriptionPlan.findMany(),
-            prisma.booking.count(),
-            prisma.booking.count({ where: { createdAt: { gte: startOfToday } } }),
-            prisma.booking.count({ where: { createdAt: { gte: startOfMonth } } }),
-            prisma.booking.count({ where: { status: 'REFUNDED' } }),
-            prisma.owner.count(),
-            prisma.user.count({ where: { role: 'STAFF' } }),
+            prisma.booking.count({ where: bkScope }),
+            prisma.booking.count({ where: { ...bkScope, createdAt: { gte: startOfToday } } }),
+            prisma.booking.count({ where: { ...bkScope, createdAt: { gte: startOfMonth } } }),
+            prisma.booking.count({ where: { ...bkScope, status: 'REFUNDED' } }),
+            isSuperAdmin ? prisma.owner.count() : prisma.owner.count({ where: { branches: { some: { id: { in: branchIds } } } } }),
+            isSuperAdmin ? prisma.user.count({ where: { role: 'STAFF' } }) : prisma.user.count({ where: { role: 'STAFF', staffBranchId: { in: branchIds } } }),
             prisma.user.count({ where: { role: 'CUSTOMER' } }),
             prisma.user.count({ where: { createdAt: { gte: startOfMonth } } }),
-            prisma.branch.count(),
-            prisma.branch.count({ where: { status: 'INACTIVE' } }),
-            prisma.branch.count({ where: { status: 'SUSPENDED' } })
+            isSuperAdmin ? prisma.branch.count() : branchIds.length,
+            isSuperAdmin ? prisma.branch.count({ where: { status: 'INACTIVE' } }) : prisma.branch.count({ where: { status: 'INACTIVE', id: { in: branchIds } } }),
+            isSuperAdmin ? prisma.branch.count({ where: { status: 'SUSPENDED' } }) : prisma.branch.count({ where: { status: 'SUSPENDED', id: { in: branchIds } } })
         ]);
 
         const subPlanRev = activeBranches.reduce((sum, b) => sum + Number(b.subscriptionPlan?.monthlyPrice || 0), 0);
-        const monthlyRevenue = Number(monthlyRevAgg._sum.amount || 0) + subPlanRev;
+        const monthlyRevenue = Number(monthlyRevAgg._sum.amount || 0) + (isSuperAdmin ? subPlanRev : 0);
         const prevMonthlyRevenue = Number(prevMonthlyRevAgg._sum.amount || 0);
         const revenueGrowthPercentage = prevMonthlyRevenue > 0
             ? Math.round(((monthlyRevenue - prevMonthlyRevenue) / prevMonthlyRevenue) * 1000) / 10
@@ -44,9 +71,9 @@ const getOverviewReport = async (req, res) => {
         return res.status(200).json({
             success: true,
             data: {
-                totalRevenue: Number(totalRevAgg._sum.amount || 0) + subPlanRev,
+                totalRevenue: Number(totalRevAgg._sum.amount || 0) + (isSuperAdmin ? subPlanRev : 0),
                 monthlyRevenue,
-                yearlyRevenue: Number(yearlyRevAgg._sum.amount || 0) + subPlanRev,
+                yearlyRevenue: Number(yearlyRevAgg._sum.amount || 0) + (isSuperAdmin ? subPlanRev : 0),
                 revenueGrowthPercentage,
                 totalBookings, todayBookings, monthlyBookings, cancelledBookings,
                 totalOwners, totalStaff, totalCustomers, newRegistrations,
@@ -73,7 +100,13 @@ const groupByMonth = (rows, valueFn) => {
 const getRevenueReport = async (req, res) => {
     try {
         const sixMonthsAgo = new Date(); sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
-        const payments = await prisma.payment.findMany({ where: { status: 'COMPLETED', createdAt: { gte: sixMonthsAgo } }, select: { amount: true, createdAt: true }, orderBy: { createdAt: 'asc' } });
+        const branchIds = await resolveOwnerBranchIds(req.user);
+        const payScope = branchIds === null ? {} : branchIds.length > 0
+            ? { booking: { slot: { branchId: { in: branchIds } } } } : { id: -1 };
+        const payments = await prisma.payment.findMany({
+            where: { ...payScope, status: 'COMPLETED', createdAt: { gte: sixMonthsAgo } },
+            select: { amount: true, createdAt: true }, orderBy: { createdAt: 'asc' }
+        });
         const grouped = groupByMonth(payments, r => Number(r.amount));
 
         return res.status(200).json({
@@ -89,7 +122,13 @@ const getRevenueReport = async (req, res) => {
 const getBookingReport = async (req, res) => {
     try {
         const sixMonthsAgo = new Date(); sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
-        const bookings = await prisma.booking.findMany({ where: { createdAt: { gte: sixMonthsAgo } }, select: { status: true, createdAt: true }, orderBy: { createdAt: 'asc' } });
+        const branchIds = await resolveOwnerBranchIds(req.user);
+        const bkScope = branchIds === null ? {} : branchIds.length > 0
+            ? { slot: { branchId: { in: branchIds } } } : { id: -1 };
+        const bookings = await prisma.booking.findMany({
+            where: { ...bkScope, createdAt: { gte: sixMonthsAgo } },
+            select: { status: true, createdAt: true }, orderBy: { createdAt: 'asc' }
+        });
 
         const byMonth = {};
         const order = [];
@@ -284,11 +323,16 @@ const getMonthlyReport = async (req, res) => {
 const exportReport = async (req, res) => {
     const { format = 'csv', type = 'general', range = 'LAST_30_DAYS' } = req.query;
     try {
+        const branchIds = await resolveOwnerBranchIds(req.user);
+        const isSuperAdmin = branchIds === null;
+        const bkScope = isSuperAdmin ? {} : branchIds.length > 0 ? { slot: { branchId: { in: branchIds } } } : { id: -1 };
+        const payScope = isSuperAdmin ? {} : branchIds.length > 0 ? { booking: { slot: { branchId: { in: branchIds } } } } : { id: -1 };
+
         const [totalBranches, revAgg, totalBookings, totalOwners] = await Promise.all([
-            prisma.branch.count({ where: { status: 'ACTIVE' } }),
-            prisma.payment.aggregate({ where: { status: 'COMPLETED' }, _sum: { amount: true } }),
-            prisma.booking.count(),
-            prisma.owner.count()
+            isSuperAdmin ? prisma.branch.count({ where: { status: 'ACTIVE' } }) : branchIds.length,
+            prisma.payment.aggregate({ where: { ...payScope, status: 'COMPLETED' }, _sum: { amount: true } }),
+            prisma.booking.count({ where: bkScope }),
+            isSuperAdmin ? prisma.owner.count() : prisma.owner.count({ where: { branches: { some: { id: { in: branchIds } } } } })
         ]);
         const totalRevenue = Number(revAgg._sum.amount || 0);
 

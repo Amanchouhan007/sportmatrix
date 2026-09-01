@@ -1,6 +1,23 @@
 const prisma = require('../../config/prisma');
 const { computeSplit } = require('../../services/paymentGateway/paymentSplit.util');
 
+const resolveOwnerBranchIds = async (user) => {
+    if (!user || user.role === 'SUPERADMIN' || user.role === 'SUPER_ADMIN' || user.role === 'ADMIN') return null;
+    const ownerProfile = await prisma.owner.findUnique({ where: { userId: user.id } }).catch(() => null);
+    const branches = await prisma.branch.findMany({
+        where: {
+            OR: [
+                { ownerUserId: user.id },
+                { ownerId: ownerProfile ? ownerProfile.id : 'NO_MATCH' }
+            ]
+        },
+        select: { id: true }
+    });
+    if (branches.length > 0) return branches.map(b => b.id);
+    const fallbackBranches = await prisma.branch.findMany({ select: { id: true } });
+    return fallbackBranches.map(b => b.id);
+};
+
 /**
  * POS / checkout payment recording. Uses the real Payment model as the single
  * unified transaction ledger (bookings, subscriptions, and admin-entered logs
@@ -39,9 +56,18 @@ const processPayment = async (req, res) => {
 
 const getPaymentStats = async (req, res) => {
     try {
+        const branchIds = await resolveOwnerBranchIds(req.user);
+        // Scope to owner branches if not SuperAdmin
+        const paymentWhere = branchIds === null ? {} : branchIds.length > 0
+            ? { OR: [{ booking: { slot: { branchId: { in: branchIds } } } }, { booking: { slotId: null } }] }
+            : { id: -1 }; // no branches => no results
+        const matchWhere = branchIds === null ? {} : branchIds.length > 0
+            ? { match: { branchId: { in: branchIds } } }
+            : { id: 'NO_MATCH' };
+
         const [payments, matchPayments] = await Promise.all([
-            prisma.payment.findMany({ include: { user: true } }),
-            prisma.matchPayment.findMany({ include: { user: true, match: true } })
+            prisma.payment.findMany({ where: paymentWhere, include: { user: true } }),
+            prisma.matchPayment.findMany({ where: matchWhere, include: { user: true, match: true } })
         ]);
 
         const processedSlotIds = new Set(payments.map(p => p.bookingId).filter(Boolean));
@@ -111,25 +137,29 @@ const getPaymentStats = async (req, res) => {
     }
 };
 
-const formatPaymentLog = (p) => ({
-    _id: `pay_${p.id}`, id: `pay_${p.id}`,
-    paymentId: p.invoiceNumber, transactionId: `TXN-${p.invoiceNumber}`, invoiceNumber: p.invoiceNumber,
-    userId: { _id: p.userId, fullName: p.user?.name || p.customerName, email: p.user?.email || '', mobile: p.user?.mobile || '' },
-    user: p.user?.name || p.customerName, customer: p.user?.name || p.customerName,
-    branchName: p.booking?.slot?.branch?.branchName || p.branchName || 'E2E Test Arena',
-    type: p.type ? p.type.toUpperCase() : 'BOOKING', amount: Number(p.amount),
-    commissionAmount: Number(p.commission),
-    commissionRate: Number(p.amount) > 0 ? Math.round((Number(p.commission) / Number(p.amount)) * 100) : 0,
-    ownerAmount: Number(p.ownerAmount),
-    ownerPayoutStatus: p.ownerPayoutStatus, commissionStatus: p.commissionStatus,
-    paymentMethod: p.paymentMethod, status: p.status,
-    notice: p.type === 'Booking' ? 'Turf Slot Online Booking' : p.type,
-    paymentDate: p.createdAt, createdAt: p.createdAt, date: p.createdAt
-});
+const formatPaymentLog = (p) => {
+    const resolvedCustomer = p.customerName || p.booking?.customerName || p.user?.name || '';
+    return {
+        _id: `pay_${p.id}`, id: `pay_${p.id}`,
+        paymentId: p.invoiceNumber, transactionId: `TXN-${p.invoiceNumber}`, invoiceNumber: p.invoiceNumber,
+        userId: { _id: p.userId, fullName: resolvedCustomer, email: p.user?.email || '', mobile: p.user?.mobile || '' },
+        user: resolvedCustomer, customer: resolvedCustomer, customerName: resolvedCustomer,
+        branchName: p.booking?.slot?.branch?.branchName || p.branchName || '',
+        type: p.type ? p.type.toUpperCase() : 'BOOKING', amount: Number(p.amount),
+        commissionAmount: Number(p.commission),
+        commissionRate: Number(p.amount) > 0 ? Math.round((Number(p.commission) / Number(p.amount)) * 100) : 0,
+        ownerAmount: Number(p.ownerAmount),
+        ownerPayoutStatus: p.ownerPayoutStatus, commissionStatus: p.commissionStatus,
+        paymentMethod: p.paymentMethod, status: p.status,
+        notice: p.type === 'Booking' ? 'Turf Slot Online Booking' : p.type,
+        paymentDate: p.createdAt, createdAt: p.createdAt, date: p.createdAt
+    };
+};
 
 const getBillHistory = async (req, res) => {
     try {
         const { page = 1, limit = 20, search = '', status = '', type = '', paymentMethod = '' } = req.query;
+        const branchIds = await resolveOwnerBranchIds(req.user);
 
         const where = {};
         if (status && status.toUpperCase() !== 'ALL') where.status = status.toUpperCase();
@@ -141,13 +171,21 @@ const getBillHistory = async (req, res) => {
                 { customerName: { contains: search } }
             ];
         }
+        // Scope to owner's branches
+        if (branchIds !== null) {
+            if (branchIds.length === 0) {
+                return res.status(200).json({ success: true, data: [], pagination: { total: 0, page: 1, limit: 20, totalPages: 0 } });
+            }
+            where.booking = { slot: { branchId: { in: branchIds } } };
+        }
 
         const pageNum = Number(page) || 1;
         const limitNum = Number(limit) || 20;
 
+        const matchWhere = branchIds === null ? {} : { match: { branchId: { in: branchIds } } };
         const [payments, matchPayments] = await Promise.all([
             prisma.payment.findMany({ where, include: { user: true, booking: { include: { slot: { include: { branch: true } } } } }, orderBy: { createdAt: 'desc' } }),
-            prisma.matchPayment.findMany({ include: { user: true, match: { include: { branch: true } } }, orderBy: { createdAt: 'desc' } })
+            prisma.matchPayment.findMany({ where: matchWhere, include: { user: true, match: { include: { branch: true } } }, orderBy: { createdAt: 'desc' } })
         ]);
 
         const logs = payments.map(formatPaymentLog);
@@ -165,7 +203,7 @@ const getBillHistory = async (req, res) => {
                 userId: { _id: mp.userId, fullName: mp.playerName || 'Player', email: '', mobile: mp.playerPhone || '' },
                 user: mp.playerName || 'Player',
                 customer: mp.playerName || 'Player',
-                branchName: mp.match?.branch?.branchName || 'E2E Test Arena',
+                branchName: mp.match?.branch?.branchName || '',
                 type: 'BOOKING',
                 amount: gross,
                 commissionAmount: comm,
@@ -294,20 +332,34 @@ const posCheckout = async (req, res) => {
             }).catch(() => null);
         }
 
+        let targetBranchId = branchId;
+        if (!targetBranchId) {
+            const defaultBranch = await prisma.branch.findFirst();
+            targetBranchId = defaultBranch?.id || null;
+        }
+
         let slotId = null;
-        if (branchId && slotDate && slotTime) {
+        if (targetBranchId && slotDate && slotTime) {
             const dateObj = new Date(slotDate);
-            const [sH, sM] = slotTime.split(':').map(Number);
+            
+            // Robust 12h to 24h HH:mm:ss parser
+            const timeMatch = String(slotTime).match(/(\d+)(?::(\d+))?\s*(AM|PM)?/i);
+            let sH = timeMatch ? parseInt(timeMatch[1], 10) : 18;
+            let sM = (timeMatch && timeMatch[2]) ? parseInt(timeMatch[2], 10) : 0;
+            const ampm = timeMatch && timeMatch[3] ? timeMatch[3].toUpperCase() : null;
+            if (ampm === 'PM' && sH < 12) sH += 12;
+            if (ampm === 'AM' && sH === 12) sH = 0;
+
+            const startTimeStr = `${String(sH).padStart(2, '0')}:${String(sM).padStart(2, '0')}:00`;
             const dur = Number(duration) || 60;
-            const eM = (sH * 60 + (sM || 0) + dur);
-            const endH = String(Math.floor(eM / 60)).padStart(2, '0');
-            const endM = String(eM % 60).padStart(2, '0');
-            const endTimeStr = `${endH}:${endM}:00`;
-            const startTimeStr = `${String(sH).padStart(2, '0')}:${String(sM || 0).padStart(2, '0')}:00`;
+            const totalEndM = sH * 60 + sM + dur;
+            const endH = Math.floor(totalEndM / 60) % 24;
+            const endM = totalEndM % 60;
+            const endTimeStr = `${String(endH).padStart(2, '0')}:${String(endM).padStart(2, '0')}:00`;
 
             let slot = await prisma.slot.findFirst({
                 where: {
-                    branchId,
+                    branchId: targetBranchId,
                     slotDate: dateObj,
                     startTime: startTimeStr
                 }
@@ -317,9 +369,9 @@ const posCheckout = async (req, res) => {
                 slot = await prisma.slot.create({
                     data: {
                         id: `s_pos_${Date.now()}_${Math.floor(Math.random()*1000)}`,
-                        branchId,
+                        branchId: targetBranchId,
                         sportId: sportId || null,
-                        courtName: courtName || 'Court 1',
+                        courtName: courtName || 'Box Cricket Pitch 1',
                         slotDate: dateObj,
                         startTime: startTimeStr,
                         endTime: endTimeStr,
@@ -342,21 +394,18 @@ const posCheckout = async (req, res) => {
         const bookingCode = `BK-POS-${Math.floor(100000 + Math.random() * 900000)}`;
         const booking = await prisma.booking.create({
             data: {
-                id: `bk_pos_${Date.now()}_${Math.floor(Math.random()*1000)}`,
                 bookingCode,
-                bookingNumber: bookingCode,
-                slotId,
+                slotId: slotId || null,
                 userId: user?.id || null,
                 customerName: name,
-                customerPhone: phone,
                 mobileNumber: phone,
-                customerEmail: customerEmail?.trim() || null,
-                totalPrice: Math.round(amount),
-                finalPrice: Math.round(amount),
-                appliedDiscount: Math.round(Number(discountAmount) || 0),
-                paymentMode: (paymentMethod || 'UPI').toUpperCase(),
-                paymentStatus: paymentStatus === 'Paid' ? 'COMPLETED' : 'PENDING',
-                status: 'CONFIRMED',
+                sportName: req.body.sport || 'Cricket',
+                courtName: courtName || 'Box Cricket Pitch 1',
+                timeSlot: slotTime || '09:00 PM',
+                dutyDate: slotDate ? new Date(slotDate) : new Date(),
+                amount: Math.round(amount),
+                duration: Number(duration) || 60,
+                status: 'COMPLETED',
                 notes: notes || `POS ${customerType} Checkout`
             }
         });
@@ -373,6 +422,12 @@ const posCheckout = async (req, res) => {
         }
 
         // POS venue walk-in bookings carry 0% platform commission (100% owner share)
+        let validPaymentMethod = 'UPI';
+        const pmUpper = (paymentMethod || '').toUpperCase();
+        if (['CASH', 'UPI', 'CARD', 'NETBANKING', 'WALLET'].includes(pmUpper)) {
+            validPaymentMethod = pmUpper;
+        }
+
         await prisma.payment.create({
             data: {
                 bookingId: booking.id,
@@ -383,7 +438,7 @@ const posCheckout = async (req, res) => {
                 commission: 0,
                 ownerAmount: Math.round(amount),
                 ownerPayoutStatus: 'CONFIRMED',
-                paymentMethod: (paymentMethod || 'UPI').toUpperCase(),
+                paymentMethod: validPaymentMethod,
                 status: 'COMPLETED',
                 type: 'POS_BILL'
             }

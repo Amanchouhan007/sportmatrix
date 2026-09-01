@@ -349,6 +349,42 @@ export default function MaintenancePage() {
                             }))}
                         />
                     )}
+                    {/* ⚡ 1-CLICK QUICK MAINTENANCE TASK PRESETS */}
+                    <div className="space-y-1.5">
+                        <label className="block text-[11px] font-black uppercase text-slate-700 tracking-wider">
+                            ⚡ Quick Select Common Turf Maintenance Issue:
+                        </label>
+                        <div className="flex flex-wrap gap-1.5 max-h-32 overflow-y-auto pr-1">
+                            {[
+                                { title: '💡 Floodlights LED Bulb & Wiring Fix', priority: 'High' },
+                                { title: '🌿 Synthetic Grass Carpet & Granule Refill', priority: 'Medium' },
+                                { title: '🏏 Box Cricket Perimeter Netting Repair', priority: 'High' },
+                                { title: '⚽ Goalpost Net & Frame Fencing Fix', priority: 'Medium' },
+                                { title: '💧 Turf Pitch Drainage & Rain Clearing', priority: 'Urgent' },
+                                { title: '🔌 Electronic Scoreboard & Audio Service', priority: 'Low' },
+                                { title: '🧹 Surface Deep Sanitization & Cleaning', priority: 'Medium' },
+                                { title: '🚧 Boundary Gate Hinge & Lock Maintenance', priority: 'Low' }
+                            ].map((preset) => (
+                                <button
+                                    key={preset.title}
+                                    type="button"
+                                    onClick={() => setNewTask(prev => ({
+                                        ...prev,
+                                        task: preset.title,
+                                        priority: preset.priority
+                                    }))}
+                                    className={`px-2.5 py-1 text-[11px] font-bold rounded-lg border transition-all cursor-pointer ${
+                                        newTask.task === preset.title
+                                            ? 'bg-emerald-600 text-white border-emerald-600 shadow-2xs'
+                                            : 'bg-slate-50 hover:bg-slate-100 text-slate-700 border-slate-200'
+                                    }`}
+                                >
+                                    {preset.title}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+
                     <Input
                         label="Issue / Task Description"
                         placeholder="e.g. Repair fence wiring / Floodlights maintenance"

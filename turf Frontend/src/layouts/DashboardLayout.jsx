@@ -223,17 +223,17 @@ export default function DashboardLayout({ role = 'owner' }) {
                 <div className="p-4 h-[72px] flex items-center justify-between border-b border-slate-100 shrink-0">
                     <div className="flex items-center gap-3 min-w-0">
                         <img 
-                            src="/kiaan_logo.jpg" 
-                            alt="Kiaan Technologies Turf" 
+                            src="/images/kiaan_gold_logo.jpg?v=2" 
+                            alt="Kiaan Technology Turf Cricket Arena" 
                             className="w-10 h-10 rounded-xl object-cover shadow-md border border-amber-300/40 shrink-0" 
                         />
                         {!isCollapsed && (
                             <div className="flex flex-col min-w-0">
                                 <span className="font-black text-slate-900 text-sm tracking-tight uppercase leading-none truncate">
-                                    KIAAN'S TURF<span className="text-[#10B981]">.</span>
+                                    KIAAN <span className="text-amber-500 font-black">TURF</span>
                                 </span>
-                                <span className="text-[9px] font-extrabold text-emerald-700 uppercase tracking-wider mt-1 truncate">
-                                    KIAAN TECHNOLOGIES • {roleLabels[role] || 'ADMIN'}
+                                <span className="text-[9px] font-extrabold text-amber-600 uppercase tracking-wider mt-1 truncate">
+                                    KIAAN TECHNOLOGY • {roleLabels[role] || 'ADMIN'}
                                 </span>
                             </div>
                         )}

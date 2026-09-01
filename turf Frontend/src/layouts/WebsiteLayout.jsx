@@ -49,17 +49,18 @@ export default function WebsiteLayout({ children }) {
                         : 'border-slate-200/60 shadow-xs'
                 }`}
             >
-                <div className="w-full px-4 sm:px-6 md:px-8 lg:px-12 h-[64px] flex items-center justify-between gap-4 relative">
+                <div className="max-w-[1440px] mx-auto px-3 sm:px-6 md:px-8 h-[64px] flex items-center justify-between gap-2 sm:gap-4 relative">
                     {/* Brand Logo */}
                     <NavLink to="/" className="flex items-center gap-2.5 group shrink-0">
-                        <img src="/kiaan_logo.jpg" alt="Kiaan Technologies Turf" className="w-9 h-9 rounded-xl object-cover shadow-md border border-amber-300/40" />
-                        <span className="text-lg font-black text-[#111827] tracking-tight leading-none uppercase">
-                            KIAAN'S TURF<span className="text-[#16A34A] text-xl font-black">.</span>
-                        </span>
+                        <img src="/images/kiaan_gold_logo.jpg?v=2" alt="Kiaan Technology Turf Cricket Arena" className="w-9 h-9 rounded-xl object-cover shadow-md border border-amber-300/40" />
+                        <div className="flex flex-col">
+                            <span className="text-base font-black text-slate-900 tracking-tight leading-none uppercase">KIAAN <span className="text-amber-500 font-black">TURF</span></span>
+                            <span className="text-[7.5px] font-black text-amber-600 tracking-[0.16em] uppercase mt-0.5">KIAAN TECHNOLOGY • CRICKET ARENA</span>
+                        </div>
                     </NavLink>
 
                     {/* Nav Links (Flexible Centered Grid) */}
-                    <nav className="hidden lg:flex items-center gap-4 xl:gap-6 2xl:gap-8 shrink">
+                    <nav className="hidden lg:flex items-center gap-2.5 xl:gap-4 2xl:gap-6 shrink">
                         {navLinks.map((link) => (
                             <NavLink 
                                 key={link.to} 
@@ -222,10 +223,10 @@ export default function WebsiteLayout({ children }) {
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-8">
                         <div className="lg:col-span-2 space-y-3">
                             <div className="flex items-center gap-2.5">
-                                <img src="/kiaan_logo.jpg" alt="Kiaan Technologies Turf" className="w-9 h-9 rounded-xl object-cover shadow-sm border border-amber-300/40" />
+                                <img src="/images/kiaan_gold_logo.jpg?v=2" alt="Kiaan Technology Turf Cricket Arena" className="w-9 h-9 rounded-xl object-cover shadow-sm border border-amber-300/40" />
                                 <div className="flex flex-col">
-                                    <span className="text-base font-black text-[#111827] tracking-tight uppercase">KIAAN'S SPORTSTURF</span>
-                                    <span className="text-[9px] font-extrabold text-[#16A34A] uppercase tracking-wider">Kiaan Technologies</span>
+                                    <span className="text-base font-black text-slate-900 tracking-tight uppercase">KIAAN <span className="text-amber-500 font-black">TURF</span></span>
+                                    <span className="text-[9px] font-extrabold text-amber-600 uppercase tracking-wider">KIAAN TECHNOLOGY • CRICKET ARENA</span>
                                 </div>
                             </div>
                             <p className="text-[13px] font-semibold text-[#6B7280] max-w-xs leading-relaxed">The complete digital sports venue management system by Kiaan Technologies.</p>

@@ -223,13 +223,18 @@ export default function LoginPage() {
                     {/* Logo & Brand Header */}
                     <div className="flex items-center gap-3.5 mb-6">
                         <img 
-                            src="/kiaan_logo.jpg" 
-                            alt="Kiaan Technologies Turf" 
+                            src="/images/kiaan_gold_logo.jpg?v=2" 
+                            alt="Kiaan Technology Turf Cricket Arena" 
                             className="w-12 h-12 rounded-2xl object-cover shadow-[0_0_25px_rgba(255,215,0,0.4)] border border-amber-300/40 shrink-0" 
                         />
-                        <span className="text-2xl font-black uppercase tracking-wider text-white">
-                            KIAAN'S SPORTSTURF<span className="text-[#C8FF2E]">.</span>
-                        </span>
+                        <div className="flex flex-col">
+                            <span className="text-2xl font-black uppercase tracking-wider text-white">
+                                KIAAN <span className="text-amber-400">TURF</span>
+                            </span>
+                            <span className="text-[10px] font-black text-amber-400 tracking-[0.2em] uppercase">
+                                KIAAN TECHNOLOGY • CRICKET ARENA
+                            </span>
+                        </div>
                     </div>
 
                     <h1 className="text-4xl xl:text-5xl font-black mb-6 leading-[1.15] uppercase italic tracking-tight text-white">

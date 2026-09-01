@@ -100,11 +100,21 @@ export default function SubscriptionPlans() {
     const handleOpenModal = (plan = null) => {
         if (plan) {
             setEditingPlan(plan)
+            const mPrice = Number(plan.monthlyPricing?.price || 0)
+            const yPrice = Number(plan.yearlyPricing?.price || 0)
+            let initialDiscount = 20
+            if (mPrice > 0 && yPrice > 0) {
+                const annualBase = mPrice * 12
+                const computedPct = Math.round(((annualBase - yPrice) / annualBase) * 100)
+                if (computedPct > 0 && computedPct < 100) initialDiscount = computedPct
+            }
+
             setFormData({
                 planName: plan.planName || '',
                 description: plan.description || '',
                 isPopular: plan.isPopular || false,
                 status: plan.status || 'active',
+                yearlyDiscountPercent: String(initialDiscount),
                 monthlyPricing: {
                     price: plan.monthlyPricing?.price ?? '',
                     branchLimit: plan.monthlyPricing?.branchLimit ?? '',
@@ -128,6 +138,7 @@ export default function SubscriptionPlans() {
                 description: '',
                 isPopular: false,
                 status: 'active',
+                yearlyDiscountPercent: '20',
                 monthlyPricing: { price: '', branchLimit: '', sportsLimit: '', bookingLimit: '', activeUsersLimit: '' },
                 yearlyPricing: { price: '', branchLimit: '', sportsLimit: '', bookingLimit: '', activeUsersLimit: '' },
                 features: []
@@ -172,7 +183,10 @@ export default function SubscriptionPlans() {
             if (field === 'price') {
                 const numVal = Number(value)
                 if (value !== '' && !isNaN(numVal) && numVal >= 0) {
-                    nextYearly.price = String(Math.round(numVal * 10))
+                    const discountPct = Number(prev.yearlyDiscountPercent ?? 20)
+                    const annualBase = numVal * 12
+                    const discountedYearly = Math.round(annualBase * (1 - discountPct / 100))
+                    nextYearly.price = String(discountedYearly)
                 } else {
                     nextYearly.price = ''
                 }
@@ -199,6 +213,24 @@ export default function SubscriptionPlans() {
         })
     }
 
+    const handleDiscountPercentChange = (pctVal) => {
+        const discountPct = Number(pctVal) || 0
+        setFormData(prev => {
+            const numVal = Number(prev.monthlyPricing.price || 0)
+            const nextYearly = { ...prev.yearlyPricing }
+            if (numVal > 0 && discountPct >= 0 && discountPct < 100) {
+                const annualBase = numVal * 12
+                const discountedYearly = Math.round(annualBase * (1 - discountPct / 100))
+                nextYearly.price = String(discountedYearly)
+            }
+            return {
+                ...prev,
+                yearlyDiscountPercent: pctVal,
+                yearlyPricing: nextYearly
+            }
+        })
+    }
+
     const handleYearlyFieldChange = (field, value) => {
         setFormData(prev => {
             const nextYearly = { ...prev.yearlyPricing, [field]: value }
@@ -206,8 +238,13 @@ export default function SubscriptionPlans() {
 
             if (field === 'price') {
                 const numVal = Number(value)
-                if (value !== '' && !isNaN(numVal) && numVal >= 0) {
-                    nextMonthly.price = String(Math.round(numVal / 10))
+                const monthlyVal = Number(prev.monthlyPricing.price || 0)
+                if (monthlyVal > 0 && value !== '' && !isNaN(numVal) && numVal >= 0) {
+                    const annualBase = monthlyVal * 12
+                    const computedPct = Math.round(((annualBase - numVal) / annualBase) * 100)
+                    if (computedPct >= 0 && computedPct < 100) {
+                        return { ...prev, yearlyDiscountPercent: String(computedPct), yearlyPricing: nextYearly }
+                    }
                 }
             }
 
@@ -696,24 +733,64 @@ export default function SubscriptionPlans() {
 
                     {/* Section 3: Yearly Pricing */}
                     <div className="bg-slate-50/80 border border-slate-200/80 rounded-2xl p-5 space-y-4">
-                        <div className="flex items-center gap-2.5 pb-3 border-b border-slate-200/70">
-                            <div className="w-7 h-7 rounded-lg bg-purple-50 text-purple-600 flex items-center justify-center font-bold text-xs">
-                                3
+                        <div className="flex items-center justify-between pb-3 border-b border-slate-200/70">
+                            <div className="flex items-center gap-2.5">
+                                <div className="w-7 h-7 rounded-lg bg-purple-50 text-purple-600 flex items-center justify-center font-bold text-xs">
+                                    3
+                                </div>
+                                <h4 className="text-xs font-black text-slate-900 uppercase tracking-widest">
+                                    Section 3: Yearly Pricing & Discount Engine
+                                </h4>
                             </div>
-                            <h4 className="text-xs font-black text-slate-900 uppercase tracking-widest">
-                                Section 3: Yearly Pricing & Tier Limits
-                            </h4>
+                            <span className="text-[10px] font-black text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-200">
+                                ⚡ Auto-Discount Active
+                            </span>
                         </div>
 
                         <div className="grid md:grid-cols-2 gap-4">
+                            <Select
+                                label="Yearly Plan Discount %"
+                                id="yearlyDiscountPercent"
+                                value={formData.yearlyDiscountPercent || '20'}
+                                onChange={e => handleDiscountPercentChange(e.target.value)}
+                                options={[
+                                    { value: '20', label: '20% OFF (Standard Website Discount)' },
+                                    { value: '16.67', label: '16.67% OFF (2 Months Free)' },
+                                    { value: '10', label: '10% OFF (Light Discount)' },
+                                    { value: '15', label: '15% OFF' },
+                                    { value: '25', label: '25% OFF (Super Value)' },
+                                    { value: '30', label: '30% OFF (Mega Annual Deal)' }
+                                ]}
+                                disabled={isSaving}
+                            />
                             <Input 
-                                label="Yearly Price (₹)" 
+                                label="Yearly Price (₹) (Auto-Calculated)" 
                                 type="number"
                                 placeholder="0" 
                                 value={formData.yearlyPricing.price}
                                 onChange={e => handleYearlyFieldChange('price', e.target.value)}
                                 disabled={isSaving}
                             />
+                        </div>
+
+                        {/* Dynamic Live Discount Breakdown Banner */}
+                        {Number(formData.monthlyPricing.price) > 0 && (
+                            <div className="bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-200 rounded-xl p-3.5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 text-xs font-semibold text-slate-800">
+                                <div className="space-y-0.5">
+                                    <div className="font-bold text-emerald-900">
+                                        Annual Base: ₹{(Number(formData.monthlyPricing.price) * 12).toLocaleString('en-IN')} (₹{Number(formData.monthlyPricing.price).toLocaleString('en-IN')}/mo × 12)
+                                    </div>
+                                    <div className="text-[11px] text-emerald-700">
+                                        After {formData.yearlyDiscountPercent || 20}% Discount: <strong className="text-slate-900">₹{Number(formData.yearlyPricing.price || 0).toLocaleString('en-IN')}/year</strong>
+                                    </div>
+                                </div>
+                                <span className="bg-emerald-600 text-white font-black text-[11px] px-3 py-1 rounded-full shadow-2xs shrink-0">
+                                    Saves ₹{(Math.max(0, (Number(formData.monthlyPricing.price) * 12) - Number(formData.yearlyPricing.price || 0))).toLocaleString('en-IN')}/yr
+                                </span>
+                            </div>
+                        )}
+
+                        <div className="grid md:grid-cols-2 gap-4 pt-1">
                             <Input 
                                 label="Branch Limit (-1 for Unlimited)" 
                                 type="number"

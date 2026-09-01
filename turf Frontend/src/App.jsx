@@ -28,6 +28,7 @@ const TournamentDetailPage = lazy(() => import('./pages/website/TournamentDetail
 const MembershipPage = lazy(() => import('./pages/website/MembershipPage'))
 const ContactPage = lazy(() => import('./pages/website/ContactPage'))
 const PlayerLeaderboardPage = lazy(() => import('./pages/website/PlayerLeaderboardPage'))
+const LiveScorecardPage = lazy(() => import('./pages/website/LiveScorecardPage'))
 
 // Lazy Super Admin
 const SADashboard = lazy(() => import('./pages/superadmin/SADashboard'))
@@ -134,6 +135,9 @@ export default function App() {
               <Route path="/leaderboard" element={<WebsiteLayout><PlayerLeaderboardPage /></WebsiteLayout>} />
               <Route path="/leaderboards" element={<Navigate to="/leaderboard" replace />} />
               <Route path="/contact" element={<WebsiteLayout><ContactPage /></WebsiteLayout>} />
+              {/* 🔴 Public Live Scorecards — no login required, shareable on WhatsApp/phones */}
+              <Route path="/live" element={<LiveScorecardPage />} />
+              <Route path="/live/:matchId" element={<LiveScorecardPage />} />
 
               {/* Super Admin Dashboard */}
               <Route path="/super-admin" element={<ProtectedRoute allowedRoles={['SUPER_ADMIN']}><DashboardLayout role="superadmin" /></ProtectedRoute>}>

@@ -48,7 +48,7 @@ export default function Modal({ isOpen, onClose, title, children, size = 'md' })
                     border: '1px solid rgba(255, 255, 255, 0.8)',
                     boxShadow: '0 30px 90px rgba(15, 23, 42, 0.35)'
                 }}
-                className={`relative bg-white/95 rounded-[20px] sm:rounded-[24px] w-full ${sizes[size] || 'max-w-[900px]'} max-h-[92vh] sm:max-h-[86vh] overflow-hidden flex flex-col z-10 my-auto shadow-2xl animate-in zoom-in-95 duration-200`}
+                className={`relative bg-white/95 rounded-[20px] sm:rounded-[24px] w-full ${sizes[size] || 'max-w-[900px]'} max-h-[84vh] sm:max-h-[82vh] overflow-hidden flex flex-col z-10 my-auto shadow-2xl animate-in zoom-in-95 duration-200`}
             >
                 {/* Modal Header */}
                 <div className="flex items-center justify-between px-4 sm:px-8 py-3.5 sm:py-6 border-b border-slate-200/80 shrink-0 bg-slate-50/50">
@@ -65,7 +65,7 @@ export default function Modal({ isOpen, onClose, title, children, size = 'md' })
                 </div>
 
                 {/* Modal Body */}
-                <div className="px-4 sm:px-8 py-4 sm:py-6 overflow-y-auto max-h-[calc(92vh-65px)] sm:max-h-[calc(86vh-85px)] custom-scrollbar">
+                <div className="px-4 sm:px-8 py-4 sm:py-6 overflow-y-auto max-h-[calc(84vh-65px)] sm:max-h-[calc(82vh-85px)] custom-scrollbar">
                     {children}
                 </div>
             </div>

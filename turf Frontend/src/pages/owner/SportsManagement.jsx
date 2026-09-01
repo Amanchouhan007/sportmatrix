@@ -959,33 +959,98 @@ export default function SportsManagement() {
                     </div>
 
                     {/* ⏱️ INDIVIDUAL HOURLY SLOT TIMING & RATES MATRIX */}
-                    <div className="bg-slate-50 border border-slate-200/90 p-4.5 rounded-2xl space-y-4">
-                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-200/80 pb-3">
-                            <div>
-                                <div className="flex items-center gap-2">
-                                    <span className="text-xs font-black text-slate-900 uppercase tracking-wider flex items-center gap-1.5">
-                                        <span>⏱️</span> Hourly Slot Timing & Pricing Matrix
-                                    </span>
-                                    <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300 text-[10px] font-bold">
-                                        Per-Hour Custom Override
-                                    </span>
-                                </div>
-                                <p className="text-[11px] text-slate-500 font-medium mt-0.5">
-                                    Har specific ghante ka rate set karein ya 1-click me saare slots ka price same karein.
-                                </p>
+                    <div className="bg-slate-50/90 border border-slate-200/90 p-5 rounded-2xl space-y-4">
+                        {/* Section Header */}
+                        <div className="border-b border-slate-200/80 pb-3">
+                            <div className="flex flex-wrap items-center gap-2">
+                                <h3 className="text-sm font-black text-slate-900 uppercase tracking-wider flex items-center gap-1.5">
+                                    <span>⏱️</span> Hourly Slot Timing & Pricing Matrix
+                                </h3>
+                                <span className="px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300 text-[10px] font-extrabold">
+                                    Per-Hour Custom Override
+                                </span>
+                            </div>
+                            <p className="text-xs text-slate-500 font-medium mt-1">
+                                Configure custom hourly rates per slot or use 1-click dynamic pricing presets below.
+                            </p>
+                        </div>
+
+                        {/* ⚡ 1-CLICK DYNAMIC PRICING AUTO-CALCULATOR & E2E SYNC TOOLBAR */}
+                        <div className="bg-white p-3 rounded-2xl border border-slate-200/90 shadow-2xs space-y-2">
+                            <div className="flex items-center justify-between">
+                                <span className="text-xs font-black text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
+                                    <span>⚡</span> 1-Click Dynamic Auto-Pricing Presets:
+                                </span>
+                                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">E2E Instant Sync</span>
                             </div>
 
-                            {/* ⚡ 1-CLICK SET SAME PRICE BAR */}
-                            <div className="flex items-center gap-2 bg-white p-2 rounded-xl border border-slate-200 shadow-2xs shrink-0">
-                                <span className="text-[11px] font-black text-slate-700">⚡ 1-Click Same Price:</span>
-                                <div className="flex items-center gap-1">
-                                    <span className="text-xs font-bold text-slate-400">₹</span>
+                            <div className="flex flex-wrap items-center gap-2">
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        const base = Number(currentSport.price || 1000);
+                                        const peak = Math.round(base * 1.3);
+                                        const slots = getHourlySlotsList(
+                                            currentSport.openingTime,
+                                            currentSport.closingTime,
+                                            base,
+                                            peak,
+                                            {}
+                                        );
+                                        const newCustomRates = {};
+                                        slots.forEach(s => {
+                                            newCustomRates[s.key] = s.isPeak ? peak : base;
+                                        });
+                                        setCurrentSport(prev => ({
+                                            ...prev,
+                                            peakPrice: String(peak),
+                                            customRates: newCustomRates
+                                        }));
+                                        addToast({ message: `🔥 Applied +30% Dynamic Night Surge (₹${base} Reg / ₹${peak} Peak) E2E!`, type: 'success' });
+                                    }}
+                                    className="bg-amber-500 hover:bg-amber-600 text-white font-black text-xs px-3.5 py-1.5 rounded-xl transition-all cursor-pointer shadow-xs flex items-center gap-1"
+                                    title="Apply +30% surge to peak evening slots"
+                                >
+                                    <span>🔥</span> Night Surge (+30%)
+                                </button>
+
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        const base = Number(currentSport.price || 1000);
+                                        const peak = Math.round(base * 1.4);
+                                        const slots = getHourlySlotsList(
+                                            currentSport.openingTime,
+                                            currentSport.closingTime,
+                                            base,
+                                            peak,
+                                            {}
+                                        );
+                                        const newCustomRates = {};
+                                        slots.forEach(s => {
+                                            newCustomRates[s.key] = s.isPeak ? peak : base;
+                                        });
+                                        setCurrentSport(prev => ({
+                                            ...prev,
+                                            peakPrice: String(peak),
+                                            customRates: newCustomRates
+                                        }));
+                                        addToast({ message: `⚡ Applied +40% Weekend Peak Surge (₹${base} Reg / ₹${peak} Peak) E2E!`, type: 'success' });
+                                    }}
+                                    className="bg-purple-600 hover:bg-purple-700 text-white font-black text-xs px-3.5 py-1.5 rounded-xl transition-all cursor-pointer shadow-xs flex items-center gap-1"
+                                    title="Apply +40% surge to peak slots"
+                                >
+                                    <span>⚡</span> Weekend Surge (+40%)
+                                </button>
+
+                                <div className="flex items-center gap-1.5 sm:ml-auto bg-slate-50 p-1 rounded-xl border border-slate-200">
+                                    <span className="text-xs font-bold text-slate-500 pl-1">₹</span>
                                     <input
                                         type="number"
                                         placeholder="2000"
                                         value={bulkRateInput}
                                         onChange={(e) => setBulkRateInput(e.target.value)}
-                                        className="w-20 bg-slate-50 border border-slate-300 rounded-lg px-2 py-1 text-xs font-black text-slate-900 focus:outline-none focus:border-emerald-500"
+                                        className="w-20 bg-white border border-slate-300 rounded-lg px-2 py-1 text-xs font-black text-slate-900 focus:outline-none focus:border-emerald-500"
                                     />
                                     <button
                                         type="button"
@@ -1007,9 +1072,9 @@ export default function SportsManagement() {
                                                 peakPrice: String(num),
                                                 customRates: newCustomRates
                                             }));
-                                            addToast({ message: `⚡ Applied ₹${num}/hr to ALL slots in 1 click!`, type: 'success' });
+                                            addToast({ message: `⚡ Applied ₹${num}/hr to ALL slots in 1 click! Click Save Setup for E2E sync.`, type: 'success' });
                                         }}
-                                        className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs px-3 py-1 rounded-lg transition-all cursor-pointer shadow-2xs"
+                                        className="bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs px-3 py-1 rounded-lg transition-all cursor-pointer shadow-xs"
                                     >
                                         Apply All
                                     </button>
@@ -1219,14 +1284,14 @@ export default function SportsManagement() {
                     {/* Quick Preset Buttons for Rates */}
                     <div>
                         <label className="block text-xs font-black uppercase text-slate-700 mb-1.5">
-                            Quick Select Hourly Preset
+                            Quick Select Hourly Presets
                         </label>
                         <div className="grid grid-cols-4 gap-2">
                             {[
-                                { label: '₹800/hr', reg: 800, peak: 1200 },
-                                { label: '₹1,000/hr', reg: 1000, peak: 1400 },
-                                { label: '₹1,200/hr', reg: 1200, peak: 1600 },
-                                { label: '₹1,500/hr', reg: 1500, peak: 2000 },
+                                { label: 'Standard (₹1k/₹1.4k)', reg: 1000, peak: 1400, night: 1800 },
+                                { label: 'Budget (₹800/₹1.2k)', reg: 800, peak: 1200, night: 1500 },
+                                { label: 'Prime (₹1.2k/₹1.6k)', reg: 1200, peak: 1600, night: 2000 },
+                                { label: 'Super (₹1.5k/₹2k)', reg: 1500, peak: 2000, night: 2500 },
                             ].map((preset) => (
                                 <button
                                     key={preset.label}
@@ -1234,7 +1299,8 @@ export default function SportsManagement() {
                                     onClick={() => setQuickPricingData(prev => ({
                                         ...prev,
                                         regularPrice: preset.reg,
-                                        peakPrice: preset.peak
+                                        peakPrice: preset.peak,
+                                        nightPrice: preset.night || preset.peak + 400
                                     }))}
                                     className={`py-2 px-2 text-xs font-black rounded-xl border transition-all cursor-pointer ${
                                         quickPricingData.regularPrice === preset.reg
@@ -1248,20 +1314,129 @@ export default function SportsManagement() {
                         </div>
                     </div>
 
-                    {/* Custom Rate Inputs */}
-                    <div className="grid grid-cols-2 gap-4">
-                        <Input 
-                            label="Regular Rate (06:00 - 17:00 Hrs)" 
-                            type="number" 
-                            value={quickPricingData.regularPrice} 
-                            onChange={(e) => setQuickPricingData({ ...quickPricingData, regularPrice: Number(e.target.value) })}
-                        />
-                        <Input 
-                            label="Peak Rate (18:00 - 23:00 Hrs)" 
-                            type="number" 
-                            value={quickPricingData.peakPrice} 
-                            onChange={(e) => setQuickPricingData({ ...quickPricingData, peakPrice: Number(e.target.value) })}
-                        />
+                    {/* Dynamic Hourly Time Windows & Rates Config */}
+                    <div className="space-y-3 bg-slate-50 p-4 rounded-2xl border border-slate-200/80">
+                        <div className="flex items-center justify-between border-b border-slate-200 pb-2">
+                            <h4 className="text-xs font-black uppercase text-slate-800 tracking-wider flex items-center gap-1.5">
+                                <span>⚡ Dynamic Time Windows & Hourly Rates</span>
+                            </h4>
+                            <span className="text-[10px] font-extrabold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full">
+                                Dynamic Hourly Pricing
+                            </span>
+                        </div>
+
+                        {/* Window 1: Regular Hours */}
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 items-end bg-white p-3 rounded-xl border border-slate-200">
+                            <div>
+                                <label className="block text-[10px] font-black uppercase text-slate-500 mb-1">From Hour</label>
+                                <input
+                                    type="time"
+                                    value={quickPricingData.regularStart || '06:00'}
+                                    onChange={(e) => setQuickPricingData({ ...quickPricingData, regularStart: e.target.value })}
+                                    className="w-full text-xs font-extrabold bg-slate-50 border border-slate-200 rounded-lg p-1.5 text-slate-800 focus:outline-none"
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-[10px] font-black uppercase text-slate-500 mb-1">To Hour</label>
+                                <input
+                                    type="time"
+                                    value={quickPricingData.regularEnd || '17:00'}
+                                    onChange={(e) => setQuickPricingData({ ...quickPricingData, regularEnd: e.target.value })}
+                                    className="w-full text-xs font-extrabold bg-slate-50 border border-slate-200 rounded-lg p-1.5 text-slate-800 focus:outline-none"
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-[10px] font-black uppercase text-emerald-700 mb-1">Regular Rate (₹/hr)</label>
+                                <Input
+                                    type="number"
+                                    value={quickPricingData.regularPrice}
+                                    onChange={(e) => setQuickPricingData({ ...quickPricingData, regularPrice: Number(e.target.value) })}
+                                    className="text-xs font-black"
+                                />
+                            </div>
+                        </div>
+
+                        {/* Window 2: Peak Evening Hours */}
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 items-end bg-amber-50/60 p-3 rounded-xl border border-amber-200/80">
+                            <div>
+                                <label className="block text-[10px] font-black uppercase text-amber-800 mb-1">Peak From</label>
+                                <input
+                                    type="time"
+                                    value={quickPricingData.peakStart || '17:00'}
+                                    onChange={(e) => setQuickPricingData({ ...quickPricingData, peakStart: e.target.value })}
+                                    className="w-full text-xs font-extrabold bg-white border border-amber-200 rounded-lg p-1.5 text-slate-800 focus:outline-none"
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-[10px] font-black uppercase text-amber-800 mb-1">Peak To</label>
+                                <input
+                                    type="time"
+                                    value={quickPricingData.peakEnd || '23:00'}
+                                    onChange={(e) => setQuickPricingData({ ...quickPricingData, peakEnd: e.target.value })}
+                                    className="w-full text-xs font-extrabold bg-white border border-amber-200 rounded-lg p-1.5 text-slate-800 focus:outline-none"
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-[10px] font-black uppercase text-amber-800 mb-1">Peak Rate (₹/hr)</label>
+                                <Input
+                                    type="number"
+                                    value={quickPricingData.peakPrice}
+                                    onChange={(e) => setQuickPricingData({ ...quickPricingData, peakPrice: Number(e.target.value) })}
+                                    className="text-xs font-black"
+                                />
+                            </div>
+                        </div>
+
+                        {/* Window 3: Late Night / Surge Hours */}
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 items-end bg-purple-50/60 p-3 rounded-xl border border-purple-200/80">
+                            <div>
+                                <label className="block text-[10px] font-black uppercase text-purple-800 mb-1">Night From</label>
+                                <input
+                                    type="time"
+                                    value={quickPricingData.nightStart || '23:00'}
+                                    onChange={(e) => setQuickPricingData({ ...quickPricingData, nightStart: e.target.value })}
+                                    className="w-full text-xs font-extrabold bg-white border border-purple-200 rounded-lg p-1.5 text-slate-800 focus:outline-none"
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-[10px] font-black uppercase text-purple-800 mb-1">Night To</label>
+                                <input
+                                    type="time"
+                                    value={quickPricingData.nightEnd || '06:00'}
+                                    onChange={(e) => setQuickPricingData({ ...quickPricingData, nightEnd: e.target.value })}
+                                    className="w-full text-xs font-extrabold bg-white border border-purple-200 rounded-lg p-1.5 text-slate-800 focus:outline-none"
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-[10px] font-black uppercase text-purple-800 mb-1">Night Rate (₹/hr)</label>
+                                <Input
+                                    type="number"
+                                    value={quickPricingData.nightPrice || 1800}
+                                    onChange={(e) => setQuickPricingData({ ...quickPricingData, nightPrice: Number(e.target.value) })}
+                                    className="text-xs font-black"
+                                />
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Weekend Dynamic Surge Multiplier */}
+                    <div className="flex items-center justify-between p-3.5 bg-emerald-50 rounded-2xl border border-emerald-200">
+                        <div className="flex items-center gap-2">
+                            <span className="text-base">⚡</span>
+                            <div>
+                                <span className="text-xs font-black text-emerald-950 block">Weekend Surge Rate (+₹{quickPricingData.weekendSurge || 200}/hr)</span>
+                                <span className="text-[10px] text-emerald-700 font-bold">Applies automatically to Saturday & Sunday slots</span>
+                            </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <input
+                                type="number"
+                                value={quickPricingData.weekendSurge || 200}
+                                onChange={(e) => setQuickPricingData({ ...quickPricingData, weekendSurge: Number(e.target.value) })}
+                                className="w-20 px-2 py-1 text-xs font-black border border-emerald-300 rounded-lg bg-white text-emerald-950 text-right focus:outline-none"
+                            />
+                            <span className="text-xs font-black text-emerald-800">₹/hr</span>
+                        </div>
                     </div>
 
                     {/* Live Calculated Payment Split Preview */}

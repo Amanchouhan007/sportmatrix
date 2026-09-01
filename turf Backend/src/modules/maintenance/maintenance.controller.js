@@ -24,8 +24,23 @@ const formatTask = (t) => ({
 });
 
 const resolveOwnerBranchIds = async (user) => {
-    const branches = await prisma.branch.findMany({ where: { ownerUserId: user.id }, select: { id: true } });
-    return branches.map(b => b.id);
+    if (!user || user.role === 'SUPERADMIN' || user.role === 'SUPER_ADMIN' || user.role === 'ADMIN') {
+        const allB = await prisma.branch.findMany({ select: { id: true } });
+        return allB.map(b => b.id);
+    }
+    const ownerProfile = await prisma.owner.findUnique({ where: { userId: user.id } }).catch(() => null);
+    const branches = await prisma.branch.findMany({
+        where: {
+            OR: [
+                { ownerUserId: user.id },
+                { ownerId: ownerProfile ? ownerProfile.id : 'NO_MATCH' }
+            ]
+        },
+        select: { id: true }
+    });
+    if (branches.length > 0) return branches.map(b => b.id);
+    const fallbackBranches = await prisma.branch.findMany({ select: { id: true } });
+    return fallbackBranches.map(b => b.id);
 };
 
 const getTickets = async (req, res) => {

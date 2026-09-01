@@ -41,10 +41,10 @@ export default function Footer() {
                 <div className="grid md:grid-cols-2 lg:grid-cols-7 gap-8">
                     <div className="lg:col-span-2 space-y-5">
                         <div className="flex items-center gap-3 mb-6">
-                            <img src="/kiaan_logo.jpg" alt="Kiaan Technologies Turf" className="w-10 h-10 rounded-xl object-cover shadow-sm border border-amber-300/40" />
+                            <img src="/images/kiaan_gold_logo.jpg?v=2" alt="Kiaan Technology Turf Cricket Arena" className="w-10 h-10 rounded-xl object-cover shadow-md border border-amber-300/40" />
                             <div className="flex flex-col">
-                                <span className="text-lg font-black text-[#111827] tracking-tight uppercase">KIAAN'S SPORTSTURF</span>
-                                <span className="text-[9px] font-extrabold text-[#16A34A] uppercase tracking-wider">Kiaan Technologies</span>
+                                <span className="text-lg font-black text-slate-900 tracking-tight uppercase">KIAAN <span className="text-amber-500 font-black">TURF</span></span>
+                                <span className="text-[9px] font-extrabold text-amber-600 uppercase tracking-wider">KIAAN TECHNOLOGY • CRICKET ARENA</span>
                             </div>
                         </div>
                         <p className="text-sm font-semibold text-[#6B7280] leading-relaxed max-w-xs">

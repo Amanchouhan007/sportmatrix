@@ -95,6 +95,12 @@ export default function OwnerPOS() {
     const [paymentStatus, setPaymentStatus] = useState('Paid') // Pending | Partial | Paid
     const [paymentMethod, setPaymentMethod] = useState('UPI') // Cash | UPI | Card | Wallet | Bank Transfer | Split Payment
     const [advanceAmount, setAdvanceAmount] = useState(0)
+    const [autoPrintReceipt, setAutoPrintReceipt] = useState(() => localStorage.getItem('pos_auto_print') !== 'false')
+
+    const toggleAutoPrint = (val) => {
+        setAutoPrintReceipt(val)
+        localStorage.setItem('pos_auto_print', String(val))
+    }
 
     // ── Add Custom Product / Ball Modal State ──
     const [isAddProductOpen, setIsAddProductOpen] = useState(false)
@@ -659,6 +665,41 @@ export default function OwnerPOS() {
         setLastBill(billData)
         setIsSuccess(true)
         addToast({ title: 'Invoice Settled', message: `Invoice ${billData.id} generated for ₹${grandTotal}`, type: 'success' })
+
+        if (autoPrintReceipt) {
+            setTimeout(() => {
+                window.print()
+            }, 200)
+        }
+    }
+
+    const handleShareWhatsApp = () => {
+        if (!lastBill) return
+        const cleanPhone = (lastBill.customerPhone || '').replace(/\D/g, '')
+        const formattedPhone = cleanPhone.length === 10 ? `91${cleanPhone}` : cleanPhone
+        const invId = lastBill.id || 'INV-001'
+        const name = lastBill.customerName || 'Customer'
+        const sport = lastBill.bookingSummary?.sport || 'Turf'
+        const court = lastBill.bookingSummary?.court || 'Pitch'
+        const slot = lastBill.bookingSummary?.slot || ''
+        const date = lastBill.date || new Date().toLocaleString()
+        const paid = lastBill.bookingSummary?.total || 0
+        const method = lastBill.method || 'UPI'
+
+        const msg = `🧾 *KIAAN TECHNOLOGY TURF - INVOICE RECEIPT*\n----------------------------------------\n*Invoice ID:* ${invId}\n*Customer:* ${name}\n*Date & Time:* ${date}\n*Venue/Slot:* ${sport} - ${court} (${slot})\n*Payment Status:* ${lastBill.paymentStatus} via ${method}\n*Grand Total Paid:* ₹${paid}\n----------------------------------------\nThank you for playing with us! 🏟️⚡`
+
+        const waUrl = formattedPhone 
+            ? `https://wa.me/${formattedPhone}?text=${encodeURIComponent(msg)}`
+            : `https://wa.me/?text=${encodeURIComponent(msg)}`
+        window.open(waUrl, '_blank')
+    }
+
+    const handleShareSMS = () => {
+        if (!lastBill) return
+        const cleanPhone = (lastBill.customerPhone || '').replace(/\D/g, '')
+        const msg = `Kiaan Turf Invoice ${lastBill.id}: Paid ₹${lastBill.bookingSummary?.total || 0} via ${lastBill.method || 'UPI'} for ${lastBill.bookingSummary?.sport || 'Booking'} (${lastBill.bookingSummary?.slot || ''}). Thank you!`
+        const smsUrl = cleanPhone ? `sms:${cleanPhone}?body=${encodeURIComponent(msg)}` : `sms:?body=${encodeURIComponent(msg)}`
+        window.location.href = smsUrl
     }
 
     const handleNewSale = () => {
@@ -765,13 +806,35 @@ export default function OwnerPOS() {
                             </div>
                         </div>
 
-                        <div className="flex gap-4 pt-4">
-                            <Button fullWidth onClick={handlePrint} size="lg" className="cursor-pointer">
-                                <HiPrinter className="mr-2" /> Print Invoice Receipt
-                            </Button>
-                            <Button fullWidth variant="outline" onClick={handleNewSale} size="lg" className="cursor-pointer">
-                                Start New Register
-                            </Button>
+                        {/* INSTANT MULTI-CHANNEL RECEIPT SHARING ACTION BAR */}
+                        <div className="space-y-3 pt-4 border-t border-slate-100">
+                            <div className="text-[11px] font-black text-slate-500 uppercase tracking-widest text-left">
+                                ⚡ INSTANT CUSTOMER RECEIPT DISPATCH
+                            </div>
+
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                                <Button 
+                                    onClick={handleShareWhatsApp} 
+                                    className="bg-[#25D366] hover:bg-[#20bd5a] text-white font-black text-xs py-3 shadow-md shadow-emerald-500/10 cursor-pointer flex items-center justify-center gap-2"
+                                >
+                                    <span>📱</span> Send WhatsApp Receipt to {lastBill.customerPhone || 'Customer'}
+                                </Button>
+                                <Button 
+                                    onClick={handleShareSMS} 
+                                    className="bg-sky-600 hover:bg-sky-700 text-white font-black text-xs py-3 shadow-md shadow-sky-500/10 cursor-pointer flex items-center justify-center gap-2"
+                                >
+                                    <span>💬</span> Send Direct SMS Receipt
+                                </Button>
+                            </div>
+
+                            <div className="flex flex-col sm:flex-row gap-3 pt-1">
+                                <Button fullWidth onClick={handlePrint} size="lg" className="bg-slate-900 hover:bg-slate-800 text-white font-black text-xs py-3.5 shadow-lg cursor-pointer flex items-center justify-center gap-2">
+                                    <HiPrinter className="w-5 h-5 text-amber-400" /> 🖨️ Thermal Print Receipt
+                                </Button>
+                                <Button fullWidth variant="outline" onClick={handleNewSale} size="lg" className="border-slate-300 hover:bg-slate-50 font-bold text-xs py-3.5 cursor-pointer text-slate-800">
+                                    Start New Register
+                                </Button>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -1311,6 +1374,18 @@ export default function OwnerPOS() {
                                             </div>
                                         </div>
                                     )}
+
+                                    <label className="flex items-center gap-2 text-xs font-bold text-slate-700 bg-slate-100 p-2.5 rounded-xl cursor-pointer hover:bg-slate-200/80 transition-colors">
+                                        <input 
+                                            type="checkbox" 
+                                            checked={autoPrintReceipt} 
+                                            onChange={(e) => toggleAutoPrint(e.target.checked)}
+                                            className="w-4 h-4 rounded text-emerald-600 focus:ring-emerald-500 accent-emerald-600 cursor-pointer" 
+                                        />
+                                        <span className="flex items-center gap-1">
+                                            ⚡ Auto-Print Receipt Instantly on Payment
+                                        </span>
+                                    </label>
 
                                     <Button
                                         fullWidth

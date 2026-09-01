@@ -2,6 +2,7 @@ import { io } from 'socket.io-client';
 import { SERVER_URL } from './api';
 
 let socket = null;
+let publicSocket = null;
 
 /** Returns the shared Socket.IO connection, creating it once per page load if a token is present. Never fabricates a connection when unauthenticated. */
 export const getSocket = () => {
@@ -15,6 +16,19 @@ export const getSocket = () => {
         socket.connect();
     }
     return socket;
+};
+
+/**
+ * Public socket — no login required. Used by the live scorecard page
+ * that customers/spectators can view without an account.
+ */
+export const getPublicSocket = () => {
+    if (!publicSocket) {
+        publicSocket = io(SERVER_URL, { autoConnect: true, reconnection: true });
+    } else if (!publicSocket.connected) {
+        publicSocket.connect();
+    }
+    return publicSocket;
 };
 
 export const joinBranchRoom = (branchId) => {

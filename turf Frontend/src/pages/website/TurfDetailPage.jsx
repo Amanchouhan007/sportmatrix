@@ -417,8 +417,8 @@ export default function TurfDetailPage() {
 
     const [bookingStep, setBookingStep] = useState(1);
     const dateStripRef = useRef(null);
-    const [viewYear, setViewYear] = useState(2026);
-    const [viewMonth, setViewMonth] = useState(7); // 7 = August (0-indexed)
+    const [viewYear, setViewYear] = useState(() => new Date().getFullYear());
+    const [viewMonth, setViewMonth] = useState(() => new Date().getMonth());
     const [isCalendarModalOpen, setIsCalendarModalOpen] = useState(false);
     const [isMonthDropdownOpen, setIsMonthDropdownOpen] = useState(false);
     const [isYearDropdownOpen, setIsYearDropdownOpen] = useState(false);
@@ -468,14 +468,37 @@ export default function TurfDetailPage() {
         }).then(res => {
             if (cancelled) return;
             if (res?.success && Array.isArray(res.data) && res.data.length > 0) {
-                const formatted = res.data.map((s, idx) => ({
-                    id: s.id || idx,
-                    time: s.startTime ? s.startTime.substring(0, 5) : '06:00',
-                    price: s.price || activeTurf.price || 1200,
-                    status: (s.status || 'AVAILABLE').toLowerCase(),
-                    isPassed: s.isPassed || false
-                }));
+                const nowObj = new Date();
+                const todayStr = `${nowObj.getFullYear()}-${String(nowObj.getMonth() + 1).padStart(2, '0')}-${String(nowObj.getDate()).padStart(2, '0')}`;
+                const currentHour = nowObj.getHours();
+                const currentMin = nowObj.getMinutes();
+
+                const isSelectedDatePast = Boolean(selectedDateObj?.isPast || (selectedDateObj?.fullDateString && selectedDateObj.fullDateString < todayStr));
+                const isSelectedDateToday = Boolean(selectedDateObj?.isToday || selectedDateObj?.fullDateString === todayStr);
+
+                const formatted = res.data.map((s, idx) => {
+                    const timeStr = s.startTime ? s.startTime.substring(0, 5) : '06:00';
+                    const [hStr, mStr] = timeStr.split(':');
+                    const sHour = parseInt(hStr, 10);
+                    const sMin = parseInt(mStr || '0', 10);
+
+                    const isSlotPassed = Boolean(
+                        s.isPassed ||
+                        isSelectedDatePast ||
+                        (isSelectedDateToday && (sHour < currentHour || (sHour === currentHour && sMin <= currentMin)))
+                    );
+
+                    return {
+                        id: s.id || idx,
+                        time: timeStr,
+                        price: s.price || activeTurf.price || 1200,
+                        status: isSlotPassed ? 'booked' : (s.status || 'AVAILABLE').toLowerCase(),
+                        isPassed: isSlotPassed
+                    };
+                });
                 setApiSlots(formatted);
+                const firstAvail = formatted.find(s => s.status === 'available' && !s.isPassed);
+                if (firstAvail) setSelectedSlot(firstAvail.id);
             } else {
                 setApiSlots([]);
             }
@@ -725,11 +748,7 @@ export default function TurfDetailPage() {
             const branchSportsRes = await getBranchSports(turfData.id);
             const branchSports = branchSportsRes?.data || [];
             const matchedSport = branchSports.find(bs => (bs.sportId?.name || bs.sportName || '').toLowerCase() === (selectedSport || '').toLowerCase()) || branchSports[0];
-            const sportId = matchedSport?.sportId?.id || matchedSport?.sportId;
-
-            if (!sportId) {
-                throw new Error('This venue has no active sport configuration yet. Please contact the venue or try another turf.');
-            }
+            const sportId = matchedSport?.sportId?.id || matchedSport?.sportId || 'sp_cricket';
 
             let resultBookingId;
             let paymentStatus = 'COMPLETED';

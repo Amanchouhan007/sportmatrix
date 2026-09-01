@@ -79,9 +79,17 @@ export default function StaffManagement() {
     useEffect(() => { fetchStaff() }, [fetchStaff])
 
     useEffect(() => {
+        const activeSelected = localStorage.getItem('selectedBranchId');
+        if (activeSelected) setMyBranchId(activeSelected);
+
         getBranches().then(res => {
-            const branch = (res?.data || res || [])[0]
-            if (branch) setMyBranchId(branch.id)
+            const list = res?.data || (Array.isArray(res) ? res : []);
+            if (Array.isArray(list) && list.length > 0) {
+                const matched = list.find(b => b.id === activeSelected) || list[0];
+                const targetId = matched.id || matched._id;
+                setMyBranchId(targetId);
+                localStorage.setItem('selectedBranchId', targetId);
+            }
         }).catch(() => {})
     }, [])
 
@@ -102,19 +110,34 @@ export default function StaffManagement() {
                 })
                 addToast({ title: 'Staff Updated', message: 'Roster details and password successfully updated.', type: 'success' })
             } else {
-                if (!myBranchId) {
+                let targetBranchId = myBranchId || localStorage.getItem('selectedBranchId');
+                if (!targetBranchId) {
+                    try {
+                        const bRes = await getBranches();
+                        const list = bRes?.data || (Array.isArray(bRes) ? bRes : []);
+                        targetBranchId = list[0]?.id || list[0]?._id;
+                    } catch (e) {}
+                }
+
+                if (!targetBranchId) {
                     addToast({ title: 'No Branch Found', message: 'No branch is linked to this account yet.', type: 'error' })
                     return
                 }
+
                 const res = await createStaff({
-                    branchId: myBranchId, name: currentStaff.name, email: currentStaff.email, phone: currentStaff.phone,
-                    role: ROLE_TO_BACKEND[currentStaff.role], shift: SHIFT_TO_BACKEND[currentStaff.shift],
-                    password: currentStaff.password || undefined,
+                    branchId: targetBranchId, 
+                    name: currentStaff.name, 
+                    email: currentStaff.email, 
+                    phone: currentStaff.phone,
+                    role: ROLE_TO_BACKEND[currentStaff.role], 
+                    shift: SHIFT_TO_BACKEND[currentStaff.shift],
+                    password: currentStaff.password ? currentStaff.password.trim() : undefined,
                     dutyFee: currentStaff.dutyFee || 300
                 })
+                const tempPass = res?.data?.temporaryPassword || currentStaff.password || 'Staff@1234'
                 addToast({
                     title: 'Staff Account Created',
-                    message: `${currentStaff.name} can now log in. Temporary password: ${res.data.temporaryPassword}`,
+                    message: `${currentStaff.name} can now log in. Password: ${tempPass}`,
                     type: 'success'
                 })
             }
@@ -123,7 +146,8 @@ export default function StaffManagement() {
             setCurrentStaff(EMPTY_FORM)
             fetchStaff()
         } catch (err) {
-            addToast({ title: 'Save Failed', message: err.message || 'Could not save this staff member.', type: 'error' })
+            const errMsg = err.response?.data?.message || err.message || 'Could not save this staff member.';
+            addToast({ title: 'Save Failed', message: errMsg, type: 'error' })
         } finally {
             setIsSaving(false)
         }

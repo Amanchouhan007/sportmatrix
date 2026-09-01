@@ -180,7 +180,7 @@ const cancelBooking = async (req, res) => {
  * rows for staff accounts.
  */
 const resolveBranchFilterForUser = async (req, branchId) => {
-    if (!req.user || req.user.role === 'SUPER_ADMIN' || req.user.role === 'ADMIN') {
+    if (!req.user || req.user.role === 'SUPER_ADMIN' || req.user.role === 'SUPERADMIN' || req.user.role === 'ADMIN' || req.user.role === 'OWNER') {
         return branchId ? { branchId } : {};
     }
     if (req.user.role === 'STAFF') {
@@ -204,7 +204,6 @@ const resolveBranchFilterForUser = async (req, branchId) => {
         return { branchId: { in: branches.map(b => b.id) } };
     }
 
-    // Fallback for admin/owner without specific branch restriction
     return {};
 };
 
@@ -492,7 +491,7 @@ const lookupGuestBookingsByPhone = async (req, res) => {
             success: true,
             count: bookings.length,
             data: bookings.map(b => {
-                const venueName = b.slot?.branch?.branchName || 'E2E Test Arena';
+                const venueName = b.slot?.branch?.branchName || b.branchName || '';
                 const dateStr = b.slot?.slotDate ? b.slot.slotDate.toISOString().split('T')[0] : 'Today';
                 const timeStr = b.slot?.startTime ? b.slot.startTime.substring(0, 5) : '18:00';
                 const bCode = b.bookingCode || `BK-${b.id}`;

@@ -21,8 +21,23 @@ const formatLead = (c) => ({
 });
 
 const resolveOwnerBranchIds = async (user) => {
-    const branches = await prisma.branch.findMany({ where: { ownerUserId: user.id }, select: { id: true } });
-    return branches.map(b => b.id);
+    if (!user || user.role === 'SUPERADMIN' || user.role === 'SUPER_ADMIN' || user.role === 'ADMIN') {
+        const allB = await prisma.branch.findMany({ select: { id: true } });
+        return allB.map(b => b.id);
+    }
+    const ownerProfile = await prisma.owner.findUnique({ where: { userId: user.id } }).catch(() => null);
+    const branches = await prisma.branch.findMany({
+        where: {
+            OR: [
+                { ownerUserId: user.id },
+                { ownerId: ownerProfile ? ownerProfile.id : 'NO_MATCH' }
+            ]
+        },
+        select: { id: true }
+    });
+    if (branches.length > 0) return branches.map(b => b.id);
+    const fallbackBranches = await prisma.branch.findMany({ select: { id: true } });
+    return fallbackBranches.map(b => b.id);
 };
 
 /**
@@ -70,7 +85,7 @@ const getLeads = async (req, res) => {
                 leadsMap.set(phoneKey, {
                     id: `bk_lead_${b.id}`,
                     branchId: b.slot?.branchId || null,
-                    branchName: b.slot?.branch?.branchName || 'E2E Test Arena',
+                    branchName: b.slot?.branch?.branchName || '',
                     name: b.customerName,
                     phone: b.mobileNumber,
                     email: null,
@@ -125,7 +140,7 @@ const getLeads = async (req, res) => {
                     leadsMap.set(umpKey, {
                         id: u.id,
                         branchId: null,
-                        branchName: u.officiatingLocations ? u.officiatingLocations.replace(' (Indore)', '').replace(' (Pune)', '') : 'E2E Test Arena',
+                        branchName: u.officiatingLocations ? u.officiatingLocations.replace(' (Indore)', '').replace(' (Pune)', '') : '',
                         name: u.fullName || 'Verified Referee',
                         phone: '9876543210',
                         email: null,

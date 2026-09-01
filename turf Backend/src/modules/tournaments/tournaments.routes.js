@@ -29,7 +29,8 @@ const {
     getSettings,
     updateSettings,
     getAllTournamentMatches,
-    saveLiveMatchScore
+    saveLiveMatchScore,
+    getLiveMatches
 } = require('./tournaments.controller');
 
 const { verifyToken, optionalToken, authorizeRoles } = require('../../middleware/auth.middleware');
@@ -37,6 +38,7 @@ const { verifyToken, optionalToken, authorizeRoles } = require('../../middleware
 const router = express.Router();
 
 // Publicly readable & Owner-scoped endpoints
+router.get('/matches/live', getLiveMatches);         // 🔴 Public live scorecard feed
 router.get('/matches/all', optionalToken, getAllTournamentMatches);
 router.post('/matches/save-score', optionalToken, saveLiveMatchScore);
 router.get('/leaderboard/global', optionalToken, getGlobalLeaderboard);

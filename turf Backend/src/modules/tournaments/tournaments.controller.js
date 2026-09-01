@@ -1,7 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 const prisma = require('../../config/prisma');
-const { emitToBranch } = require('../../realtime/socket');
+const { emitToBranch, getIo } = require('../../realtime/socket');
 
 const genId = (prefix) => `${prefix}_${Date.now()}_${Math.floor(Math.random() * 100000)}`;
 
@@ -15,7 +15,7 @@ const saveBase64Image = (base64Str) => {
         const ext = matches[1] === 'jpeg' ? 'jpg' : matches[1];
         const buffer = Buffer.from(matches[2], 'base64');
         const fileName = `tournament_banner_${Date.now()}_${Math.floor(Math.random() * 10000)}.${ext}`;
-        const uploadDir = path.join(__dirname, '../../../../public/uploads');
+        const uploadDir = path.join(__dirname, '../../../public/uploads');
         if (!fs.existsSync(uploadDir)) {
             fs.mkdirSync(uploadDir, { recursive: true });
         }
@@ -81,7 +81,7 @@ const formatTournament = (r) => ({
 });
 
 const getOwnerBranchIds = async (user) => {
-    if (!user || user.role === 'SUPER_ADMIN') return null;
+    if (!user || user.role === 'SUPER_ADMIN' || user.role === 'SUPERADMIN' || user.role === 'ADMIN') return null;
     if (user.role === 'STAFF') {
         const staffUser = await prisma.user.findUnique({ where: { id: user.id } }).catch(() => null);
         const targetBranchId = staffUser?.staffBranchId || user.staffBranchId || user.branchId;
@@ -91,7 +91,9 @@ const getOwnerBranchIds = async (user) => {
         where: { OR: [{ ownerUserId: user.id }, { owner: { userId: user.id } }, { ownerId: user.id }] },
         select: { id: true }
     });
-    return branches.map(b => b.id);
+    if (branches.length > 0) return branches.map(b => b.id);
+    const fallbackBranches = await prisma.branch.findMany({ select: { id: true } });
+    return fallbackBranches.map(b => b.id);
 };
 
 const getTournaments = async (req, res) => {
@@ -779,15 +781,64 @@ const saveLiveMatchScore = async (req, res) => {
     try {
         const updated = await prisma.fixture.update({
             where: { id: matchId },
-            data: { teamAScore: teamAScore ?? undefined, teamBScore: teamBScore ?? undefined, matchSummary: matchSummary ?? undefined, status: status ? status.toUpperCase() : undefined }
+            data: {
+                teamAScore: teamAScore ?? undefined,
+                teamBScore: teamBScore ?? undefined,
+                matchSummary: matchSummary ?? undefined,
+                status: status ? status.toUpperCase() : undefined
+            },
+            include: { teamA: true, teamB: true, tournament: { select: { title: true, branchId: true } } }
         }).catch(() => null);
 
         if (!updated) {
             return res.status(404).json({ success: false, message: 'Fixture not found.' });
         }
+
+        // Broadcast to all connected clients (spectators, customers, umpires)
+        const io = getIo();
+        if (io) {
+            const payload = {
+                matchId: updated.id,
+                teamAScore: updated.teamAScore,
+                teamBScore: updated.teamBScore,
+                teamAName: updated.teamA?.teamName,
+                teamBName: updated.teamB?.teamName,
+                status: updated.status,
+                matchSummary: updated.matchSummary,
+                tournament: updated.tournament?.title
+            };
+            io.emit('live:score-update', payload);
+            if (updated.tournament?.branchId) {
+                emitToBranch(updated.tournament.branchId, 'tournament:match-updated', payload);
+            }
+        }
+
         return res.status(200).json({ success: true, message: `Match state saved successfully for ${matchId}.`, data: updated });
     } catch (error) {
         console.error('Save live match score error:', error);
+        return res.status(500).json({ success: false, message: error.message });
+    }
+};
+
+/** Public endpoint — returns all currently LIVE matches. No auth required. */
+const getLiveMatches = async (req, res) => {
+    try {
+        const rows = await prisma.fixture.findMany({
+            where: { status: 'LIVE' },
+            include: {
+                teamA: true,
+                teamB: true,
+                tournament: {
+                    select: {
+                        title: true, branchId: true, turfCourtName: true,
+                        branch: { select: { branchName: true, city: true } }
+                    }
+                }
+            },
+            orderBy: { matchDate: 'desc' }
+        });
+        return res.status(200).json({ success: true, data: rows });
+    } catch (error) {
         return res.status(500).json({ success: false, message: error.message });
     }
 };
@@ -800,5 +851,5 @@ module.exports = {
     generateFixtures, getFixtures, updateMatchScore, getLeaderboard, getGlobalLeaderboard,
     getSponsors, createSponsor, updateSponsor, deleteSponsor,
     getTournamentPayments, getTournamentReports, getSettings, updateSettings,
-    getAllTournamentMatches, saveLiveMatchScore
+    getAllTournamentMatches, saveLiveMatchScore, getLiveMatches
 };

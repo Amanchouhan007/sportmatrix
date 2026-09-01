@@ -78,11 +78,11 @@ export default function Navbar() {
                     }
                 }}>
                     <div className="relative">
-                        <img src="/kiaan_logo.jpg" alt="Kiaan Technologies Turf" className="w-10 h-10 rounded-xl object-cover shadow-md border border-amber-300/40" />
+                        <img src="/images/kiaan_gold_logo.jpg?v=2" alt="Kiaan Technology Turf Cricket Arena" className="w-10 h-10 rounded-xl object-cover shadow-md border border-amber-300/40" />
                     </div>
                     <div className="flex flex-col">
-                        <span className="text-lg font-black text-[#111827] tracking-tight leading-none uppercase">KIAAN'S TURF<span className="text-[#16A34A] text-xl font-black">.</span></span>
-                        <span className="text-[8px] font-black text-emerald-700 tracking-[0.2em] uppercase mt-0.5">KIAAN TECHNOLOGIES</span>
+                        <span className="text-lg font-black text-slate-900 tracking-tight leading-none uppercase">KIAAN <span className="text-amber-500 font-black">TURF</span></span>
+                        <span className="text-[8px] font-black text-amber-600 tracking-[0.18em] uppercase mt-0.5">KIAAN TECHNOLOGY • CRICKET ARENA</span>
                     </div>
                 </div>
 

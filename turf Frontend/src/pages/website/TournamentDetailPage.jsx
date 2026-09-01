@@ -17,20 +17,60 @@ const jerseyColorOptions = [
     { value: 'Purple', label: 'Deep Purple', color: '#9333EA' },
 ];
 
-// Fallback bracket for display when no API fixtures available
-const fallbackBracketRounds = [
-    {
-        name: 'Quarter Finals', matches: [
-            { teams: [{ seed: 1, name: 'Vijay Nagar Blasters', score: '148/4', winner: true }, { seed: 2, name: 'Palasia Super Strikers', score: '136/7' }] },
-            { teams: [{ seed: 3, name: 'Bhawarkua Titans', score: '162/3', winner: true }, { seed: 4, name: 'Chappan Strikers', score: '158/8' }] },
-        ]
-    },
-    {
-        name: 'Final', matches: [
-            { teams: [{ seed: 1, name: 'Vijay Nagar Blasters', score: 'Live Soon' }, { seed: 3, name: 'Bhawarkua Titans', score: 'Live Soon' }] },
-        ]
-    },
-]
+// Clean dynamic bracket generator for newly created tournaments or awaiting draws
+const generateCleanStructureBracket = (tournament, registeredTeams = []) => {
+    const teams = Array.isArray(registeredTeams) ? registeredTeams : [];
+    const maxT = Number(tournament?.maxTeams || tournament?.maximumTeams || 8);
+    const getTeamName = (index, fallbackLabel) => {
+        if (teams[index] && (teams[index].team_name || teams[index].name)) {
+            return teams[index].team_name || teams[index].name;
+        }
+        return fallbackLabel;
+    };
+
+    if (maxT <= 4) {
+        return [
+            {
+                name: 'Semi Finals',
+                matches: [
+                    { teams: [{ seed: 1, name: getTeamName(0, 'Slot #1 (TBD)'), score: 'Scheduled' }, { seed: 2, name: getTeamName(1, 'Slot #2 (TBD)'), score: 'Scheduled' }] },
+                    { teams: [{ seed: 3, name: getTeamName(2, 'Slot #3 (TBD)'), score: 'Scheduled' }, { seed: 4, name: getTeamName(3, 'Slot #4 (TBD)'), score: 'Scheduled' }] }
+                ]
+            },
+            {
+                name: 'Final',
+                matches: [
+                    { teams: [{ seed: 1, name: 'Winner SF 1', score: 'Upcoming' }, { seed: 2, name: 'Winner SF 2', score: 'Upcoming' }] }
+                ]
+            }
+        ];
+    }
+
+    return [
+        {
+            name: 'Quarter Finals',
+            matches: [
+                { teams: [{ seed: 1, name: getTeamName(0, 'Slot #1 (TBD)'), score: 'Scheduled' }, { seed: 2, name: getTeamName(1, 'Slot #2 (TBD)'), score: 'Scheduled' }] },
+                { teams: [{ seed: 3, name: getTeamName(2, 'Slot #3 (TBD)'), score: 'Scheduled' }, { seed: 4, name: getTeamName(3, 'Slot #4 (TBD)'), score: 'Scheduled' }] },
+                { teams: [{ seed: 5, name: getTeamName(4, 'Slot #5 (TBD)'), score: 'Scheduled' }, { seed: 6, name: getTeamName(5, 'Slot #6 (TBD)'), score: 'Scheduled' }] },
+                { teams: [{ seed: 7, name: getTeamName(6, 'Slot #7 (TBD)'), score: 'Scheduled' }, { seed: 8, name: getTeamName(7, 'Slot #8 (TBD)'), score: 'Scheduled' }] }
+            ]
+        },
+        {
+            name: 'Semi Finals',
+            matches: [
+                { teams: [{ seed: 1, name: 'Winner QF 1', score: 'Upcoming' }, { seed: 2, name: 'Winner QF 2', score: 'Upcoming' }] },
+                { teams: [{ seed: 3, name: 'Winner QF 3', score: 'Upcoming' }, { seed: 4, name: 'Winner QF 4', score: 'Upcoming' }] }
+            ]
+        },
+        {
+            name: 'Final',
+            matches: [
+                { teams: [{ seed: 1, name: 'Winner SF 1', score: 'Upcoming' }, { seed: 2, name: 'Winner SF 2', score: 'Upcoming' }] }
+            ]
+        }
+    ];
+};
 
 // Default rules and perks based on sport
 const getDefaultRules = (sport) => {
@@ -199,7 +239,7 @@ export default function TournamentDetailPage() {
             })
             return acc
         }, {})).map(([name, matches]) => ({ name, matches }))
-        : fallbackBracketRounds
+        : generateCleanStructureBracket(tournament, tournament?.teams || [])
 
     if (loading) {
         return (

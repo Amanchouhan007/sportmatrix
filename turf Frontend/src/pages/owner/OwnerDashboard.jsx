@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
+import { createPortal } from 'react-dom'
 import { useNavigate } from 'react-router-dom'
 import Card from '../../components/ui/Card'
 import StatCard from '../../components/ui/StatCard'
@@ -7,6 +8,7 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContaine
 import { 
     HiLightningBolt, 
     HiUsers, 
+    HiUserGroup,
     HiCurrencyRupee, 
     HiCalendar, 
     HiClock, 
@@ -15,7 +17,8 @@ import {
     HiPencil,
     HiXCircle,
     HiCreditCard,
-    HiArrowSmUp
+    HiArrowSmUp,
+    HiSearch
 } from 'react-icons/hi'
 import { useAuth } from '../../context/AuthContext'
 import { useToast } from '../../components/ui/Toast'
@@ -64,6 +67,11 @@ export default function OwnerDashboard() {
     const [historyTab, setHistoryTab] = useState('DAY_BY_DAY') // 'DAY_BY_DAY' | 'WEEKLY' | 'ALL_LOGS'
     const [historySearchQuery, setHistorySearchQuery] = useState('')
 
+    // Interactive Dashboard Bookings Filtering State
+    const [bookingFilterPeriod, setBookingFilterPeriod] = useState('ALL') // 'ALL' | 'TODAY' | 'WEEKLY' | 'MONTHLY' | 'SPECIFIC_DATE'
+    const [selectedBookingDate, setSelectedBookingDate] = useState('')
+    const [bookingSearchQuery, setBookingSearchQuery] = useState('')
+
     // 100% Database-Authoritative History State
     const [historyAnalytics, setHistoryAnalytics] = useState({
         dailyHistory: [],
@@ -90,6 +98,10 @@ export default function OwnerDashboard() {
             setLoadingHistory(false)
         }
     }, [user])
+
+    useEffect(() => {
+        fetchHistory()
+    }, [fetchHistory])
 
     useEffect(() => {
         if (isHistoryModalOpen) {
@@ -153,6 +165,49 @@ export default function OwnerDashboard() {
             ? DEFAULT_PEAK_DATA_7DAYS 
             : DEFAULT_PEAK_DATA_30DAYS
 
+    // Filtered Bookings Logic for Dashboard Table
+    const rawLogs = historyAnalytics.allLogs && historyAnalytics.allLogs.length > 0
+        ? historyAnalytics.allLogs
+        : (stats.recentBookings || []);
+
+    const filteredDashboardBookings = rawLogs.filter(b => {
+        const now = new Date();
+        const bDateStr = b.date || b.createdAt || '';
+
+        if (bookingFilterPeriod === 'TODAY') {
+            const todayLabel = `${now.getDate()} ${now.toLocaleString('en-US', { month: 'short' })} ${now.getFullYear()}`;
+            const todayIso = now.toISOString().split('T')[0];
+            if (!bDateStr.includes(todayLabel) && !bDateStr.includes(todayIso) && b.time !== 'Just now' && !b.id?.startsWith('pay_')) {
+                return false;
+            }
+        } else if (bookingFilterPeriod === 'WEEKLY') {
+            const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+            const bDate = b.createdAt ? new Date(b.createdAt) : new Date();
+            if (bDate < sevenDaysAgo) return false;
+        } else if (bookingFilterPeriod === 'MONTHLY') {
+            const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+            const bDate = b.createdAt ? new Date(b.createdAt) : new Date();
+            if (bDate < thirtyDaysAgo) return false;
+        } else if (bookingFilterPeriod === 'SPECIFIC_DATE' && selectedBookingDate) {
+            const pickDate = new Date(selectedBookingDate);
+            const pickLabel = `${pickDate.getDate()} ${pickDate.toLocaleString('en-US', { month: 'short' })} ${pickDate.getFullYear()}`;
+            if (!bDateStr.includes(selectedBookingDate) && !bDateStr.includes(pickLabel)) {
+                return false;
+            }
+        }
+
+        if (bookingSearchQuery.trim()) {
+            const q = bookingSearchQuery.toLowerCase();
+            const matchesCust = (b.customer || '').toLowerCase().includes(q);
+            const matchesSport = (b.sport || '').toLowerCase().includes(q);
+            const matchesCourt = (b.court || '').toLowerCase().includes(q);
+            const matchesAmt = (b.amount || '').toString().includes(q);
+            if (!matchesCust && !matchesSport && !matchesCourt && !matchesAmt) return false;
+        }
+
+        return true;
+    });
+
     return (
         <div className="space-y-6 animate-in fade-in duration-300">
             {/* ── 1. Compact Dashboard Header ── */}
@@ -197,104 +252,104 @@ export default function OwnerDashboard() {
                     label="Today's Revenue"
                     value={`₹${stats.todaysRevenue.toLocaleString()}`}
                     change="Live MySQL Data"
-                    trend="up"
-                    icon={<HiCurrencyRupee />}
-                    colorTheme="emerald"
+                    changeType="positive"
+                    icon={<HiCurrencyRupee className="w-5 h-5 text-emerald-600" />}
+                    accentColor="emerald"
                 />
 
                 <StatCard
                     label="Today's Bookings"
-                    value={stats.todaysBookings}
+                    value={stats.todaysBookings.toString()}
                     change="Real-time DB"
-                    trend="up"
-                    icon={<HiCalendar />}
-                    colorTheme="blue"
+                    changeType="positive"
+                    icon={<HiCalendar className="w-5 h-5 text-blue-600" />}
+                    accentColor="blue"
                 />
 
                 <StatCard
                     label="Active Matches"
-                    value={stats.activeMatches}
+                    value={stats.activeMatches.toString()}
                     change="Active matches live"
-                    trend="up"
-                    icon={<HiUsers />}
-                    colorTheme="purple"
+                    changeType="positive"
+                    icon={<HiUserGroup className="w-5 h-5 text-purple-600" />}
+                    accentColor="purple"
                 />
 
                 <StatCard
                     label="Upcoming Events"
-                    value={stats.upcomingEvents}
+                    value={stats.upcomingEvents.toString()}
                     change="Next cup in 3 days"
-                    trend="up"
-                    icon={<HiClock />}
-                    colorTheme="amber"
+                    changeType="positive"
+                    icon={<HiClock className="w-5 h-5 text-amber-600" />}
+                    accentColor="amber"
                 />
             </div>
 
-            {/* ── 3. Peak Occupancy Analysis Section ── */}
-            <div className="bg-white rounded-[20px] border border-slate-200/80 p-5 sm:p-6 shadow-[0_4px_20px_rgba(0,0,0,0.03)] space-y-6">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            {/* ── 3. Chart Section: Peak Occupancy Analysis ── */}
+            <div className="bg-white rounded-[20px] border border-slate-200/80 p-5 sm:p-6 shadow-[0_4px_20px_rgba(0,0,0,0.03)] space-y-4">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                     <div>
                         <h2 className="text-base sm:text-lg font-black text-slate-900 tracking-tight">Peak Occupancy Analysis</h2>
                         <p className="text-xs text-slate-500 font-medium mt-0.5">Hourly court utilization tracking</p>
                     </div>
 
-                    <div className="flex items-center gap-3">
-                        {/* Interactive Range Selector Tabs */}
-                        <div className="inline-flex p-1 rounded-xl bg-slate-100/90 border border-slate-200/70 gap-1 text-xs font-bold">
-                            <button
-                                onClick={() => setChartRange('TODAY')}
-                                className={`px-3 py-1 rounded-lg transition-all cursor-pointer ${
-                                    chartRange === 'TODAY'
-                                        ? 'bg-white text-[#10B981] shadow-2xs font-extrabold'
-                                        : 'text-slate-600 hover:text-slate-900'
-                                }`}
-                            >
-                                Today
-                            </button>
-                            <button
-                                onClick={() => setChartRange('7DAYS')}
-                                className={`px-3 py-1 rounded-lg transition-all cursor-pointer ${
-                                    chartRange === '7DAYS'
-                                        ? 'bg-white text-[#10B981] shadow-2xs font-extrabold'
-                                        : 'text-slate-600 hover:text-slate-900'
-                                }`}
-                            >
-                                7 Days
-                            </button>
-                            <button
-                                onClick={() => setChartRange('30DAYS')}
-                                className={`px-3 py-1 rounded-lg transition-all cursor-pointer ${
-                                    chartRange === '30DAYS'
-                                        ? 'bg-white text-[#10B981] shadow-2xs font-extrabold'
-                                        : 'text-slate-600 hover:text-slate-900'
-                                }`}
-                            >
-                                30 Days
-                            </button>
-                        </div>
-
-                        <Badge variant="primary">Live Status</Badge>
+                    <div className="flex items-center gap-1.5 p-1 bg-slate-100/80 rounded-xl border border-slate-200/60 self-start sm:self-auto">
+                        <button
+                            onClick={() => setChartRange('TODAY')}
+                            className={`px-3 py-1.5 rounded-lg text-xs font-black transition-all cursor-pointer ${
+                                chartRange === 'TODAY' 
+                                    ? 'bg-white text-emerald-600 shadow-xs' 
+                                    : 'text-slate-600 hover:text-slate-900'
+                            }`}
+                        >
+                            Today
+                        </button>
+                        <button
+                            onClick={() => setChartRange('7DAYS')}
+                            className={`px-3 py-1.5 rounded-lg text-xs font-black transition-all cursor-pointer ${
+                                chartRange === '7DAYS' 
+                                    ? 'bg-white text-emerald-600 shadow-xs' 
+                                    : 'text-slate-600 hover:text-slate-900'
+                            }`}
+                        >
+                            7 Days
+                        </button>
+                        <button
+                            onClick={() => setChartRange('30DAYS')}
+                            className={`px-3 py-1.5 rounded-lg text-xs font-black transition-all cursor-pointer ${
+                                chartRange === '30DAYS' 
+                                    ? 'bg-white text-emerald-600 shadow-xs' 
+                                    : 'text-slate-600 hover:text-slate-900'
+                            }`}
+                        >
+                            30 Days
+                        </button>
+                        <span className="h-4 w-px bg-slate-300 mx-1" />
+                        <span className="px-2 py-1 text-[11px] font-extrabold text-emerald-600 bg-emerald-50 rounded-md border border-emerald-200/50">
+                            Live Status
+                        </span>
                     </div>
                 </div>
 
-                <div className="h-72 w-full pt-2">
-                    <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
+                <div className="h-64 sm:h-72 w-full pt-2">
+                    <ResponsiveContainer width="100%" height="100%">
                         <BarChart data={activeChartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                            <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
+                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E2E8F0" />
                             <XAxis 
                                 dataKey="h" 
-                                tick={{ fontSize: 11, fill: '#64748b', fontWeight: '600' }} 
-                                axisLine={false} 
                                 tickLine={false} 
+                                axisLine={false} 
+                                tick={{ fill: '#64748B', fontSize: 11, fontWeight: 700 }}
                             />
                             <YAxis 
-                                tick={{ fontSize: 11, fill: '#64748b', fontWeight: '600' }} 
-                                tickFormatter={v => `${v}%`} 
-                                axisLine={false} 
                                 tickLine={false} 
+                                axisLine={false} 
+                                tick={{ fill: '#64748B', fontSize: 11, fontWeight: 700 }}
+                                tickFormatter={(v) => `${v}%`}
+                                domain={[0, 100]}
                             />
-                            <Tooltip
-                                cursor={{ fill: 'rgba(16, 185, 129, 0.06)' }}
+                            <Tooltip 
+                                cursor={{ fill: 'rgba(226, 232, 240, 0.4)' }}
                                 content={({ active, payload }) => {
                                     if (active && payload && payload.length) {
                                         const data = payload[0].payload
@@ -315,21 +370,116 @@ export default function OwnerDashboard() {
                 </div>
             </div>
 
-            {/* ── 4. Today's Bookings Data Section ── */}
-            <div className="bg-white rounded-[20px] border border-slate-200/80 p-5 sm:p-6 shadow-[0_4px_20px_rgba(0,0,0,0.03)] space-y-5">
-                <div className="flex items-center justify-between">
+            {/* ── 4. Premium Bookings Overview & Controller Section ── */}
+            <div className="bg-white rounded-[24px] border border-slate-200/90 p-5 sm:p-6 shadow-[0_8px_30px_rgb(0,0,0,0.04)] space-y-5">
+                {/* Section Header */}
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-4">
                     <div>
-                        <h2 className="text-base sm:text-lg font-black text-slate-900 tracking-tight">Today&apos;s Bookings</h2>
-                        <p className="text-xs text-slate-500 font-medium mt-0.5">Scheduled slots for match days</p>
+                        <div className="flex items-center gap-2.5">
+                            <h2 className="text-lg font-black text-slate-900 tracking-tight">Bookings Overview & Live Schedule</h2>
+                            <span className="px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200/70 text-[11px] font-black">
+                                {filteredDashboardBookings.length} Matches
+                            </span>
+                        </div>
+                        <p className="text-xs text-slate-500 font-medium mt-1">Filter by timeline or select a specific calendar date to audit match history</p>
                     </div>
 
                     <button
                         onClick={() => navigate('/admin/bookings')}
-                        className="text-xs font-extrabold text-[#10B981] hover:text-emerald-700 hover:underline cursor-pointer flex items-center gap-1"
+                        className="self-start sm:self-auto px-4 py-2 text-xs font-black text-white bg-slate-900 hover:bg-emerald-600 rounded-xl transition-all shadow-md cursor-pointer flex items-center gap-2"
                     >
-                        <span>View All</span>
-                        <span>→</span>
+                        <span>View Full Ledger</span>
+                        <span>➔</span>
                     </button>
+                </div>
+
+                {/* Dedicated Filter & Control Bar */}
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 bg-slate-50/90 p-3 rounded-2xl border border-slate-200/70">
+                    {/* Period Filter Tabs */}
+                    <div className="flex flex-wrap items-center gap-1.5">
+                        <button
+                            onClick={() => setBookingFilterPeriod('ALL')}
+                            className={`px-3.5 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer ${
+                                bookingFilterPeriod === 'ALL'
+                                    ? 'bg-emerald-600 text-white shadow-sm'
+                                    : 'bg-white text-slate-600 hover:text-slate-900 border border-slate-200/60 hover:bg-slate-100'
+                            }`}
+                        >
+                            All Bookings
+                        </button>
+                        <button
+                            onClick={() => setBookingFilterPeriod('TODAY')}
+                            className={`px-3.5 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer ${
+                                bookingFilterPeriod === 'TODAY'
+                                    ? 'bg-emerald-600 text-white shadow-sm'
+                                    : 'bg-white text-slate-600 hover:text-slate-900 border border-slate-200/60 hover:bg-slate-100'
+                            }`}
+                        >
+                            Today
+                        </button>
+                        <button
+                            onClick={() => setBookingFilterPeriod('WEEKLY')}
+                            className={`px-3.5 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer ${
+                                bookingFilterPeriod === 'WEEKLY'
+                                    ? 'bg-emerald-600 text-white shadow-sm'
+                                    : 'bg-white text-slate-600 hover:text-slate-900 border border-slate-200/60 hover:bg-slate-100'
+                            }`}
+                        >
+                            7 Days
+                        </button>
+                        <button
+                            onClick={() => setBookingFilterPeriod('MONTHLY')}
+                            className={`px-3.5 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer ${
+                                bookingFilterPeriod === 'MONTHLY'
+                                    ? 'bg-emerald-600 text-white shadow-sm'
+                                    : 'bg-white text-slate-600 hover:text-slate-900 border border-slate-200/60 hover:bg-slate-100'
+                            }`}
+                        >
+                            30 Days
+                        </button>
+                    </div>
+
+                    {/* Right Controls: Calendar Picker + Search Input */}
+                    <div className="flex flex-wrap items-center gap-2.5">
+                        {/* Interactive Calendar Date Picker */}
+                        <div className="flex items-center gap-2 px-3 py-1.5 bg-white rounded-xl border border-slate-200/90 shadow-2xs">
+                            <HiCalendar className="w-4 h-4 text-emerald-600 shrink-0" />
+                            <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Date:</span>
+                            <input
+                                type="date"
+                                value={selectedBookingDate}
+                                onChange={(e) => {
+                                    setSelectedBookingDate(e.target.value);
+                                    if (e.target.value) setBookingFilterPeriod('SPECIFIC_DATE');
+                                }}
+                                className="bg-transparent text-xs font-black text-slate-800 focus:outline-none cursor-pointer"
+                            />
+                            {selectedBookingDate && (
+                                <button
+                                    onClick={() => {
+                                        setSelectedBookingDate('');
+                                        setBookingFilterPeriod('ALL');
+                                    }}
+                                    className="text-slate-400 hover:text-rose-600 font-bold text-xs ml-1 cursor-pointer"
+                                    title="Reset Date"
+                                >
+                                    ✕
+                                </button>
+                            )}
+                        </div>
+
+                        {/* Search Input */}
+                        <div className="relative flex-1 sm:flex-initial">
+                            <HiSearch className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                            <input
+                                type="text"
+                                placeholder="Search customer, sport, court..."
+                                value={bookingSearchQuery}
+                                onChange={(e) => setBookingSearchQuery(e.target.value)}
+                                className="pl-8 pr-3 py-1.5 rounded-xl border border-slate-200/90 text-xs font-semibold text-slate-800 bg-white focus:ring-2 focus:ring-emerald-500 w-full sm:w-56 shadow-2xs transition-all outline-none"
+                            />
+                        </div>
+                    </div>
                 </div>
 
                 {/* Data Table */}
@@ -337,7 +487,7 @@ export default function OwnerDashboard() {
                     <table className="w-full text-xs text-left border-collapse min-w-[700px]">
                         <thead>
                             <tr className="bg-slate-50 border-b border-slate-200/80 text-slate-600 font-black uppercase tracking-wider h-11">
-                                <th className="px-4.5 py-3">TIME</th>
+                                <th className="px-4.5 py-3">TIME & DATE</th>
                                 <th className="px-4.5 py-3">CUSTOMER</th>
                                 <th className="px-4.5 py-3">SPORT</th>
                                 <th className="px-4.5 py-3">COURT</th>
@@ -348,23 +498,30 @@ export default function OwnerDashboard() {
                         </thead>
 
                         <tbody className="divide-y divide-slate-100">
-                            {(stats.recentBookings || DEFAULT_BOOKINGS).map((b, i) => {
-                                const list = stats.recentBookings || DEFAULT_BOOKINGS;
-                                const initials = (b.customer || '').split(' ').map(n => n[0]).join('').toUpperCase() || 'CU';
-                                const isNearBottom = i >= Math.max(0, list.length - 2);
-                                
-                                return (
-                                    <tr
-                                        key={b.id || i}
-                                        className="h-14 hover:bg-slate-50/80 transition-colors cursor-pointer group"
-                                    >
-                                        {/* Time */}
-                                        <td className="px-4.5 py-3 whitespace-nowrap font-bold text-slate-800">
-                                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-100 text-slate-700 font-bold text-xs border border-slate-200/60">
-                                                <HiClock className="w-3.5 h-3.5 text-slate-400" />
-                                                {b.time}
-                                            </span>
-                                        </td>
+                            {filteredDashboardBookings.length === 0 ? (
+                                <tr>
+                                    <td colSpan="7" className="px-4.5 py-8 text-center text-slate-400 font-semibold">
+                                        No bookings found for the selected filter or date.
+                                    </td>
+                                </tr>
+                            ) : (
+                                filteredDashboardBookings.map((b, i) => {
+                                    const list = filteredDashboardBookings;
+                                    const initials = (b.customer || '').split(' ').map(n => n[0]).join('').toUpperCase() || 'CU';
+                                    const isNearBottom = i >= Math.max(0, list.length - 2);
+                                    
+                                    return (
+                                        <tr
+                                            key={b.id || i}
+                                            className="h-14 hover:bg-slate-50/80 transition-colors cursor-pointer group"
+                                        >
+                                            {/* Time & Date */}
+                                            <td className="px-4.5 py-3 whitespace-nowrap font-bold text-slate-800">
+                                                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-100 text-slate-700 font-bold text-xs border border-slate-200/60">
+                                                    <HiClock className="w-3.5 h-3.5 text-slate-400" />
+                                                    {b.time || 'Scheduled'} {b.date ? `(${b.date})` : ''}
+                                                </span>
+                                            </td>
 
                                         {/* Customer */}
                                         <td className="px-4.5 py-3 whitespace-nowrap">
@@ -485,8 +642,9 @@ export default function OwnerDashboard() {
                                             )}
                                         </td>
                                     </tr>
-                                )
-                            })}
+                                 )
+                             })
+                            )}
                         </tbody>
                     </table>
                 </div>
@@ -495,9 +653,9 @@ export default function OwnerDashboard() {
             {/* ═══════════════════════════════════════════════════
                 📜 DETAILED HISTORY & ANALYTICS LOG MODAL
             ═══════════════════════════════════════════════════ */}
-            {isHistoryModalOpen && (
-                <div className="fixed inset-0 z-[99999] flex items-center justify-center bg-black/75 backdrop-blur-md p-4 animate-in fade-in overflow-y-auto">
-                    <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl max-w-4xl w-full p-6 space-y-5 my-auto max-h-[92vh] overflow-y-auto">
+            {isHistoryModalOpen && createPortal(
+                <div className="fixed inset-0 z-[999999] flex items-center justify-center bg-slate-950/80 backdrop-blur-md p-3 sm:p-6 animate-in fade-in">
+                    <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl max-w-4xl w-full p-4 sm:p-6 space-y-5 my-auto max-h-[85vh] overflow-y-auto relative z-10">
                         {/* Header */}
                         <div className="flex items-center justify-between border-b border-slate-100 pb-3">
                             <div className="flex items-center gap-3">
@@ -725,7 +883,8 @@ export default function OwnerDashboard() {
                             </button>
                         </div>
                     </div>
-                </div>
+                </div>,
+                document.body
             )}
         </div>
     )

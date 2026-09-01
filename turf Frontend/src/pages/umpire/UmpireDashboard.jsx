@@ -803,13 +803,13 @@ export default function UmpireDashboard() {
                     <div className="p-5 border-b border-slate-800 flex items-center justify-between">
                         <div className="flex items-center gap-3">
                             <img 
-                                src="/kiaan_logo.jpg" 
-                                alt="Kiaan Technologies Turf" 
-                                className="w-10 h-10 rounded-xl object-cover shadow-md border border-emerald-400/40 shrink-0" 
+                                src="/images/kiaan_gold_logo.jpg?v=2" 
+                                alt="Kiaan Technology Turf Cricket Arena" 
+                                className="w-10 h-10 rounded-xl object-cover shadow-md border border-amber-300/40 shrink-0" 
                             />
                             <div>
-                                <h2 className="text-xs font-black text-white tracking-wider uppercase">KIAAN'S TURF</h2>
-                                <p className="text-[9px] text-emerald-400 font-bold uppercase tracking-widest">OFFICIAL UMPIRE</p>
+                                <h2 className="text-xs font-black text-white tracking-wider uppercase">KIAAN <span className="text-amber-400">TURF</span></h2>
+                                <p className="text-[9px] text-amber-400 font-bold uppercase tracking-widest">OFFICIAL UMPIRE</p>
                             </div>
                         </div>
 

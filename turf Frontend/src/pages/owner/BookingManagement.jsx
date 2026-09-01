@@ -385,59 +385,108 @@ export default function BookingManagement() {
                 </div>
             )}
 
-            {/* Details Modal (compact) */}
+            {/* Executive Details & Audit Modal */}
             {selectedBooking && (
-                <Modal isOpen={detailModal} onClose={() => setDetailModal(false)} title={`Booking Summary : ${selectedBooking.id}`} size="md">
-                    <div className="space-y-6">
-                        <div className="flex items-center gap-4 bg-surface-50 p-4 rounded-2xl border border-surface-200">
-                            <div className="w-12 h-12 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-600 text-lg font-black">
-                                <HiUser />
-                            </div>
-                            <div className="text-xs">
-                                <h3 className="text-sm font-black text-surface-900 leading-tight">{selectedBooking.customer}</h3>
-                                <p className="text-surface-500 font-semibold mt-1">{selectedBooking.phone || '—'}</p>
-                            </div>
-                        </div>
-
-                        <div className="grid grid-cols-2 gap-4 text-xs">
-                            <div className="p-4 bg-white border border-surface-200 rounded-2xl shadow-soft space-y-1">
-                                <span className="text-[10px] text-surface-400 font-extrabold uppercase tracking-wider block">Reserved Slot</span>
-                                <span className="text-sm font-black text-surface-850 flex items-center gap-1.5">
-                                    <HiCalendar className="text-emerald-500" /> {selectedBooking.date}
-                                </span>
-                                <span className="text-[11px] text-surface-500 font-bold block mt-1">Slot time: {selectedBooking.time}</span>
+                <Modal isOpen={detailModal} onClose={() => setDetailModal(false)} title={`Match Booking Ledger : ${selectedBooking.id}`} size="lg">
+                    <div className="space-y-5 py-1">
+                        {/* 1. Header Banner & Verification Status */}
+                        <div className="bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 p-4 rounded-2xl text-white flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-lg border border-slate-700">
+                            <div>
+                                <div className="flex items-center gap-2">
+                                    <span className="px-2.5 py-0.5 rounded-lg bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-[11px] font-black tracking-wide uppercase">
+                                        Verified Booking
+                                    </span>
+                                    <span className="text-xs font-mono text-slate-300">Invoice #{selectedBooking.id}</span>
+                                </div>
+                                <h3 className="text-lg font-black text-white mt-1">{selectedBooking.customer}</h3>
+                                <p className="text-xs text-slate-300 font-semibold">{selectedBooking.phone || 'No phone provided'}</p>
                             </div>
 
-                            <div className="p-4 bg-white border border-surface-200 rounded-2xl shadow-soft space-y-1">
-                                <span className="text-[10px] text-surface-400 font-extrabold uppercase tracking-wider block">Sport Category</span>
-                                <span className="text-sm font-black text-surface-850 flex items-center gap-1.5">
-                                    <HiTicket className="text-emerald-500" /> {selectedBooking.sport}
-                                </span>
-                                <span className="text-[11px] text-surface-500 font-bold block mt-1">Amount: {selectedBooking.amount}</span>
+                            <div className="flex items-center gap-2 self-start sm:self-auto">
+                                <Badge variant={STATUS_BADGE_VARIANT[selectedBooking.status] || 'default'} dot className="px-3 py-1.5 text-xs font-black">
+                                    {selectedBooking.status}
+                                </Badge>
                             </div>
                         </div>
 
-                        <div className="p-4 bg-surface-50 rounded-2xl border border-surface-200 text-xs flex justify-between items-center">
-                            <span className="font-bold text-surface-600">Verification Status:</span>
-                            <Badge variant={STATUS_BADGE_VARIANT[selectedBooking.status] || 'default'} dot>
-                                {selectedBooking.status}
-                            </Badge>
+                        {/* 2. Financial Breakdown & Net Share Grid */}
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                            <div className="p-3.5 bg-emerald-50/80 rounded-2xl border border-emerald-200/80 space-y-1 text-left">
+                                <span className="text-[10px] text-emerald-800 font-black uppercase tracking-wider block">Gross Amount Paid</span>
+                                <span className="text-lg font-black text-emerald-950 block">{selectedBooking.amount}</span>
+                                <span className="text-[10px] text-emerald-700 font-bold block">Method: {selectedBooking.rawStatus === 'COMPLETED' ? 'UPI / Online' : 'Settled'}</span>
+                            </div>
+
+                            <div className="p-3.5 bg-blue-50/80 rounded-2xl border border-blue-200/80 space-y-1 text-left">
+                                <span className="text-[10px] text-blue-800 font-black uppercase tracking-wider block">Platform Fee (10%)</span>
+                                <span className="text-lg font-black text-blue-950 block">{selectedBooking.commission}</span>
+                                <span className="text-[10px] text-blue-700 font-bold block">Commission Deducted</span>
+                            </div>
+
+                            <div className="p-3.5 bg-purple-50/80 rounded-2xl border border-purple-200/80 space-y-1 text-left">
+                                <span className="text-[10px] text-purple-800 font-black uppercase tracking-wider block">Net Venue Payout</span>
+                                <span className="text-lg font-black text-purple-950 block">{selectedBooking.netShare}</span>
+                                <span className="text-[10px] text-purple-700 font-bold block">Owner Ledger Share</span>
+                            </div>
                         </div>
 
-                        <div className="flex gap-3 justify-end pt-4 border-t border-surface-100">
-                            {selectedBooking.rawStatus === 'PENDING' && (
-                                <Button onClick={() => handleApprove(selectedBooking.id)} disabled={busyId === selectedBooking.id} className="bg-emerald-600 hover:bg-emerald-700 cursor-pointer">
-                                    <HiCheckCircle className="mr-1.5 w-4 h-4" /> Approve Booking
-                                </Button>
+                        {/* 3. Slot Schedule & Venue Location Card */}
+                        <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200/80 space-y-3">
+                            <h4 className="text-xs font-black text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
+                                <HiCalendar className="text-emerald-600 w-4 h-4" /> Reserved Match Slot & Venue Details
+                            </h4>
+
+                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+                                <div>
+                                    <span className="text-[10px] text-slate-400 font-extrabold uppercase block">Date</span>
+                                    <span className="font-extrabold text-slate-900 block mt-0.5">{selectedBooking.date}</span>
+                                </div>
+                                <div>
+                                    <span className="text-[10px] text-slate-400 font-extrabold uppercase block">Playing Time</span>
+                                    <span className="font-extrabold text-slate-900 block mt-0.5">{selectedBooking.slotRange || selectedBooking.time}</span>
+                                </div>
+                                <div>
+                                    <span className="text-[10px] text-slate-400 font-extrabold uppercase block">Sport</span>
+                                    <span className="font-extrabold text-slate-900 block mt-0.5">🏏 {selectedBooking.sport}</span>
+                                </div>
+                                <div>
+                                    <span className="text-[10px] text-slate-400 font-extrabold uppercase block">Court / Pitch</span>
+                                    <span className="font-extrabold text-slate-900 block mt-0.5">{selectedBooking.court}</span>
+                                </div>
+                            </div>
+
+                            {selectedBooking.notes && (
+                                <div className="p-3 bg-amber-50 rounded-xl border border-amber-200/70 text-xs text-amber-900 font-medium mt-2">
+                                    <span className="font-bold uppercase text-[10px] text-amber-700 block">Booking Notes / Special Requests:</span>
+                                    {selectedBooking.notes}
+                                </div>
                             )}
-                            {!['REFUNDED', 'REFUND_PENDING'].includes(selectedBooking.rawStatus) && (
-                                <Button onClick={() => handleCancel(selectedBooking.id)} disabled={busyId === selectedBooking.id} variant="outline" className="text-red-550 border-red-200 hover:bg-red-50 cursor-pointer">
-                                    <HiBan className="mr-1.5 w-4 h-4" /> Cancel & Refund
+                        </div>
+
+                        {/* 4. Instant Customer Dispatch & Action Bar */}
+                        <div className="pt-3 border-t border-slate-100 flex flex-col sm:flex-row gap-2.5 justify-between items-center">
+                            <button
+                                onClick={() => {
+                                    const cleanPhone = (selectedBooking.phone || '').replace(/\D/g, '');
+                                    const msg = `Hi ${selectedBooking.customer}, your turf booking #${selectedBooking.id} for ${selectedBooking.sport} on ${selectedBooking.date} (${selectedBooking.time}) is CONFIRMED! Amount Paid: ${selectedBooking.amount}. Thank you for playing at Kiaan Turf!`;
+                                    const url = cleanPhone ? `https://wa.me/91${cleanPhone}?text=${encodeURIComponent(msg)}` : `https://wa.me/?text=${encodeURIComponent(msg)}`;
+                                    window.open(url, '_blank');
+                                }}
+                                className="w-full sm:w-auto px-4 py-2 bg-[#25D366] hover:bg-[#20bd5a] text-white font-black text-xs rounded-xl shadow-md cursor-pointer flex items-center justify-center gap-1.5 transition-all"
+                            >
+                                <span>📱</span> Send WhatsApp Receipt to {selectedBooking.customer}
+                            </button>
+
+                            <div className="flex gap-2 w-full sm:w-auto justify-end">
+                                {!['REFUNDED', 'REFUND_PENDING'].includes(selectedBooking.rawStatus) && (
+                                    <Button onClick={() => handleCancel(selectedBooking.id)} disabled={busyId === selectedBooking.id} variant="outline" className="text-red-600 border-red-200 hover:bg-red-50 font-extrabold text-xs cursor-pointer">
+                                        <HiBan className="mr-1 w-3.5 h-3.5" /> Cancel & Refund
+                                    </Button>
+                                )}
+                                <Button variant="outline" onClick={() => setDetailModal(false)} className="font-extrabold text-xs cursor-pointer">
+                                    Close
                                 </Button>
-                            )}
-                            <Button variant="outline" onClick={() => setDetailModal(false)} className="cursor-pointer">
-                                Close
-                            </Button>
+                            </div>
                         </div>
                     </div>
                 </Modal>

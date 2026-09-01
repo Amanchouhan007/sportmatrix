@@ -66,22 +66,28 @@ export default function SystemSettings() {
     const [tempCommission, setTempCommission] = useState(null)
 
     // ─── Profile Settings States ────────────────────────────────────────────────
-    const [profileData, setProfileData] = useState({
-        fullName: user?.fullName || user?.name || (isSuperAdmin ? 'Super Admin' : 'Turf Admin'),
-        email: user?.email || defaultEmail,
-        mobile: user?.mobile || user?.phone || '9876543210',
-        alternateMobile: user?.alternateMobile || '',
-        profileImage: user?.profileImage || user?.avatar || ''
+    const [profileData, setProfileData] = useState(() => {
+        const savedAvatar = localStorage.getItem('user_profile_avatar') || ''
+        const initialImg = (typeof savedAvatar === 'string' && savedAvatar.startsWith('data:image')) ? savedAvatar : (user?.profileImage || user?.avatar || '')
+        return {
+            fullName: user?.fullName || user?.name || (isSuperAdmin ? 'Super Admin' : 'Turf Admin'),
+            email: user?.email || defaultEmail,
+            mobile: user?.mobile || user?.phone || '9876543210',
+            alternateMobile: user?.alternateMobile || '',
+            profileImage: initialImg
+        }
     })
 
     useEffect(() => {
         if (user) {
+            const savedAvatar = localStorage.getItem('user_profile_avatar') || ''
+            const validLocalImg = (typeof savedAvatar === 'string' && savedAvatar.startsWith('data:image')) ? savedAvatar : ''
             setProfileData(prev => ({
                 fullName: prev.fullName || user.fullName || user.name || (isSuperAdmin ? 'Super Admin' : 'Turf Admin'),
                 email: prev.email || user.email || defaultEmail,
                 mobile: prev.mobile || user.mobile || user.phone || '9876543210',
                 alternateMobile: prev.alternateMobile || user.alternateMobile || '',
-                profileImage: prev.profileImage || user.profileImage || user.avatar || ''
+                profileImage: validLocalImg || prev.profileImage || user.profileImage || user.avatar || ''
             }))
         }
     }, [user, isSuperAdmin, defaultEmail])
@@ -267,16 +273,19 @@ export default function SystemSettings() {
     const fetchProfile = async () => {
         try {
             const res = await getProfile()
+            const savedAvatar = localStorage.getItem('user_profile_avatar') || ''
             if (res && res.success) {
                 const data = res.data
+                const rawImg = savedAvatar || data.profileImage || data.avatar || ''
+                const validImg = typeof rawImg === 'string' && (rawImg.startsWith('data:image') || rawImg.startsWith('http') || rawImg.startsWith('/')) ? rawImg : ''
                 setProfileData({
                     fullName: data.fullName || data.name || user?.fullName || defaultName,
                     email: data.email || user?.email || defaultEmail,
                     mobile: data.mobile || user?.mobile || '9876543210',
                     alternateMobile: data.alternateMobile || '',
-                    profileImage: data.profileImage || data.avatar || ''
+                    profileImage: validImg
                 })
-                updateUser(data)
+                updateUser({ ...data, profileImage: validImg, avatar: validImg })
             }
         } catch (err) {
             console.warn('Profile fetch note:', err.message)
@@ -372,7 +381,15 @@ export default function SystemSettings() {
         if (file) {
             const reader = new FileReader()
             reader.onloadend = () => {
-                setProfileData(prev => ({ ...prev, profileImage: reader.result }))
+                const base64Img = reader.result
+                setProfileData(prev => ({ ...prev, profileImage: base64Img }))
+                try {
+                    localStorage.setItem('user_profile_avatar', base64Img)
+                } catch (err) {
+                    console.warn('LocalStorage save avatar note:', err.message)
+                }
+                updateUser({ ...user, profileImage: base64Img, avatar: base64Img })
+                addToast({ title: 'Photo Loaded', message: 'Click "Update Profile" below to confirm changes.', type: 'info' })
             }
             reader.readAsDataURL(file)
         }
@@ -385,11 +402,17 @@ export default function SystemSettings() {
             return
         }
 
+        if (profileData.profileImage) {
+            try {
+                localStorage.setItem('user_profile_avatar', profileData.profileImage)
+            } catch (e) {}
+        }
+
         setIsSavingProfile(true)
         try {
             const res = await apiUpdateProfile(profileData)
             if (res && res.success) {
-                updateUser(res.data)
+                updateUser({ ...res.data, profileImage: profileData.profileImage, avatar: profileData.profileImage })
                 addToast({ title: 'Profile Updated', message: 'Your profile settings have been saved successfully.', type: 'success' })
             }
         } catch (err) {
@@ -546,20 +569,21 @@ export default function SystemSettings() {
 
                         {/* Profile Avatar */}
                         <div className="relative w-28 h-28 mx-auto group">
-                            {profileData.profileImage ? (
+                            {profileData.profileImage && typeof profileData.profileImage === 'string' && (profileData.profileImage.startsWith('data:image') || profileData.profileImage.startsWith('http') || profileData.profileImage.startsWith('/')) ? (
                                 <img
                                     src={profileData.profileImage}
                                     alt={profileData.fullName}
+                                    onError={() => setProfileData(prev => ({ ...prev, profileImage: '' }))}
                                     className="w-28 h-28 rounded-2xl object-cover border-2 border-emerald-500/30 shadow-md bg-white"
                                 />
                             ) : (
-                                <div className="w-28 h-28 rounded-2xl bg-gradient-to-br from-emerald-500 to-green-600 flex items-center justify-center text-white text-3xl font-black shadow-lg shadow-emerald-600/20 border-2 border-emerald-400/30">
+                                <div className="w-28 h-28 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center text-white text-3xl font-black shadow-lg shadow-emerald-600/20 border-2 border-emerald-400/30">
                                     {((profileData.fullName || user?.fullName || defaultName).split(' ').map(n => n[0]).join('') || 'A').substring(0, 2).toUpperCase()}
                                 </div>
                             )}
                             {/* Upload Overlay */}
-                            <label className="absolute inset-0 bg-slate-900/60 text-white rounded-2xl flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200 cursor-pointer text-xs font-bold gap-1 backdrop-blur-xs">
-                                <FiUpload className="w-4 h-4 text-emerald-400" />
+                            <label className="absolute inset-0 bg-slate-900/70 text-white rounded-2xl flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200 cursor-pointer text-xs font-bold gap-1 backdrop-blur-xs">
+                                <FiUpload className="w-5 h-5 text-emerald-400" />
                                 <span>Change Photo</span>
                                 <input
                                     type="file"
