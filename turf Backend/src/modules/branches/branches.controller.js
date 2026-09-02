@@ -3,11 +3,38 @@ const prisma = require('../../config/prisma');
 
 const genId = (prefix) => `${prefix}_${Date.now()}_${Math.floor(Math.random() * 100000)}`;
 
+const parseSqFt = (val) => {
+    if (val === undefined || val === null || val === '') return 5000;
+    if (typeof val === 'number' && !isNaN(val)) return val;
+    const clean = String(val).replace(/,/g, '');
+    const m = clean.match(/(\d+)/);
+    return m ? parseInt(m[1], 10) : 5000;
+};
+
+const formatTime12h = (timeStr) => {
+    if (!timeStr) return '06:00 AM';
+    if (typeof timeStr !== 'string') return String(timeStr);
+    let clean = timeStr.trim().replace(/o/gi, '0');
+    if (clean.toUpperCase().includes('AM') || clean.toUpperCase().includes('PM')) return clean;
+    const parts = clean.split(':');
+    if (parts.length >= 2) {
+        let h = parseInt(parts[0], 10);
+        const m = parts[1];
+        if (isNaN(h)) return clean;
+        const ampm = h >= 12 ? 'PM' : 'AM';
+        h = h % 12;
+        if (h === 0) h = 12;
+        const hStr = h < 10 ? `0${h}` : `${h}`;
+        return `${hStr}:${m} ${ampm}`;
+    }
+    return clean;
+};
+
 const formatBranch = (b, statsObj = { revenue: 0, count: 0, commission: 0 }) => {
     const bookingRevenue = typeof statsObj === 'number' ? statsObj : (statsObj?.revenue || 0);
     const bookingCount = typeof statsObj === 'object' ? (statsObj?.count || 0) : 0;
     const bookingCommission = typeof statsObj === 'object' ? (statsObj?.commission || Math.round(bookingRevenue * 0.1)) : Math.round(bookingRevenue * 0.1);
-    const planPrice = Number(b.subscriptionPlan?.monthlyPrice || 0);
+    const planPrice = Number(b.subscriptionPriceSnapshot ?? b.planPrice ?? b.subscriptionPlan?.monthlyPrice ?? 0);
 
     const activeSports = (b.branchSports || []).filter(bs => bs.status === 'ACTIVE');
     let minSportPrice = null;
@@ -44,6 +71,8 @@ const formatBranch = (b, statsObj = { revenue: 0, count: 0, commission: 0 }) => 
         planName: b.subscriptionPlan?.planName || 'Standard Plan',
         planPrice,
         plan_price: planPrice,
+        subscriptionPriceSnapshot: planPrice,
+        subscription_price_snapshot: planPrice,
         bookingRevenue,
         booking_revenue: bookingRevenue,
         bookingCount,
@@ -62,18 +91,54 @@ const formatBranch = (b, statsObj = { revenue: 0, count: 0, commission: 0 }) => 
         pricePerHour: effectiveMinPrice,
         price: effectiveMinPrice,
         minPriceHourly: effectiveMinPrice,
-        openingTime: b.openingTime,
-        closingTime: b.closingTime,
-        turfSize: `${b.dimensionsSqFt || 0} Sq.Ft`,
-        dimensions: `${b.dimensionsSqFt || 0} Sq.Ft`,
+        peakPricePerHour: activeSports[0]?.peakPrice ? Number(activeSports[0].peakPrice) : (b.branchSports?.[0]?.peakPrice ? Number(b.branchSports[0].peakPrice) : Math.round(effectiveMinPrice * 1.5)),
+        peakPrice: activeSports[0]?.peakPrice ? Number(activeSports[0].peakPrice) : (b.branchSports?.[0]?.peakPrice ? Number(b.branchSports[0].peakPrice) : Math.round(effectiveMinPrice * 1.5)),
+        isDynamicPricingActive: b.isDynamicPricingActive !== false,
+        openingTime: formatTime12h(b.openingTime),
+        closingTime: formatTime12h(b.closingTime),
+        turfSize: `${(b.dimensionsSqFt || 5000).toLocaleString('en-IN')} Sq.Ft`,
+        dimensions: `${(b.dimensionsSqFt || 5000).toLocaleString('en-IN')} Sq.Ft`,
+        dimensionsSqFt: b.dimensionsSqFt || 5000,
         surfaceType: b.surfaceType,
         rating: Number(b.rating),
         reviewCount: b.reviewCount,
+        discountOffer: (()=>{
+            const allOffers = b.discountOffers || [];
+            const activeOffers = allOffers.filter(d => d.status === 'ACTIVE');
+            const targetOffers = activeOffers.length > 0 ? activeOffers : allOffers;
+            const sortedOffers = [...targetOffers].sort((a, b) => new Date(b.updatedAt || 0) - new Date(a.updatedAt || 0));
+            return sortedOffers[0]?.title || '';
+        })(),
+        couponCode: (()=>{
+            const allOffers = b.discountOffers || [];
+            const activeOffers = allOffers.filter(d => d.status === 'ACTIVE');
+            const targetOffers = activeOffers.length > 0 ? activeOffers : allOffers;
+            const sortedOffers = [...targetOffers].sort((a, b) => new Date(b.updatedAt || 0) - new Date(a.updatedAt || 0));
+            return sortedOffers[0]?.promoCode || '';
+        })(),
+        discount_offer: (()=>{
+            const allOffers = b.discountOffers || [];
+            const activeOffers = allOffers.filter(d => d.status === 'ACTIVE');
+            const targetOffers = activeOffers.length > 0 ? activeOffers : allOffers;
+            const sortedOffers = [...targetOffers].sort((a, b) => new Date(b.updatedAt || 0) - new Date(a.updatedAt || 0));
+            return sortedOffers[0]?.title || '';
+        })(),
+        coupon_code: (()=>{
+            const allOffers = b.discountOffers || [];
+            const activeOffers = allOffers.filter(d => d.status === 'ACTIVE');
+            const targetOffers = activeOffers.length > 0 ? activeOffers : allOffers;
+            const sortedOffers = [...targetOffers].sort((a, b) => new Date(b.updatedAt || 0) - new Date(a.updatedAt || 0));
+            return sortedOffers[0]?.promoCode || '';
+        })(),
         amenities: b.amenities || [],
         logo: b.logo || '',
         images: b.images || [],
         sports,
-        status: b.status,
+        status: (b.owner?.status === 'SUSPENDED' || b.ownerUser?.status === 'SUSPENDED' || b.owner?.user?.status === 'SUSPENDED')
+            ? 'SUSPENDED'
+            : ((b.owner?.status === 'INACTIVE' || b.ownerUser?.status === 'INACTIVE' || b.owner?.user?.status === 'INACTIVE')
+                ? 'INACTIVE'
+                : (b.status || 'ACTIVE')),
         totalPlatformRevenue: planPrice + bookingCommission,
         totalRevenue: planPrice + bookingCommission,
         createdAt: b.createdAt
@@ -192,7 +257,7 @@ const getBranches = async (req, res) => {
             prisma.branch.count({ where }),
             prisma.branch.findMany({
                 where,
-                include: { owner: true, subscriptionPlan: true, branchSports: { include: { sport: true } } },
+                include: { owner: { include: { user: true } }, ownerUser: true, subscriptionPlan: true, branchSports: { include: { sport: true } }, discountOffers: true },
                 orderBy: { createdAt: 'desc' },
                 skip: (pageNum - 1) * limitNum,
                 take: limitNum
@@ -219,7 +284,7 @@ const getBranchById = async (req, res) => {
     try {
         const branch = await prisma.branch.findUnique({
             where: { id: req.params.id },
-            include: { owner: true, subscriptionPlan: true, branchSports: { include: { sport: true } } }
+            include: { owner: { include: { user: true } }, ownerUser: true, subscriptionPlan: true, branchSports: { include: { sport: true } }, discountOffers: true }
         });
         if (!branch) {
             return res.status(404).json({ success: false, message: 'Branch not found.' });
@@ -271,6 +336,7 @@ const createBranch = async (req, res) => {
             return res.status(400).json({ success: false, message: `Subscription plan "${planId}" does not exist.` });
         }
 
+        const activePlanPrice = Number(plan.monthlyPrice || 0);
         const resolvedLat = (latitude !== undefined && latitude !== null && !isNaN(Number(latitude))) ? Number(latitude) : 22.7196;
         const resolvedLng = (longitude !== undefined && longitude !== null && !isNaN(Number(longitude))) ? Number(longitude) : 75.8577;
 
@@ -283,6 +349,8 @@ const createBranch = async (req, res) => {
                 ownerId: owner.id,
                 ownerUserId: owner.userId,
                 subscriptionPlanId: plan.id,
+                subscriptionPriceSnapshot: activePlanPrice,
+                planPrice: activePlanPrice,
                 country: country || 'India',
                 state: state || null,
                 city: city || null,
@@ -299,15 +367,59 @@ const createBranch = async (req, res) => {
                 minPriceHourly: pricePerHour ? Number(pricePerHour) : undefined,
                 openingTime: openingTime || undefined,
                 closingTime: closingTime || undefined,
-                dimensionsSqFt: dimensionsSqFt ? Number(dimensionsSqFt) : undefined,
+                dimensionsSqFt: parseSqFt(dimensionsSqFt || req.body.turfSize || req.body.dimensions),
                 surfaceType: surfaceType || undefined,
                 amenities: Array.isArray(amenities) ? amenities : [],
                 latitude: resolvedLat,
                 longitude: resolvedLng,
                 status: 'ACTIVE'
             },
-            include: { owner: true, subscriptionPlan: true }
+            include: { owner: true, subscriptionPlan: true, branchSports: { include: { sport: true } }, discountOffers: true }
         });
+
+        // Automatically create discount offer if text provided
+        const offerText = req.body.discountOffer || req.body.discount_offer;
+        const promoText = req.body.couponCode || req.body.coupon_code;
+        if (offerText || promoText) {
+            try {
+                await prisma.discountOffer.create({
+                    data: {
+                        id: genId('disc'),
+                        branchId: branch.id,
+                        ownerId: owner.id,
+                        title: String(offerText || '30% OFF FIRST MATCH'),
+                        promoCode: String(promoText || 'CRICKET25'),
+                        discountType: 'PERCENTAGE',
+                        discountValue: 30.00,
+                        startDate: new Date(),
+                        endDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000),
+                        status: 'ACTIVE'
+                    }
+                });
+            } catch (discErr) {
+                console.error('Error creating discount offer:', discErr);
+            }
+        }
+
+        // Automatically create initial BranchSport records for dynamic pricing
+        const regPrice = pricePerHour ? Number(pricePerHour) : 700;
+        const peakPrice = req.body.peakPricePerHour ? Number(req.body.peakPricePerHour) : Math.round(regPrice * 1.5);
+        
+        try {
+            const sportsList = await prisma.sport.findMany({ take: 3 });
+            if (sportsList.length > 0) {
+                await prisma.branchSport.createMany({
+                    data: sportsList.map(s => ({
+                        id: genId('bs'),
+                        branchId: branch.id,
+                        sportId: s.id,
+                        regularPrice: regPrice,
+                        peakPrice: peakPrice,
+                        status: 'ACTIVE'
+                    }))
+                });
+            }
+        } catch (_) {}
 
         return res.status(201).json({ success: true, message: 'Branch created successfully.', data: formatBranch(branch, 0) });
     } catch (error) {
@@ -332,21 +444,46 @@ const updateBranch = async (req, res) => {
         }
 
         const {
-            branchName, description, subscriptionPlanId,
+            branchName, description, subscriptionPlanId, ownerId,
             city, state, country, zipCode, fullAddress, email, mobile, alternateMobile, gstNumber,
             logo, images, amenities, minPriceHourly, pricePerHour, price, openingTime, closingTime,
             dimensionsSqFt, surfaceType, status, latitude, longitude
         } = req.body;
 
         const targetPrice = minPriceHourly ?? pricePerHour ?? price;
-        const targetPeakPrice = req.body.peakPricePerHour ?? req.body.peakPrice ?? (targetPrice !== undefined ? Math.round(Number(targetPrice) * 1.5) : undefined);
+        const targetPeakPrice = req.body.peakPricePerHour ?? req.body.peakPrice;
+
+        const validPrice = (targetPrice !== undefined && targetPrice !== '' && !isNaN(Number(targetPrice))) ? Number(targetPrice) : undefined;
+        const validPeakPrice = (targetPeakPrice !== undefined && targetPeakPrice !== '' && !isNaN(Number(targetPeakPrice))) ? Number(targetPeakPrice) : validPrice;
+
+        let newSnapshotPrice = undefined;
+        if (subscriptionPlanId) {
+            const newPlan = await prisma.subscriptionPlan.findUnique({ where: { id: subscriptionPlanId } });
+            if (newPlan) {
+                newSnapshotPrice = Number(newPlan.monthlyPrice || 0);
+            }
+        }
+
+        let resolvedOwnerId = undefined;
+        let resolvedOwnerUserId = undefined;
+        if (ownerId) {
+            const targetOwner = await prisma.owner.findFirst({ where: { OR: [{ id: ownerId }, { userId: ownerId }] } });
+            if (targetOwner) {
+                resolvedOwnerId = targetOwner.id;
+                resolvedOwnerUserId = targetOwner.userId;
+            }
+        }
 
         const updated = await prisma.branch.update({
             where: { id },
             data: {
                 branchName: branchName ?? undefined,
                 description: description ?? undefined,
+                ownerId: resolvedOwnerId ?? undefined,
+                ownerUserId: resolvedOwnerUserId ?? undefined,
                 subscriptionPlanId: subscriptionPlanId ?? undefined,
+                subscriptionPriceSnapshot: newSnapshotPrice ?? undefined,
+                planPrice: newSnapshotPrice ?? undefined,
                 city: city ?? undefined,
                 state: state ?? undefined,
                 country: country ?? undefined,
@@ -359,30 +496,131 @@ const updateBranch = async (req, res) => {
                 logo: logo ?? undefined,
                 images: Array.isArray(images) ? images : undefined,
                 amenities: Array.isArray(amenities) ? amenities : undefined,
-                minPriceHourly: targetPrice !== undefined ? Number(targetPrice) : undefined,
-                openingTime: openingTime ?? undefined,
-                closingTime: closingTime ?? undefined,
-                dimensionsSqFt: dimensionsSqFt !== undefined ? Number(dimensionsSqFt) : undefined,
+                minPriceHourly: validPrice !== undefined ? validPrice : undefined,
+                openingTime: openingTime ? formatTime12h(openingTime) : undefined,
+                closingTime: closingTime ? formatTime12h(closingTime) : undefined,
+                dimensionsSqFt: (dimensionsSqFt !== undefined || req.body.turfSize !== undefined || req.body.dimensions !== undefined) ? parseSqFt(dimensionsSqFt ?? req.body.turfSize ?? req.body.dimensions) : undefined,
                 surfaceType: surfaceType ?? undefined,
-                latitude: (latitude !== undefined && latitude !== null) ? Number(latitude) : undefined,
-                longitude: (longitude !== undefined && longitude !== null) ? Number(longitude) : undefined,
+                latitude: (latitude !== undefined && latitude !== null && latitude !== '') ? Number(latitude) : undefined,
+                longitude: (longitude !== undefined && longitude !== null && longitude !== '') ? Number(longitude) : undefined,
+                isDynamicPricingActive: req.body.isDynamicPricingActive !== undefined ? Boolean(req.body.isDynamicPricingActive) : undefined,
                 status: status ?? undefined
             },
-            include: { owner: true, subscriptionPlan: true, branchSports: { include: { sport: true } } }
+            include: { owner: true, subscriptionPlan: true, branchSports: { include: { sport: true } }, discountOffers: true }
         });
 
-        // Sync all BranchSport records for dynamic morning vs evening peak pricing
-        if (targetPrice !== undefined || targetPeakPrice !== undefined) {
-            await prisma.branchSport.updateMany({
-                where: { branchId: id },
-                data: {
-                    regularPrice: targetPrice !== undefined ? Number(targetPrice) : undefined,
-                    peakPrice: targetPeakPrice !== undefined ? Number(targetPeakPrice) : undefined
+        // Upsert DiscountOffer
+        const offerText = req.body.discountOffer ?? req.body.discount_offer;
+        const promoText = req.body.couponCode ?? req.body.coupon_code;
+        if (offerText !== undefined || promoText !== undefined) {
+            try {
+                const existingOffer = await prisma.discountOffer.findFirst({ where: { branchId: id } });
+                if (existingOffer) {
+                    await prisma.discountOffer.update({
+                        where: { id: existingOffer.id },
+                        data: {
+                            title: (offerText !== undefined && offerText !== '') ? String(offerText) : existingOffer.title,
+                            promoCode: (promoText !== undefined && promoText !== '') ? String(promoText) : existingOffer.promoCode,
+                            status: 'ACTIVE'
+                        }
+                    });
+                } else if (offerText || promoText) {
+                    await prisma.discountOffer.create({
+                        data: {
+                            id: genId('disc'),
+                            branchId: id,
+                            ownerId: updated.ownerId || null,
+                            title: String(offerText || '30% OFF FIRST MATCH'),
+                            promoCode: String(promoText || 'CRICKET25'),
+                            discountType: 'PERCENTAGE',
+                            discountValue: 30.00,
+                            startDate: new Date(),
+                            endDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000),
+                            status: 'ACTIVE'
+                        }
+                    });
+                }
+            } catch (discErr) {
+                console.error('Error updating discount offer:', discErr);
+            }
+        }
+
+        // Sync selected sports into BranchSport relations
+        const sportIconsMap = {
+            'Cricket': '🏏',
+            'Football': '⚽',
+            'Badminton': '🏸',
+            'Tennis': '🎾'
+        };
+
+        const selectedSportNames = Array.isArray(req.body.sports) && req.body.sports.length > 0
+            ? req.body.sports.map(s => typeof s === 'string' ? s : (s?.name || s?.sport?.name || '')).filter(Boolean)
+            : ['Cricket'];
+
+        // Delete any branchSport rows for sports that are no longer selected
+        const allMasters = await prisma.sport.findMany();
+        const selectedMasters = allMasters.filter(m => selectedSportNames.some(sn => sn.toLowerCase() === m.name.toLowerCase()));
+        const selectedIds = selectedMasters.map(m => m.id);
+
+        if (selectedIds.length > 0) {
+            await prisma.branchSport.deleteMany({
+                where: {
+                    branchId: id,
+                    sportId: { notIn: selectedIds }
                 }
             }).catch(() => {});
         }
 
-        return res.status(200).json({ success: true, message: 'Branch details updated successfully.', data: formatBranch(updated, 0) });
+        for (const sName of selectedSportNames) {
+            let masterSport = await prisma.sport.findFirst({
+                where: { name: { contains: sName } }
+            });
+            if (!masterSport) {
+                masterSport = await prisma.sport.create({
+                    data: {
+                        id: genId('sp'),
+                        name: sName,
+                        icon: sportIconsMap[sName] || '⚽',
+                        category: 'Turf Sport',
+                        defaultSlotDuration: 60
+                    }
+                }).catch(() => null);
+            }
+            if (masterSport) {
+                const existingBS = await prisma.branchSport.findFirst({
+                    where: { branchId: id, sportId: masterSport.id }
+                });
+                if (existingBS) {
+                    await prisma.branchSport.update({
+                        where: { id: existingBS.id },
+                        data: {
+                            regularPrice: validPrice !== undefined ? validPrice : existingBS.regularPrice,
+                            peakPrice: validPeakPrice !== undefined ? validPeakPrice : existingBS.peakPrice,
+                            status: 'ACTIVE'
+                        }
+                    }).catch(() => {});
+                } else {
+                    await prisma.branchSport.create({
+                        data: {
+                            id: genId('bs'),
+                            branchId: id,
+                            sportId: masterSport.id,
+                            regularPrice: validPrice || 800,
+                            peakPrice: validPeakPrice || validPrice || 1200,
+                            status: 'ACTIVE'
+                        }
+                    }).catch(() => {});
+                }
+            }
+        }
+
+        const reloaded = await prisma.branch.findUnique({
+            where: { id },
+            include: { owner: { include: { user: true } }, ownerUser: true, subscriptionPlan: true, branchSports: { include: { sport: true } }, discountOffers: true }
+        });
+
+        const revenueMap = await getBookingRevenueByBranch([id]);
+        return res.status(200).json({ success: true, message: 'Branch details updated successfully.', data: formatBranch(reloaded || updated, revenueMap[id] || 0) });
     } catch (error) {
         console.error('Update branch error:', error);
         return res.status(500).json({ success: false, message: 'Internal Server Error updating branch: ' + error.message });
@@ -412,15 +650,38 @@ const changeBranchStatus = async (req, res) => {
                 if (activeBranches.length === 0) {
                     await prisma.user.update({
                         where: { id: updatedBranch.ownerUserId },
-                        data: { status: 'SUSPENDED' }
+                        data: { status: status }
                     }).catch(() => {});
+                    if (updatedBranch.ownerId) {
+                        await prisma.owner.update({
+                            where: { id: updatedBranch.ownerId },
+                            data: { status: status }
+                        }).catch(() => {});
+                    }
                 }
             } else if (status === 'ACTIVE') {
                 await prisma.user.update({
                     where: { id: updatedBranch.ownerUserId },
                     data: { status: 'ACTIVE' }
                 }).catch(() => {});
+                if (updatedBranch.ownerId) {
+                    await prisma.owner.update({
+                        where: { id: updatedBranch.ownerId },
+                        data: { status: 'ACTIVE' }
+                    }).catch(() => {});
+                }
             }
+        }
+
+        try {
+            const { getIo } = require('../../realtime/socket');
+            const io = getIo();
+            if (io) {
+                io.emit('status_updated', { branchId: id, status });
+                io.emit('global_data_changed', { type: 'BRANCH_STATUS_CHANGE', branchId: id });
+            }
+        } catch (e) {
+            console.error('Socket emit error in changeBranchStatus:', e);
         }
 
         return res.status(200).json({ success: true, message: `Branch status successfully updated to ${status}.` });
@@ -459,7 +720,7 @@ const getDashboardStats = async (req, res) => {
             prisma.branch.findMany({ where, include: { subscriptionPlan: true } })
         ]);
 
-        const planRevenue = branches.reduce((sum, b) => sum + Number(b.subscriptionPlan?.monthlyPrice || 0), 0);
+        const planRevenue = branches.reduce((sum, b) => sum + Number(b.subscriptionPriceSnapshot ?? b.planPrice ?? b.subscriptionPlan?.monthlyPrice ?? 0), 0);
         const revenueMap = await getBookingRevenueByBranch(branches.map(b => b.id));
         let bookingGross = 0;
         let bookingCommission = 0;

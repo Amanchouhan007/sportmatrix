@@ -98,28 +98,24 @@ const updatePlan = async (req, res) => {
                 description: description !== undefined ? description.trim() : undefined,
                 isPopular: isPopular !== undefined ? !!isPopular : undefined,
                 status: status !== undefined ? status.toUpperCase() : undefined,
-                monthlyPrice: monthlyPricing?.price ?? undefined,
-                monthlyBranchLimit: monthlyPricing?.branchLimit ?? undefined,
-                monthlySportsLimit: monthlyPricing?.sportsLimit ?? undefined,
-                monthlyBookingLimit: monthlyPricing?.bookingLimit ?? undefined,
-                monthlyActiveUsersLimit: monthlyPricing?.activeUsersLimit ?? undefined,
-                yearlyPrice: yearlyPricing?.price ?? undefined,
-                yearlyBranchLimit: yearlyPricing?.branchLimit ?? undefined,
-                yearlySportsLimit: yearlyPricing?.sportsLimit ?? undefined,
-                yearlyBookingLimit: yearlyPricing?.bookingLimit ?? undefined,
-                yearlyActiveUsersLimit: yearlyPricing?.activeUsersLimit ?? undefined,
+                monthlyPrice: monthlyPricing?.price !== undefined && monthlyPricing?.price !== null ? Number(monthlyPricing.price) : undefined,
+                monthlyBranchLimit: monthlyPricing?.branchLimit !== undefined && monthlyPricing?.branchLimit !== null ? Number(monthlyPricing.branchLimit) : undefined,
+                monthlySportsLimit: monthlyPricing?.sportsLimit !== undefined && monthlyPricing?.sportsLimit !== null ? Number(monthlyPricing.sportsLimit) : undefined,
+                monthlyBookingLimit: monthlyPricing?.bookingLimit !== undefined && monthlyPricing?.bookingLimit !== null ? Number(monthlyPricing.bookingLimit) : undefined,
+                monthlyActiveUsersLimit: monthlyPricing?.activeUsersLimit !== undefined && monthlyPricing?.activeUsersLimit !== null ? Number(monthlyPricing.activeUsersLimit) : undefined,
+                yearlyPrice: yearlyPricing?.price !== undefined && yearlyPricing?.price !== null ? Number(yearlyPricing.price) : undefined,
+                yearlyBranchLimit: yearlyPricing?.branchLimit !== undefined && yearlyPricing?.branchLimit !== null ? Number(yearlyPricing.branchLimit) : undefined,
+                yearlySportsLimit: yearlyPricing?.sportsLimit !== undefined && yearlyPricing?.sportsLimit !== null ? Number(yearlyPricing.sportsLimit) : undefined,
+                yearlyBookingLimit: yearlyPricing?.bookingLimit !== undefined && yearlyPricing?.bookingLimit !== null ? Number(yearlyPricing.bookingLimit) : undefined,
+                yearlyActiveUsersLimit: yearlyPricing?.activeUsersLimit !== undefined && yearlyPricing?.activeUsersLimit !== null ? Number(yearlyPricing.activeUsersLimit) : undefined,
                 features: features ?? undefined
             }
-        }).catch(() => null);
-
-        if (!updated) {
-            return res.status(404).json({ success: false, message: 'Subscription plan not found' });
-        }
+        });
 
         return res.status(200).json({ success: true, message: 'Subscription plan updated successfully', data: formatPlan(updated) });
     } catch (error) {
         console.error('Error updating subscription plan:', error);
-        return res.status(500).json({ success: false, message: 'Failed to update subscription plan', error: error.message });
+        return res.status(500).json({ success: false, message: 'Failed to update subscription plan: ' + error.message });
     }
 };
 
@@ -221,6 +217,14 @@ const purchaseSubscription = async (req, res) => {
                 }
             });
             await tx.owner.update({ where: { id: owner.id }, data: { subscriptionPlan: { connect: { id: plan.id } } } });
+            await tx.branch.updateMany({
+                where: { ownerId: owner.id },
+                data: {
+                    subscriptionPlanId: plan.id,
+                    subscriptionPriceSnapshot: amount,
+                    planPrice: amount
+                }
+            });
             return sub;
         });
 

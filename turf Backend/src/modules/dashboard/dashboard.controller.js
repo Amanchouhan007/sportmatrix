@@ -226,7 +226,7 @@ const getDashboardSummary = async (req, res) => {
                 prisma.subscriptionPlan.count({ where: { status: 'ACTIVE' } })
             ]);
 
-            const subscriptionRevenue = branches.reduce((sum, b) => sum + Number(b.subscriptionPlan?.monthlyPrice || 0), 0);
+            const subscriptionRevenue = branches.reduce((sum, b) => sum + Number(b.subscriptionPriceSnapshot ?? b.planPrice ?? b.subscriptionPlan?.monthlyPrice ?? 0), 0);
             const grossBookingRevenue = ownerSummary.todaysGrossRevenue || ownerSummary.totalRevenue || 0;
             const platformCommission = Math.round((grossBookingRevenue * 10) / 100);
 
@@ -310,7 +310,7 @@ const getCommissionGrowth = async (req, res) => {
 
 const getTopBranches = async (req, res) => {
     try {
-        const branches = await prisma.branch.findMany({ include: { owner: true, subscriptionPlan: true } });
+        const branches = await prisma.branch.findMany({ include: { owner: { include: { user: true } }, ownerUser: true, subscriptionPlan: true } });
         const bookingAgg = await prisma.booking.groupBy({ by: ['slotId'], where: { status: 'COMPLETED' }, _sum: { amount: true } });
         const slots = await prisma.slot.findMany({ where: { id: { in: bookingAgg.map(b => b.slotId).filter(Boolean) } }, select: { id: true, branchId: true } });
         const slotToBranch = Object.fromEntries(slots.map(s => [s.id, s.branchId]));
@@ -325,11 +325,16 @@ const getTopBranches = async (req, res) => {
         }
 
         const rows = branches.map(br => {
-            const planPrice = Number(br.subscriptionPlan?.monthlyPrice || 0);
+            const planPrice = Number(br.subscriptionPriceSnapshot ?? br.planPrice ?? br.subscriptionPlan?.monthlyPrice ?? 0);
             const bookingRev = revenueByBranch[br.id] || 0;
+            const effectiveStatus = (br.owner?.status === 'SUSPENDED' || br.ownerUser?.status === 'SUSPENDED' || br.owner?.user?.status === 'SUSPENDED')
+                ? 'SUSPENDED'
+                : ((br.owner?.status === 'INACTIVE' || br.ownerUser?.status === 'INACTIVE' || br.owner?.user?.status === 'INACTIVE')
+                    ? 'INACTIVE'
+                    : (br.status || 'ACTIVE'));
             return {
                 _id: br.id, branchName: br.branchName, 'Branch Name': br.branchName,
-                city: br.city, City: br.city, status: br.status, Status: br.status,
+                city: br.city, City: br.city, status: effectiveStatus, Status: effectiveStatus,
                 ownerName: br.owner?.fullName || null, planName: br.subscriptionPlan?.planName || null,
                 planPrice, Bookings: bookingsByBranch[br.id] || 0, bookingsCount: bookingsByBranch[br.id] || 0,
                 Revenue: planPrice, totalRevenue: planPrice

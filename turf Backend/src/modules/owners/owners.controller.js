@@ -135,6 +135,10 @@ const createOwner = async (req, res) => {
         const branchCode = `BR-${Math.floor(1000 + Math.random() * 9000)}`;
         const turfBranchName = (businessName && businessName.trim()) ? businessName.trim() : `${fullName.trim()}'s Turf Arena`;
 
+        const selectedPlanId = planId || 'plan_starter';
+        const activePlan = await prisma.subscriptionPlan.findUnique({ where: { id: selectedPlanId } });
+        const planPriceAmount = Number(activePlan?.monthlyPrice || (selectedPlanId === 'plan_starter' ? 800 : 3000));
+
         const owner = await prisma.$transaction(async (tx) => {
             const createdOwner = await tx.owner.create({
                 data: {
@@ -154,7 +158,7 @@ const createOwner = async (req, res) => {
                     zipCode: zipCode ? zipCode.trim() : null,
                     fullAddress: fullAddress ? fullAddress.trim() : null,
                     profileImage: profileImage || null,
-                    subscriptionPlan: { connect: { id: planId || 'plan_starter' } },
+                    subscriptionPlan: { connect: { id: selectedPlanId } },
                     createdBy: req.user?.id || 'SYSTEM',
                     updatedBy: req.user?.id || 'SYSTEM',
                     user: {
@@ -180,13 +184,29 @@ const createOwner = async (req, res) => {
                     branchCode,
                     ownerId: createdOwner.id,
                     ownerUserId: createdOwner.userId,
-                    subscriptionPlanId: planId || 'plan_starter',
+                    subscriptionPlanId: selectedPlanId,
+                    subscriptionPriceSnapshot: planPriceAmount,
+                    planPrice: planPriceAmount,
                     city: city ? city.trim() : null,
                     zipCode: zipCode ? zipCode.trim() : null,
                     fullAddress: fullAddress ? fullAddress.trim() : null,
                     email: normalizedEmail,
                     mobile: normalizedMobile,
                     status: 'ACTIVE'
+                }
+            });
+
+            await tx.ownerSubscription.create({
+                data: {
+                    id: genId('sub'),
+                    ownerId: createdOwner.id,
+                    planId: selectedPlanId,
+                    planName: activePlan?.planName || 'Starter Plan',
+                    amount: planPriceAmount,
+                    billingCycle: 'MONTHLY',
+                    status: 'ACTIVE',
+                    paymentStatus: 'COMPLETED',
+                    paymentMethod: 'ONLINE'
                 }
             });
 
@@ -408,10 +428,22 @@ const changeOwnerStatus = async (req, res) => {
 
         await prisma.$transaction([
             prisma.owner.update({ where: { id }, data: { status, updatedBy: req.user?.id || 'SYSTEM' } }),
-            prisma.user.update({ where: { id: existing.userId }, data: { status } })
+            prisma.user.update({ where: { id: existing.userId }, data: { status } }),
+            prisma.branch.updateMany({ where: { OR: [{ ownerId: id }, { ownerUserId: existing.userId }] }, data: { status } })
         ]);
 
-        return res.status(200).json({ success: true, message: `Owner status updated to ${status}` });
+        try {
+            const { getIo } = require('../../realtime/socket');
+            const io = getIo();
+            if (io) {
+                io.emit('status_updated', { ownerId: id, userId: existing.userId, status });
+                io.emit('global_data_changed', { type: 'OWNER_STATUS_CHANGE', ownerId: id });
+            }
+        } catch (e) {
+            console.error('Socket emit error in changeOwnerStatus:', e);
+        }
+
+        return res.status(200).json({ success: true, message: `Owner, User, and all linked Turfs updated to ${status}` });
     } catch (error) {
         console.error('Error updating owner status:', error);
         return res.status(500).json({ success: false, message: 'Failed to update owner status', error: error.message });

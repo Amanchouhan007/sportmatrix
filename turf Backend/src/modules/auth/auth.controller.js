@@ -336,15 +336,53 @@ const updateUserStatus = async (req, res) => {
             return res.status(400).json({ success: false, message: 'Valid status is required (ACTIVE, INACTIVE, SUSPENDED).' });
         }
 
-        const updated = await prisma.user.update({ where: { id }, data: { status: normalizedStatus } }).catch(() => null);
-        if (!updated) {
+        const user = await prisma.user.findUnique({ where: { id } });
+        if (!user) {
             return res.status(404).json({ success: false, message: 'User not found' });
+        }
+
+        // 1. Update User status
+        await prisma.user.update({ where: { id }, data: { status: normalizedStatus } });
+
+        // 2. Find and update linked Owner profile if exists
+        const owner = await prisma.owner.findFirst({
+            where: { OR: [{ userId: id }, { email: user.email }] }
+        });
+
+        if (owner) {
+            await prisma.owner.update({
+                where: { id: owner.id },
+                data: { status: normalizedStatus, updatedBy: req.user?.id || 'SYSTEM' }
+            });
+
+            // 3. Update all linked Branches for this owner
+            await prisma.branch.updateMany({
+                where: { OR: [{ ownerId: owner.id }, { ownerUserId: id }] },
+                data: { status: normalizedStatus }
+            });
+        } else {
+            await prisma.branch.updateMany({
+                where: { ownerUserId: id },
+                data: { status: normalizedStatus }
+            });
+        }
+
+        // 4. Broadcast real-time Socket.IO event
+        try {
+            const { getIo } = require('../../realtime/socket');
+            const io = getIo();
+            if (io) {
+                io.emit('status_updated', { userId: id, ownerId: owner?.id, status: normalizedStatus });
+                io.emit('global_data_changed', { type: 'STATUS_CHANGE', userId: id });
+            }
+        } catch (e) {
+            console.error('Socket emit error in updateUserStatus:', e);
         }
 
         return res.status(200).json({
             success: true,
-            message: `User status updated to ${normalizedStatus}`,
-            data: { id, status: normalizedStatus === 'ACTIVE' ? 'Active' : 'Suspended' }
+            message: `User, Owner, and linked Turf status updated to ${normalizedStatus}`,
+            data: { id, status: normalizedStatus === 'ACTIVE' ? 'Active' : (normalizedStatus === 'SUSPENDED' ? 'Suspended' : 'Inactive') }
         });
     } catch (error) {
         console.error('Update user status error:', error);

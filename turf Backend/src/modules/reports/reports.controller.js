@@ -61,7 +61,7 @@ const getOverviewReport = async (req, res) => {
             isSuperAdmin ? prisma.branch.count({ where: { status: 'SUSPENDED' } }) : prisma.branch.count({ where: { status: 'SUSPENDED', id: { in: branchIds } } })
         ]);
 
-        const subPlanRev = activeBranches.reduce((sum, b) => sum + Number(b.subscriptionPlan?.monthlyPrice || 0), 0);
+        const subPlanRev = activeBranches.reduce((sum, b) => sum + Number(b.subscriptionPriceSnapshot ?? b.planPrice ?? b.subscriptionPlan?.monthlyPrice ?? 0), 0);
         const monthlyRevenue = Number(monthlyRevAgg._sum.amount || 0) + (isSuperAdmin ? subPlanRev : 0);
         const prevMonthlyRevenue = Number(prevMonthlyRevAgg._sum.amount || 0);
         const revenueGrowthPercentage = prevMonthlyRevenue > 0
@@ -171,11 +171,13 @@ const getSubscriptionAnalyticsReport = async (req, res) => {
         for (const b of branches) {
             if (!b.subscriptionPlan) continue;
             const key = b.subscriptionPlan.id;
-            if (!byPlan[key]) byPlan[key] = { planName: b.subscriptionPlan.planName, price: Number(b.subscriptionPlan.monthlyPrice), count: 0 };
+            const branchPrice = Number(b.subscriptionPriceSnapshot ?? b.planPrice ?? b.subscriptionPlan.monthlyPrice ?? 0);
+            if (!byPlan[key]) byPlan[key] = { planName: b.subscriptionPlan.planName, price: branchPrice, count: 0, revenue: 0 };
             byPlan[key].count++;
+            byPlan[key].revenue += branchPrice;
         }
         const data = Object.values(byPlan).sort((a, b) => b.count - a.count)
-            .map(p => ({ ...p, totalUsers: p.count, revenue: p.price * p.count, name: p.planName, value: p.count }));
+            .map(p => ({ ...p, totalUsers: p.count, name: p.planName, value: p.count }));
         return res.status(200).json({ success: true, data });
     } catch (error) {
         console.error('Subscription analytics error:', error);
