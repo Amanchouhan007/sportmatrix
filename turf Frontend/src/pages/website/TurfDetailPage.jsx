@@ -766,6 +766,8 @@ export default function TurfDetailPage() {
                     paymentMode: paymentMode.toUpperCase().replace(/-/g, '_'),
                     durationHours: duration,
                     slotDate, startTime, endTime,
+                    promoCode: promoCode || couponCode || null,
+                    myPaymentAmount: myPaymentAmount || null
                 });
                 if (!created?.success) throw new Error(created?.message || 'Could not lock this slot.');
 
@@ -773,6 +775,7 @@ export default function TurfDetailPage() {
                     matchId: created.data.matchId,
                     holdId: created.data.holdId,
                     paymentMethod: 'UPI',
+                    amount: myPaymentAmount || created.data.captainSharePayable
                 });
                 if (!verified?.success) throw new Error(verified?.message || 'Payment could not be verified.');
 

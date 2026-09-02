@@ -446,6 +446,8 @@ export default function SlotBookingPage() {
                 startTime: `${selectedSlotTime}:00`,
                 endTime: `${endHour}:00:00`,
                 totalPayingPlayers: perPlayerCount,
+                promoCode: appliedOffer?.code || null,
+                myPaymentAmount
             })
             if (!created?.success) throw new Error(created?.message || 'Could not lock this slot.')
 
@@ -453,6 +455,7 @@ export default function SlotBookingPage() {
                 matchId: created.data.matchId,
                 holdId: created.data.holdId,
                 paymentMethod: 'UPI',
+                amount: myPaymentAmount || created.data.captainSharePayable
             })
             if (!verified?.success) throw new Error(verified?.message || 'Payment could not be verified.')
 

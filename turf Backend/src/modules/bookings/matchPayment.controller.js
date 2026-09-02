@@ -127,6 +127,13 @@ class MatchPaymentController {
             if (deadline <= now) deadline = new Date(now.getTime() + 30 * 60 * 1000);
 
             await prisma.$transaction(async (tx) => {
+                const captainShare = (req.body.amount || req.body.myPaymentAmount)
+                    ? Number(req.body.amount || req.body.myPaymentAmount)
+                    : pricing.teamAShare;
+                const totalAmount = (req.body.amount || req.body.myPaymentAmount)
+                    ? Number(req.body.amount || req.body.myPaymentAmount)
+                    : pricing.totalRent;
+
                 await tx.match.create({
                     data: {
                         id: matchId,
@@ -137,8 +144,8 @@ class MatchPaymentController {
                         teamAName, teamBName,
                         paymentMode,
                         matchStatus: 'SLOT_HELD',
-                        totalAmount: pricing.totalRent,
-                        teamAShare: pricing.teamAShare,
+                        totalAmount,
+                        teamAShare: captainShare,
                         teamBShare: pricing.teamBShare,
                         perPlayerAmount: pricing.perPlayerAmount,
                         opponentPaymentDeadline: deadline,
@@ -280,7 +287,10 @@ class MatchPaymentController {
                 return res.status(403).json({ success: false, message: 'Only the booking captain can pay this share.' });
             }
 
-            const split = await computeSplit(match.teamAShare, match.commissionRateSnapshot);
+            const paymentAmount = (req.body.amount || req.body.myPaymentAmount)
+                ? Number(req.body.amount || req.body.myPaymentAmount)
+                : Number(match.teamAShare || match.totalAmount);
+            const split = await computeSplit(paymentAmount, match.commissionRateSnapshot);
 
             const result = await prisma.$transaction(async (tx) => {
                 const payment = await tx.matchPayment.create({
@@ -290,11 +300,8 @@ class MatchPaymentController {
                         userId: req.user.id,
                         teamSide: 'TEAM_A',
                         playerName: req.user.name,
-                        amount: match.teamAShare,
+                        amount: paymentAmount,
                         paymentMode: match.paymentMode,
-                        // No live gateway yet: the customer's payment reference is recorded, but
-                        // paymentStatus stays PENDING until the owner confirms receipt AND the
-                        // platform confirms its commission (see confirmOwnerReceipt/confirmCommission).
                         paymentStatus: 'PENDING',
                         commissionAmount: split.commissionAmount,
                         ownerAmount: split.ownerAmount,
@@ -307,7 +314,7 @@ class MatchPaymentController {
                 await SlotHoldService.convertHold(holdId);
 
                 // Fetch slot details to resolve all covered slots for multi-hour duration
-                const primarySlot = await tx.slot.findUnique({ where: { id: match.slotId } });
+                const primarySlot = await tx.slot.findUnique({ where: { id: match.slotId }, include: { sport: true } });
                 if (primarySlot) {
                     const startH = Number(primarySlot.startTime.split(':')[0]);
                     const finSnap = typeof match.financialSnapshot === 'string' ? JSON.parse(match.financialSnapshot) : (match.financialSnapshot || {});
@@ -346,7 +353,7 @@ class MatchPaymentController {
                         courtName: primarySlot?.courtName || 'Court 1',
                         timeSlot: primarySlot?.startTime ? primarySlot.startTime.substring(0, 5) : '18:00',
                         dutyDate: primarySlot?.slotDate || new Date(),
-                        amount: match.totalAmount,
+                        amount: paymentAmount,
                         duration: primarySlot ? primarySlot.duration : 60,
                         notes: `Match Booking (${match.paymentMode}) - ${primarySlot?.courtName || 'Court 1'}`,
                         status: 'COMPLETED'

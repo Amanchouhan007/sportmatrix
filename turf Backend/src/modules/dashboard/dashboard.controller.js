@@ -7,6 +7,9 @@ const resolveOwnerBranchIds = async (userOrId) => {
         const allB = await prisma.branch.findMany({ select: { id: true } });
         return allB.map(b => b.id);
     }
+    if (userRole === 'STAFF' && typeof userOrId === 'object' && userOrId?.staffBranchId) {
+        return [userOrId.staffBranchId];
+    }
     if (!userId) return [];
     const ownerProfile = await prisma.owner.findUnique({ where: { userId } }).catch(() => null);
     const branches = await prisma.branch.findMany({
@@ -67,12 +70,12 @@ const getOwnerDashboardSummary = async (branchIds = [], isSuperAdmin = false) =>
     const slotWhereAvailable = { status: 'AVAILABLE', slotDate: { gte: startOfToday, lte: endOfToday } };
 
     if (!isSuperAdmin) {
-        paymentWhereToday.OR = [{ booking: { slot: { branchId: branchFilter } } }, { booking: { court: { sport: { branchId: branchFilter } } } }];
-        bookingWhereToday.OR = [{ slot: { branchId: branchFilter } }, { court: { sport: { branchId: branchFilter } } }];
+        paymentWhereToday.booking = { slot: { branchId: branchFilter } };
+        bookingWhereToday.slot = { branchId: branchFilter };
         matchPaymentWhereToday.match = { branchId: branchFilter };
 
-        paymentWhereAll.OR = [{ booking: { slot: { branchId: branchFilter } } }, { booking: { court: { sport: { branchId: branchFilter } } } }];
-        bookingWhereAll.OR = [{ slot: { branchId: branchFilter } }, { court: { sport: { branchId: branchFilter } } }];
+        paymentWhereAll.booking = { slot: { branchId: branchFilter } };
+        bookingWhereAll.slot = { branchId: branchFilter };
         matchPaymentWhereAll.match = { branchId: branchFilter };
 
         slotWhereActive.branchId = branchFilter;
@@ -88,11 +91,11 @@ const getOwnerDashboardSummary = async (branchIds = [], isSuperAdmin = false) =>
         prisma.matchPayment.findMany({ where: matchPaymentWhereAll }),
         prisma.slot.count({ where: slotWhereActive }),
         prisma.slot.count({ where: slotWhereAvailable }),
-        prisma.payment.findMany({ where: paymentWhereAll, include: { booking: { include: { slot: true } } }, orderBy: { createdAt: 'desc' }, take: 10 }),
-        prisma.booking.findMany({ where: bookingWhereAll, include: { slot: true }, orderBy: { createdAt: 'desc' }, take: 10 }),
-        prisma.matchPayment.findMany({ where: matchPaymentWhereAll, include: { match: { include: { branch: true } } }, orderBy: { createdAt: 'desc' }, take: 10 }),
+        prisma.payment.findMany({ where: paymentWhereAll, include: { booking: { include: { slot: { include: { sport: true } } } } }, orderBy: { createdAt: 'desc' }, take: 10 }),
+        prisma.booking.findMany({ where: bookingWhereAll, include: { slot: { include: { sport: true } } }, orderBy: { createdAt: 'desc' }, take: 10 }),
+        prisma.matchPayment.findMany({ where: matchPaymentWhereAll, include: { match: { include: { branch: true, slot: { include: { sport: true } }, sport: true } } }, orderBy: { createdAt: 'desc' }, take: 10 }),
         prisma.slot.findMany({ where: isSuperAdmin ? { status: 'BOOKED' } : { status: 'BOOKED', branchId: branchFilter }, select: { startTime: true } }),
-        isSuperAdmin ? prisma.sport.count() : prisma.sport.count({ where: { branchId: branchFilter } }),
+        isSuperAdmin ? prisma.sport.count() : prisma.sport.count({ where: { branchSports: { some: { branchId: branchFilter } } } }).catch(() => prisma.sport.count()),
         isSuperAdmin ? prisma.tournament.count({ where: { status: { in: ['APPROVED', 'REGISTRATION_OPEN', 'UPCOMING', 'ACTIVE', 'RUNNING'] } } }) : prisma.tournament.count({ where: { branchId: branchFilter, status: { in: ['APPROVED', 'REGISTRATION_OPEN', 'UPCOMING', 'ACTIVE', 'RUNNING'] } } })
     ]);
 
@@ -133,7 +136,7 @@ const getOwnerDashboardSummary = async (branchIds = [], isSuperAdmin = false) =>
             createdAt: p.createdAt,
             time: p.createdAt ? new Date(p.createdAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }) : 'Just now',
             customer: p.customerName || p.booking?.customerName || p.user?.name || '',
-            sport: p.booking?.sportName || 'Cricket',
+            sport: p.booking?.slot?.sport?.name || p.booking?.sportName || 'Badminton',
             court: p.booking?.slot?.courtName || p.booking?.courtName || '',
             amount: `₹${gross.toLocaleString('en-IN')}`,
             status: 'Confirmed'
@@ -149,7 +152,7 @@ const getOwnerDashboardSummary = async (branchIds = [], isSuperAdmin = false) =>
                 createdAt: b.createdAt,
                 time: b.createdAt ? new Date(b.createdAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }) : 'Just now',
                 customer: b.customerName || '',
-                sport: b.sportName || 'Cricket',
+                sport: b.slot?.sport?.name || b.sportName || 'Badminton',
                 court: b.slot?.courtName || b.courtName || '',
                 amount: `₹${gross.toLocaleString('en-IN')}`,
                 status: 'Confirmed'
@@ -171,7 +174,7 @@ const getOwnerDashboardSummary = async (branchIds = [], isSuperAdmin = false) =>
                 createdAt: mp.createdAt,
                 time: mp.createdAt ? new Date(mp.createdAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }) : 'Just now',
                 customer: mp.playerName || 'Match Player',
-                sport: 'Cricket',
+                sport: mp.match?.slot?.sport?.name || mp.match?.sport?.name || 'Badminton',
                 court: mp.match?.courtName || 'Court 1',
                 amount: `₹${gross.toLocaleString('en-IN')}`,
                 status: 'Confirmed'
@@ -381,14 +384,14 @@ const getDashboardHistory = async (req, res) => {
         const branchIds = await resolveOwnerBranchIds(req.user);
         const branchFilter = isSuperAdmin ? undefined : (branchIds.length > 0 ? { in: branchIds } : { in: ['NO_MATCH_BRANCH_ID'] });
 
-        const pWhere = isSuperAdmin ? {} : { OR: [{ booking: { slot: { branchId: branchFilter } } }, { booking: { court: { sport: { branchId: branchFilter } } } }] };
-        const bWhere = isSuperAdmin ? {} : { OR: [{ slot: { branchId: branchFilter } }, { court: { sport: { branchId: branchFilter } } }] };
+        const pWhere = isSuperAdmin ? {} : { booking: { slot: { branchId: branchFilter } } };
+        const bWhere = isSuperAdmin ? {} : { slot: { branchId: branchFilter } };
         const mWhere = isSuperAdmin ? {} : { match: { branchId: branchFilter } };
 
         const [payments, bookings, matchPayments] = await Promise.all([
-            prisma.payment.findMany({ where: pWhere, include: { booking: { include: { slot: true } } }, orderBy: { createdAt: 'desc' } }),
-            prisma.booking.findMany({ where: bWhere, include: { slot: true }, orderBy: { createdAt: 'desc' } }),
-            prisma.matchPayment.findMany({ where: mWhere, include: { match: true }, orderBy: { createdAt: 'desc' } })
+            prisma.payment.findMany({ where: pWhere, include: { booking: { include: { slot: { include: { sport: true } } } } }, orderBy: { createdAt: 'desc' } }),
+            prisma.booking.findMany({ where: bWhere, include: { slot: { include: { sport: true } } }, orderBy: { createdAt: 'desc' } }),
+            prisma.matchPayment.findMany({ where: mWhere, include: { match: { include: { slot: { include: { sport: true } }, sport: true } } }, orderBy: { createdAt: 'desc' } })
         ]);
 
         // Merge & deduplicate into unified transaction ledger
@@ -401,7 +404,7 @@ const getDashboardHistory = async (req, res) => {
                 id: `pay_${p.id}`,
                 amount: Number(p.amount || 0),
                 customerName: p.customerName || p.booking?.customerName || p.user?.name || '',
-                sportName: p.booking?.sportName || 'Cricket',
+                sportName: p.booking?.slot?.sport?.name || p.booking?.sportName || 'Badminton',
                 courtName: p.booking?.slot?.courtName || p.booking?.courtName || '',
                 status: p.status === 'COMPLETED' ? 'COMPLETED' : 'PENDING',
                 createdAt: p.createdAt
@@ -414,7 +417,7 @@ const getDashboardHistory = async (req, res) => {
                     id: `bk_${b.id}`,
                     amount: Number(b.amount || 0),
                     customerName: b.customerName || '',
-                    sportName: b.sportName || 'Cricket',
+                    sportName: b.slot?.sport?.name || b.sportName || 'Badminton',
                     courtName: b.slot?.courtName || b.courtName || '',
                     status: b.status || 'COMPLETED',
                     createdAt: b.createdAt
@@ -432,7 +435,7 @@ const getDashboardHistory = async (req, res) => {
                     id: `mpay_${mp.id}`,
                     amount: Number(mp.amount || 0),
                     customerName: mp.playerName || 'Match Player',
-                    sportName: 'Cricket',
+                    sportName: mp.match?.slot?.sport?.name || mp.match?.sport?.name || 'Badminton',
                     court: mp.match?.courtName || 'Court 1',
                     status: mp.paymentStatus === 'COMPLETED' ? 'COMPLETED' : 'PENDING',
                     createdAt: mp.createdAt
