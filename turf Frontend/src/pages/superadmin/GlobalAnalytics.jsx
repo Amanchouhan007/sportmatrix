@@ -4,6 +4,7 @@ import Input from '../../components/ui/Input'
 import CustomDatePicker from '../../components/ui/CustomDatePicker'
 import { useToast } from '../../components/ui/Toast'
 import { useAuth } from '../../context/AuthContext'
+import PageLoader from '../../components/ui/PageLoader'
 import { 
     BarChart, 
     Bar, 
@@ -269,12 +270,7 @@ export default function GlobalAnalytics() {
     }
 
     if (authLoading || isPageLoading) {
-        return (
-            <div className="min-h-[60vh] flex flex-col items-center justify-center gap-4">
-                <div className="w-12 h-12 border-4 border-[#22C55E] border-t-transparent rounded-full animate-spin"></div>
-                <span className="text-slate-500 text-xs font-bold uppercase tracking-wider">Preparing analytics commands...</span>
-            </div>
-        )
+        return <PageLoader text="Preparing analytics commands..." />
     }
 
     return (

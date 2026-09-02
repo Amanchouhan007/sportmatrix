@@ -5,6 +5,7 @@ import Input from '../../components/ui/Input'
 import CustomDatePicker from '../../components/ui/CustomDatePicker'
 import { useToast } from '../../components/ui/Toast'
 import { useAuth } from '../../context/AuthContext'
+import PageLoader from '../../components/ui/PageLoader'
 import { 
     BarChart, 
     Bar, 
@@ -189,12 +190,7 @@ export default function SADashboard() {
     useRealtime(['booking:new', 'booking:cancelled', 'payment:pending', 'payment:owner-confirmed', 'payment:settled', 'status_updated', 'global_data_changed'], () => fetchDashboardData())
 
     if (authLoading || isPageLoading) {
-        return (
-            <div className="min-h-[60vh] flex flex-col items-center justify-center gap-4">
-                <div className="w-12 h-12 border-4 border-[#22C55E] border-t-transparent rounded-full animate-spin"></div>
-                <span className="text-slate-500 text-sm font-bold uppercase tracking-wider">Loading Enterprise Overview...</span>
-            </div>
-        )
+        return <PageLoader text="Loading Enterprise Overview..." />
     }
 
     // Custom Dark Emerald Tooltip for Charts

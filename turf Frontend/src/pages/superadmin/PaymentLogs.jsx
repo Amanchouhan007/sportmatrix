@@ -5,6 +5,7 @@ import Modal from '../../components/ui/Modal'
 import Pagination from '../../components/ui/Pagination'
 import CustomDatePicker from '../../components/ui/CustomDatePicker'
 import { useToast } from '../../components/ui/Toast'
+import PageLoader from '../../components/ui/PageLoader'
 import { getPaymentLogs, getPaymentLogById, getPaymentStats } from '../../services/paymentLogService'
 import { getPendingSettlements, confirmCommission } from '../../services/matchPaymentService'
 import useRealtime from '../../utils/useRealtime'
@@ -307,12 +308,7 @@ export default function PaymentLogs() {
     ]
 
     if (isPageLoading) {
-        return (
-            <div className="min-h-[60vh] flex flex-col items-center justify-center gap-4">
-                <div className="w-12 h-12 border-4 border-[#22C55E] border-t-transparent rounded-full animate-spin" />
-                <span className="text-slate-500 text-xs font-bold uppercase tracking-wider">Loading payment logs...</span>
-            </div>
-        )
+        return <PageLoader text="Loading payment logs..." />
     }
 
     return (

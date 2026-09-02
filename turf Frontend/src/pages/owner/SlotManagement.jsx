@@ -8,6 +8,7 @@ import CustomSelect from '../../components/ui/CustomSelect'
 import EmptyState from '../../components/ui/EmptyState'
 import { useToast } from '../../components/ui/Toast'
 import { useAuth } from '../../context/AuthContext'
+import PageLoader from '../../components/ui/PageLoader'
 import { getBranches } from '../../services/branchService'
 import { getBranchSports } from '../../services/sportsService'
 import {
@@ -592,12 +593,7 @@ export default function SlotManagement() {
     }
 
     if (isPageLoading) {
-        return (
-            <div className="flex flex-col items-center justify-center min-h-[400px] space-y-4">
-                <div className="w-12 h-12 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin" />
-                <p className="text-surface-500 text-sm font-semibold">Loading branch configurations...</p>
-            </div>
-        )
+        return <PageLoader text="Loading branch configurations..." />
     }
 
     return (

@@ -30,9 +30,9 @@ export default function LiveCricketChallengeCard({
     const [isVisible, setIsVisible] = useState(true)
     const [isMinimized, setIsMinimized] = useState(() => {
         if (typeof window !== 'undefined') {
-            return window.innerWidth < 768; // Auto-minimize on mobile and tablets to keep cards 100% visible
+            return window.innerWidth < 768 // Auto-minimize on small mobile screens (< 768px)
         }
-        return false;
+        return false
     })
     const [position, setPosition] = useState({ x: 0, y: 0 })
     const [isDragging, setIsDragging] = useState(false)
@@ -65,6 +65,17 @@ export default function LiveCricketChallengeCard({
             setTimeLeft(prev => (prev > 1 ? prev - 1 : 899))
         }, 1000)
         return () => clearInterval(timer)
+    }, [])
+
+    // Auto-minimize on small mobile screens (< 768px)
+    useEffect(() => {
+        const handleResize = () => {
+            if (window.innerWidth < 768) {
+                setIsMinimized(true)
+            }
+        }
+        window.addEventListener('resize', handleResize)
+        return () => window.removeEventListener('resize', handleResize)
     }, [])
 
     // Auto-rotate matches every 7 seconds when more than 1 match is available
@@ -195,7 +206,7 @@ export default function LiveCricketChallengeCard({
 
     return (
         <div 
-            className="fixed bottom-4 left-3 right-3 sm:left-auto sm:right-6 sm:bottom-5 z-[90] max-w-[calc(100vw-24px)] sm:max-w-[350px] animate-in slide-in-from-bottom-5 duration-300 touch-none select-none mx-auto sm:mx-0"
+            className="fixed bottom-3 left-3 right-3 sm:left-auto sm:right-4 sm:bottom-4 md:right-5 md:bottom-5 z-[90] max-w-[calc(100vw-24px)] sm:max-w-[310px] md:max-w-[295px] lg:max-w-[340px] animate-in slide-in-from-bottom-5 duration-300 touch-none select-none mx-auto sm:mx-0"
             style={{ transform: `translate3d(${position.x}px, ${position.y}px, 0)` }}
             onMouseEnter={() => setIsPaused(true)}
             onMouseLeave={() => setIsPaused(false)}

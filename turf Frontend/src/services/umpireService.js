@@ -40,7 +40,7 @@ export const getUmpireMatches = async () => {
 export const recordToss = async (data) => {
     try {
         const res = await api.post('/umpire/toss', data);
-        if (res && res.data) return res.data;
+        if (res) return res;
     } catch (e) {
         console.warn('recordToss API error:', e.message);
     }
@@ -50,7 +50,7 @@ export const recordToss = async (data) => {
 export const updateMatchScore = async (data) => {
     try {
         const res = await api.post('/umpire/score', data);
-        if (res && res.data) return res.data;
+        if (res) return res;
     } catch (e) {
         console.warn('updateMatchScore API error:', e.message);
     }
@@ -60,7 +60,7 @@ export const updateMatchScore = async (data) => {
 export const completeMatch = async (data) => {
     try {
         const res = await api.post('/umpire/complete', data);
-        if (res && res.data) return res.data;
+        if (res) return res;
     } catch (e) {
         console.warn('completeMatch API error:', e.message);
     }
@@ -70,7 +70,7 @@ export const completeMatch = async (data) => {
 export const updatePaymentStatus = async (data) => {
     try {
         const res = await api.post('/umpire/payment-status', data);
-        if (res && res.data) return res.data;
+        if (res) return res;
     } catch (e) {
         console.warn('updatePaymentStatus API error:', e.message);
     }
@@ -80,7 +80,7 @@ export const updatePaymentStatus = async (data) => {
 export const registerGroundMatch = async (data) => {
     try {
         const res = await api.post('/umpire/register-ground-match', data);
-        if (res && res.data) return res.data;
+        if (res) return res;
     } catch (e) {
         console.warn('registerGroundMatch API error:', e.message);
     }

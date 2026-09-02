@@ -18,6 +18,7 @@ import Modal from '../../components/ui/Modal'
 import TurfGalleryModal from '../../components/booking/TurfGalleryModal'
 import VenueSwitchModal from '../../components/booking/VenueSwitchModal'
 import AuthModal from '../../components/booking/AuthModal'
+import PageLoader from '../../components/ui/PageLoader'
 import CorporateBookingModal from '../../components/website/CorporateBookingModal'
 
 const DEFAULT_COURT_NAME = 'Court 1'
@@ -532,11 +533,7 @@ export default function SlotBookingPage() {
     }
 
     if (venueLoading) {
-        return (
-            <div className="min-h-screen flex items-center justify-center text-slate-500 font-semibold pt-20">
-                Loading turf details...
-            </div>
-        )
+        return <PageLoader text="Loading turf details..." />
     }
 
     if (venueError || !selectedVenue) {

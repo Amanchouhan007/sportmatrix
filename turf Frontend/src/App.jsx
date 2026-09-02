@@ -112,7 +112,7 @@ export default function App() {
       <BrowserRouter>
         <ScrollToTop />
         <ToastProvider>
-          <Suspense fallback={<PageLoader text="Loading SportMatrix..." />}>
+          <Suspense fallback={<PageLoader text="Loading SportMatrix..." fullScreen />}>
             <Routes>
               {/* Mobile Remote Controller Public Route */}
               <Route path="/mobile-controller/:sessionId" element={<MobileControllerStandalonePage />} />
