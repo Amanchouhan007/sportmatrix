@@ -186,7 +186,7 @@ export default function SADashboard() {
         fetchDashboardData()
     }, [range, startDate, endDate])
 
-    useRealtime(['booking:new', 'booking:cancelled', 'payment:pending', 'payment:owner-confirmed', 'payment:settled'], () => fetchDashboardData())
+    useRealtime(['booking:new', 'booking:cancelled', 'payment:pending', 'payment:owner-confirmed', 'payment:settled', 'status_updated', 'global_data_changed'], () => fetchDashboardData())
 
     if (authLoading || isPageLoading) {
         return (
@@ -343,9 +343,9 @@ export default function SADashboard() {
                         color: 'from-emerald-500 to-teal-400'
                     },
                     {
-                        label: 'Total Admin Users',
+                        label: 'Total Turf Owners',
                         value: numUsers.toLocaleString('en-IN'),
-                        trend: `${numUsers} Registered Admins`,
+                        trend: `${numUsers} Owners (${numBranches} Turf Venues)`,
                         isUp: true,
                         icon: HiUsers,
                         color: 'from-teal-500 to-green-400'

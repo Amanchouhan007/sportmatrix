@@ -34,18 +34,12 @@ export default function AllTurfsPage() {
                 const res = await fetch(`${API_URL}/branches`)
                 const data = await res.json()
                 if (data.success && data.data && Array.isArray(data.data.branches)) {
-                    const defaultPricingTable = [1200, 800, 1600, 600, 1000, 1400, 900, 1800];
-                    const defaultRatingsTable = [4.9, 4.7, 4.8, 4.6, 4.9, 4.5, 4.8, 4.9];
                     const mapped = data.data.branches.map((b, idx) => {
-                        const rawPrice = Number(b.price_per_hour || b.pricePerHour || b.price || b.minPriceHourly);
-                        const resolvedPrice = (!isNaN(rawPrice) && rawPrice > 0 && rawPrice !== 700)
-                            ? rawPrice
-                            : (defaultPricingTable[idx % defaultPricingTable.length]);
+                        const rawPrice = Number(b.pricePerHour ?? b.price_per_hour ?? b.price ?? b.minPriceHourly ?? b.min_price_hourly);
+                        const resolvedPrice = (!isNaN(rawPrice) && rawPrice > 0) ? rawPrice : 700;
 
                         const rawRating = Number(b.rating);
-                        const resolvedRating = (!isNaN(rawRating) && rawRating > 0 && rawRating !== 4.5 && rawRating !== 4.8)
-                            ? rawRating
-                            : (defaultRatingsTable[idx % defaultRatingsTable.length]);
+                        const resolvedRating = (!isNaN(rawRating) && rawRating > 0) ? rawRating : 4.5;
 
                         return {
                             id: b.id || b._id || `br_${idx + 1}`,
@@ -55,16 +49,19 @@ export default function AllTurfsPage() {
                             sport: (Array.isArray(b.sports) && b.sports[0]) ? (typeof b.sports[0] === 'string' ? b.sports[0] : (b.sports[0]?.name || 'Cricket')) : 'Cricket',
                             sports: Array.isArray(b.sports) && b.sports.length > 0 ? b.sports.map(s => typeof s === 'string' ? s : (s?.name || 'Cricket')) : ['Cricket'],
                             rating: resolvedRating,
-                            reviews: 120 + (idx * 25),
+                            reviews: b.reviewCount || (120 + (idx * 5)),
                             price: resolvedPrice,
                             pricePerHour: resolvedPrice,
-                            openingTime: b.opening_time || b.openingTime || '06:00 AM',
-                            closingTime: b.closing_time || b.closingTime || '11:00 PM',
-                            turfSize: b.turf_size || b.turfSize || '5,000 Sq.Ft',
-                            dimensions: b.turf_size || b.turfSize || '5,000 Sq.Ft',
-                            surfaceType: b.surface_type || b.surfaceType || 'TurfPro Synthetic Arena',
+                            openingTime: b.openingTime || b.opening_time || '06:00 AM',
+                            closingTime: b.closingTime || b.closing_time || '11:00 PM',
+                            dimensionsSqFt: b.dimensionsSqFt || b.dimensions_sqft,
+                            turfSize: b.dimensionsSqFt ? `${Number(b.dimensionsSqFt).toLocaleString('en-IN')} Sq.Ft` : (b.turfSize || b.dimensions || '5,000 Sq.Ft'),
+                            dimensions: b.dimensionsSqFt ? `${Number(b.dimensionsSqFt).toLocaleString('en-IN')} Sq.Ft` : (b.turfSize || b.dimensions || '5,000 Sq.Ft'),
+                            surfaceType: b.surfaceType || b.surface_type || 'TurfPro Synthetic Arena',
                             amenities: Array.isArray(b.amenities) ? b.amenities : ['Floodlights', 'Parking', 'Washroom'],
-                            image: b.logo || (Array.isArray(b.images) && b.images[0] ? b.images[0] : `/images/turf${(idx % 6) + 1}.png`)
+                            image: b.logo || (Array.isArray(b.images) && b.images[0] ? b.images[0] : `/images/turf${(idx % 6) + 1}.png`),
+                            discountOffer: b.discountOffer || b.discount_offer || '',
+                            couponCode: b.couponCode || b.coupon_code || ''
                         };
                     })
                     setTurfList(mapped)

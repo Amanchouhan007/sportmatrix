@@ -8,6 +8,8 @@ import { getAllUsers, updateUserStatus } from '../../services/authService'
 import { postApi, deleteApi } from '../../services/api'
 import { FiSearch, FiX, FiKey, FiSlash, FiCheck, FiTrash2, FiUser, FiUsers } from 'react-icons/fi'
 
+import useRealtime from '../../utils/useRealtime'
+
 export default function UserManagement() {
     const { addToast } = useToast()
     const [users, setUsers] = useState([])
@@ -18,28 +20,33 @@ export default function UserManagement() {
     const [deleteModal, setDeleteModal] = useState({ open: false, user: null })
     const [resetModal, setResetModal] = useState({ open: false, user: null, password: '' })
 
-    useEffect(() => {
-        const loadUsers = async () => {
-            setLoading(true)
-            try {
-                const data = await getAllUsers()
-                if (Array.isArray(data)) {
-                    setUsers(data)
-                }
-            } catch (err) {
-                console.error('Failed to load real users from API:', err)
-                addToast({
-                    title: 'Fetch Failed',
-                    message: err?.message || 'Could not load users from backend database.',
-                    type: 'danger'
-                })
-                setUsers([])
-            } finally {
-                setLoading(false)
+    const loadUsers = async () => {
+        setLoading(true)
+        try {
+            const data = await getAllUsers()
+            if (Array.isArray(data)) {
+                setUsers(data)
             }
+        } catch (err) {
+            console.error('Failed to load real users from API:', err)
+            addToast({
+                title: 'Fetch Failed',
+                message: err?.message || 'Could not load users from backend database.',
+                type: 'danger'
+            })
+            setUsers([])
+        } finally {
+            setLoading(false)
         }
+    }
+
+    useEffect(() => {
         loadUsers()
     }, [])
+
+    useRealtime(['status_updated', 'global_data_changed'], () => {
+        loadUsers()
+    })
 
     const handleToggleStatus = async () => {
         const user = confirm.user
@@ -337,7 +344,7 @@ export default function UserManagement() {
                     <Input
                         label="New Password *"
                         type="text"
-                        placeholder="e.g. password123"
+                        placeholder="Enter new password"
                         value={resetModal.password}
                         onChange={(e) => setResetModal({ ...resetModal, password: e.target.value })}
                     />

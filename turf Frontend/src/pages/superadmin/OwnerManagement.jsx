@@ -7,6 +7,7 @@ import Input from '../../components/ui/Input'
 import ConfirmDialog from '../../components/ui/ConfirmDialog'
 import { useToast } from '../../components/ui/Toast'
 import { useAuth } from '../../context/AuthContext'
+import useRealtime from '../../utils/useRealtime'
 import { 
     FiEdit2, 
     FiTrash2, 
@@ -176,6 +177,10 @@ export default function OwnerManagement() {
             }
         }
     }, [page, searchTerm, statusFilter, token, user])
+
+    useRealtime(['status_updated', 'global_data_changed'], () => {
+        fetchData()
+    })
 
     // Close dropdown on click outside
     useEffect(() => {
@@ -722,17 +727,31 @@ export default function OwnerManagement() {
                                                                 {isExpanded ? <FiChevronUp className="w-4 h-4 text-[#16A34A]" /> : <FiChevronDown className="w-4 h-4" />}
                                                             </button>
 
-                                                            {r.profileImage ? (
-                                                                <img
-                                                                    src={r.profileImage}
-                                                                    alt={r.fullName}
-                                                                    className="w-10 h-10 rounded-2xl object-cover border border-slate-200 bg-white shadow-2xs"
-                                                                />
-                                                            ) : (
-                                                                <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-green-500 to-emerald-400 flex items-center justify-center text-white text-xs font-black shadow-xs">
-                                                                    {((r.fullName || '').split(' ').map(n => n[0]).join('') || '?').substring(0, 2).toUpperCase()}
-                                                                </div>
-                                                            )}
+                                                            {(() => {
+                                                                const initials = ((r.fullName || '').split(' ').map(n => n[0]).join('') || '?').substring(0, 2).toUpperCase();
+                                                                return (
+                                                                    <div className="relative w-10 h-10 shrink-0">
+                                                                        {r.profileImage ? (
+                                                                            <img
+                                                                                src={r.profileImage}
+                                                                                alt={r.fullName}
+                                                                                className="w-10 h-10 rounded-2xl object-cover border border-slate-200 bg-white shadow-2xs shrink-0"
+                                                                                onError={(e) => {
+                                                                                    e.target.style.display = 'none';
+                                                                                    const fallback = e.target.parentElement.querySelector('.owner-logo-fallback');
+                                                                                    if (fallback) fallback.style.display = 'flex';
+                                                                                }}
+                                                                            />
+                                                                        ) : null}
+                                                                        <div 
+                                                                            className="owner-logo-fallback w-10 h-10 rounded-2xl bg-gradient-to-tr from-green-500 to-emerald-400 flex items-center justify-center text-white text-xs font-black shadow-xs shrink-0"
+                                                                            style={{ display: r.profileImage ? 'none' : 'flex' }}
+                                                                        >
+                                                                            {initials}
+                                                                        </div>
+                                                                    </div>
+                                                                );
+                                                            })()}
                                                             <div>
                                                                 <div className="font-black text-slate-900 text-sm flex items-center gap-1.5">
                                                                     <span>{r.fullName || 'N/A'}</span>

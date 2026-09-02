@@ -284,8 +284,8 @@ export default function TurfDetailPage() {
                 amenities: parsedAmenities,
                 openingTime: liveBranch.openingTime || '06:00',
                 closingTime: liveBranch.closingTime || '23:00',
-                discountOffer: liveBranch.discountOffer || liveBranch.discount_offer || '20% OFF FIRST MATCH',
-                couponCode: liveBranch.couponCode || liveBranch.coupon_code || 'CRICKET20',
+                discountOffer: liveBranch.discountOffer || liveBranch.discount_offer || '',
+                couponCode: liveBranch.couponCode || liveBranch.coupon_code || '',
                 lat: Number(liveBranch.latitude || 22.7244),
                 lng: Number(liveBranch.longitude || 75.8839)
             };
@@ -307,8 +307,8 @@ export default function TurfDetailPage() {
             amenities: ['Floodlights', 'Parking', 'Washroom'],
             openingTime: '06:00',
             closingTime: '23:00',
-            discountOffer: '20% OFF FIRST MATCH',
-            couponCode: 'CRICKET20',
+            discountOffer: '',
+            couponCode: '',
             lat: 22.7244,
             lng: 75.8839
         };

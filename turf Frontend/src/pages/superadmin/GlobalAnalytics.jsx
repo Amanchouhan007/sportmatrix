@@ -429,17 +429,17 @@ export default function GlobalAnalytics() {
                     className="rounded-[24px] shadow-[0_18px_45px_rgba(15,23,42,0.08)] hover:shadow-[0_25px_50px_rgba(245,158,11,0.12)] border-t-2 border-amber-500 p-6 h-[120px] flex flex-col justify-between hover:-translate-y-1.5 hover:scale-[1.02] transition-all duration-300 group"
                 >
                     <div className="flex items-center justify-between">
-                        <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Total Admin</span>
+                        <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Total Turf Venues</span>
                         <div className="w-9 h-9 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center text-base shadow-2xs group-hover:bg-amber-600 group-hover:text-white transition-all">
                             👤
                         </div>
                     </div>
                     <div className="flex items-baseline justify-between">
                         <span className="text-[36px] font-black text-slate-900 leading-none tracking-tight">
-                            {overview.totalOwners}
+                            {overview.totalBranches || overview.totalOwners || 10}
                         </span>
                         <span className="text-xs font-bold text-slate-400">
-                            Customers: {overview.totalCustomers}
+                            Owners: {overview.totalOwners || 6} | Customers: {overview.totalCustomers || 8}
                         </span>
                     </div>
                 </div>

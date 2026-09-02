@@ -43,8 +43,18 @@ export default function TurfCard({ turf, onMouseEnter, onMouseLeave, i = 0 }) {
 
     // Dynamic Turf Owner Offer Reader with Guaranteed CSS Gradients
     const getTurfOffer = (t) => {
+        if (t.discountOffer || t.couponCode) {
+            return {
+                code: t.couponCode || 'OFFER',
+                icon: '⚡',
+                tag: String(t.discountOffer || 'SPECIAL OFFER').toUpperCase(),
+                discount: 20,
+                type: 'percent',
+                bg: 'linear-gradient(135deg, #D97706 0%, #EA580C 50%, #DC2626 100%)',
+                shadow: '0 6px 18px rgba(234,88,12,0.55)'
+            };
+        }
         try {
-            // 1. Check if Turf Owner has created an active offer for this specific turf
             const cachedDiscounts = localStorage.getItem('sports_discounts_data');
             if (cachedDiscounts) {
                 const list = JSON.parse(cachedDiscounts);
@@ -52,7 +62,7 @@ export default function TurfCard({ turf, onMouseEnter, onMouseLeave, i = 0 }) {
                     if (d.status && d.status !== 'Active') return false;
                     const matchesId = String(d.turfId) === String(t.id) ||
                                       d.turfId === `turf-${t.id}` ||
-                                      (d.turfName && d.turfName.toLowerCase().includes(t.name.toLowerCase()));
+                                      (d.turfName && d.turfName.toLowerCase().includes((t.name || '').toLowerCase()));
                     return matchesId;
                 });
 
@@ -73,19 +83,7 @@ export default function TurfCard({ turf, onMouseEnter, onMouseLeave, i = 0 }) {
         } catch (e) {
             console.error('Error fetching turf owner offer:', e);
         }
-
-        // 2. Default high-converting offer if no owner custom discount is active
-        const id = Number(t.id) || 1;
-        const offers = [
-            { code: 'SM200', icon: '🔥', tag: 'FLAT ₹200 OFF', discount: 200, type: 'flat', bg: 'linear-gradient(135deg, #E11D48 0%, #F97316 50%, #F59E0B 100%)', shadow: '0 6px 18px rgba(225,29,72,0.55)' },
-            { code: 'CRICKET20', icon: '⚡', tag: '20% OFF FIRST MATCH', discount: 20, type: 'percent', bg: 'linear-gradient(135deg, #D97706 0%, #EA580C 50%, #DC2626 100%)', shadow: '0 6px 18px rgba(234,88,12,0.55)' },
-            { code: 'PROUMPIRE', icon: '🏏', tag: 'FREE UMPIRE ADDON', discount: 300, type: 'umpire', bg: 'linear-gradient(135deg, #059669 0%, #0D9488 50%, #059669 100%)', shadow: '0 6px 18px rgba(5,150,105,0.55)' },
-            { code: 'NIGHTSPECIAL', icon: '🌙', tag: 'NIGHT MATCH DEAL', discount: 200, type: 'flat', bg: 'linear-gradient(135deg, #4F46E5 0%, #7C3AED 50%, #DB2777 100%)', shadow: '0 6px 18px rgba(124,58,237,0.55)' },
-            { code: 'DARECASH150', icon: '🎁', tag: '₹150 DARE CASHBACK', discount: 150, type: 'flat', bg: 'linear-gradient(135deg, #EA580C 0%, #DC2626 50%, #F59E0B 100%)', shadow: '0 6px 18px rgba(220,38,38,0.55)' },
-            { code: 'SQUAD100', icon: '🎟️', tag: 'SQUAD ₹100/PLAYER', discount: 150, type: 'flat', bg: 'linear-gradient(135deg, #2563EB 0%, #4F46E5 50%, #0284C7 100%)', shadow: '0 6px 18px rgba(37,99,235,0.55)' },
-            { code: 'EARLY250', icon: '⭐', tag: 'EARLY BIRD ₹250 OFF', discount: 250, type: 'flat', bg: 'linear-gradient(135deg, #059669 0%, #65A30D 50%, #0D9488 100%)', shadow: '0 6px 18px rgba(101,163,13,0.55)' },
-        ];
-        return offers[id % offers.length];
+        return null;
     }
     const promo = getTurfOffer(turf)
 
@@ -93,7 +91,8 @@ export default function TurfCard({ turf, onMouseEnter, onMouseLeave, i = 0 }) {
 
     const handleViewDetails = (e) => {
         if (e) e.stopPropagation();
-        navigate(`/turf/${turf.id}`)
+        const promoParam = promo?.code ? `?promo=${promo.code}` : ''
+        navigate(`/booking/${turf.id}${promoParam}`)
     }
 
     const handleBookNow = (e) => {
@@ -118,7 +117,7 @@ export default function TurfCard({ turf, onMouseEnter, onMouseLeave, i = 0 }) {
             id={`turf-card-${turf.id}`}
             onMouseEnter={onMouseEnter}
             onMouseLeave={onMouseLeave}
-            onClick={handleViewDetails}
+            onClick={handleBookNow}
             style={{ animationDelay: `${i * 100}ms` }}
             className={`group relative flex flex-col h-full bg-white border border-[#E5E7EB] rounded-[18px] overflow-hidden transition-all duration-300 hover:-translate-y-[6px] hover:border-[#16A34A]/40 shadow-[0_15px_45px_rgba(0,0,0,0.08)] hover:shadow-[0_25px_60px_rgba(0,0,0,0.14)] cursor-pointer`}
         >
@@ -150,8 +149,8 @@ export default function TurfCard({ turf, onMouseEnter, onMouseLeave, i = 0 }) {
                         <HiHeart className={`w-4 h-4 transition-transform duration-200 ${isLiked ? 'scale-110 text-rose-500' : ''}`} />
                     </button>
 
-                    {/* Ultra-Attractive Glowing Offer Badge (Prominent, Bold & Guaranteed Visible) */}
-                    {(turf.discountOffer || promo) && (
+                    {/* Ultra-Attractive Glowing Offer Badge */}
+                    {promo && promo.tag && (
                         <div 
                             onClick={(e) => { e.stopPropagation(); handleBookNow(e) }}
                             style={{ 
@@ -162,7 +161,7 @@ export default function TurfCard({ turf, onMouseEnter, onMouseLeave, i = 0 }) {
                         >
                             <span className="text-[11px] sm:text-xs animate-bounce shrink-0 drop-shadow-md">{promo?.icon || '⚡'}</span>
                             <span className="text-[9.5px] sm:text-[10.5px] font-black text-white uppercase tracking-wider drop-shadow-md truncate">
-                                {turf.discountOffer ? turf.discountOffer.toUpperCase() : (promo?.tag || '20% OFF FIRST MATCH')}
+                                {promo.tag}
                             </span>
                         </div>
                     )}
@@ -214,7 +213,7 @@ export default function TurfCard({ turf, onMouseEnter, onMouseLeave, i = 0 }) {
                 <div className="flex flex-wrap items-center mb-1.5">
                     <span className="text-[9.5px] sm:text-[10px] font-medium text-[#4B5563] line-clamp-2 leading-tight">
                         {(()=>{
-                            const dim = turf.turfSize || turf.dimensions || '5,000 Sq.Ft';
+                            const dim = turf.dimensionsSqFt ? `${Number(turf.dimensionsSqFt).toLocaleString('en-IN')} Sq.Ft` : (turf.turfSize || turf.dimensions || '5,000 Sq.Ft');
                             const m = dim.match(/(\d+)\s*(?:[×x*X]|by)\s*(\d+)/);
                             const sqft = m ? (parseInt(m[1], 10) * parseInt(m[2], 10)).toLocaleString('en-IN') : (dim.includes('Sq.Ft') ? dim : `${dim}`);
                             return (
@@ -228,23 +227,27 @@ export default function TurfCard({ turf, onMouseEnter, onMouseLeave, i = 0 }) {
                     </span>
                 </div>
 
-                {/* ── PROFESSIONAL IN-CARD COUPON STRIP (Swiggy / Zomato Pro Style) ── */}
-                <div 
-                    onClick={handleBookNow}
-                    className="my-1.5 py-1 px-2 rounded-lg bg-gradient-to-r from-emerald-50 via-teal-50 to-emerald-50 border border-dashed border-emerald-400/90 flex items-center justify-between gap-1.5 transition-all hover:bg-emerald-100/60 cursor-pointer group/promo select-none"
-                >
-                    <div className="flex items-center gap-1.5 min-w-0 flex-1 overflow-hidden">
-                        <span className="text-xs shrink-0">{promo?.icon || '⚡'}</span>
-                        <span className="text-[9.5px] sm:text-[10px] font-black text-emerald-950 truncate tracking-tight">
-                            {turf.discountOffer || promo?.tag || '20% OFF FIRST MATCH'}
-                        </span>
+                {/* ── PROFESSIONAL IN-CARD COUPON STRIP (Only shown when active promo exists) ── */}
+                {promo && (promo.tag || promo.code) && (
+                    <div 
+                        onClick={handleBookNow}
+                        className="my-1.5 py-1 px-2 rounded-lg bg-gradient-to-r from-emerald-50 via-teal-50 to-emerald-50 border border-dashed border-emerald-400/90 flex items-center justify-between gap-1.5 transition-all hover:bg-emerald-100/60 cursor-pointer group/promo select-none"
+                    >
+                        <div className="flex items-center gap-1.5 min-w-0 flex-1 overflow-hidden">
+                            <span className="text-xs shrink-0">{promo?.icon || '⚡'}</span>
+                            <span className="text-[9.5px] sm:text-[10px] font-black text-emerald-950 truncate tracking-tight">
+                                {promo.tag}
+                            </span>
+                        </div>
+                        {promo.code && (
+                            <div className="flex items-center gap-1 shrink-0">
+                                <span className="font-mono font-black text-[8.5px] sm:text-[9px] bg-emerald-700 text-white px-1.5 py-0.5 rounded shadow-2xs uppercase tracking-wider">
+                                    {promo.code}
+                                </span>
+                            </div>
+                        )}
                     </div>
-                    <div className="flex items-center gap-1 shrink-0">
-                        <span className="font-mono font-black text-[8.5px] sm:text-[9px] bg-emerald-700 text-white px-1.5 py-0.5 rounded shadow-2xs uppercase tracking-wider">
-                            {turf.couponCode || promo?.code || 'CRICKET20'}
-                        </span>
-                    </div>
-                </div>
+                )}
 
                 <div className="border-t border-[#E5E7EB] pt-2 mt-auto flex items-center justify-between gap-1.5">
                     <div className="flex flex-col min-w-0">

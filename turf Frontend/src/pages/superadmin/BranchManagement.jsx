@@ -24,6 +24,8 @@ import {
     getDashboardStats
 } from '../../services/branchService'
 
+import useRealtime from '../../utils/useRealtime'
+
 const fallbackBranches = []
 
 export default function BranchManagement() {
@@ -132,7 +134,7 @@ export default function BranchManagement() {
         businessName: '',
         email: '',
         mobile: '',
-        password: 'password123'
+        password: ''
     })
     const [isQuickOwnerLoading, setIsQuickOwnerLoading] = useState(false)
 
@@ -148,7 +150,7 @@ export default function BranchManagement() {
                 businessName: quickOwnerData.businessName.trim() || `${quickOwnerData.fullName.trim()} Sports Network`,
                 email: quickOwnerData.email.trim() || `owner_${Date.now()}@turf.com`,
                 mobile: quickOwnerData.mobile.trim() || '9876543210',
-                password: quickOwnerData.password ? quickOwnerData.password.trim() : 'password123'
+                password: quickOwnerData.password ? quickOwnerData.password.trim() : undefined
             }
             const res = await createOwner(payload)
             const newOwnerObj = (res && (res.data || res.owner)) || {
@@ -163,7 +165,7 @@ export default function BranchManagement() {
             setOwners(prev => [newOwnerObj, ...prev])
             setFormData(prev => ({ ...prev, ownerId: newId }))
             setIsQuickAddOwnerOpen(false)
-            setQuickOwnerData({ fullName: '', businessName: '', email: '', mobile: '', password: 'password123' })
+            setQuickOwnerData({ fullName: '', businessName: '', email: '', mobile: '', password: '' })
             addToast({ title: 'Owner Registered', message: `${newOwnerObj.fullName} registered live in database!`, type: 'success' })
         } catch (error) {
             console.error('Quick owner creation error:', error)
@@ -357,6 +359,11 @@ export default function BranchManagement() {
         loadStats()
     }, [page, searchTerm, selectedStatus, selectedOwnerId, selectedPlanId])
 
+    useRealtime(['status_updated', 'global_data_changed'], () => {
+        loadBranches()
+        loadStats()
+    })
+
     // Fetch individual branch and load detail view modal
     const handleViewBranch = async (branch) => {
         if (!branch) return
@@ -385,15 +392,19 @@ export default function BranchManagement() {
                 description: fullBranch.description || '',
                 ownerId: fullBranch.ownerId?._id || fullBranch.ownerId?.id || (typeof fullBranch.ownerId === 'string' ? fullBranch.ownerId : ''),
                 subscriptionPlanId: fullBranch.subscriptionPlanId?._id || fullBranch.subscriptionPlanId?.id || (typeof fullBranch.subscriptionPlanId === 'string' ? fullBranch.subscriptionPlanId : ''),
-                pricePerHour: fullBranch.pricePerHour || fullBranch.price || 1000,
+                pricePerHour: fullBranch.pricePerHour ?? fullBranch.price ?? fullBranch.minPriceHourly ?? '',
+                peakPricePerHour: fullBranch.peakPricePerHour ?? fullBranch.peakPrice ?? '',
+                isDynamicPricingActive: fullBranch.isDynamicPricingActive !== undefined ? fullBranch.isDynamicPricingActive : true,
                 openingTime: fullBranch.openingTime || '06:00 AM',
                 closingTime: fullBranch.closingTime || '11:00 PM',
-                turfSize: fullBranch.turfSize || fullBranch.dimensions || '5,000 Sq.Ft',
+                turfSize: fullBranch.turfSize || fullBranch.dimensions || (fullBranch.dimensionsSqFt ? `${fullBranch.dimensionsSqFt} Sq.Ft` : ''),
                 surfaceType: fullBranch.surfaceType || 'TurfPro Synthetic Arena',
-                sports: Array.isArray(fullBranch.sports) && fullBranch.sports.length > 0 ? fullBranch.sports : ['Cricket'],
-                amenities: Array.isArray(fullBranch.amenities) ? fullBranch.amenities : ['Floodlights', 'Parking', 'Washroom'],
-                discountOffer: fullBranch.discountOffer || '20% OFF FIRST MATCH',
-                couponCode: fullBranch.couponCode || 'CRICKET20',
+                sports: Array.isArray(fullBranch.sports) && fullBranch.sports.length > 0
+                    ? fullBranch.sports.map(s => typeof s === 'string' ? s : (s?.name || s?.sport?.name || 'Cricket')).filter(Boolean)
+                    : ['Cricket'],
+                amenities: Array.isArray(fullBranch.amenities) && fullBranch.amenities.length > 0 ? fullBranch.amenities : ['Floodlights', 'Parking', 'Washroom'],
+                discountOffer: fullBranch.discountOffer || '',
+                couponCode: fullBranch.couponCode || '',
                 country: fullBranch.country || 'India',
                 state: fullBranch.state || '',
                 city: fullBranch.city || '',
@@ -419,7 +430,20 @@ export default function BranchManagement() {
                     setEditingBranch(fetched)
                     setFormData(prev => ({
                         ...prev,
-                        ...fetched,
+                        branchName: fetched.branchName || prev.branchName,
+                        pricePerHour: fetched.pricePerHour ?? fetched.price ?? fetched.minPriceHourly ?? prev.pricePerHour,
+                        peakPricePerHour: fetched.peakPricePerHour ?? fetched.peakPrice ?? prev.peakPricePerHour,
+                        isDynamicPricingActive: fetched.isDynamicPricingActive !== undefined ? fetched.isDynamicPricingActive : prev.isDynamicPricingActive,
+                        openingTime: fetched.openingTime || prev.openingTime,
+                        closingTime: fetched.closingTime || prev.closingTime,
+                        turfSize: fetched.turfSize || fetched.dimensions || (fetched.dimensionsSqFt ? `${fetched.dimensionsSqFt} Sq.Ft` : prev.turfSize),
+                        surfaceType: fetched.surfaceType || prev.surfaceType,
+                        sports: Array.isArray(fetched.sports) && fetched.sports.length > 0
+                            ? fetched.sports.map(s => typeof s === 'string' ? s : (s?.name || s?.sport?.name || 'Cricket')).filter(Boolean)
+                            : prev.sports,
+                        amenities: Array.isArray(fetched.amenities) && fetched.amenities.length > 0 ? fetched.amenities : prev.amenities,
+                        discountOffer: fetched.discountOffer || fetched.discount_offer || prev.discountOffer || '',
+                        couponCode: fetched.couponCode || fetched.coupon_code || prev.couponCode || '',
                         ownerId: fetched.ownerId?._id || fetched.ownerId?.id || (typeof fetched.ownerId === 'string' ? fetched.ownerId : prev.ownerId)
                     }))
                 }
@@ -437,12 +461,14 @@ export default function BranchManagement() {
                 ownerId: '',
                 subscriptionPlanId: subscriptionPlans[0]?._id || '',
                 pricePerHour: '',
-                openingTime: '',
-                closingTime: '',
-                turfSize: '',
-                surfaceType: '',
-                sports: [],
-                amenities: [],
+                peakPricePerHour: '',
+                isDynamicPricingActive: true,
+                openingTime: '06:00 AM',
+                closingTime: '11:00 PM',
+                turfSize: '5,000 Sq.Ft',
+                surfaceType: 'TurfPro Synthetic Arena',
+                sports: ['Cricket'],
+                amenities: ['Floodlights', 'Parking', 'Washroom'],
                 discountOffer: '',
                 couponCode: '',
                 country: 'India',
@@ -496,6 +522,11 @@ export default function BranchManagement() {
 
         const payload = {
             ...formData,
+            pricePerHour: (formData.pricePerHour !== '' && formData.pricePerHour !== undefined) ? Number(formData.pricePerHour) : undefined,
+            peakPricePerHour: (formData.peakPricePerHour !== '' && formData.peakPricePerHour !== undefined) ? Number(formData.peakPricePerHour) : undefined,
+            openingTime: formData.openingTime || undefined,
+            closingTime: formData.closingTime || undefined,
+            isDynamicPricingActive: formData.isDynamicPricingActive !== false,
             ownerId: finalOwnerId,
             newOwnerName: formData.ownerOption === 'NEW' ? formData.newOwnerName.trim() : null,
             newOwnerBusinessName: formData.ownerOption === 'NEW' ? formData.newOwnerBusinessName.trim() : null,
@@ -506,11 +537,15 @@ export default function BranchManagement() {
             setIsSubmitLoading(true)
 
             if (editingBranch) {
-                await updateBranch(editingBranch._id || editingBranch.id, payload)
+                const updateRes = await updateBranch(editingBranch._id || editingBranch.id, payload)
+                const updatedObj = updateRes?.data || updateRes?.branch
+                if (updatedObj) {
+                    setBranches(prev => prev.map(b => (b.id === updatedObj.id || b._id === updatedObj.id) ? { ...b, ...updatedObj } : b))
+                }
                 addToast({ title: 'Updated', message: 'Branch details updated successfully', type: 'success' })
                 setModal(false)
-                loadBranches()
-                loadStats()
+                await loadBranches()
+                await loadStats()
             } else {
                 await createBranch(payload)
                 addToast({ title: 'Success', message: 'Branch & Owner created successfully!', type: 'success' })
@@ -639,7 +674,7 @@ export default function BranchManagement() {
         { 
             key: 'totalRevenue', 
             label: 'Plan Price', 
-            render: (v, r) => `₹${Number(r?.subscriptionPlan?.monthlyPrice || r?.subscriptionPlanId?.monthlyPrice || r?.planPrice || r?.subscription_price_snapshot || 1000).toLocaleString('en-IN')}` 
+            render: (v, r) => `₹${Number(r?.planPrice ?? r?.plan_price ?? r?.subscription_price_snapshot ?? r?.subscriptionPriceSnapshot ?? r?.subscriptionPlan?.monthlyPrice ?? r?.subscriptionPlanId?.monthlyPrice ?? 1000).toLocaleString('en-IN')}` 
         },
         {
             key: 'bookingRevenue',
@@ -790,7 +825,7 @@ export default function BranchManagement() {
                     </div>
                     <div className="my-1.5">
                         <div className="text-3xl font-black text-slate-900 tracking-tight leading-none">
-                            ₹{Number(stats.planRevenue ?? branches.reduce((sum, b) => sum + Number(b.planPrice || b.subscriptionPlanId?.monthlyPrice || 0), 0)).toLocaleString('en-IN')}
+                            ₹{Number(stats.planRevenue ?? branches.reduce((sum, b) => sum + Number(b.planPrice ?? b.plan_price ?? b.subscription_price_snapshot ?? b.subscriptionPriceSnapshot ?? b.subscriptionPlan?.monthlyPrice ?? 0), 0)).toLocaleString('en-IN')}
                         </div>
                     </div>
                     <div className="flex items-center justify-between gap-2 mt-3 pt-2.5 border-t border-slate-100 text-[11px]">
@@ -945,17 +980,31 @@ export default function BranchManagement() {
                             >
                                 {/* Branch Name & Avatar */}
                                 <div className="col-span-3 flex items-center gap-3">
-                                    {r.logo ? (
-                                        <img
-                                            src={r.logo}
-                                            alt={r.branchName}
-                                            className="w-10 h-10 rounded-xl object-cover border border-surface-200 bg-white shadow-soft shrink-0"
-                                        />
-                                    ) : (
-                                        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500 via-teal-600 to-cyan-600 flex items-center justify-center text-white text-xs font-black shadow-soft tracking-wider shrink-0">
-                                            {((r.branchName || '').split(' ').map(n => n[0]).join('') || '?').substring(0, 2).toUpperCase()}
-                                        </div>
-                                    )}
+                                    {(() => {
+                                        const initials = ((r.branchName || '').split(' ').map(n => n[0]).join('') || '?').substring(0, 2).toUpperCase();
+                                        return (
+                                            <div className="relative w-10 h-10 shrink-0">
+                                                {r.logo ? (
+                                                    <img
+                                                        src={r.logo}
+                                                        alt={r.branchName}
+                                                        className="w-10 h-10 rounded-xl object-cover border border-surface-200 bg-white shadow-soft shrink-0"
+                                                        onError={(e) => {
+                                                            e.target.style.display = 'none';
+                                                            const fallback = e.target.parentElement.querySelector('.logo-fallback');
+                                                            if (fallback) fallback.style.display = 'flex';
+                                                        }}
+                                                    />
+                                                ) : null}
+                                                <div 
+                                                    className="logo-fallback w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500 via-teal-600 to-cyan-600 flex items-center justify-center text-white text-xs font-black shadow-soft tracking-wider shrink-0"
+                                                    style={{ display: r.logo ? 'none' : 'flex' }}
+                                                >
+                                                    {initials}
+                                                </div>
+                                            </div>
+                                        );
+                                    })()}
                                     <div className="truncate min-w-0">
                                         <div className="font-bold text-surface-900 text-sm tracking-tight truncate">{r.branchName || 'N/A'}</div>
                                         <div className="text-[11px] text-surface-400 font-medium">{r.branchCode || '—'}</div>
@@ -1023,7 +1072,7 @@ export default function BranchManagement() {
                                 {/* Plan Price */}
                                 <div className="col-span-1 text-right">
                                     <span className="text-emerald-600 font-bold text-xs tracking-tight whitespace-nowrap">
-                                        ₹{Number(r.subscriptionPlanId?.monthlyPrice || r.planPrice || r.subscription_price_snapshot || (r.totalRevenue && r.totalRevenue <= 3000 ? r.totalRevenue : 1000)).toLocaleString('en-IN')}
+                                        ₹{Number(r.planPrice ?? r.plan_price ?? r.subscription_price_snapshot ?? r.subscriptionPriceSnapshot ?? (typeof r.subscriptionPlanId === 'object' ? r.subscriptionPlanId?.monthlyPrice : null) ?? r.subscriptionPlan?.monthlyPrice ?? 1000).toLocaleString('en-IN')}
                                     </span>
                                 </div>
 
@@ -1206,9 +1255,9 @@ export default function BranchManagement() {
                                     <div className="md:col-span-2">
                                         <Input 
                                             label="🔑 Set Admin Login Password (for Login Access)" 
-                                            placeholder="e.g. password123"
+                                            placeholder="Enter admin login password"
                                             type="text"
-                                            value={quickOwnerData.password || 'password123'}
+                                            value={quickOwnerData.password}
                                             onChange={e => setQuickOwnerData({ ...quickOwnerData, password: e.target.value })}
                                         />
                                         <p className="text-[11px] text-emerald-700 font-bold mt-1">
@@ -1289,14 +1338,7 @@ export default function BranchManagement() {
                                     placeholder="e.g. 800"
                                     type="number"
                                     value={formData.pricePerHour}
-                                    onChange={e => {
-                                        const val = e.target.value;
-                                        setFormData({
-                                            ...formData,
-                                            pricePerHour: val,
-                                            peakPricePerHour: formData.peakPricePerHour || (val ? Math.round(Number(val) * 1.5) : '')
-                                        });
-                                    }}
+                                    onChange={e => setFormData({ ...formData, pricePerHour: e.target.value })}
                                 />
                                 <span className="text-[10px] text-surface-500 font-medium mt-1 block">Applied during regular/morning hours (e.g. 06:00 AM - 05:00 PM)</span>
                             </div>
@@ -1305,7 +1347,7 @@ export default function BranchManagement() {
                                     label="🌆 Evening / Peak-Hour Rate (₹/hr) *" 
                                     placeholder="e.g. 1400"
                                     type="number"
-                                    value={formData.peakPricePerHour || (formData.pricePerHour ? Math.round(Number(formData.pricePerHour) * 1.5) : 1500)}
+                                    value={formData.peakPricePerHour || ''}
                                     onChange={e => setFormData({ ...formData, peakPricePerHour: e.target.value })}
                                 />
                                 <span className="text-[10px] text-amber-700 font-bold mt-1 block">Applied automatically during high-demand evening peak hours</span>
@@ -1339,20 +1381,50 @@ export default function BranchManagement() {
                             />
                         </div>
 
-                        {/* Dynamic Pricing Summary Pill */}
-                        <div className="p-3 bg-gradient-to-r from-emerald-50 to-amber-50 rounded-xl border border-emerald-200 flex items-center justify-between text-xs">
+                        {/* Dynamic Pricing Summary Pill with Clickable Activate / Deactivate Toggle */}
+                        <div className={`p-3 rounded-xl border flex items-center justify-between text-xs transition-all ${
+                            formData.isDynamicPricingActive !== false
+                                ? 'bg-gradient-to-r from-emerald-50 via-teal-50 to-amber-50 border-emerald-200 shadow-2xs'
+                                : 'bg-slate-100 border-slate-300 opacity-90'
+                        }`}>
                             <div className="flex items-center gap-2">
-                                <span className="text-base">📈</span>
+                                <span className="text-base">{formData.isDynamicPricingActive !== false ? '📈' : '⏸️'}</span>
                                 <div>
-                                    <span className="font-extrabold text-surface-900 block">Dynamic Hourly Rate Schedule</span>
+                                    <span className="font-extrabold text-surface-900 block flex items-center gap-1.5">
+                                        Dynamic Hourly Rate Schedule
+                                        {formData.isDynamicPricingActive === false && (
+                                            <span className="text-[10px] text-slate-500 font-bold bg-slate-200 px-1.5 py-0.5 rounded">
+                                                Uniform Rate Only
+                                            </span>
+                                        )}
+                                    </span>
                                     <span className="text-surface-600 font-medium">
-                                        Morning (06:00 AM - {formData.peakStartTime || '05:00 PM'}): <strong className="text-emerald-700">₹{formData.pricePerHour || 1000}/hr</strong> · Evening Peak ({formData.peakStartTime || '05:00 PM'} - {formData.peakEndTime || '11:00 PM'}): <strong className="text-amber-700">₹{formData.peakPricePerHour || Math.round(Number(formData.pricePerHour || 1000) * 1.5)}/hr</strong>
+                                        {formData.isDynamicPricingActive !== false ? (
+                                            <>
+                                                Morning ({formData.openingTime || '06:00 AM'} - {formData.peakStartTime || '05:00 PM'}): <strong className="text-emerald-700">₹{formData.pricePerHour || '0'}/hr</strong> · Evening Peak ({formData.peakStartTime || '05:00 PM'} - {formData.peakEndTime || '11:00 PM'}): <strong className="text-amber-700">₹{formData.peakPricePerHour || formData.pricePerHour || '0'}/hr</strong>
+                                            </>
+                                        ) : (
+                                            <>
+                                                Single Off-Peak Rate: <strong className="text-slate-900 font-black">₹{formData.pricePerHour || '0'}/hr</strong> (Evening Peak Rate Deactivated)
+                                            </>
+                                        )}
                                     </span>
                                 </div>
                             </div>
-                            <span className="px-2.5 py-1 bg-emerald-600 text-white font-black text-[10px] rounded-lg uppercase tracking-wider shrink-0">
-                                ✓ Dynamic Active
-                            </span>
+                            <button
+                                type="button"
+                                onClick={() => setFormData(prev => ({
+                                    ...prev,
+                                    isDynamicPricingActive: prev.isDynamicPricingActive === false ? true : false
+                                }))}
+                                className={`px-3 py-1.5 text-white font-black text-[10px] rounded-xl uppercase tracking-wider shrink-0 transition-all cursor-pointer shadow-sm hover:scale-105 active:scale-95 flex items-center gap-1 ${
+                                    formData.isDynamicPricingActive !== false
+                                        ? 'bg-[#16A34A] hover:bg-emerald-700 ring-2 ring-emerald-300'
+                                        : 'bg-slate-600 hover:bg-slate-700'
+                                }`}
+                            >
+                                {formData.isDynamicPricingActive !== false ? '✓ DYNAMIC ACTIVE' : '✕ DYNAMIC INACTIVE'}
+                            </button>
                         </div>
                     </div>
 
@@ -1383,15 +1455,17 @@ export default function BranchManagement() {
                                 <label className="block text-sm font-medium text-surface-700 mb-1.5">Sports Available</label>
                                 <div className="flex flex-wrap gap-2">
                                     {['Cricket', 'Football', 'Badminton', 'Tennis'].map(sport => {
-                                        const currentSports = Array.isArray(formData.sports) ? formData.sports : [];
-                                        const isChecked = currentSports.includes(sport);
+                                        const currentSports = Array.isArray(formData.sports)
+                                            ? formData.sports.map(s => typeof s === 'string' ? s : (s?.name || s?.sport?.name || '')).filter(Boolean)
+                                            : [];
+                                        const isChecked = currentSports.some(s => s.toLowerCase() === sport.toLowerCase());
                                         return (
                                             <button
                                                 key={sport}
                                                 type="button"
                                                 onClick={() => {
                                                     const nextSports = isChecked
-                                                        ? currentSports.filter(s => s !== sport)
+                                                        ? currentSports.filter(s => s.toLowerCase() !== sport.toLowerCase())
                                                         : [...currentSports, sport];
                                                     setFormData({ ...formData, sports: nextSports });
                                                 }}
@@ -1445,13 +1519,13 @@ export default function BranchManagement() {
                             <Input 
                                 label="Offer Badge Text" 
                                 placeholder="e.g. 20% OFF FIRST MATCH"
-                                value={formData.discountOffer}
+                                value={formData.discountOffer || ''}
                                 onChange={e => setFormData({ ...formData, discountOffer: e.target.value })}
                             />
                             <Input 
                                 label="Coupon / Promo Code" 
                                 placeholder="e.g. CRICKET20"
-                                value={formData.couponCode}
+                                value={formData.couponCode || ''}
                                 onChange={e => setFormData({ ...formData, couponCode: e.target.value })}
                             />
                         </div>
@@ -1712,17 +1786,31 @@ export default function BranchManagement() {
                         {/* Unified Top Banner: Logo, Name, Status & Core KPIs */}
                         <div className="bg-slate-900 rounded-2xl p-6 text-white shadow-lg space-y-5 border border-slate-800">
                             <div className="flex flex-col sm:flex-row items-center gap-5">
-                                {viewingBranch.logo ? (
-                                    <img 
-                                        src={viewingBranch.logo} 
-                                        alt={viewingBranch.branchName} 
-                                        className="w-20 h-20 rounded-2xl object-cover border-2 border-slate-700 bg-white shrink-0 shadow-md"
-                                    />
-                                ) : (
-                                    <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-700 flex items-center justify-center text-white text-2xl font-black shrink-0 shadow-md border-2 border-emerald-400/40">
-                                        {((viewingBranch.branchName || '').split(' ').map(n => n[0]).join('') || '?').substring(0, 2).toUpperCase()}
-                                    </div>
-                                )}
+                                {(() => {
+                                    const initials = ((viewingBranch.branchName || '').split(' ').map(n => n[0]).join('') || '?').substring(0, 2).toUpperCase();
+                                    return (
+                                        <div className="relative w-20 h-20 shrink-0">
+                                            {viewingBranch.logo ? (
+                                                <img 
+                                                    src={viewingBranch.logo} 
+                                                    alt={viewingBranch.branchName} 
+                                                    className="w-20 h-20 rounded-2xl object-cover border-2 border-slate-700 bg-white shrink-0 shadow-md"
+                                                    onError={(e) => {
+                                                        e.target.style.display = 'none';
+                                                        const fallback = e.target.parentElement.querySelector('.banner-logo-fallback');
+                                                        if (fallback) fallback.style.display = 'flex';
+                                                    }}
+                                                />
+                                            ) : null}
+                                            <div 
+                                                className="banner-logo-fallback w-20 h-20 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-700 flex items-center justify-center text-white text-2xl font-black shrink-0 shadow-md border-2 border-emerald-400/40"
+                                                style={{ display: viewingBranch.logo ? 'none' : 'flex' }}
+                                            >
+                                                {initials}
+                                            </div>
+                                        </div>
+                                    );
+                                })()}
                                 <div className="text-center sm:text-left flex-1 space-y-1.5 font-sans">
                                     <div className="flex flex-col sm:flex-row sm:items-center gap-2 justify-center sm:justify-start">
                                         <h3 className="text-2xl font-black text-white tracking-tight">{viewingBranch.branchName}</h3>
@@ -1756,7 +1844,7 @@ export default function BranchManagement() {
                                 </div>
                                 <div className="bg-slate-800/80 p-3 rounded-xl border border-slate-700/80">
                                     <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block mb-0.5">Total Revenue</span>
-                                    <span className="text-lg font-black text-[#C8FF2E]">₹{Number(viewingBranch.totalRevenue !== undefined && viewingBranch.totalRevenue !== null ? viewingBranch.totalRevenue : (Number(viewingBranch.planPrice || viewingBranch.plan_price || viewingBranch.subscriptionPlanId?.monthlyPrice || viewingBranch.subscriptionPlanId?.monthly_price || 0) + Number(viewingBranch.booking_revenue || viewingBranch.bookingRevenue || 0))).toLocaleString('en-IN')}</span>
+                                    <span className="text-lg font-black text-[#C8FF2E]">₹{Number(viewingBranch.totalRevenue !== undefined && viewingBranch.totalRevenue !== null ? viewingBranch.totalRevenue : (Number(viewingBranch.planPrice ?? viewingBranch.plan_price ?? viewingBranch.subscription_price_snapshot ?? viewingBranch.subscriptionPriceSnapshot ?? viewingBranch.subscriptionPlan?.monthlyPrice ?? 0) + Number(viewingBranch.booking_revenue || viewingBranch.bookingRevenue || 0))).toLocaleString('en-IN')}</span>
                                 </div>
                                 <div className="bg-slate-800/80 p-3 rounded-xl border border-slate-700/80">
                                     <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block mb-0.5">Hourly Rate</span>

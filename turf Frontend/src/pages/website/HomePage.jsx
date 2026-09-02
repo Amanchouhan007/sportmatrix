@@ -129,13 +129,17 @@ export default function HomePage() {
                     rating: resolvedRating,
                     price: resolvedPrice,
                     pricePerHour: resolvedPrice,
-                    dimensions: b.turfSize || b.dimensions || b.dimensionsSqft || b.dimensions_sqft || '5,000 Sq.Ft',
+                    dimensionsSqFt: b.dimensionsSqFt || b.dimensions_sqft,
+                    dimensions: b.dimensionsSqFt ? `${Number(b.dimensionsSqFt).toLocaleString('en-IN')} Sq.Ft` : (b.turfSize || b.dimensions || '5,000 Sq.Ft'),
+                    turfSize: b.dimensionsSqFt ? `${Number(b.dimensionsSqFt).toLocaleString('en-IN')} Sq.Ft` : (b.turfSize || b.dimensions || '5,000 Sq.Ft'),
                     surfaceType: b.surfaceType || b.surface_type || 'TurfPro Synthetic Arena',
                     image: firstImg || `/images/turf${(idx % 5) + 1}.png`,
                     sports: parsedSports,
                     amenities: parsedAmenities,
-                    discountOffer: b.discountOffer || b.discount_offer || '20% OFF FIRST MATCH',
-                    couponCode: b.couponCode || b.coupon_code || 'CRICKET20',
+                    discountOffer: b.discountOffer || b.discount_offer || '',
+                    couponCode: b.couponCode || b.coupon_code || '',
+                    openingTime: b.openingTime || b.opening_time || '08:00 AM',
+                    closingTime: b.closingTime || b.closing_time || '11:00 PM',
                     lat: Number(b.latitude || (22.7244 + (idx * 0.01))),
                     lng: Number(b.longitude || (75.8839 + (idx * 0.01)))
                 }
@@ -382,9 +386,7 @@ export default function HomePage() {
                         {/* 1. 🔥 DARE MATCH™ TEMPLATE */}
                         <div
                             onClick={() => {
-                                const nearbyId = filteredTurfs[0]?.id || 6
-                                setIsChallengeVisible(true)
-                                navigate(`/booking/${nearbyId}?mode=dare&pay=opponent`)
+                                resultsRef.current?.scrollIntoView({ behavior: 'smooth' })
                             }}
                             className="group relative overflow-hidden w-full flex flex-col justify-between p-4 sm:p-4.5 rounded-3xl border-2 border-orange-500/60 hover:border-orange-400 shadow-xl hover:shadow-[0_20px_45px_rgba(249,115,22,0.45)] transition-all duration-500 cursor-pointer hover:-translate-y-1.5 text-left min-h-[320px]"
                         >
@@ -439,8 +441,7 @@ export default function HomePage() {
                         {/* 2. 🤝 50:50 SPLIT™ TEMPLATE */}
                         <div
                             onClick={() => {
-                                const nearbyId = filteredTurfs[0]?.id || 6
-                                navigate(`/booking/${nearbyId}?mode=split50`)
+                                resultsRef.current?.scrollIntoView({ behavior: 'smooth' })
                             }}
                             className="group relative overflow-hidden w-full flex flex-col justify-between p-4 sm:p-4.5 rounded-3xl border-2 border-emerald-500/60 hover:border-emerald-400 shadow-xl hover:shadow-[0_20px_45px_rgba(16,185,129,0.45)] transition-all duration-500 cursor-pointer hover:-translate-y-1.5 text-left min-h-[320px]"
                         >
@@ -495,8 +496,7 @@ export default function HomePage() {
                         {/* 3. 👥 SQUAD SPLIT™ TEMPLATE */}
                         <div
                             onClick={() => {
-                                const nearbyId = filteredTurfs[0]?.id || 6
-                                navigate(`/booking/${nearbyId}?mode=per_player`)
+                                resultsRef.current?.scrollIntoView({ behavior: 'smooth' })
                             }}
                             className="group relative overflow-hidden w-full flex flex-col justify-between p-4 sm:p-4.5 rounded-3xl border-2 border-blue-500/60 hover:border-blue-400 shadow-xl hover:shadow-[0_20px_45px_rgba(59,130,246,0.45)] transition-all duration-500 cursor-pointer hover:-translate-y-1.5 text-left min-h-[320px]"
                         >
@@ -551,8 +551,7 @@ export default function HomePage() {
                         {/* 4. 💳 FULL PAY™ TEMPLATE */}
                         <div
                             onClick={() => {
-                                const nearbyId = filteredTurfs[0]?.id || 6
-                                navigate(`/booking/${nearbyId}?mode=full`)
+                                resultsRef.current?.scrollIntoView({ behavior: 'smooth' })
                             }}
                             className="group relative overflow-hidden w-full flex flex-col justify-between p-4 sm:p-4.5 rounded-3xl border-2 border-lime-500/60 hover:border-lime-400 shadow-xl hover:shadow-[0_20px_45px_rgba(132,204,22,0.45)] transition-all duration-500 cursor-pointer hover:-translate-y-1.5 text-left min-h-[320px]"
                         >
