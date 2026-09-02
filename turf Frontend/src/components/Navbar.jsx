@@ -173,8 +173,10 @@ export default function Navbar() {
                 {/* Header inside mobile drawer */}
                 <div className="px-6 py-4 border-b border-[#E5E7EB] flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                        <div className="w-9 h-9 rounded-xl bg-[#16A34A] text-white flex items-center justify-center font-black text-xs">SM</div>
-                        <span className="text-lg font-black text-[#111827] uppercase italic">SportMatrix.</span>
+                        <div className="w-8 h-8 rounded-xl overflow-hidden border border-amber-400/80 shadow-md bg-black p-0.5 shrink-0">
+                            <img src="/images/kiaan_gold_logo.jpg?v=2" alt="Kiaan Turf Logo" className="w-full h-full object-cover rounded-lg" />
+                        </div>
+                        <span className="text-base font-black text-[#0B132B] uppercase">KIAAN <span className="text-[#F59E0B]">TURF</span></span>
                     </div>
                     <button onClick={() => setMobileOpen(false)} className="p-2 text-[#111827] hover:bg-slate-100 rounded-full cursor-pointer">
                         <HiX className="w-7 h-7" />

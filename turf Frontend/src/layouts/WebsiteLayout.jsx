@@ -50,12 +50,23 @@ export default function WebsiteLayout({ children }) {
                 }`}
             >
                 <div className="max-w-[1440px] mx-auto px-3 sm:px-6 md:px-8 h-[64px] flex items-center justify-between gap-2 sm:gap-4 relative">
-                    {/* Brand Logo */}
-                    <NavLink to="/" className="flex items-center gap-2.5 group shrink-0">
-                        <img src="/images/kiaan_gold_logo.jpg?v=2" alt="Kiaan Technology Turf Cricket Arena" className="w-9 h-9 rounded-xl object-cover shadow-md border border-amber-300/40" />
-                        <div className="flex flex-col">
-                            <span className="text-base font-black text-slate-900 tracking-tight leading-none uppercase">KIAAN <span className="text-amber-500 font-black">TURF</span></span>
-                            <span className="text-[7.5px] font-black text-amber-600 tracking-[0.16em] uppercase mt-0.5">KIAAN TECHNOLOGY • CRICKET ARENA</span>
+                    {/* Brand Logo - Kiaan Gold Badge & Lockup */}
+                    <NavLink to="/" className="flex items-center gap-2 sm:gap-2.5 group shrink-0">
+                        <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl overflow-hidden border-2 border-amber-400/80 shadow-md bg-black p-0.5 shrink-0 group-hover:scale-105 transition-transform">
+                            <img 
+                                src="/images/kiaan_gold_logo.jpg?v=2" 
+                                alt="Kiaan Turf Logo" 
+                                className="w-full h-full object-cover rounded-lg"
+                            />
+                        </div>
+                        <div className="flex flex-col text-left leading-none">
+                            <div className="text-sm sm:text-base font-black text-[#0B132B] tracking-tight uppercase flex items-center gap-1">
+                                <span>KIAAN</span>
+                                <span className="text-[#F59E0B] font-black">TURF</span>
+                            </div>
+                            <span className="text-[7px] sm:text-[8px] font-black text-[#F59E0B] tracking-[0.16em] uppercase mt-0.5 whitespace-nowrap">
+                                KIAAN TECHNOLOGY • CRICKET ARENA
+                            </span>
                         </div>
                     </NavLink>
 
@@ -84,45 +95,46 @@ export default function WebsiteLayout({ children }) {
                             </NavLink>
                         ))}
                     </nav>                    {/* Auth & Guest Lookup Buttons (Desktop & Tablet Action Group) */}
-                    <div className="flex items-center gap-2 sm:gap-2.5 shrink-0">
-                        {/* 🏢 Corporate Booking Button with Neon Lime Theme Glow */}
+                    <div className="flex items-center gap-1.5 sm:gap-2 xl:gap-2.5 shrink-0">
+                        {/* 🏢 Corporate Booking Button */}
                         <button 
                             type="button"
                             onClick={() => setIsCorpOpen(true)} 
-                            className="group relative overflow-hidden font-black text-[11px] xl:text-xs tracking-wider uppercase px-2.5 sm:px-3.5 py-1.5 sm:py-2 text-slate-100 bg-gradient-to-r from-slate-950 via-slate-900 to-emerald-950 hover:from-emerald-950 hover:via-slate-900 hover:to-slate-950 border-2 border-emerald-500/50 hover:border-[#C8FF2E] shadow-md hover:shadow-[0_0_22px_rgba(200,255,46,0.45)] transition-all duration-300 rounded-xl cursor-pointer flex items-center gap-1.5 shrink-0 transform hover:scale-105"
+                            className="group relative overflow-hidden font-black text-[10px] xl:text-xs tracking-wider uppercase px-2 sm:px-3 xl:px-3.5 py-1.5 text-slate-100 bg-gradient-to-r from-slate-950 via-slate-900 to-emerald-950 hover:from-emerald-950 hover:via-slate-900 hover:to-slate-950 border border-emerald-500/50 hover:border-[#C8FF2E] shadow-sm hover:shadow-[0_0_18px_rgba(200,255,46,0.4)] transition-all duration-300 rounded-xl cursor-pointer flex items-center gap-1 shrink-0"
                             title="Corporate & Bulk Event Booking"
                         >
-                            <span className="w-5 h-5 sm:w-6 sm:h-6 rounded-lg bg-emerald-500/20 text-[#C8FF2E] flex items-center justify-center text-xs sm:text-sm shadow-inner group-hover:scale-125 group-hover:rotate-12 group-hover:bg-[#C8FF2E] group-hover:text-slate-950 group-hover:shadow-[0_0_12px_rgba(200,255,46,0.7)] transition-all duration-300 shrink-0">
+                            <span className="w-5 h-5 rounded-lg bg-emerald-500/20 text-[#C8FF2E] flex items-center justify-center text-xs shadow-inner group-hover:scale-110 transition-all shrink-0">
                                 🏢
                             </span>
-                            <span className="hidden xs:inline md:inline text-slate-100 group-hover:text-[#C8FF2E] transition-colors drop-shadow-sm font-black">Corporate Booking</span>
-                            <span className="w-1.5 h-1.5 rounded-full bg-[#C8FF2E] animate-ping hidden md:inline-block shadow-[0_0_6px_#C8FF2E]" />
+                            <span className="hidden sm:inline text-slate-100 group-hover:text-[#C8FF2E] transition-colors font-black whitespace-nowrap">
+                                Corporate <span className="hidden xl:inline">Booking</span>
+                            </span>
                         </button>
 
-                        {/* 🔍 Find Booking Button with Emerald Glass Glow */}
+                        {/* 🔍 Find Booking Button */}
                         <button 
                             type="button"
                             onClick={() => setIsLookupOpen(true)} 
-                            className="group relative overflow-hidden font-black text-[11px] xl:text-xs tracking-wider uppercase px-2.5 sm:px-3.5 py-1.5 sm:py-2 text-emerald-950 bg-gradient-to-r from-emerald-500/15 via-teal-500/10 to-emerald-500/20 hover:from-emerald-500/30 hover:to-teal-500/35 hover:bg-emerald-100 border-2 border-emerald-400/90 hover:border-[#16A34A] shadow-md hover:shadow-[0_0_20px_rgba(22,163,74,0.4)] transition-all duration-300 rounded-xl cursor-pointer flex items-center gap-1.5 shrink-0 transform hover:scale-105"
+                            className="group relative overflow-hidden font-black text-[10px] xl:text-xs tracking-wider uppercase px-2 sm:px-3 xl:px-3.5 py-1.5 text-emerald-950 bg-gradient-to-r from-emerald-500/15 via-teal-500/10 to-emerald-500/20 hover:from-emerald-500/30 hover:to-teal-500/35 border border-emerald-400/90 hover:border-[#16A34A] shadow-sm hover:shadow-[0_0_15px_rgba(22,163,74,0.3)] transition-all duration-300 rounded-xl cursor-pointer flex items-center gap-1 shrink-0"
                             title="Find My Booking"
                         >
-                            <span className="w-5 h-5 sm:w-6 sm:h-6 rounded-lg bg-emerald-500/25 text-emerald-800 flex items-center justify-center text-xs sm:text-sm shadow-inner group-hover:scale-125 group-hover:-rotate-12 group-hover:bg-[#16A34A] group-hover:text-white group-hover:shadow-[0_0_12px_rgba(22,163,74,0.6)] transition-all duration-300 shrink-0">
+                            <span className="w-5 h-5 rounded-lg bg-emerald-500/25 text-emerald-800 flex items-center justify-center text-xs shadow-inner group-hover:scale-110 transition-all shrink-0">
                                 🔍
                             </span>
-                            <span className="hidden xs:inline md:inline text-emerald-950 group-hover:text-[#065F46] transition-colors font-black">Find Booking</span>
+                            <span className="hidden sm:inline text-emerald-950 font-black whitespace-nowrap">Find Booking</span>
                         </button>
 
                         <button 
                             type="button"
                             onClick={() => navigate('/login')} 
-                            className="hidden md:block font-black text-[10.5px] xl:text-[11px] tracking-widest uppercase px-3.5 py-2 border border-slate-200 text-[#111827] hover:border-[#16A34A] hover:text-[#16A34A] hover:bg-slate-50 transition-all rounded-xl cursor-pointer shrink-0"
+                            className="hidden lg:block font-black text-[10px] xl:text-[11px] tracking-wider uppercase px-3 py-1.5 border border-slate-200 text-[#111827] hover:border-[#16A34A] hover:text-[#16A34A] hover:bg-slate-50 transition-all rounded-xl cursor-pointer shrink-0 whitespace-nowrap"
                         >
                             Log In
                         </button>
                         <button 
                             type="button"
                             onClick={() => navigate('/register')} 
-                            className="hidden md:block bg-[#C8FF2E] hover:bg-[#b8f51a] text-[#111827] font-black text-[10.5px] xl:text-[11px] tracking-widest uppercase px-4 py-2 border border-[#aee810] rounded-full shadow-[0_4px_14px_rgba(184,255,44,0.35)] hover:shadow-[0_6px_20px_rgba(184,255,44,0.45)] transition-all transform hover:scale-[1.03] cursor-pointer shrink-0"
+                            className="hidden lg:block bg-[#C8FF2E] hover:bg-[#b8f51a] text-[#111827] font-black text-[10px] xl:text-[11px] tracking-wider uppercase px-3.5 xl:px-4 py-1.5 border border-[#aee810] rounded-full shadow-sm hover:shadow-md transition-all cursor-pointer shrink-0 whitespace-nowrap"
                         >
                             Get Started
                         </button>

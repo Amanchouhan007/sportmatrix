@@ -17,6 +17,8 @@ const jerseyColorOptions = [
     { value: 'Purple', label: 'Deep Purple', color: '#9333EA' },
 ];
 
+import PageLoader from '../../components/ui/PageLoader'
+
 // Clean dynamic bracket generator for newly created tournaments or awaiting draws
 const generateCleanStructureBracket = (tournament, registeredTeams = []) => {
     const teams = Array.isArray(registeredTeams) ? registeredTeams : [];
@@ -242,14 +244,7 @@ export default function TournamentDetailPage() {
         : generateCleanStructureBracket(tournament, tournament?.teams || [])
 
     if (loading) {
-        return (
-            <div className="min-h-screen bg-white text-[#111827] flex items-center justify-center">
-                <div className="text-center">
-                    <div className="w-12 h-12 border-2 border-[#16A34A] border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-                    <p className="text-[#6B7280] text-xs font-black uppercase tracking-widest">Loading Tournament...</p>
-                </div>
-            </div>
-        )
+        return <PageLoader text="Loading Tournament..." />
     }
 
     if (!tournament) {

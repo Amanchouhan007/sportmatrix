@@ -11,6 +11,7 @@ import StatCard from '../../components/ui/StatCard'
 import ConfirmDialog from '../../components/ui/ConfirmDialog'
 import { useToast } from '../../components/ui/Toast'
 import { useAuth } from '../../context/AuthContext'
+import PageLoader from '../../components/ui/PageLoader'
 import { FiTrash2, FiPower, FiSearch, FiBriefcase, FiCheckCircle, FiSlash, FiTrendingUp, FiEye, FiMapPin, FiUser, FiMail, FiEdit2, FiDownload, FiChevronLeft, FiChevronRight, FiFilter } from 'react-icons/fi'
 import { getOwners, createOwner } from '../../services/ownerService'
 import { getAllPlans } from '../../services/subscriptionPlanService'
@@ -761,12 +762,7 @@ export default function BranchManagement() {
     }
 
     if (isPageLoading || authLoading) {
-        return (
-            <div className="min-h-[50vh] flex flex-col items-center justify-center gap-4">
-                <div className="w-12 h-12 border-4 border-primary-600 border-t-transparent rounded-full animate-spin"></div>
-                <span className="text-surface-500 text-sm font-semibold">Loading Branch module configuration...</span>
-            </div>
-        )
+        return <PageLoader text="Loading Branch module configuration..." />
     }
 
     return (

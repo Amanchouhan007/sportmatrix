@@ -20,7 +20,7 @@ import {
 import SlotGrid from '../../components/ui/SlotGrid'
 import { useToast } from '../../components/ui/Toast'
 import { useAuth } from '../../context/AuthContext'
-import { getBranchById } from '../../services/branchService'
+import { getPublicBranchById } from '../../services/publicBranchService'
 import { getBranchSports } from '../../services/sportsService'
 import api from '../../services/api'
 import TurfHeroGallery from '../../components/turf-detail/TurfHeroGallery'
@@ -31,6 +31,7 @@ import TurfBookingSuccessModal from '../../components/turf-detail/TurfBookingSuc
 import PaymentModal from '../../components/booking/PaymentModal'
 import VenueSwitchModal from '../../components/booking/VenueSwitchModal'
 import CorporateBookingModal from '../../components/website/CorporateBookingModal'
+import PageLoader from '../../components/ui/PageLoader'
 
 const defaultTurfData = {
     id: 1, name: 'SportZone Arena', location: 'Andheri West, Mumbai', rating: 4.8, reviews: 124,
@@ -238,7 +239,8 @@ export default function TurfDetailPage() {
 
     useEffect(() => {
         if (!id) return;
-        getBranchById(id).then(res => {
+        // Use public client — no JWT attached, returns same data regardless of who is logged in
+        getPublicBranchById(id).then(res => {
             const b = res?.data || res?.branch || res;
             if (b && (b.branchName || b.name)) {
                 setLiveBranch(b);
@@ -523,6 +525,10 @@ export default function TurfDetailPage() {
     }, [activeTurf.price, selectedDateObj, activeTurf.id, activeTurf.openingTime, activeTurf.closingTime]);
 
     const slots = apiSlots.length > 0 ? apiSlots : fallbackSlots;
+
+    if (!liveBranch) {
+        return <PageLoader text="Loading Turf Details..." fullScreen />
+    }
 
     useEffect(() => {
         if (dateStripRef.current) {

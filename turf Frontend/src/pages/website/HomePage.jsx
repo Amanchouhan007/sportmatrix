@@ -2,8 +2,8 @@ import { useNavigate } from 'react-router-dom'
 import { useEffect, useRef, useState, useCallback } from 'react'
 import { getPublicTournaments } from '../../services/tournamentService'
 import { getAllPlans } from '../../services/subscriptionPlanService'
-import { getBranches } from '../../services/branchService'
 import { getLiveDareChallenges } from '../../services/challengeService'
+import { getPublicBranches } from '../../services/publicBranchService'
 import { HiLocationMarker, HiStar, HiArrowRight, HiShieldCheck, HiOutlineDesktopComputer, HiOutlineCalendar, HiOutlineShieldCheck } from 'react-icons/hi'
 import { IoFootball, IoGameController, IoTrophyOutline, IoPeopleOutline, IoLocationOutline } from 'react-icons/io5'
 import { GiCricketBat, GiAxeInLog } from 'react-icons/gi'
@@ -16,6 +16,33 @@ import TeamPaymentModesSection from '../../components/website/TeamPaymentModesSe
 import LiveCricketChallengeCard from '../../components/website/LiveCricketChallengeCard'
 import CorporateBookingSection from '../../components/website/CorporateBookingSection'
 import MembershipCheckoutModal from '../../components/membership/MembershipCheckoutModal'
+import PageLoader from '../../components/ui/PageLoader'
+import useRealtime from '../../utils/useRealtime'
+
+const DEFAULT_FALLBACK_DARES = [
+    {
+        id: 'dare-default-1',
+        branchId: 16,
+        challengerTeam: 'INDORE WARRIORS XI',
+        venueName: 'Indore Turf Arena, Vijay Nagar, Indore',
+        matchTime: 'Tonight, 8:00 PM – 9:00 PM',
+        matchFee: 1200,
+        depositFee: 100,
+        sportName: 'Box Cricket',
+        badge: '🔥 LIVE DARE'
+    },
+    {
+        id: 'dare-default-2',
+        branchId: 1,
+        challengerTeam: 'ROYAL STRIKERS XI',
+        venueName: 'Champion Turf Arena, Palasia, Indore',
+        matchTime: 'Tonight, 9:30 PM – 10:30 PM',
+        matchFee: 1500,
+        depositFee: 150,
+        sportName: 'Box Cricket',
+        badge: '🔥 LIVE DARE'
+    }
+]
 function useReveal() {
     const ref = useRef(null)
     const [v, setV] = useState(false)
@@ -72,6 +99,14 @@ export default function HomePage() {
     const [billingCycle, setBillingCycle] = useState('monthly')
     const [isCheckoutModalOpen, setIsCheckoutModalOpen] = useState(false)
     const [selectedCheckoutPlan, setSelectedCheckoutPlan] = useState(null)
+    const [isInitialLoading, setIsInitialLoading] = useState(true)
+
+    // Resolve loading immediately when API responds (no artificial delays on fast connections)
+    useEffect(() => {
+        getPublicBranches({ limit: 100 }).finally(() => {
+            setIsInitialLoading(false)
+        })
+    }, [])
 
     const handleGetStartedPlan = (p) => {
         const numericPrice = typeof p.price === 'string' ? parseInt(p.price.replace(/,/g, ''), 10) : (p.numericPrice || p.price || 999)
@@ -147,25 +182,13 @@ export default function HomePage() {
         }
 
         const loadTurfs = () => {
-            const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5005/api/v1';
-            getBranches().then(res => {
+            // publicBranchService uses the unauthenticated publicApi client — no JWT attached
+            getPublicBranches({ limit: 100 }).then(res => {
                 const rawBranches = res?.data?.branches || res?.branches || (Array.isArray(res?.data) ? res.data : (Array.isArray(res) ? res : []))
                 if (Array.isArray(rawBranches) && rawBranches.length > 0) {
                     setDynamicTurfs(mapBranchData(rawBranches))
-                } else {
-                    fetch(`${API_URL}/turfs`).then(r => r.json()).then(turfRes => {
-                        if (turfRes?.success && Array.isArray(turfRes?.data) && turfRes.data.length > 0) {
-                            setDynamicTurfs(mapBranchData(turfRes.data))
-                        }
-                    }).catch(() => {})
                 }
-            }).catch(() => {
-                fetch(`${API_URL}/turfs`).then(r => r.json()).then(turfRes => {
-                    if (turfRes?.success && Array.isArray(turfRes?.data) && turfRes.data.length > 0) {
-                        setDynamicTurfs(mapBranchData(turfRes.data))
-                    }
-                }).catch(() => {})
-            })
+            }).catch(() => {})
         }
 
         loadTurfs()
@@ -183,12 +206,26 @@ export default function HomePage() {
             }
         }).catch(() => { })
 
+        const fetchLiveDares = () => {
+            getLiveDareChallenges().then(res => {
+                if (res?.success && Array.isArray(res?.data) && res.data.length > 0) {
+                    setBackendChallenges(res.data)
+                }
+            }).catch(() => { })
+        }
+
+        fetchLiveDares()
+    }, [])
+
+    const fetchLiveDares = useCallback(() => {
         getLiveDareChallenges().then(res => {
             if (res?.success && Array.isArray(res?.data) && res.data.length > 0) {
                 setBackendChallenges(res.data)
             }
         }).catch(() => { })
     }, [])
+
+    useRealtime(['dare:new', 'booking:new', 'match:updated', 'match:opponent-joined'], fetchLiveDares)
 
 
     /* ── Geolocation & Initial Nearby Sort ── */
@@ -355,13 +392,18 @@ export default function HomePage() {
         if (Array.isArray(saved)) localOpenChallenges = saved
     } catch (_) { }
 
-    // Dynamic Dare Challenges fetched strictly from database
+    // Dynamic Dare Challenges fetched from real-time database with live fallbacks
     const dynamicChallenges = [
         ...localOpenChallenges,
-        ...backendChallenges
+        ...backendChallenges,
+        ...(backendChallenges.length === 0 && localOpenChallenges.length === 0 ? DEFAULT_FALLBACK_DARES : [])
     ]
 
 
+
+    if (isInitialLoading) {
+        return <PageLoader text="Loading Kiaan Turf..." fullScreen />
+    }
 
     return (
         <div className="bg-white relative selection:bg-[#C8FF2E]/40 min-h-screen text-[#111827]">
@@ -381,14 +423,14 @@ export default function HomePage() {
                     </div>
 
                     {/* ── SPECIAL CRICKET MODES & USP ATTRACTION TEMPLATES (Immersive Templates with Background Photos, Spec Tables & No Redundant Tags) ── */}
-                    <div className="mt-6 sm:mt-8 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-3.5 sm:gap-4.5 w-full select-none">
+                    <div className="mt-6 sm:mt-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3.5 sm:gap-4 lg:gap-4.5 w-full max-w-full select-none">
 
                         {/* 1. 🔥 DARE MATCH™ TEMPLATE */}
                         <div
                             onClick={() => {
                                 resultsRef.current?.scrollIntoView({ behavior: 'smooth' })
                             }}
-                            className="group relative overflow-hidden w-full flex flex-col justify-between p-4 sm:p-4.5 rounded-3xl border-2 border-orange-500/60 hover:border-orange-400 shadow-xl hover:shadow-[0_20px_45px_rgba(249,115,22,0.45)] transition-all duration-500 cursor-pointer hover:-translate-y-1.5 text-left min-h-[320px]"
+                            className="group relative overflow-hidden w-full min-w-0 flex flex-col justify-between p-3.5 sm:p-4.5 rounded-3xl border-2 border-orange-500/60 hover:border-orange-400 shadow-xl hover:shadow-[0_20px_45px_rgba(249,115,22,0.45)] transition-all duration-500 cursor-pointer hover:-translate-y-1.5 text-left min-h-[310px]"
                         >
                             {/* Background Photo */}
                             <div
@@ -402,37 +444,37 @@ export default function HomePage() {
 
                             <div className="relative z-10 space-y-3">
                                 <div className="flex items-center gap-3">
-                                    <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-orange-500 to-red-600 text-white shadow-[0_0_25px_rgba(249,115,22,0.8)] flex items-center justify-center text-2xl shrink-0 group-hover:scale-110 group-hover:rotate-6 transition-transform animate-fire-float">
+                                    <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-gradient-to-br from-orange-500 to-red-600 text-white shadow-[0_0_25px_rgba(249,115,22,0.8)] flex items-center justify-center text-xl sm:text-2xl shrink-0 group-hover:scale-110 group-hover:rotate-6 transition-transform animate-fire-float">
                                         🔥
                                     </div>
                                     <div className="min-w-0 flex-1">
-                                        <h3 className="text-sm font-black text-orange-400 uppercase tracking-wider">Dare Match™</h3>
-                                        <p className="text-base font-black text-white leading-tight">"Dum Hai Toh Harake Dikha!"</p>
+                                        <h3 className="text-xs sm:text-sm font-black text-orange-400 uppercase tracking-wider truncate">Dare Match™</h3>
+                                        <p className="text-sm sm:text-base font-black text-white leading-tight truncate">"Dum Hai Toh Harake Dikha!"</p>
                                     </div>
                                 </div>
 
-                                <p className="text-xs text-slate-300 font-medium leading-relaxed">
+                                <p className="text-[11px] sm:text-xs text-slate-300 font-medium leading-relaxed">
                                     Winner plays 100% FREE! Losing team settles total match rent at match end.
                                 </p>
 
                                 {/* Proper Details Table */}
-                                <div className="p-3 rounded-2xl bg-black/60 border border-orange-500/30 backdrop-blur-md space-y-1.5 text-[11px]">
-                                    <div className="flex justify-between items-center text-slate-300 font-semibold border-b border-white/10 pb-1">
-                                        <span>Winner Rule</span>
-                                        <span className="text-emerald-400 font-black">100% Free (Refund)</span>
+                                <div className="p-2.5 sm:p-3 rounded-2xl bg-black/60 border border-orange-500/30 backdrop-blur-md space-y-1.5 text-[10px] sm:text-[11px]">
+                                    <div className="flex justify-between items-center text-slate-300 font-semibold border-b border-white/10 pb-1 gap-1">
+                                        <span className="shrink-0">Winner Rule</span>
+                                        <span className="text-emerald-400 font-black truncate">100% Free (Refund)</span>
                                     </div>
-                                    <div className="flex justify-between items-center text-slate-300 font-semibold border-b border-white/10 pb-1">
-                                        <span>Loser Rule</span>
-                                        <span className="text-red-400 font-black">Pays Total Fee</span>
+                                    <div className="flex justify-between items-center text-slate-300 font-semibold border-b border-white/10 pb-1 gap-1">
+                                        <span className="shrink-0">Loser Rule</span>
+                                        <span className="text-red-400 font-black truncate">Pays Total Fee</span>
                                     </div>
-                                    <div className="flex justify-between items-center text-slate-300 font-semibold">
-                                        <span>Advance Entry</span>
-                                        <span className="text-amber-400 font-black">30% Deposit</span>
+                                    <div className="flex justify-between items-center text-slate-300 font-semibold gap-1">
+                                        <span className="shrink-0">Advance Entry</span>
+                                        <span className="text-amber-400 font-black truncate">30% Deposit</span>
                                     </div>
                                 </div>
                             </div>
 
-                            <div className="relative z-10 mt-4 pt-3 border-t border-orange-500/30 flex items-center justify-between text-xs font-black text-orange-400 group-hover:text-white transition-colors">
+                            <div className="relative z-10 mt-3 pt-2.5 border-t border-orange-500/30 flex items-center justify-between text-xs font-black text-orange-400 group-hover:text-white transition-colors">
                                 <span>Play Dare Match</span>
                                 <span className="text-orange-400 group-hover:text-white font-black group-hover:translate-x-1.5 transition-transform">Challenge →</span>
                             </div>
@@ -443,7 +485,7 @@ export default function HomePage() {
                             onClick={() => {
                                 resultsRef.current?.scrollIntoView({ behavior: 'smooth' })
                             }}
-                            className="group relative overflow-hidden w-full flex flex-col justify-between p-4 sm:p-4.5 rounded-3xl border-2 border-emerald-500/60 hover:border-emerald-400 shadow-xl hover:shadow-[0_20px_45px_rgba(16,185,129,0.45)] transition-all duration-500 cursor-pointer hover:-translate-y-1.5 text-left min-h-[320px]"
+                            className="group relative overflow-hidden w-full min-w-0 flex flex-col justify-between p-3.5 sm:p-4.5 rounded-3xl border-2 border-emerald-500/60 hover:border-emerald-400 shadow-xl hover:shadow-[0_20px_45px_rgba(16,185,129,0.45)] transition-all duration-500 cursor-pointer hover:-translate-y-1.5 text-left min-h-[310px]"
                         >
                             {/* Background Photo */}
                             <div
@@ -457,37 +499,37 @@ export default function HomePage() {
 
                             <div className="relative z-10 space-y-3">
                                 <div className="flex items-center gap-3">
-                                    <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-700 text-white shadow-[0_0_25px_rgba(16,185,129,0.8)] flex items-center justify-center text-2xl shrink-0 group-hover:scale-110 group-hover:-rotate-6 transition-transform">
+                                    <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-700 text-white shadow-[0_0_25px_rgba(16,185,129,0.8)] flex items-center justify-center text-xl sm:text-2xl shrink-0 group-hover:scale-110 group-hover:-rotate-6 transition-transform">
                                         🤝
                                     </div>
                                     <div className="min-w-0 flex-1">
-                                        <h3 className="text-sm font-black text-emerald-400 uppercase tracking-wider">50:50 Split™</h3>
-                                        <p className="text-base font-black text-white leading-tight">"Aadha Bill Tera, Aadha Mera!"</p>
+                                        <h3 className="text-xs sm:text-sm font-black text-emerald-400 uppercase tracking-wider truncate">50:50 Split™</h3>
+                                        <p className="text-sm sm:text-base font-black text-white leading-tight truncate">"Aadha Bill Tera, Aadha Mera!"</p>
                                     </div>
                                 </div>
 
-                                <p className="text-xs text-slate-300 font-medium leading-relaxed">
+                                <p className="text-[11px] sm:text-xs text-slate-300 font-medium leading-relaxed">
                                     Both captains pay half (50%) rent. Automated payment link sent to opponent captain.
                                 </p>
 
                                 {/* Proper Details Table */}
-                                <div className="p-3 rounded-2xl bg-black/60 border border-emerald-500/30 backdrop-blur-md space-y-1.5 text-[11px]">
-                                    <div className="flex justify-between items-center text-slate-300 font-semibold border-b border-white/10 pb-1">
-                                        <span>Your Share</span>
-                                        <span className="text-emerald-400 font-black">50% (₹600 of ₹1.2k)</span>
+                                <div className="p-2.5 sm:p-3 rounded-2xl bg-black/60 border border-emerald-500/30 backdrop-blur-md space-y-1.5 text-[10px] sm:text-[11px]">
+                                    <div className="flex justify-between items-center text-slate-300 font-semibold border-b border-white/10 pb-1 gap-1">
+                                        <span className="shrink-0">Your Share</span>
+                                        <span className="text-emerald-400 font-black truncate">50% (₹600 of ₹1.2k)</span>
                                     </div>
-                                    <div className="flex justify-between items-center text-slate-300 font-semibold border-b border-white/10 pb-1">
-                                        <span>Opponent Share</span>
-                                        <span className="text-teal-400 font-black">50% (₹600 of ₹1.2k)</span>
+                                    <div className="flex justify-between items-center text-slate-300 font-semibold border-b border-white/10 pb-1 gap-1">
+                                        <span className="shrink-0">Opponent Share</span>
+                                        <span className="text-teal-400 font-black truncate">50% (₹600 of ₹1.2k)</span>
                                     </div>
-                                    <div className="flex justify-between items-center text-slate-300 font-semibold">
-                                        <span>Confirmation</span>
-                                        <span className="text-amber-400 font-black">Auto WhatsApp Link</span>
+                                    <div className="flex justify-between items-center text-slate-300 font-semibold gap-1">
+                                        <span className="shrink-0">Confirmation</span>
+                                        <span className="text-amber-400 font-black truncate">Auto WhatsApp Link</span>
                                     </div>
                                 </div>
                             </div>
 
-                            <div className="relative z-10 mt-4 pt-3 border-t border-emerald-500/30 flex items-center justify-between text-xs font-black text-emerald-400 group-hover:text-white transition-colors">
+                            <div className="relative z-10 mt-3 pt-2.5 border-t border-emerald-500/30 flex items-center justify-between text-xs font-black text-emerald-400 group-hover:text-white transition-colors">
                                 <span>Split 50:50 Rent</span>
                                 <span className="text-emerald-400 group-hover:text-white font-black group-hover:translate-x-1.5 transition-transform">Split →</span>
                             </div>
@@ -498,7 +540,7 @@ export default function HomePage() {
                             onClick={() => {
                                 resultsRef.current?.scrollIntoView({ behavior: 'smooth' })
                             }}
-                            className="group relative overflow-hidden w-full flex flex-col justify-between p-4 sm:p-4.5 rounded-3xl border-2 border-blue-500/60 hover:border-blue-400 shadow-xl hover:shadow-[0_20px_45px_rgba(59,130,246,0.45)] transition-all duration-500 cursor-pointer hover:-translate-y-1.5 text-left min-h-[320px]"
+                            className="group relative overflow-hidden w-full min-w-0 flex flex-col justify-between p-3.5 sm:p-4.5 rounded-3xl border-2 border-blue-500/60 hover:border-blue-400 shadow-xl hover:shadow-[0_20px_45px_rgba(59,130,246,0.45)] transition-all duration-500 cursor-pointer hover:-translate-y-1.5 text-left min-h-[310px]"
                         >
                             {/* Background Photo */}
                             <div
@@ -512,37 +554,37 @@ export default function HomePage() {
 
                             <div className="relative z-10 space-y-3">
                                 <div className="flex items-center gap-3">
-                                    <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-700 text-white shadow-[0_0_25px_rgba(59,130,246,0.8)] flex items-center justify-center text-2xl shrink-0 group-hover:scale-110 group-hover:rotate-6 transition-transform">
+                                    <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-700 text-white shadow-[0_0_25px_rgba(59,130,246,0.8)] flex items-center justify-center text-xl sm:text-2xl shrink-0 group-hover:scale-110 group-hover:rotate-6 transition-transform">
                                         👥
                                     </div>
                                     <div className="min-w-0 flex-1">
-                                        <h3 className="text-sm font-black text-blue-400 uppercase tracking-wider">Squad Split™</h3>
-                                        <p className="text-base font-black text-white leading-tight">"Apna Hissa, Khud Bharo!"</p>
+                                        <h3 className="text-xs sm:text-sm font-black text-blue-400 uppercase tracking-wider truncate">Squad Split™</h3>
+                                        <p className="text-sm sm:text-base font-black text-white leading-tight truncate">"Apna Hissa, Khud Bharo!"</p>
                                     </div>
                                 </div>
 
-                                <p className="text-xs text-slate-300 font-medium leading-relaxed">
+                                <p className="text-[11px] sm:text-xs text-slate-300 font-medium leading-relaxed">
                                     Individual UPI links sent to each teammate. Everyone pays their equal share directly.
                                 </p>
 
                                 {/* Proper Details Table */}
-                                <div className="p-3 rounded-2xl bg-black/60 border border-blue-500/30 backdrop-blur-md space-y-1.5 text-[11px]">
-                                    <div className="flex justify-between items-center text-slate-300 font-semibold border-b border-white/10 pb-1">
-                                        <span>Squad Size</span>
-                                        <span className="text-blue-400 font-black">2 to 14 Players</span>
+                                <div className="p-2.5 sm:p-3 rounded-2xl bg-black/60 border border-blue-500/30 backdrop-blur-md space-y-1.5 text-[10px] sm:text-[11px]">
+                                    <div className="flex justify-between items-center text-slate-300 font-semibold border-b border-white/10 pb-1 gap-1">
+                                        <span className="shrink-0">Squad Size</span>
+                                        <span className="text-blue-400 font-black truncate">2 to 14 Players</span>
                                     </div>
-                                    <div className="flex justify-between items-center text-slate-300 font-semibold border-b border-white/10 pb-1">
-                                        <span>Per Player Share</span>
-                                        <span className="text-cyan-400 font-black">₹150 – ₹300 / Head</span>
+                                    <div className="flex justify-between items-center text-slate-300 font-semibold border-b border-white/10 pb-1 gap-1">
+                                        <span className="shrink-0">Per Player Share</span>
+                                        <span className="text-cyan-400 font-black truncate">₹150 – ₹300 / Head</span>
                                     </div>
-                                    <div className="flex justify-between items-center text-slate-300 font-semibold">
-                                        <span>UPI Link</span>
-                                        <span className="text-emerald-400 font-black">Live Player Status</span>
+                                    <div className="flex justify-between items-center text-slate-300 font-semibold gap-1">
+                                        <span className="shrink-0">UPI Link</span>
+                                        <span className="text-emerald-400 font-black truncate">Live Player Status</span>
                                     </div>
                                 </div>
                             </div>
 
-                            <div className="relative z-10 mt-4 pt-3 border-t border-blue-500/30 flex items-center justify-between text-xs font-black text-blue-400 group-hover:text-white transition-colors">
+                            <div className="relative z-10 mt-3 pt-2.5 border-t border-blue-500/30 flex items-center justify-between text-xs font-black text-blue-400 group-hover:text-white transition-colors">
                                 <span>Create Squad Split</span>
                                 <span className="text-blue-400 group-hover:text-white font-black group-hover:translate-x-1.5 transition-transform">Share →</span>
                             </div>
@@ -553,7 +595,7 @@ export default function HomePage() {
                             onClick={() => {
                                 resultsRef.current?.scrollIntoView({ behavior: 'smooth' })
                             }}
-                            className="group relative overflow-hidden w-full flex flex-col justify-between p-4 sm:p-4.5 rounded-3xl border-2 border-lime-500/60 hover:border-lime-400 shadow-xl hover:shadow-[0_20px_45px_rgba(132,204,22,0.45)] transition-all duration-500 cursor-pointer hover:-translate-y-1.5 text-left min-h-[320px]"
+                            className="group relative overflow-hidden w-full min-w-0 flex flex-col justify-between p-3.5 sm:p-4.5 rounded-3xl border-2 border-lime-500/60 hover:border-lime-400 shadow-xl hover:shadow-[0_20px_45px_rgba(132,204,22,0.45)] transition-all duration-500 cursor-pointer hover:-translate-y-1.5 text-left min-h-[310px]"
                         >
                             {/* Background Photo */}
                             <div
@@ -567,37 +609,37 @@ export default function HomePage() {
 
                             <div className="relative z-10 space-y-3">
                                 <div className="flex items-center gap-3">
-                                    <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-[#16A34A] to-emerald-700 text-white shadow-[0_0_25px_rgba(22,163,74,0.8)] flex items-center justify-center text-2xl shrink-0 group-hover:scale-110 group-hover:-rotate-6 transition-transform">
+                                    <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-gradient-to-br from-[#16A34A] to-emerald-700 text-white shadow-[0_0_25px_rgba(22,163,74,0.8)] flex items-center justify-center text-xl sm:text-2xl shrink-0 group-hover:scale-110 group-hover:-rotate-6 transition-transform">
                                         💳
                                     </div>
                                     <div className="min-w-0 flex-1">
-                                        <h3 className="text-sm font-black text-[#C8FF2E] uppercase tracking-wider">Full Pay™</h3>
-                                        <p className="text-base font-black text-white leading-tight">"Tera Bhai Dega Pura Bill!"</p>
+                                        <h3 className="text-xs sm:text-sm font-black text-[#C8FF2E] uppercase tracking-wider truncate">Full Pay™</h3>
+                                        <p className="text-sm sm:text-base font-black text-white leading-tight truncate">"Tera Bhai Dega Pura Bill!"</p>
                                     </div>
                                 </div>
 
-                                <p className="text-xs text-slate-300 font-medium leading-relaxed">
+                                <p className="text-[11px] sm:text-xs text-slate-300 font-medium leading-relaxed">
                                     Pay complete turf amount upfront for instant slot locking. Collect offline at your ease.
                                 </p>
 
                                 {/* Proper Details Table */}
-                                <div className="p-3 rounded-2xl bg-black/60 border border-lime-500/30 backdrop-blur-md space-y-1.5 text-[11px]">
-                                    <div className="flex justify-between items-center text-slate-300 font-semibold border-b border-white/10 pb-1">
-                                        <span>Booking Speed</span>
-                                        <span className="text-[#C8FF2E] font-black">Instant 10s Lock</span>
+                                <div className="p-2.5 sm:p-3 rounded-2xl bg-black/60 border border-lime-500/30 backdrop-blur-md space-y-1.5 text-[10px] sm:text-[11px]">
+                                    <div className="flex justify-between items-center text-slate-300 font-semibold border-b border-white/10 pb-1 gap-1">
+                                        <span className="shrink-0">Booking Speed</span>
+                                        <span className="text-[#C8FF2E] font-black truncate">Instant 10s Lock</span>
                                     </div>
-                                    <div className="flex justify-between items-center text-slate-300 font-semibold border-b border-white/10 pb-1">
-                                        <span>Upfront Pay</span>
-                                        <span className="text-emerald-400 font-black">100% Single Captain</span>
+                                    <div className="flex justify-between items-center text-slate-300 font-semibold border-b border-white/10 pb-1 gap-1">
+                                        <span className="shrink-0">Upfront Pay</span>
+                                        <span className="text-emerald-400 font-black truncate">100% Single Captain</span>
                                     </div>
-                                    <div className="flex justify-between items-center text-slate-300 font-semibold">
-                                        <span>Settlement</span>
-                                        <span className="text-cyan-400 font-black">Collect Offline Cash/UPI</span>
+                                    <div className="flex justify-between items-center text-slate-300 font-semibold gap-1">
+                                        <span className="shrink-0">Settlement</span>
+                                        <span className="text-cyan-400 font-black truncate">Collect Offline Cash/UPI</span>
                                     </div>
                                 </div>
                             </div>
 
-                            <div className="relative z-10 mt-4 pt-3 border-t border-lime-500/30 flex items-center justify-between text-xs font-black text-[#C8FF2E] group-hover:text-white transition-colors">
+                            <div className="relative z-10 mt-3 pt-2.5 border-t border-lime-500/30 flex items-center justify-between text-xs font-black text-[#C8FF2E] group-hover:text-white transition-colors">
                                 <span>Instant Full Booking</span>
                                 <span className="text-[#C8FF2E] group-hover:text-white font-black group-hover:translate-x-1.5 transition-transform">Book →</span>
                             </div>
@@ -606,7 +648,7 @@ export default function HomePage() {
                         {/* 5. 👑 HALL OF FAME™ TEMPLATE */}
                         <div
                             onClick={() => navigate('/leaderboard')}
-                            className="group relative overflow-hidden w-full flex flex-col justify-between p-4 sm:p-4.5 rounded-3xl border-2 border-amber-500/60 hover:border-amber-400 shadow-xl hover:shadow-[0_20px_45px_rgba(245,158,11,0.45)] transition-all duration-500 cursor-pointer hover:-translate-y-1.5 text-left min-h-[320px]"
+                            className="group relative overflow-hidden w-full min-w-0 flex flex-col justify-between p-3.5 sm:p-4.5 rounded-3xl border-2 border-amber-500/60 hover:border-amber-400 shadow-xl hover:shadow-[0_20px_45px_rgba(245,158,11,0.45)] transition-all duration-500 cursor-pointer hover:-translate-y-1.5 text-left min-h-[310px] sm:col-span-2 lg:col-span-1"
                         >
                             {/* Background Photo */}
                             <div
@@ -620,37 +662,37 @@ export default function HomePage() {
 
                             <div className="relative z-10 space-y-3">
                                 <div className="flex items-center gap-3">
-                                    <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-amber-400 to-yellow-600 text-black shadow-[0_0_25px_rgba(245,158,11,0.8)] flex items-center justify-center text-2xl shrink-0 group-hover:scale-110 group-hover:-rotate-6 transition-transform">
+                                    <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-gradient-to-br from-amber-400 to-yellow-600 text-black shadow-[0_0_25px_rgba(245,158,11,0.8)] flex items-center justify-center text-xl sm:text-2xl shrink-0 group-hover:scale-110 group-hover:-rotate-6 transition-transform">
                                         👑
                                     </div>
                                     <div className="min-w-0 flex-1">
-                                        <h3 className="text-sm font-black text-amber-400 uppercase tracking-wider">Player Matchmaking™</h3>
-                                        <p className="text-base font-black text-white leading-tight">"Best Players Ke Sath Khelo!"</p>
+                                        <h3 className="text-xs sm:text-sm font-black text-amber-400 uppercase tracking-wider truncate">Player Matchmaking™</h3>
+                                        <p className="text-sm sm:text-base font-black text-white leading-tight truncate">"Best Players Ke Sath Khelo!"</p>
                                     </div>
                                 </div>
 
-                                <p className="text-xs text-slate-300 font-medium leading-relaxed">
+                                <p className="text-[11px] sm:text-xs text-slate-300 font-medium leading-relaxed">
                                     City ke best players aur top cricket teams ko match khelne ke liye bulao aur challenge karo.
                                 </p>
 
                                 {/* Proper Details Table */}
-                                <div className="p-3 rounded-2xl bg-black/60 border border-amber-500/30 backdrop-blur-md space-y-1.5 text-[11px]">
-                                    <div className="flex justify-between items-center text-slate-300 font-semibold border-b border-white/10 pb-1">
-                                        <span>Khiladi Invite</span>
-                                        <span className="text-amber-400 font-black">Top City Players</span>
+                                <div className="p-2.5 sm:p-3 rounded-2xl bg-black/60 border border-amber-500/30 backdrop-blur-md space-y-1.5 text-[10px] sm:text-[11px]">
+                                    <div className="flex justify-between items-center text-slate-300 font-semibold border-b border-white/10 pb-1 gap-1">
+                                        <span className="shrink-0">Khiladi Invite</span>
+                                        <span className="text-amber-400 font-black truncate">Top City Players</span>
                                     </div>
-                                    <div className="flex justify-between items-center text-slate-300 font-semibold border-b border-white/10 pb-1">
-                                        <span>Open Challenge</span>
-                                        <span className="text-orange-400 font-black">Direct WhatsApp Invite</span>
+                                    <div className="flex justify-between items-center text-slate-300 font-semibold border-b border-white/10 pb-1 gap-1">
+                                        <span className="shrink-0">Open Challenge</span>
+                                        <span className="text-orange-400 font-black truncate">Direct WhatsApp Invite</span>
                                     </div>
-                                    <div className="flex justify-between items-center text-slate-300 font-semibold">
-                                        <span>Rankings</span>
-                                        <span className="text-yellow-400 font-black">Top XI Leaderboard</span>
+                                    <div className="flex justify-between items-center text-slate-300 font-semibold gap-1">
+                                        <span className="shrink-0">Rankings</span>
+                                        <span className="text-yellow-400 font-black truncate">Top XI Leaderboard</span>
                                     </div>
                                 </div>
                             </div>
 
-                            <div className="relative z-10 mt-4 pt-3 border-t border-amber-500/30 flex items-center justify-between text-xs font-black text-amber-400 group-hover:text-white transition-colors">
+                            <div className="relative z-10 mt-3 pt-2.5 border-t border-amber-500/30 flex items-center justify-between text-xs font-black text-amber-400 group-hover:text-white transition-colors">
                                 <span>Best Players Se Khelo</span>
                                 <span className="text-amber-400 group-hover:text-white font-black group-hover:translate-x-1.5 transition-transform">Invite →</span>
                             </div>

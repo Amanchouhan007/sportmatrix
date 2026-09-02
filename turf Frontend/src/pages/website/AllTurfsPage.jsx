@@ -4,6 +4,8 @@ import { HiLocationMarker, HiStar, HiSearch, HiFilter, HiX, HiRefresh, HiOutline
 import TurfSearchBar from '../../components/TurfSearchBar'
 import TurfCard from '../../components/TurfCard'
 import CustomSelect from '../../components/ui/CustomSelect'
+import PageLoader from '../../components/ui/PageLoader'
+import { getPublicBranches } from '../../services/publicBranchService'
 
 const sportSlugs = { cricket: 'Cricket' }
 const allAmenities = ['Floodlights', 'Parking', 'Washroom', 'Drinking Water', 'Seating', 'AC']
@@ -25,14 +27,14 @@ export default function AllTurfsPage() {
     const [sortBy, setSortBy] = useState('rating')
     const [drawerOpen, setDrawerOpen] = useState(false)
     const [turfList, setTurfList] = useState([])
+    const [loading, setLoading] = useState(true)
 
-    // Load real-time database branches from REST API & purge demo hardcoded data
+    // Load real-time database branches via public API (no auth token attached)
     useEffect(() => {
         const fetchRealBranches = async () => {
             try {
-                const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5005/api/v1';
-                const res = await fetch(`${API_URL}/branches`)
-                const data = await res.json()
+                const res = await getPublicBranches()
+                const data = res
                 if (data.success && data.data && Array.isArray(data.data.branches)) {
                     const mapped = data.data.branches.map((b, idx) => {
                         const rawPrice = Number(b.pricePerHour ?? b.price_per_hour ?? b.price ?? b.minPriceHourly ?? b.min_price_hourly);
@@ -42,9 +44,9 @@ export default function AllTurfsPage() {
                         const resolvedRating = (!isNaN(rawRating) && rawRating > 0) ? rawRating : 4.5;
 
                         return {
-                            id: b.id || b._id || `br_${idx + 1}`,
+                            id: b.id || b._id || ('br_' + (idx + 1)),
                             name: b.branchName || 'Sports Arena',
-                            location: b.fullAddress || `${(b.city || 'Indore').toUpperCase()} Turf Complex`,
+                            location: b.fullAddress || ((b.city || 'Indore').toUpperCase() + ' Turf Complex'),
                             city: (b.city || 'Indore').charAt(0).toUpperCase() + (b.city || 'Indore').slice(1),
                             sport: (Array.isArray(b.sports) && b.sports[0]) ? (typeof b.sports[0] === 'string' ? b.sports[0] : (b.sports[0]?.name || 'Cricket')) : 'Cricket',
                             sports: Array.isArray(b.sports) && b.sports.length > 0 ? b.sports.map(s => typeof s === 'string' ? s : (s?.name || 'Cricket')) : ['Cricket'],
@@ -55,19 +57,21 @@ export default function AllTurfsPage() {
                             openingTime: b.openingTime || b.opening_time || '06:00 AM',
                             closingTime: b.closingTime || b.closing_time || '11:00 PM',
                             dimensionsSqFt: b.dimensionsSqFt || b.dimensions_sqft,
-                            turfSize: b.dimensionsSqFt ? `${Number(b.dimensionsSqFt).toLocaleString('en-IN')} Sq.Ft` : (b.turfSize || b.dimensions || '5,000 Sq.Ft'),
-                            dimensions: b.dimensionsSqFt ? `${Number(b.dimensionsSqFt).toLocaleString('en-IN')} Sq.Ft` : (b.turfSize || b.dimensions || '5,000 Sq.Ft'),
+                            turfSize: b.dimensionsSqFt ? (Number(b.dimensionsSqFt).toLocaleString('en-IN') + ' Sq.Ft') : (b.turfSize || b.dimensions || '5,000 Sq.Ft'),
+                            dimensions: b.dimensionsSqFt ? (Number(b.dimensionsSqFt).toLocaleString('en-IN') + ' Sq.Ft') : (b.turfSize || b.dimensions || '5,000 Sq.Ft'),
                             surfaceType: b.surfaceType || b.surface_type || 'TurfPro Synthetic Arena',
-                            amenities: Array.isArray(b.amenities) ? b.amenities : ['Floodlights', 'Parking', 'Washroom'],
-                            image: b.logo || (Array.isArray(b.images) && b.images[0] ? b.images[0] : `/images/turf${(idx % 6) + 1}.png`),
-                            discountOffer: b.discountOffer || b.discount_offer || '',
-                            couponCode: b.couponCode || b.coupon_code || ''
+                            image: b.logo || (Array.isArray(b.images) && b.images[0]) || `/images/turf${(idx % 5) + 1}.png`,
+                            amenities: Array.isArray(b.amenities) && b.amenities.length > 0 ? b.amenities : ['Floodlights', 'Parking', 'Washroom'],
+                            lat: Number(b.latitude || (22.7244 + (idx * 0.01))),
+                            lng: Number(b.longitude || (75.8839 + (idx * 0.01)))
                         };
                     })
                     setTurfList(mapped)
                 }
             } catch (err) {
                 console.warn('Real branch fetch note:', err.message)
+            } finally {
+                setLoading(false)
             }
         }
         fetchRealBranches()
@@ -139,6 +143,10 @@ export default function AllTurfsPage() {
     const gridCols = drawerOpen && !isMobile
         ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4'
         : 'grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5'
+
+    if (loading) {
+        return <PageLoader text="Loading Kiaan Turfs..." fullScreen />
+    }
 
     return (
         <div className="h-screen w-screen overflow-hidden bg-white text-[#111827] selection:bg-[#C8FF2E]/40 flex flex-col relative">

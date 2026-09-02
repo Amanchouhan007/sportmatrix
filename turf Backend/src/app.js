@@ -23,6 +23,10 @@ app.use('/uploads', express.static(path.join(__dirname, '../public/uploads')));
 const authRouter = require('./modules/auth/auth.routes');
 app.use('/api/v1/auth', authRouter);
 
+// Public Marketplace Routes (no authentication required)
+const publicRouter = require('./modules/public/public.routes');
+app.use('/api/v1/public', publicRouter);
+
 // Sports Routes registration
 const sportsRouter = require('./modules/sports/sports.routes');
 app.use('/api/v1/sports', sportsRouter);

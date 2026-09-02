@@ -1,19 +1,13 @@
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import PageLoader from '../components/ui/PageLoader';
 
 export default function ProtectedRoute({ children, allowedRoles }) {
     const { token, user, loading } = useAuth();
 
     // Show a loading screen during context initialization
     if (loading) {
-        return (
-            <div className="min-h-screen bg-slate-900 flex items-center justify-center">
-                <div className="flex flex-col items-center gap-4">
-                    <div className="w-10 h-10 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin"></div>
-                    <span className="text-slate-400 text-sm font-medium">Loading Dashboard...</span>
-                </div>
-            </div>
-        );
+        return <PageLoader text="Verifying Access..." fullScreen />;
     }
 
     // Require active session token and user object
