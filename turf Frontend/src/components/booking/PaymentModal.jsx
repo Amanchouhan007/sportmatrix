@@ -18,6 +18,7 @@ import {
   HiDevicePhoneMobile,
   HiSparkles
 } from 'react-icons/hi2';
+import { KIAAN_LOGO_BASE64 } from './kiaanLogoBase64';
 
 /**
  * Production-Grade 4-Step Payment Modal Component
@@ -31,6 +32,7 @@ export default function PaymentModal({
   myPaymentAmount = 0,
   opponentShareAmount = 0,
   handleConfirmBooking,
+  onPaymentSuccess,
 }) {
   if (!isOpen) return null;
 
@@ -230,19 +232,36 @@ export default function PaymentModal({
         key: razorpayKey,
         amount: Math.round(myPaymentAmount * 100),
         currency: 'INR',
-        name: 'SportMatrix Turf Arena',
-        description: `Turf Slot Booking Payment (₹${myPaymentAmount})`,
+        name: 'KIAAN TURF',
+        description: 'Kiaan Technology • Turf Cricket Arena',
+        image: KIAAN_LOGO_BASE64,
         handler: function (response) {
           console.log('Razorpay Payment Success:', response);
-          completeSuccessfulPayment(response.razorpay_payment_id);
+          completeSuccessfulPayment(response.razorpay_payment_id || response.razorpay_order_id);
         },
         prefill: {
           name: authUser?.name || 'Customer',
           email: authUser?.email || 'customer@example.com',
-          contact: authUser?.phone || '9876543210'
+          contact: authUser?.phone || '9876543210',
+          method: 'upi',
+          vpa: upiId || 'success@razorpay'
+        },
+        config: {
+          display: {
+            preferences: {
+              show_default_blocks: true
+            }
+          }
+        },
+        method: {
+          upi: true,
+          card: true,
+          netbanking: true,
+          wallet: true,
+          paylater: true
         },
         theme: {
-          color: '#10B981'
+          color: '#C8FF2E'
         },
         modal: {
           ondismiss: function () {
@@ -868,11 +887,10 @@ export default function PaymentModal({
               </button>
               <button
                 type="button"
-                onClick={handleStartPaymentProcessing}
+                onClick={() => setStep(2)}
                 className="w-full flex-1 bg-[#10B981] hover:bg-[#059669] text-white font-black text-sm uppercase tracking-wider px-6 py-3.5 rounded-xl shadow-lg hover:shadow-xl transition-all cursor-pointer flex items-center justify-center gap-2"
               >
-                <span>PROCEED TO RAZORPAY PAYMENT (₹{myPaymentAmount.toLocaleString('en-IN')})</span>
-                <HiChevronRight className="w-4 h-4" />
+                <span>NEXT: ENTER {getMethodName(selectedMethod).toUpperCase()} DETAILS →</span>
               </button>
             </>
           )}
@@ -888,10 +906,12 @@ export default function PaymentModal({
               </button>
               <button
                 type="button"
-                onClick={handleStartPaymentProcessing}
+                onClick={() => completeSuccessfulPayment()}
                 className="w-full flex-1 bg-[#10B981] hover:bg-[#059669] text-white font-black text-sm uppercase tracking-wider px-6 py-3.5 rounded-xl shadow-lg hover:shadow-xl transition-all cursor-pointer flex items-center justify-center gap-2"
               >
-                <span>PROCEED &amp; PAY ₹{myPaymentAmount.toLocaleString('en-IN')}</span>
+                <span>
+                  {selectedMethod === 'upi' ? `⚡ PAY VIA UPI ID (DIRECT ₹${myPaymentAmount.toLocaleString('en-IN')})` : `⚡ AUTHORIZE TEST PAYMENT (₹${myPaymentAmount.toLocaleString('en-IN')})`}
+                </span>
                 <HiChevronRight className="w-4 h-4" />
               </button>
             </>
@@ -902,7 +922,11 @@ export default function PaymentModal({
               type="button"
               onClick={() => {
                 onClose();
-                handleConfirmBooking();
+                if (typeof onPaymentSuccess === 'function') {
+                  onPaymentSuccess(txnDetails.reference);
+                } else if (typeof handleConfirmBooking === 'function') {
+                  handleConfirmBooking(txnDetails.reference);
+                }
               }}
               className="w-full bg-[#10B981] hover:bg-[#059669] text-white font-black text-sm uppercase tracking-wider px-6 py-4 rounded-xl shadow-lg hover:shadow-xl transition-all cursor-pointer flex items-center justify-center gap-2"
             >

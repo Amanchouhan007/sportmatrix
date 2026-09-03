@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext.jsx';
 import { useToast } from '../ui/Toast.jsx';
 import PaymentModal from './PaymentModal.jsx';
+import { KIAAN_LOGO_BASE64 } from './kiaanLogoBase64';
 
 /**
  * BookingStep3Lock — Step 3 Review & Payment Lock Component
@@ -28,6 +29,7 @@ export default function BookingStep3Lock({
   const [guestName, setGuestName] = useState('');
   const [guestPhone, setGuestPhone] = useState('');
   const [guestEmail, setGuestEmail] = useState('');
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
 
   // Pre-load Razorpay checkout script on mount
   useEffect(() => {
@@ -72,19 +74,39 @@ export default function BookingStep3Lock({
           key: razorpayKey,
           amount: Math.round(myPaymentAmount * 100),
           currency: 'INR',
-          name: 'SportMatrix Turf Arena',
-          description: `Booking - ${selectedVenue?.name || 'Turf Arena'} (₹${myPaymentAmount})`,
+          name: 'KIAAN TURF',
+          description: 'Kiaan Technology • Turf Cricket Arena',
+          image: KIAAN_LOGO_BASE64,
           handler: function (response) {
             console.log('Razorpay Payment Success:', response);
-            handleConfirmBooking(response.razorpay_payment_id, guestData);
+            handleConfirmBooking(response.razorpay_payment_id || response.razorpay_order_id, guestData);
           },
           prefill: {
             name: finalName,
             email: finalEmail || 'player@sportmatrix.com',
-            contact: finalPhone
+            contact: finalPhone,
+            method: 'upi',
+            vpa: 'success@razorpay'
+          },
+          upi: {
+            flow: 'collect'
+          },
+          config: {
+            display: {
+              preferences: {
+                show_default_blocks: true
+              }
+            }
+          },
+          method: {
+            upi: true,
+            card: true,
+            netbanking: true,
+            wallet: true,
+            paylater: true
           },
           theme: {
-            color: '#10B981'
+            color: '#C8FF2E'
           }
         };
         try {
@@ -211,7 +233,7 @@ export default function BookingStep3Lock({
       </div>
 
       {/* Action CTA Buttons */}
-      <div className="flex items-center justify-between gap-4 pt-2">
+      <div className="flex flex-wrap items-center justify-between gap-4 pt-2">
         <button
           type="button"
           onClick={() => setActiveStep(2)}
@@ -219,15 +241,40 @@ export default function BookingStep3Lock({
         >
           ← Change Payment Mode
         </button>
-        <button
-          type="button"
-          onClick={handleRazorpayCheckout}
-          disabled={isSubmitting}
-          className="bg-[#10B981] hover:bg-[#059669] text-white font-black text-sm uppercase tracking-wider px-8 py-4 rounded-xl shadow-lg transition-all cursor-pointer hover:scale-105 active:scale-95 flex items-center gap-2"
-        >
-          <span>{isSubmitting ? 'Processing Payment...' : `⚡ LOCK MATCH & PAY ₹${myPaymentAmount.toLocaleString('en-IN')} →`}</span>
-        </button>
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={() => setShowPaymentModal(true)}
+            disabled={isSubmitting}
+            className="px-5 py-3.5 rounded-xl border-2 border-emerald-600 text-emerald-800 font-black text-xs uppercase tracking-wider hover:bg-emerald-50 transition-all cursor-pointer"
+          >
+            📱 Custom UPI / VPA Form
+          </button>
+          <button
+            type="button"
+            onClick={handleRazorpayCheckout}
+            disabled={isSubmitting}
+            className="bg-[#10B981] hover:bg-[#059669] text-white font-black text-sm uppercase tracking-wider px-8 py-4 rounded-xl shadow-lg transition-all cursor-pointer hover:scale-105 active:scale-95 flex items-center gap-2"
+          >
+            <span>{isSubmitting ? 'Processing Payment...' : `⚡ LOCK MATCH & PAY ₹${myPaymentAmount.toLocaleString('en-IN')} →`}</span>
+          </button>
+        </div>
       </div>
+
+      {showPaymentModal && (
+        <PaymentModal
+          isOpen={showPaymentModal}
+          onClose={() => setShowPaymentModal(false)}
+          totalRent={totalRent}
+          myPaymentAmount={myPaymentAmount}
+          paymentMode={paymentMode}
+          onPaymentSuccess={(payId) => {
+            setShowPaymentModal(false);
+            const guestData = { guestName: guestName.trim() || user?.name || 'Valued Player', guestPhone: guestPhone.trim() || user?.mobile || '9876543210', guestEmail: guestEmail.trim() || user?.email || 'player@sportmatrix.com' };
+            handleConfirmBooking(payId, guestData);
+          }}
+        />
+      )}
     </div>
   );
 }

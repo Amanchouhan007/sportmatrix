@@ -114,7 +114,7 @@ export default function UmpireDashboard() {
         try {
             const list = await getUmpireMatches()
             if (Array.isArray(list) && list.length > 0) {
-                const upcoming = list.filter(m => (m.dutyStatus || m.match_status) !== 'CERTIFIED_COMPLETED').map(m => {
+                const upcoming = list.filter(m => (m.dutyStatus || m.status) !== 'CERTIFIED_COMPLETED').map(m => {
                     const matchObj = m.match || {};
                     const teamA = matchObj.teamAName || m.team1_name || 'Team A';
                     const teamB = matchObj.teamBName || m.team2_name || 'Team B';
@@ -162,8 +162,9 @@ export default function UmpireDashboard() {
                         status: m.dutyStatus || m.status || 'SCHEDULED',
                         statusColor: (m.dutyStatus || m.status) === 'CERTIFIED_COMPLETED' ? 'gray' : 'emerald',
                         umpireFee: Number(m.dutyFee || m.umpireFee || 300),
-                        paymentStatus: m.feePaymentStatus === 'RECEIVED' ? 'Paid Direct QR' : (m.paymentStatus || 'Direct QR Pending'),
-                        ballByBallFeed: m.ballByBallFeed,
+                        totalOvers: Number(m.totalOvers || 6),
+                        paymentStatus: (m.feePaymentStatus === 'RECEIVED' || m.paymentStatus === 'Payment Received' || m.paymentStatus === 'Paid Direct QR') ? 'Payment Received' : 'Payment Pending',
+                        feePaymentStatus: m.feePaymentStatus || 'PENDING',
                         currentScoreSummary: m.currentScoreSummary,
                         tossSummary: m.tossWinnerTeam ? `Toss Won By ${m.tossWinnerTeam} (Elected To ${m.tossElected || 'Bat'})` : null,
                         teamA: {
@@ -285,7 +286,7 @@ export default function UmpireDashboard() {
     // Helper to calculate deterministic scoring engine state from delivery history
     const getEngineState = (deliveries = [], match = scoringMatch, currentInn = currentScore?.selectedInnings || 1) => {
         const ballsPerOver = 6
-        const totalOvers = 6
+        const totalOvers = Number(match?.totalOvers || currentScore?.totalOvers || 6)
         const maxWickets = 10
 
         const teamAName = match?.teamA?.name || match?.teamAName || 'Team A'
@@ -402,16 +403,36 @@ export default function UmpireDashboard() {
         })
 
         const activeInnNum = currentInn || (deliveries.length > 0 ? deliveries[deliveries.length - 1].innings : 1)
-        const targetRuns = activeInnNum === 2 || inn1.legalBalls >= totalOvers * ballsPerOver || inn1.wickets >= maxWickets
-            ? inn1.runs + 1
-            : null
+        const maxLegalBalls = totalOvers * ballsPerOver
+        const isInn1Finished = inn1.legalBalls >= maxLegalBalls || inn1.wickets >= maxWickets
+        const targetRuns = (activeInnNum === 2 || isInn1Finished) ? inn1.runs + 1 : null
+        
+        const isInn2Finished = (targetRuns && inn2.runs >= targetRuns) || inn2.legalBalls >= maxLegalBalls || inn2.wickets >= maxWickets
+        const isMatchComplete = isInn2Finished
+
+        let resultText = null
+        if (isMatchComplete) {
+            if (targetRuns && inn2.runs >= targetRuns) {
+                const wktsLeft = maxWickets - inn2.wickets
+                resultText = `🏆 ${teamBName} won by ${wktsLeft} wicket${wktsLeft === 1 ? '' : 's'}!`
+            } else if (inn2.runs === inn1.runs) {
+                resultText = `🤝 MATCH TIED! SUPER OVER REQUIRED!`
+            } else {
+                const margin = inn1.runs - inn2.runs
+                resultText = `🏆 ${teamAName} won by ${margin} run${margin === 1 ? '' : 's'}!`
+            }
+        }
 
         return {
             selectedInnings: activeInnNum,
-            config: { totalOvers, ballsPerOver, maxWickets },
+            config: { totalOvers, ballsPerOver, maxWickets, maxLegalBalls },
             innings1: inn1,
             innings2: inn2,
             targetRuns,
+            isInn1Finished,
+            isInn2Finished,
+            isMatchComplete,
+            resultText,
             batters,
             bowlers,
             deliveries
@@ -421,6 +442,7 @@ export default function UmpireDashboard() {
     // Convert Engine to UI score snapshot for rendering
     const syncEngineToUI = (engine) => {
         const activeInn = engine.selectedInnings === 2 ? engine.innings2 : engine.innings1
+        const totalOvers = engine.config?.totalOvers || 6
         const ovFormatted = `${Math.floor(activeInn.legalBalls / 6)}.${activeInn.legalBalls % 6}`
         
         // Extract balls in current over
@@ -438,6 +460,7 @@ export default function UmpireDashboard() {
             runs: activeInn.runs,
             wickets: activeInn.wickets,
             overs: ovFormatted,
+            totalOvers,
             legalBalls: activeInn.legalBalls,
             ballsThisOver,
             striker: activeInn.striker,
@@ -449,6 +472,9 @@ export default function UmpireDashboard() {
             topBowler: activeInn.currentBowler,
             bowlerWickets: bowlerStats.wickets,
             bowlerRuns: bowlerStats.runsConceded,
+            isMatchComplete: engine.isMatchComplete,
+            resultText: engine.resultText,
+            targetRuns: engine.targetRuns,
             engine
         }
     }
@@ -514,11 +540,14 @@ export default function UmpireDashboard() {
                 topBowlerName: nextUI.topBowler,
                 topBowlerWickets: nextUI.bowlerWickets
             })
-            if (addToast) addToast(`Ball Recorded: ${delEvent.event}`, 'info')
-
-            // Trigger over complete prompt if 6 legal balls completed
-            if (delEvent.legalBall && activeInn.legalBalls > 0 && activeInn.legalBalls % 6 === 0) {
+            if (nextEngine.isMatchComplete) {
+                if (addToast) addToast(`🎉 MATCH COMPLETED! ${nextEngine.resultText}`, 'success')
+            } else if (nextEngine.isInn1Finished && currentEngine.selectedInnings === 1) {
+                if (addToast) addToast(`🏆 Innings 1 Complete! Target: ${nextEngine.targetRuns} Runs. Switched to Innings 2!`, 'success')
+            } else if (delEvent.legalBall && activeInn.legalBalls > 0 && activeInn.legalBalls % 6 === 0) {
                 setOverCompleteModalOpen(true)
+            } else {
+                if (addToast) addToast(`Ball Recorded: ${delEvent.event}`, 'info')
             }
         } catch (e) {
             console.error('Error persisting delivery:', e)
@@ -655,24 +684,25 @@ export default function UmpireDashboard() {
             })
         }
 
-        const updatedMatches = matches.map(m => {
-            if (m.id === match.id) {
-                return {
-                    ...m,
-                    status: 'Certified & Completed',
-                    statusColor: 'emerald',
-                    teamA: { ...m.teamA, score: currentScore.runs, wickets: currentScore.wickets },
-                    mvp: currentScore.mvpPlayer,
-                    paymentStatus: 'Payment Received'
-                }
-            }
-            return m
-        })
-        setMatches(updatedMatches)
+        const completedItem = {
+            id: match.id,
+            matchTitle: match.title || `${match.teamA?.name || 'Team A'} vs ${match.teamB?.name || 'Team B'}`,
+            turf: match.turf || 'Spike Turf Arena',
+            date: new Date().toLocaleDateString(),
+            time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+            officiatedBy: myUmpireName || 'Official Umpire',
+            result: `Match Certified - Innings ${currentScore.selectedInnings || 1}: ${currentScore.runs}/${currentScore.wickets}`,
+            mvp: `MVP: ${currentScore.mvpPlayer || batsmanName || 'Performance Star'}`,
+            payment: `✓ ₹${match.umpireFee || 300} Received`,
+            verifiedTier: '⚖️ 1.5x Umpire Certified'
+        }
+
+        setMatchHistory(prev => [completedItem, ...prev.filter(h => h.id !== match.id)])
+        setMatches(prev => prev.filter(m => m.id !== match.id && m.id !== match.matchCode))
         setScoringMatch(null)
 
         if (addToast) {
-            addToast(`🎉 Match Certified & Persisted to DB! ${batsmanName} updated on Leaderboard!`, 'success')
+            addToast(`🎉 Match Certified & Closed! Persisted to DB & moved to History!`, 'success')
         }
     }
 
@@ -762,10 +792,11 @@ export default function UmpireDashboard() {
         }
 
         const updatedMatches = matches.map(m => {
-            if (m.id === match.id) {
+            if (m.id === match.id || m.id === match.matchCode || m.matchCode === match.id) {
                 return {
                     ...m,
                     paymentStatus: 'Payment Received',
+                    feePaymentStatus: 'RECEIVED',
                     receiptNo: receiptNo,
                     paidAt: timestamp
                 }
@@ -775,7 +806,7 @@ export default function UmpireDashboard() {
         setMatches(updatedMatches)
 
         const updatedHistory = matchHistory.map(h => {
-            if (h.id === match.id || h.matchTitle === match.title) {
+            if (h.id === match.id || h.id === match.matchCode || h.matchTitle === match.title) {
                 return {
                     ...h,
                     payment: `✓ ₹${match.umpireFee || 300} Received on Personal QR (${myUpiId})`
@@ -790,7 +821,8 @@ export default function UmpireDashboard() {
             ...match,
             receiptNo,
             paidAt: timestamp,
-            paymentStatus: 'Payment Received'
+            paymentStatus: 'Payment Received',
+            feePaymentStatus: 'RECEIVED'
         })
         if (addToast) {
             addToast(`✅ ₹${match.umpireFee || 300} Payment Marked as Received in DB! Receipt Generated: ${receiptNo}`, 'success')
@@ -884,55 +916,55 @@ export default function UmpireDashboard() {
             )}
 
             {/* ═══════════════════════════════════════════════════
-                RESPONSIVE LEFT SIDEBAR
+                RESPONSIVE LEFT SIDEBAR (LIGHT THEME UI)
             ═══════════════════════════════════════════════════ */}
-            <aside className={`fixed md:static top-0 bottom-0 left-0 z-50 w-72 bg-[#0B0F19] text-white flex flex-col justify-between border-r border-slate-800/80 shadow-2xl backdrop-blur-xl transition-transform duration-300 transform ${
+            <aside className={`fixed md:static top-0 bottom-0 left-0 z-50 w-72 bg-white text-slate-900 flex flex-col justify-between border-r border-slate-200/90 shadow-xl backdrop-blur-xl transition-transform duration-300 transform ${
                 isSidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
             } shrink-0`}>
                 <div>
                     {/* Brand & Umpire Badge Header */}
-                    <div className="p-5 border-b border-slate-800/80 flex items-center justify-between">
+                    <div className="p-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
                         <div className="flex items-center gap-3">
                             <img 
                                 src="/images/kiaan_gold_logo.jpg?v=2" 
                                 alt="Kiaan Technology Turf Cricket Arena" 
-                                className="w-10 h-10 rounded-xl object-cover shadow-md border border-amber-400/40 shadow-amber-500/10 shrink-0" 
+                                className="w-10 h-10 rounded-xl object-cover shadow-sm border border-amber-400/50 shrink-0" 
                             />
                             <div>
-                                <h2 className="text-xs font-black text-white tracking-wider uppercase">KIAAN <span className="text-amber-400">TURF</span></h2>
-                                <p className="text-[9px] text-amber-400 font-bold uppercase tracking-widest">OFFICIAL UMPIRE</p>
+                                <h2 className="text-xs font-black text-slate-950 tracking-wider uppercase">KIAAN <span className="text-amber-600">TURF</span></h2>
+                                <p className="text-[9px] text-amber-700 font-bold uppercase tracking-widest">OFFICIAL UMPIRE</p>
                             </div>
                         </div>
 
                         <button 
                             type="button"
                             onClick={() => setIsSidebarOpen(false)}
-                            className="md:hidden text-slate-400 hover:text-white p-1 cursor-pointer"
+                            className="md:hidden text-slate-500 hover:text-slate-900 p-1 cursor-pointer"
                         >
                             <HiX className="w-6 h-6" />
                         </button>
                     </div>
 
-                    {/* Umpire Profile Summary Card */}
-                    <div className="p-4 mx-3.5 my-3.5 bg-slate-900/90 rounded-2xl border border-slate-700/60 space-y-2.5 shadow-lg relative overflow-hidden group hover:border-amber-400/50 transition-all">
+                    {/* Umpire Profile Summary Card (Clean Light Theme) */}
+                    <div className="p-4 mx-3.5 my-3.5 bg-gradient-to-br from-emerald-50/80 via-slate-50 to-emerald-50/40 rounded-2xl border border-emerald-200/80 space-y-2.5 shadow-sm relative overflow-hidden group hover:border-emerald-300 transition-all">
                         <div className="flex items-center justify-between">
-                            <span className="text-xs font-black text-white truncate max-w-[150px]">{myUmpireName || 'Official Umpire'}</span>
-                            <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 text-[9px] font-black tracking-wide flex items-center gap-1">
+                            <span className="text-xs font-black text-slate-950 truncate max-w-[150px]">{myUmpireName || 'Official Umpire'}</span>
+                            <span className="px-2.5 py-0.5 rounded-full bg-emerald-600 text-white text-[9px] font-black tracking-wide flex items-center gap-1 shadow-2xs">
                                 ✓ Certified
                             </span>
                         </div>
-                        <p className="text-[11px] text-slate-300 font-medium truncate">
+                        <p className="text-[11px] text-slate-600 font-semibold truncate">
                             🏟️ {officiatingLocations || 'Spike Turf & Royal Ground (Indore)'}
                         </p>
-                        <div className="flex items-center justify-between text-[10px] font-mono pt-2 border-t border-slate-800">
-                            <span className="text-slate-400 font-semibold uppercase text-[9px] tracking-wider">UPI QR:</span>
-                            <span className="text-emerald-400 font-bold bg-slate-950/80 border border-emerald-500/30 px-2.5 py-0.5 rounded text-[11px] truncate max-w-[130px] shadow-inner">{myUpiId || 'rajesh.umpire@okhdfcbank'}</span>
+                        <div className="flex items-center justify-between text-[10px] font-mono pt-2 border-t border-emerald-100">
+                            <span className="text-slate-500 font-bold uppercase text-[9px] tracking-wider">UPI QR:</span>
+                            <span className="text-emerald-900 font-bold bg-white border border-emerald-300 px-2.5 py-0.5 rounded text-[11px] truncate max-w-[130px] shadow-2xs">{myUpiId || 'rajesh.umpire@okhdfcbank'}</span>
                         </div>
                     </div>
 
                     {/* Navigation Links */}
                     <nav className="p-3.5 space-y-1.5">
-                        <div className="px-3.5 py-2 text-[10px] font-black uppercase tracking-widest text-slate-400/90">NAVIGATION MENU</div>
+                        <div className="px-3.5 py-2 text-[10px] font-black uppercase tracking-widest text-slate-400">NAVIGATION MENU</div>
                         {[
                             { id: 'duty', label: 'Live Duty & Matches', badge: matches.length, icon: '⚡' },
                             { id: 'history', label: 'Match History Log', badge: matchHistory.length, icon: '📜' },
@@ -950,8 +982,8 @@ export default function UmpireDashboard() {
                                     }}
                                     className={`w-full flex items-center justify-between px-4 py-3 rounded-xl text-xs font-bold transition-all duration-200 cursor-pointer ${
                                         isActive
-                                            ? 'bg-[#C8FF2E] text-slate-950 shadow-lg shadow-[#C8FF2E]/20 font-black scale-[1.01] translate-x-1'
-                                            : 'text-slate-300 hover:bg-slate-800/70 hover:text-white hover:translate-x-1'
+                                            ? 'bg-[#C8FF2E] text-slate-950 shadow-md shadow-[#C8FF2E]/30 font-black scale-[1.01] translate-x-1 ring-1 ring-slate-950/10'
+                                            : 'text-slate-600 hover:bg-emerald-50/80 hover:text-emerald-950 hover:translate-x-1'
                                     }`}
                                 >
                                     <div className="flex items-center gap-3">
@@ -959,8 +991,8 @@ export default function UmpireDashboard() {
                                         <span>{tab.label}</span>
                                     </div>
                                     {tab.badge !== null && tab.badge !== undefined && (
-                                        <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-black font-mono shadow-xs ${
-                                            isActive ? 'bg-slate-950 text-[#C8FF2E] border border-slate-950' : 'bg-slate-800/90 text-slate-300 border border-slate-700/60'
+                                        <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-black font-mono shadow-2xs ${
+                                            isActive ? 'bg-slate-950 text-[#C8FF2E]' : 'bg-slate-100 text-slate-700 border border-slate-200'
                                         }`}>
                                             {tab.badge}
                                         </span>
@@ -1035,11 +1067,27 @@ export default function UmpireDashboard() {
                     <div className="flex items-center gap-2">
                         <button
                             type="button"
-                            onClick={() => setQrModalMatch({ title: 'Direct Match Fee', umpireFee: myMatchFee, turf: 'Ground Match' })}
+                            onClick={() => setEditingCaptainsMatch({
+                                isNew: true,
+                                title: '',
+                                turf: 'Spike Turf & Royal Ground',
+                                turfLocation: 'Bhawarkua, Indore',
+                                time: '8:00 PM – 9:00 PM',
+                                date: 'Today',
+                                matchType: 'Dare Match™ (Loser Pays All)',
+                                modeBadge: '🔥 DARE MATCH',
+                                umpireFee: 300,
+                                teamAName: '',
+                                teamACaptain: '',
+                                teamAPhone: '',
+                                teamBName: '',
+                                teamBCaptain: '',
+                                teamBPhone: ''
+                            })}
                             className="px-3.5 py-2 rounded-xl bg-[#C8FF2E] hover:bg-[#B5F000] text-slate-950 font-black text-xs uppercase tracking-wider flex items-center gap-1.5 shadow-xs transition-all cursor-pointer shrink-0"
                         >
-                            <HiQrcode className="w-4 h-4 text-slate-950" />
-                            <span className="hidden sm:inline">Show QR (₹{myMatchFee})</span>
+                            <span>➕</span>
+                            <span className="hidden sm:inline">Register Match</span>
                         </button>
 
                         <button
@@ -1087,12 +1135,14 @@ export default function UmpireDashboard() {
                             </div>
                         </div>
 
-                        {/* Card 3: Match Duty Fee */}
+                        {/* Card 3: Match Duty Fee & Daily Settlement Ledger */}
                         <div className="bg-white rounded-3xl p-5 border border-[#E5E7EB] shadow-xs flex items-center justify-between relative overflow-hidden group hover:shadow-md hover:border-[#16A34A]/30 transition-all">
                             <div className="space-y-1 relative z-10">
                                 <span className="text-[11px] font-black uppercase tracking-wider text-slate-500">Umpire Match Rate</span>
                                 <div className="text-2xl font-black text-[#111827]">₹{myMatchFee} <span className="text-xs font-bold text-emerald-600">/ Match</span></div>
-                                <p className="text-[10px] font-semibold text-slate-400">Direct QR Instant Pay</p>
+                                <p className="text-[10px] font-bold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200 inline-block">
+                                    💰 Today Earned: ₹{(matches.filter(m => m.feePaymentStatus === 'RECEIVED' || m.paymentStatus === 'Payment Received').length + matchHistory.length) * (myMatchFee || 300)}
+                                </p>
                             </div>
                             <div className="w-12 h-12 rounded-2xl bg-lime-50 text-lime-700 border border-lime-300 flex items-center justify-center text-2xl shrink-0 group-hover:scale-110 transition-transform">
                                 💰
@@ -1155,47 +1205,54 @@ export default function UmpireDashboard() {
                             </div>
                         </div>
 
-                        {matches.length === 0 ? (
-                            <div className="bg-white rounded-3xl border border-[#E5E7EB] p-8 sm:p-12 text-center shadow-xs space-y-4">
-                                <div className="w-16 h-16 bg-gradient-to-br from-emerald-100 to-teal-50 text-emerald-700 rounded-2xl flex items-center justify-center text-3xl mx-auto border border-emerald-200 shadow-sm">
-                                    🏏
-                                </div>
-                                <div className="space-y-1">
-                                    <h3 className="text-lg font-black text-[#111827] uppercase tracking-tight">No Live Duty Matches Queue</h3>
-                                    <p className="text-xs text-slate-500 max-w-md mx-auto font-semibold leading-relaxed">
-                                        Captains will book you for live box cricket matches, or you can register a ground match directly below.
-                                    </p>
-                                </div>
-                                <div className="pt-2">
-                                    <button
-                                        type="button"
-                                        onClick={() => setEditingCaptainsMatch({
-                                            isNew: true,
-                                            title: '',
-                                            turf: 'Spike Cricket Turf',
-                                            turfLocation: 'Bhawarkua, Indore',
-                                            time: '8:00 PM – 9:00 PM',
-                                            date: 'Today',
-                                            matchType: 'Dare Match™ (Loser Pays All)',
-                                            modeBadge: '🔥 DARE MATCH',
-                                            umpireFee: 300,
-                                            teamAName: '',
-                                            teamACaptain: '',
-                                            teamAPhone: '',
-                                            teamBName: '',
-                                            teamBCaptain: '',
-                                            teamBPhone: ''
-                                        })}
-                                        className="px-5 py-3 rounded-xl bg-[#C8FF2E] hover:bg-[#B5F000] text-slate-950 font-black text-xs uppercase tracking-wider inline-flex items-center gap-2 shadow-md transition-all cursor-pointer hover:scale-105 active:scale-95"
-                                    >
-                                        <span>➕</span>
-                                        <span>Register Ground Match & Captains</span>
-                                    </button>
-                                </div>
-                            </div>
-                        ) : (
-                            <div className="grid grid-cols-1 gap-4">
-                                {matches.map((match) => (
+                        {(() => {
+                            const activeMatchesList = matches.filter(m => m.status !== 'Certified & Completed' && m.status !== 'COMPLETED' && m.status !== 'CERTIFIED_COMPLETED');
+
+                            if (activeMatchesList.length === 0) {
+                                return (
+                                    <div className="bg-white rounded-3xl border border-[#E5E7EB] p-8 sm:p-12 text-center shadow-xs space-y-4">
+                                        <div className="w-16 h-16 bg-gradient-to-br from-emerald-100 to-teal-50 text-emerald-700 rounded-2xl flex items-center justify-center text-3xl mx-auto border border-emerald-200 shadow-sm">
+                                            🏏
+                                        </div>
+                                        <div className="space-y-1">
+                                            <h3 className="text-lg font-black text-[#111827] uppercase tracking-tight">No Live Duty Matches Queue</h3>
+                                            <p className="text-xs text-slate-500 max-w-md mx-auto font-semibold leading-relaxed">
+                                                Captains will book you for live box cricket matches, or you can register a ground match directly below.
+                                            </p>
+                                        </div>
+                                        <div className="pt-2">
+                                            <button
+                                                type="button"
+                                                onClick={() => setEditingCaptainsMatch({
+                                                    isNew: true,
+                                                    title: '',
+                                                    turf: 'Spike Cricket Turf',
+                                                    turfLocation: 'Bhawarkua, Indore',
+                                                    time: '8:00 PM – 9:00 PM',
+                                                    date: 'Today',
+                                                    matchType: 'Dare Match™ (Loser Pays All)',
+                                                    modeBadge: '🔥 DARE MATCH',
+                                                    umpireFee: 300,
+                                                    teamAName: '',
+                                                    teamACaptain: '',
+                                                    teamAPhone: '',
+                                                    teamBName: '',
+                                                    teamBCaptain: '',
+                                                    teamBPhone: ''
+                                                })}
+                                                className="px-5 py-3 rounded-xl bg-[#C8FF2E] hover:bg-[#B5F000] text-slate-950 font-black text-xs uppercase tracking-wider inline-flex items-center gap-2 shadow-md transition-all cursor-pointer hover:scale-105 active:scale-95"
+                                            >
+                                                <span>➕</span>
+                                                <span>Register Ground Match & Captains</span>
+                                            </button>
+                                        </div>
+                                    </div>
+                                );
+                            }
+
+                            return (
+                                <div className="grid grid-cols-1 gap-4">
+                                    {activeMatchesList.map((match) => (
                                     <div
                                         key={match.id}
                                         className={`bg-white rounded-3xl border-2 p-5 sm:p-6 transition-all shadow-sm ${
@@ -1225,7 +1282,7 @@ export default function UmpireDashboard() {
                                                     <span className="px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-600 border border-slate-300 font-bold text-[10px] uppercase tracking-wider">
                                                         🕒 Starts at {match.time?.split('–')?.[0]?.trim() || match.time}
                                                     </span>
-                                                ) : (match.paymentStatus === 'Payment Received' || match.paymentStatus === 'QR Paid on Ground' || match.feePaymentStatus === 'RECEIVED') ? (
+                                                ) : (match.paymentStatus === 'Payment Received' || match.paymentStatus === 'Paid Direct QR' || match.paymentStatus === 'QR Paid on Ground' || match.feePaymentStatus === 'RECEIVED') ? (
                                                     <span className="px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300 font-black text-[10px] uppercase tracking-wider">
                                                         ✓ Received (₹{match.umpireFee || 300})
                                                     </span>
@@ -1310,66 +1367,68 @@ export default function UmpireDashboard() {
                                                 </button>
                                             )}
 
-                                            {/* PAYMENT BUTTON: Only shown when Match is Live or Completed (Never on Upcoming!) */}
-                                            {match.status !== 'Upcoming' && (
-                                                (match.paymentStatus === 'Payment Received' || match.paymentStatus === 'QR Paid on Ground') ? (
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => setQrModalMatch(match)}
-                                                        className="px-4 py-2.5 rounded-xl bg-emerald-100 hover:bg-emerald-200 text-emerald-900 border border-emerald-400 font-black text-xs transition-all cursor-pointer flex items-center gap-1.5 shadow-2xs"
-                                                    >
-                                                        <HiCheckCircle className="w-4 h-4 text-emerald-600" />
-                                                        <span>✓ Payment Received (₹{match.umpireFee || 300})</span>
-                                                    </button>
-                                                ) : (
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => setQrModalMatch(match)}
-                                                        className="px-4 py-2.5 rounded-xl bg-purple-50 hover:bg-purple-100 text-purple-800 border border-purple-300 font-black text-xs transition-all cursor-pointer flex items-center gap-1.5"
-                                                    >
-                                                        <HiQrcode className="w-4 h-4 text-purple-700" />
-                                                        <span>Show QR (₹{match.umpireFee || 300})</span>
-                                                    </button>
-                                                )
+                                            {/* PAYMENT BUTTON: Always shown on all registered & assigned match cards */}
+                                            {(match.paymentStatus === 'Payment Received' || match.paymentStatus === 'Paid Direct QR' || match.paymentStatus === 'QR Paid on Ground' || match.feePaymentStatus === 'RECEIVED') ? (
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setQrModalMatch(match)}
+                                                    className="px-4 py-2.5 rounded-xl bg-emerald-100 hover:bg-emerald-200 text-emerald-900 border border-emerald-400 font-black text-xs transition-all cursor-pointer flex items-center gap-1.5 shadow-2xs"
+                                                >
+                                                    <HiCheckCircle className="w-4 h-4 text-emerald-600" />
+                                                    <span>✓ Payment Received (₹{match.umpireFee || 300})</span>
+                                                </button>
+                                            ) : (
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setQrModalMatch(match)}
+                                                    className="px-4 py-2.5 rounded-xl bg-purple-50 hover:bg-purple-100 text-purple-800 border border-purple-300 font-black text-xs transition-all cursor-pointer flex items-center gap-1.5 shadow-xs"
+                                                >
+                                                    <HiQrcode className="w-4 h-4 text-purple-700" />
+                                                    <span>Show QR (₹{match.umpireFee || 300})</span>
+                                                </button>
                                             )}
 
-                                            {/* Edit Captains & Teams Button */}
-                                            <button
-                                                type="button"
-                                                onClick={() => setEditingCaptainsMatch({
-                                                    isNew: false,
-                                                    id: match.id,
-                                                    title: match.title,
-                                                    turf: match.turf,
-                                                    turfLocation: match.turfLocation,
-                                                    teamAName: match.teamA?.name || '',
-                                                    teamACaptain: match.teamA?.captain || '',
-                                                    teamAPhone: match.teamA?.phone || '',
-                                                    teamBName: match.teamB?.name || '',
-                                                    teamBCaptain: match.teamB?.captain || '',
-                                                    teamBPhone: match.teamB?.phone || ''
-                                                })}
-                                                className="px-3.5 py-2.5 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 font-bold text-xs transition-all cursor-pointer flex items-center gap-1.5"
-                                                title="Edit Team & Captain Contact Details"
-                                            >
-                                                <span>✏️</span>
-                                                <span>Edit Captains</span>
-                                            </button>
+                                            {/* Edit Captains & Teams Button (Active/Upcoming Only) */}
+                                            {match.status !== 'Certified & Completed' && match.status !== 'COMPLETED' && match.status !== 'CERTIFIED_COMPLETED' && (
+                                                <>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setEditingCaptainsMatch({
+                                                            isNew: false,
+                                                            id: match.id,
+                                                            title: match.title,
+                                                            turf: match.turf,
+                                                            turfLocation: match.turfLocation,
+                                                            teamAName: match.teamA?.name || '',
+                                                            teamACaptain: match.teamA?.captain || '',
+                                                            teamAPhone: match.teamA?.phone || '',
+                                                            teamBName: match.teamB?.name || '',
+                                                            teamBCaptain: match.teamB?.captain || '',
+                                                            teamBPhone: match.teamB?.phone || ''
+                                                        })}
+                                                        className="px-3.5 py-2.5 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 font-bold text-xs transition-all cursor-pointer flex items-center gap-1.5"
+                                                        title="Edit Team & Captain Contact Details"
+                                                    >
+                                                        <span>✏️</span>
+                                                        <span>Edit Captains</span>
+                                                    </button>
 
-                                            {/* WhatsApp Captains */}
-                                            <button
-                                                type="button"
-                                                onClick={() => {
-                                                    const rawPhone = match.teamA?.phone || match.teamB?.phone || '9876543210';
-                                                    const cleanPhone = rawPhone.replace(/\D/g, '');
-                                                    const fullPhone = cleanPhone.length === 10 ? `91${cleanPhone}` : cleanPhone;
-                                                    window.open(`https://wa.me/${fullPhone}?text=Hello%20Captain%2C%20this%20is%20${encodeURIComponent(myUmpireName || 'Official Umpire')}%20for%20your%20match%20at%20${encodeURIComponent(match.turf)}.%20Please%20report%20for%20toss!`, '_blank')
-                                                }}
-                                                className="px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs transition-all cursor-pointer flex items-center gap-1.5"
-                                            >
-                                                <span>💬</span>
-                                                <span>Call Captains</span>
-                                            </button>
+                                                    {/* WhatsApp Captains */}
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => {
+                                                            const rawPhone = match.teamA?.phone || match.teamB?.phone || '9876543210';
+                                                            const cleanPhone = rawPhone.replace(/\D/g, '');
+                                                            const fullPhone = cleanPhone.length === 10 ? `91${cleanPhone}` : cleanPhone;
+                                                            window.open(`https://wa.me/${fullPhone}?text=Hello%20Captain%2C%20this%20is%20${encodeURIComponent(myUmpireName || 'Official Umpire')}%20for%20your%20match%20at%20${encodeURIComponent(match.turf)}.%20Please%20report%20for%20toss!`, '_blank')
+                                                        }}
+                                                        className="px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs transition-all cursor-pointer flex items-center gap-1.5"
+                                                    >
+                                                        <span>💬</span>
+                                                        <span>Call Captains</span>
+                                                    </button>
+                                                </>
+                                            )}
                                         </div>
                                     </div>
 
@@ -1410,9 +1469,10 @@ export default function UmpireDashboard() {
                                 </div>
                             ))}
                         </div>
-                    )}
-                </div>
-            )}
+                    );
+                })()}
+            </div>
+        )}
 
                 {/* ═══════════════════════════════════════════════════
                     TAB 2: OFFICIATED MATCHES RECORD (KAUNSA MATCH KISNE KIYA)
@@ -2072,23 +2132,47 @@ export default function UmpireDashboard() {
                             </div>
                         </div>
 
-                        <div className="flex items-center gap-2 pt-2">
+                        <div className="grid grid-cols-3 gap-2 pt-2">
                             <button
                                 type="button"
                                 onClick={() => {
                                     window.print()
                                 }}
-                                className="flex-1 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs cursor-pointer flex items-center justify-center gap-1.5"
+                                className="py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs cursor-pointer flex items-center justify-center gap-1"
                             >
                                 <HiDownload className="w-4 h-4" />
-                                <span>Print Receipt</span>
+                                <span>Print</span>
                             </button>
+
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    const captPhone = receiptModalMatch.teamA?.captainPhone || receiptModalMatch.teamB?.captainPhone || '';
+                                    const text = encodeURIComponent(
+                                        `*OFFICIAL MATCH UMPIRE RECEIPT*\n` +
+                                        `*Receipt No:* ${receiptModalMatch.receiptNo || 'REC-UMP-9842'}\n` +
+                                        `*Match:* ${receiptModalMatch.title || 'Ground Match'}\n` +
+                                        `*Turf:* ${receiptModalMatch.turf || 'Kiaan Turf'}\n` +
+                                        `*Umpire:* ${myUmpireName || 'Official Umpire'} (Certified)\n` +
+                                        `*Fee Paid:* ₹${receiptModalMatch.umpireFee || 300}\n` +
+                                        `*Status:* ✓ PAID DIRECT QR\n\n` +
+                                        `Thank you for playing at Kiaan Turf Arena!`
+                                    );
+                                    const phoneDigits = captPhone ? captPhone.replace(/\D/g, '') : '';
+                                    window.open(`https://wa.me/${phoneDigits}?text=${text}`, '_blank');
+                                }}
+                                className="py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs cursor-pointer flex items-center justify-center gap-1 shadow-xs"
+                            >
+                                <span>📲</span>
+                                <span>WhatsApp</span>
+                            </button>
+
                             <button
                                 type="button"
                                 onClick={() => setReceiptModalMatch(null)}
-                                className="flex-1 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs uppercase tracking-wider shadow-md cursor-pointer"
+                                className="py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-black text-xs uppercase tracking-wider cursor-pointer shadow-xs"
                             >
-                                ✓ Done
+                                ✓ Close
                             </button>
                         </div>
                     </div>
@@ -2129,29 +2213,83 @@ export default function UmpireDashboard() {
                             }}
                             className="space-y-4"
                         >
-                            {/* Turf & Ground Details */}
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            {/* Turf, Location & Total Overs Selector (Clean Light Theme UI) */}
+                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 p-4 rounded-2xl bg-gradient-to-br from-emerald-50/80 via-slate-50 to-emerald-50/40 border border-emerald-200/80 shadow-xs">
                                 <div>
-                                    <label className="block text-xs font-black uppercase text-slate-700 mb-1">Turf Name</label>
-                                    <input
-                                        type="text"
-                                        value={editingCaptainsMatch.turf || ''}
-                                        onChange={(e) => setEditingCaptainsMatch(prev => ({ ...prev, turf: e.target.value }))}
-                                        placeholder="e.g. Spike Cricket Turf"
-                                        required
-                                        className="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-xs font-bold text-[#111827] outline-none focus:border-emerald-500"
-                                    />
+                                    <label className="block text-xs font-black uppercase tracking-wider text-emerald-900 mb-1 flex items-center gap-1">
+                                        <span>🏟️</span> Select Turf Venue *
+                                    </label>
+                                    <div className="relative">
+                                        <select
+                                            value={editingCaptainsMatch.turf || ''}
+                                            onChange={(e) => {
+                                                const val = e.target.value;
+                                                const preset = [
+                                                    { name: 'Spike Turf & Royal Ground', location: 'Bhawarkua, Indore' },
+                                                    { name: 'Kiaan Turf Arena', location: 'Vijay Nagar, Indore' },
+                                                    { name: 'Royal Box Cricket Arena', location: 'Palasia, Indore' },
+                                                    { name: 'Champions Turf & Arena', location: 'Rau, Indore' },
+                                                    { name: 'Indore Super Box Turf', location: 'Geeta Bhawan, Indore' },
+                                                    { name: 'Star Sports Box Turf', location: 'AB Road, Indore' },
+                                                    { name: 'Kiaan Technology Turf Arena', location: 'Pune' }
+                                                ].find(t => t.name === val);
+
+                                                if (preset) {
+                                                    setEditingCaptainsMatch(prev => ({
+                                                        ...prev,
+                                                        turf: preset.name,
+                                                        turfLocation: preset.location
+                                                    }));
+                                                } else {
+                                                    setEditingCaptainsMatch(prev => ({ ...prev, turf: val }));
+                                                }
+                                            }}
+                                            required
+                                            className="w-full px-3.5 py-2.5 rounded-xl border-2 border-emerald-500 bg-white text-xs font-extrabold text-slate-900 outline-none focus:border-emerald-600 focus:ring-2 focus:ring-emerald-500/20 cursor-pointer transition-all shadow-2xs"
+                                        >
+                                            <option value="" disabled className="bg-white text-slate-400">-- Select Area Turf --</option>
+                                            <option value="Spike Turf & Royal Ground" className="bg-white text-slate-900 font-bold py-2">🏟️ Spike Turf & Royal Ground (Bhawarkua)</option>
+                                            <option value="Kiaan Turf Arena" className="bg-white text-slate-900 font-bold py-2">🏟️ Kiaan Turf Arena (Vijay Nagar)</option>
+                                            <option value="Royal Box Cricket Arena" className="bg-white text-slate-900 font-bold py-2">🏟️ Royal Box Cricket Arena (Palasia)</option>
+                                            <option value="Champions Turf & Arena" className="bg-white text-slate-900 font-bold py-2">🏟️ Champions Turf (Rau)</option>
+                                            <option value="Indore Super Box Turf" className="bg-white text-slate-900 font-bold py-2">🏟️ Indore Super Box Turf (Geeta Bhawan)</option>
+                                            <option value="Star Sports Box Turf" className="bg-white text-slate-900 font-bold py-2">🏟️ Star Sports Box Turf (AB Road)</option>
+                                            <option value="Kiaan Technology Turf Arena" className="bg-white text-slate-900 font-bold py-2">🏟️ Kiaan Tech Turf (Pune)</option>
+                                        </select>
+                                    </div>
                                 </div>
+
                                 <div>
-                                    <label className="block text-xs font-black uppercase text-slate-700 mb-1">Location / Area</label>
+                                    <label className="block text-xs font-black uppercase tracking-wider text-slate-700 mb-1 flex items-center gap-1">
+                                        <span>📍</span> Location / Area *
+                                    </label>
                                     <input
                                         type="text"
                                         value={editingCaptainsMatch.turfLocation || ''}
                                         onChange={(e) => setEditingCaptainsMatch(prev => ({ ...prev, turfLocation: e.target.value }))}
                                         placeholder="e.g. Bhawarkua, Indore"
                                         required
-                                        className="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-xs font-bold text-[#111827] outline-none focus:border-emerald-500"
+                                        className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 bg-white text-xs font-bold text-slate-900 outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 transition-all shadow-2xs"
                                     />
+                                </div>
+
+                                <div>
+                                    <label className="block text-xs font-black uppercase tracking-wider text-emerald-950 mb-1 flex items-center gap-1">
+                                        <span>🏏</span> Overs Limit *
+                                    </label>
+                                    <select
+                                        value={editingCaptainsMatch.totalOvers || 6}
+                                        onChange={(e) => setEditingCaptainsMatch(prev => ({ ...prev, totalOvers: Number(e.target.value) }))}
+                                        className="w-full px-3.5 py-2.5 rounded-xl border-2 border-emerald-500 bg-emerald-100/70 text-xs font-black text-emerald-950 outline-none focus:border-emerald-600 focus:ring-2 focus:ring-emerald-500/20 cursor-pointer shadow-2xs transition-all"
+                                    >
+                                        <option value={4} className="bg-white text-slate-900 font-bold">⚡ 4 Overs (Quick Blitz)</option>
+                                        <option value={6} className="bg-white text-slate-900 font-bold">🏏 6 Overs (Box Turf Standard)</option>
+                                        <option value={8} className="bg-white text-slate-900 font-bold">🔥 8 Overs (Pro League)</option>
+                                        <option value={10} className="bg-white text-slate-900 font-bold">🏆 10 Overs (T10 Format)</option>
+                                        <option value={12} className="bg-white text-slate-900 font-bold">⭐ 12 Overs (Championship)</option>
+                                        <option value={15} className="bg-white text-slate-900 font-bold">🌟 15 Overs (Super Cup)</option>
+                                        <option value={20} className="bg-white text-slate-900 font-bold">💥 20 Overs (T20 Format)</option>
+                                    </select>
                                 </div>
                             </div>
 
@@ -2274,6 +2412,30 @@ export default function UmpireDashboard() {
                                     <span className="text-xs font-mono font-bold text-slate-500">
                                         LIC: UMP-IND-409
                                     </span>
+                                    <div className="flex items-center gap-1.5 bg-emerald-50 border border-emerald-300 px-2.5 py-0.5 rounded-full text-xs font-black text-emerald-950">
+                                        <span>🏏 Format:</span>
+                                        <select
+                                            value={scoringMatch.totalOvers || currentScore.totalOvers || 6}
+                                            onChange={(e) => {
+                                                const newOvers = Number(e.target.value)
+                                                const updatedMatch = { ...scoringMatch, totalOvers: newOvers }
+                                                setScoringMatch(updatedMatch)
+                                                const engine = currentScore.engine || getEngineState([], updatedMatch)
+                                                const nextEngine = getEngineState(engine.deliveries || [], updatedMatch, engine.selectedInnings)
+                                                setCurrentScore(syncEngineToUI(nextEngine))
+                                                if (addToast) addToast(`🏏 Match Format Set to ${newOvers} Overs!`, 'info')
+                                            }}
+                                            className="bg-transparent font-black text-emerald-900 outline-none cursor-pointer"
+                                        >
+                                            <option value={4}>4 Overs</option>
+                                            <option value={6}>6 Overs</option>
+                                            <option value={8}>8 Overs</option>
+                                            <option value={10}>10 Overs</option>
+                                            <option value={12}>12 Overs</option>
+                                            <option value={15}>15 Overs</option>
+                                            <option value={20}>20 Overs</option>
+                                        </select>
+                                    </div>
                                 </div>
                                 <h3 className="text-lg font-black text-[#111827] mt-1">
                                     {scoringMatch.title}
@@ -2288,6 +2450,24 @@ export default function UmpireDashboard() {
                                 <HiX className="w-5 h-5" />
                             </button>
                         </div>
+
+                        {/* Match Finished Celebration Banner */}
+                        {currentScore.isMatchComplete && (
+                            <div className="p-4 bg-gradient-to-r from-purple-900 via-indigo-900 to-slate-900 text-white rounded-2xl border-2 border-purple-500 shadow-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 animate-in fade-in">
+                                <div>
+                                    <span className="text-[10px] font-black uppercase text-amber-400 tracking-wider block">🏆 OFFICIAL MATCH RESULT</span>
+                                    <div className="text-base font-black text-white">{currentScore.resultText}</div>
+                                    <p className="text-xs text-slate-300 font-medium mt-0.5">International Cricket Rules applied. All overs/wickets completed!</p>
+                                </div>
+                                <button
+                                    type="button"
+                                    onClick={() => handleSignAndCertifyMatch(scoringMatch)}
+                                    className="px-4 py-2.5 rounded-xl bg-[#C8FF2E] hover:bg-[#B5F000] text-slate-950 font-black text-xs uppercase tracking-wider shadow-md hover:scale-105 transition-all shrink-0 cursor-pointer"
+                                >
+                                    <span>⚖️ Sign Off (1.5x)</span>
+                                </button>
+                            </div>
+                        )}
 
                         {/* Free Hit Alert Banner */}
                         {currentScore.engine?.deliveries && currentScore.engine.deliveries.length > 0 && currentScore.engine.deliveries[currentScore.engine.deliveries.length - 1].event === 'NO_BALL' && (
@@ -2322,7 +2502,7 @@ export default function UmpireDashboard() {
                                 </div>
                                 <div className="text-5xl font-black font-mono tracking-tight text-white flex items-baseline gap-2">
                                     <span>{currentScore.runs}/{currentScore.wickets}</span>
-                                    <span className="text-lg text-slate-400 font-semibold">({currentScore.overs} Overs)</span>
+                                    <span className="text-lg text-slate-400 font-semibold">({currentScore.overs} / {currentScore.totalOvers || 6}.0 Overs)</span>
                                 </div>
                                 {currentScore.selectedInnings === 2 && currentScore.engine?.targetRuns && (
                                     <div className="text-xs font-bold text-amber-300 mt-1">
@@ -2822,47 +3002,106 @@ export default function UmpireDashboard() {
             )}
 
             {/* 🏆 OVER COMPLETE / BOWLER CHANGE SUB-MODAL */}
-            {overCompleteModalOpen && (
-                <div className="fixed inset-0 z-[9999999] flex items-center justify-center bg-black/80 backdrop-blur-md p-4 animate-in fade-in">
-                    <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl max-w-md w-full p-6 space-y-4">
-                        <div className="flex items-center justify-between border-b border-slate-100 pb-2">
-                            <span className="text-xs font-black uppercase tracking-wider text-purple-700">🏆 Over Complete & Bowler Change</span>
-                            <button type="button" onClick={() => setOverCompleteModalOpen(false)} className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 font-bold cursor-pointer"><HiX className="w-5 h-5"/></button>
-                        </div>
+            {overCompleteModalOpen && (() => {
+                const existingBowlersList = Object.values(currentScore.engine?.bowlers || {});
+                const lastBowlerName = currentScore.currentBowler;
 
-                        <div className="p-3 bg-purple-50 rounded-2xl text-xs text-purple-950 font-bold">
-                            6 Legal deliveries completed for this over. Strike has been rotated automatically.
-                        </div>
+                return (
+                    <div className="fixed inset-0 z-[9999999] flex items-center justify-center bg-black/80 backdrop-blur-md p-4 animate-in fade-in">
+                        <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl max-w-md w-full p-6 space-y-4">
+                            <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+                                <span className="text-xs font-black uppercase tracking-wider text-purple-700">🏆 Over Complete & Bowler Change</span>
+                                <button type="button" onClick={() => setOverCompleteModalOpen(false)} className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 font-bold cursor-pointer"><HiX className="w-5 h-5"/></button>
+                            </div>
 
-                        <div>
-                            <label className="block text-xs font-black uppercase text-slate-700 mb-1">Select / Enter New Bowler Name *</label>
-                            <input
-                                type="text"
-                                value={nextBowlerName}
-                                onChange={e => setNextBowlerName(e.target.value)}
-                                placeholder="e.g. Vikas Singh"
-                                className="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-xs font-bold text-[#111827]"
-                            />
-                        </div>
+                            <div className="p-3 bg-purple-50 rounded-2xl text-xs text-purple-950 font-bold">
+                                6 Legal deliveries completed for this over. Strike rotated automatically. Select bowler for next over:
+                            </div>
 
-                        <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
-                            <button
-                                type="button"
-                                onClick={() => {
-                                    if (nextBowlerName) {
-                                        setCurrentScore(prev => ({ ...prev, currentBowler: nextBowlerName }))
-                                    }
-                                    setOverCompleteModalOpen(false)
-                                    setNextBowlerName('')
-                                }}
-                                className="px-5 py-2 rounded-xl bg-purple-600 hover:bg-purple-700 text-white font-black text-xs uppercase"
-                            >
-                                Confirm Bowler
-                            </button>
+                            {/* EXISTING BOWLERS QUICK-SELECT CHIPS */}
+                            {existingBowlersList.length > 0 && (
+                                <div className="space-y-2">
+                                    <label className="block text-[11px] font-black uppercase text-slate-500 tracking-wider">
+                                        ⚡ Select Existing Bowler (1-Tap Selection)
+                                    </label>
+                                    <div className="grid grid-cols-1 gap-2 max-h-48 overflow-y-auto custom-scrollbar">
+                                        {existingBowlersList.map((bw, idx) => {
+                                            const isLastBowler = bw.name.trim().toLowerCase() === (lastBowlerName || '').trim().toLowerCase();
+                                            const isSelected = nextBowlerName.trim().toLowerCase() === bw.name.trim().toLowerCase();
+                                            const ovs = `${Math.floor((bw.legalBalls || 0) / 6)}.${(bw.legalBalls || 0) % 6}`;
+
+                                            return (
+                                                <button
+                                                    key={idx}
+                                                    type="button"
+                                                    onClick={() => setNextBowlerName(bw.name)}
+                                                    className={`p-3 rounded-2xl border text-left transition-all flex items-center justify-between cursor-pointer ${
+                                                        isSelected
+                                                            ? 'bg-purple-100 border-purple-500 ring-2 ring-purple-400/30'
+                                                            : isLastBowler
+                                                            ? 'bg-amber-50/60 border-amber-200 hover:border-amber-400'
+                                                            : 'bg-slate-50 border-slate-200 hover:border-slate-300 hover:bg-white'
+                                                    }`}
+                                                >
+                                                    <div>
+                                                        <div className="flex items-center gap-2">
+                                                            <span className="font-extrabold text-xs text-slate-900">{bw.name}</span>
+                                                            {isLastBowler && (
+                                                                <span className="bg-amber-100 text-amber-800 text-[9px] font-black px-2 py-0.5 rounded-full uppercase">
+                                                                    Bowled Last Over
+                                                                </span>
+                                                            )}
+                                                        </div>
+                                                        <div className="text-[10px] font-mono text-slate-500 font-semibold mt-0.5">
+                                                            {ovs} ov &middot; {bw.wickets} wkts &middot; {bw.runsConceded} runs
+                                                        </div>
+                                                    </div>
+                                                    {isSelected ? (
+                                                        <span className="text-purple-700 font-black text-sm">✓ Selected</span>
+                                                    ) : (
+                                                        <span className="text-slate-400 font-bold text-xs">Select ➔</span>
+                                                    )}
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* OR ENTER NEW BOWLER NAME */}
+                            <div className="space-y-1 pt-1">
+                                <label className="block text-[11px] font-black uppercase text-slate-600">
+                                    {existingBowlersList.length > 0 ? '➕ Or Enter New Bowler Name' : 'Select / Enter New Bowler Name *'}
+                                </label>
+                                <input
+                                    type="text"
+                                    value={nextBowlerName}
+                                    onChange={e => setNextBowlerName(e.target.value)}
+                                    placeholder="e.g. Vikas Singh"
+                                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-xs font-bold text-[#111827] outline-none focus:border-purple-500"
+                                />
+                            </div>
+
+                            <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        if (nextBowlerName) {
+                                            setCurrentScore(prev => ({ ...prev, currentBowler: nextBowlerName.trim() }))
+                                        }
+                                        setOverCompleteModalOpen(false)
+                                        setNextBowlerName('')
+                                    }}
+                                    disabled={!nextBowlerName.trim()}
+                                    className="px-6 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-700 disabled:opacity-40 text-white font-black text-xs uppercase shadow-md cursor-pointer"
+                                >
+                                    Confirm Bowler
+                                </button>
+                            </div>
                         </div>
                     </div>
-                </div>
-            )}
+                );
+            })()}
 
             {/* ✏️ EDIT PLAYER NAMES SUB-MODAL */}
             {editBatterModalOpen && (
