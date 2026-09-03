@@ -297,7 +297,8 @@ export default function SlotBookingPage() {
         if (modeParam === 'dare') return 'DARE_TO_PLAY'
         if (modeParam === 'split50' || modeParam === 'split-50') return 'SPLIT_50_50'
         if (modeParam === 'per_player' || modeParam === 'per-player') return 'PER_PLAYER'
-        return 'DARE_TO_PLAY'
+        if (modeParam === 'full' || modeParam === 'full_pay') return 'FULL_PAY'
+        return 'FULL_PAY'
     })
 
     const [perPlayerCount, setPerPlayerCount] = useState(6)
@@ -465,13 +466,11 @@ export default function SlotBookingPage() {
                 venueName: selectedVenue.name,
                 date: selectedDateObj.formattedLabel,
                 slotTime: selectedSlotTime,
-                amountPaid: created.data.captainSharePayable,
+                amountPaid: myPaymentAmount || created.data.totalAmount || totalRent,
+                actualPaidAmount: myPaymentAmount || created.data.totalAmount || totalRent,
                 paymentMode,
                 inviteUrl: verified.data.inviteUrl,
-                // No live gateway yet: payment stays PENDING until the venue confirms
-                // receipt and the platform confirms its commission (see Phase 1 split
-                // settlement). payoutDestination tells the customer where to pay.
-                paymentStatus: verified.data.paymentStatus || 'PENDING',
+                paymentStatus: verified.data.paymentStatus || 'COMPLETED',
                 payoutDestination: verified.data.payoutDestination,
                 commissionAmount: verified.data.commissionAmount,
                 ownerAmount: verified.data.ownerAmount,

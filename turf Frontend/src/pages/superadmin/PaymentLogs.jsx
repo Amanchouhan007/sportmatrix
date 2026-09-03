@@ -153,6 +153,8 @@ export default function PaymentLogs() {
             await confirmCommission(paymentId)
             addToast({ title: 'Commission Confirmed', message: 'This payment is now fully settled.', type: 'success' })
             fetchPendingCommissions()
+            fetchLogs(currentPage)
+            fetchStats()
         } catch (err) {
             addToast({ title: 'Confirmation Failed', message: err.message || 'Could not confirm commission.', type: 'error' })
         } finally {
@@ -336,7 +338,7 @@ export default function PaymentLogs() {
                     <p className="text-xs sm:text-sm text-slate-500 font-medium mt-1">Platform earnings and escrow logs</p>
                 </div>
                 <button
-                    onClick={() => { fetchLogs(currentPage); fetchStats() }}
+                    onClick={() => { fetchPendingCommissions(); fetchLogs(currentPage); fetchStats(); }}
                     className="h-9 px-4 rounded-xl bg-white hover:bg-slate-50 text-slate-700 font-bold text-xs border border-slate-200 shadow-2xs hover:-translate-y-0.5 transition-all cursor-pointer flex items-center gap-2 self-start sm:self-auto"
                 >
                     <FiRefreshCw className={`w-3.5 h-3.5 text-[#16A34A] ${isTableLoading ? 'animate-spin' : ''}`} />

@@ -384,28 +384,55 @@ export default function BranchManagement() {
     // Fetch individual branch and load edit modal
     const handleOpenModal = async (branch = null) => {
         if (branch) {
-            const fullBranch = branch
-            setEditingBranch(fullBranch)
-            setOwnerSearchText(fullBranch.ownerId?.fullName || fullBranch.ownerId?.name || fullBranch.ownerName || '')
-            setFormData({
+            const targetId = branch._id || branch.id;
+            setEditingBranch(branch);
+            setOwnerSearchText(branch.ownerId?.fullName || branch.ownerId?.name || branch.ownerName || '');
+
+            let fullBranch = branch;
+            try {
+                const res = await getBranchById(targetId);
+                if (res && (res.data || res.branch)) {
+                    fullBranch = res.data || res.branch;
+                }
+            } catch (e) {
+                console.warn('Optional edit detail refresh note:', e);
+            }
+
+            setEditingBranch(fullBranch);
+
+            const resolvedOwnerId = typeof fullBranch.ownerId === 'object'
+                ? (fullBranch.ownerId?._id || fullBranch.ownerId?.id || '')
+                : (fullBranch.ownerId || '');
+
+            const resolvedPlanId = typeof fullBranch.subscriptionPlanId === 'object'
+                ? (fullBranch.subscriptionPlanId?._id || fullBranch.subscriptionPlanId?.id || '')
+                : (fullBranch.subscriptionPlanId || fullBranch.subscriptionPlan?._id || fullBranch.subscriptionPlan?.id || '');
+
+            setOwnerSearchText(fullBranch.ownerId?.fullName || fullBranch.ownerId?.name || fullBranch.ownerName || '');
+
+            const initialForm = {
                 branchName: fullBranch.branchName || '',
                 branchCode: fullBranch.branchCode || '',
                 description: fullBranch.description || '',
-                ownerId: fullBranch.ownerId?._id || fullBranch.ownerId?.id || (typeof fullBranch.ownerId === 'string' ? fullBranch.ownerId : ''),
-                subscriptionPlanId: fullBranch.subscriptionPlanId?._id || fullBranch.subscriptionPlanId?.id || (typeof fullBranch.subscriptionPlanId === 'string' ? fullBranch.subscriptionPlanId : ''),
+                ownerId: resolvedOwnerId,
+                subscriptionPlanId: resolvedPlanId,
                 pricePerHour: fullBranch.pricePerHour ?? fullBranch.price ?? fullBranch.minPriceHourly ?? '',
                 peakPricePerHour: fullBranch.peakPricePerHour ?? fullBranch.peakPrice ?? '',
                 isDynamicPricingActive: fullBranch.isDynamicPricingActive !== undefined ? fullBranch.isDynamicPricingActive : true,
                 openingTime: fullBranch.openingTime || '06:00 AM',
+                peakStartTime: fullBranch.peakStartTime || '05:00 PM',
+                peakEndTime: fullBranch.peakEndTime || '11:00 PM',
                 closingTime: fullBranch.closingTime || '11:00 PM',
                 turfSize: fullBranch.turfSize || fullBranch.dimensions || (fullBranch.dimensionsSqFt ? `${fullBranch.dimensionsSqFt} Sq.Ft` : ''),
                 surfaceType: fullBranch.surfaceType || 'TurfPro Synthetic Arena',
-                sports: Array.isArray(fullBranch.sports) && fullBranch.sports.length > 0
-                    ? fullBranch.sports.map(s => typeof s === 'string' ? s : (s?.name || s?.sport?.name || 'Cricket')).filter(Boolean)
-                    : ['Cricket'],
-                amenities: Array.isArray(fullBranch.amenities) && fullBranch.amenities.length > 0 ? fullBranch.amenities : ['Floodlights', 'Parking', 'Washroom'],
-                discountOffer: fullBranch.discountOffer || '',
-                couponCode: fullBranch.couponCode || '',
+                sports: Array.isArray(fullBranch.sports)
+                    ? fullBranch.sports.map(s => typeof s === 'string' ? s : (s?.name || s?.sport?.name || '')).filter(Boolean)
+                    : [],
+                amenities: Array.isArray(fullBranch.amenities)
+                    ? (typeof fullBranch.amenities === 'string' && fullBranch.amenities.startsWith('[') ? JSON.parse(fullBranch.amenities) : fullBranch.amenities)
+                    : (typeof fullBranch.amenities === 'string' ? fullBranch.amenities.split(',').map(a => a.trim()).filter(Boolean) : []),
+                discountOffer: fullBranch.discountOffer || fullBranch.discount_offer || '',
+                couponCode: fullBranch.couponCode || fullBranch.coupon_code || '',
                 country: fullBranch.country || 'India',
                 state: fullBranch.state || '',
                 city: fullBranch.city || '',
@@ -420,37 +447,10 @@ export default function BranchManagement() {
                 logo: fullBranch.logo || '',
                 images: Array.isArray(fullBranch.images) ? fullBranch.images : (fullBranch.images ? [fullBranch.images] : []),
                 status: fullBranch.status || 'ACTIVE'
-            })
-            setModal(true)
+            };
 
-            try {
-                const targetId = branch._id || branch.id
-                const res = await getBranchById(targetId)
-                if (res && (res.data || res.branch)) {
-                    const fetched = res.data || res.branch
-                    setEditingBranch(fetched)
-                    setFormData(prev => ({
-                        ...prev,
-                        branchName: fetched.branchName || prev.branchName,
-                        pricePerHour: fetched.pricePerHour ?? fetched.price ?? fetched.minPriceHourly ?? prev.pricePerHour,
-                        peakPricePerHour: fetched.peakPricePerHour ?? fetched.peakPrice ?? prev.peakPricePerHour,
-                        isDynamicPricingActive: fetched.isDynamicPricingActive !== undefined ? fetched.isDynamicPricingActive : prev.isDynamicPricingActive,
-                        openingTime: fetched.openingTime || prev.openingTime,
-                        closingTime: fetched.closingTime || prev.closingTime,
-                        turfSize: fetched.turfSize || fetched.dimensions || (fetched.dimensionsSqFt ? `${fetched.dimensionsSqFt} Sq.Ft` : prev.turfSize),
-                        surfaceType: fetched.surfaceType || prev.surfaceType,
-                        sports: Array.isArray(fetched.sports) && fetched.sports.length > 0
-                            ? fetched.sports.map(s => typeof s === 'string' ? s : (s?.name || s?.sport?.name || 'Cricket')).filter(Boolean)
-                            : prev.sports,
-                        amenities: Array.isArray(fetched.amenities) && fetched.amenities.length > 0 ? fetched.amenities : prev.amenities,
-                        discountOffer: fetched.discountOffer || fetched.discount_offer || prev.discountOffer || '',
-                        couponCode: fetched.couponCode || fetched.coupon_code || prev.couponCode || '',
-                        ownerId: fetched.ownerId?._id || fetched.ownerId?.id || (typeof fetched.ownerId === 'string' ? fetched.ownerId : prev.ownerId)
-                    }))
-                }
-            } catch (e) {
-                console.warn('Optional edit detail refresh note:', e)
-            }
+            setFormData(initialForm);
+            setModal(true);
         } else {
             setEditingBranch(null)
             setOwnerSearchText('')
@@ -460,16 +460,18 @@ export default function BranchManagement() {
                 branchCode: '',
                 description: '',
                 ownerId: '',
-                subscriptionPlanId: subscriptionPlans[0]?._id || '',
+                subscriptionPlanId: subscriptionPlans[0]?._id || subscriptionPlans[0]?.id || '',
                 pricePerHour: '',
                 peakPricePerHour: '',
                 isDynamicPricingActive: true,
                 openingTime: '06:00 AM',
+                peakStartTime: '05:00 PM',
+                peakEndTime: '11:00 PM',
                 closingTime: '11:00 PM',
                 turfSize: '5,000 Sq.Ft',
                 surfaceType: 'TurfPro Synthetic Arena',
-                sports: ['Cricket'],
-                amenities: ['Floodlights', 'Parking', 'Washroom'],
+                sports: [],
+                amenities: [],
                 discountOffer: '',
                 couponCode: '',
                 country: 'India',
@@ -517,9 +519,9 @@ export default function BranchManagement() {
 
         const finalOwnerId = formData.ownerOption === 'NEW' 
             ? null 
-            : (formData.ownerId || (owners.length > 0 ? (owners[0]._id || owners[0].id) : 'own_001'));
+            : (formData.ownerId || (editingBranch ? (typeof editingBranch.ownerId === 'object' ? (editingBranch.ownerId?._id || editingBranch.ownerId?.id) : editingBranch.ownerId) : (owners.length > 0 ? (owners[0]._id || owners[0].id) : 'own_001')));
         
-        const finalPlanId = formData.subscriptionPlanId || (subscriptionPlans.length > 0 ? subscriptionPlans[0]._id : 'plan_starter');
+        const finalPlanId = formData.subscriptionPlanId || (editingBranch ? (typeof editingBranch.subscriptionPlanId === 'object' ? (editingBranch.subscriptionPlanId?._id || editingBranch.subscriptionPlanId?.id) : (editingBranch.subscriptionPlanId || editingBranch.subscriptionPlan?._id || editingBranch.subscriptionPlan?.id)) : (subscriptionPlans.length > 0 ? (subscriptionPlans[0]._id || subscriptionPlans[0].id) : 'plan_starter'));
 
         const payload = {
             ...formData,

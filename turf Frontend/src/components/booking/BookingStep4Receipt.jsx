@@ -39,12 +39,22 @@ export default function BookingStep4Receipt({
         }
     }
 
+    const resolvedPaidAmount = Number(
+        bookingResult?.actualPaidAmount ??
+        bookingResult?.paidAmount ??
+        bookingResult?.amountPaid ??
+        bookingResult?.amount ??
+        (paymentMode === 'FULL_PAY' ? totalRent : myPaymentAmount) ??
+        totalRent ??
+        0
+    )
+
     const triggerFastBookingReceiptPrint = () => {
         const bookingId = bookingResult?.bookingId || 'SM-BK-9831'
         const venueName = selectedVenue?.name || 'SportMatrix Turf Arena'
         const venueLocation = `${selectedVenue?.location || 'Indore'}, ${selectedVenue?.city || 'Madhya Pradesh'}`
         const dateLabel = `${selectedDateObj?.formattedLabel || 'Today'} · ${slotTimeLabel}`
-        const paidAmount = `₹${myPaymentAmount?.toLocaleString('en-IN')}`
+        const paidAmount = `₹${resolvedPaidAmount.toLocaleString('en-IN')}`
         const payModeLabel = paymentMode?.replace(/_/g, ' ') || 'UPI'
         const customerName = user?.name || 'Valued Player'
         const customerEmail = user?.email || 'player@sportmatrix.com'
@@ -216,7 +226,7 @@ export default function BookingStep4Receipt({
                         <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 block">TOTAL AMOUNT PAID</span>
                         <span className="text-xs text-emerald-400 font-semibold">Taxes Included (GST Invoice)</span>
                     </div>
-                    <span className="text-3xl font-black text-[#C8FF2E] font-mono">₹{myPaymentAmount?.toLocaleString('en-IN')}</span>
+                    <span className="text-3xl font-black text-[#C8FF2E] font-mono">₹{resolvedPaidAmount.toLocaleString('en-IN')}</span>
                 </div>
             </div>
 
