@@ -133,42 +133,139 @@ const createBooking = async (req, res) => {
  * an account, the amount is credited back to their real Wallet.
  */
 const cancelBooking = async (req, res) => {
-    const id = Number(req.params.id);
+    const rawId = String(req.params.id || '').trim();
 
     try {
-        const booking = await prisma.booking.findUnique({ where: { id } });
+        let booking = null;
+        let numericId = !isNaN(Number(rawId)) ? Number(rawId) : null;
+
+        if (numericId) {
+            booking = await prisma.booking.findUnique({ where: { id: numericId } }).catch(() => null);
+        }
+
         if (!booking) {
-            return res.status(404).json({ success: false, message: 'Booking record not found.' });
+            booking = await prisma.booking.findFirst({
+                where: {
+                    OR: [
+                        { bookingCode: rawId },
+                        { id: isNaN(Number(rawId.replace(/\D/g, ''))) ? -1 : Number(rawId.replace(/\D/g, '')) }
+                    ]
+                }
+            }).catch(() => null);
         }
-        if (booking.status === 'REFUNDED') {
-            return res.status(400).json({ success: false, message: 'This booking is already cancelled/refunded.' });
+
+        if (booking) {
+            if (booking.status === 'REFUNDED' || booking.status === 'CANCELLED') {
+                return res.status(400).json({ success: false, message: 'This booking is already cancelled/refunded.' });
+            }
+
+            let branchId = null;
+            await prisma.$transaction(async (tx) => {
+                await tx.booking.update({ where: { id: booking.id }, data: { status: 'REFUNDED' } });
+
+                if (booking.slotId) {
+                    const slot = await tx.slot.update({ where: { id: booking.slotId }, data: { status: 'AVAILABLE' } }).catch(() => null);
+                    if (slot) branchId = slot.branchId;
+
+                    const linkedMatch = await tx.match.findFirst({ where: { slotId: booking.slotId } }).catch(() => null);
+                    if (linkedMatch) {
+                        await tx.match.update({ where: { id: linkedMatch.id }, data: { matchStatus: 'CANCELLED' } }).catch(() => null);
+                        await tx.matchPayment.updateMany({ where: { matchId: linkedMatch.id }, data: { paymentStatus: 'REFUNDED' } }).catch(() => null);
+                    }
+                }
+
+                if (booking.userId) {
+                    await MatchSettlementService.postWalletTransaction(tx, {
+                        userId: booking.userId,
+                        type: 'REFUND',
+                        description: `Refund for cancelled booking #${booking.bookingCode || booking.id}`,
+                        amount: Number(booking.amount)
+                    }).catch(() => null);
+                }
+
+                await tx.dispute.create({
+                    data: {
+                        id: `DISP-${Date.now()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`,
+                        userId: booking.userId || null,
+                        customerName: booking.customerName || 'Customer',
+                        bookingId: booking.id,
+                        type: 'REFUND',
+                        amount: Number(booking.amount),
+                        reason: `Booking #${booking.bookingCode || booking.id} cancelled & refunded`,
+                        status: 'RESOLVED',
+                        resolutionNotes: 'Auto-resolved upon cancellation refund'
+                    }
+                }).catch(() => null);
+            });
+
+            emitToBranch(branchId, 'booking:cancelled', { bookingId: booking.id, bookingCode: booking.bookingCode });
+            if (booking.userId) emitToUser(booking.userId, 'booking:cancelled', { bookingId: booking.id });
+            emitToSuperAdmins('booking:cancelled', { bookingId: booking.id, bookingCode: booking.bookingCode });
+
+            return res.status(200).json({ success: true, message: 'Booking successfully cancelled, slot is now available.' });
         }
 
-        let branchId = null;
-        await prisma.$transaction(async (tx) => {
-            await tx.booking.update({ where: { id }, data: { status: 'REFUNDED' } });
-            if (booking.slotId) {
-                const slot = await tx.slot.update({ where: { id: booking.slotId }, data: { status: 'AVAILABLE' } });
-                branchId = slot.branchId;
-            }
-            if (booking.userId) {
-                await MatchSettlementService.postWalletTransaction(tx, {
-                    userId: booking.userId,
-                    type: 'REFUND',
-                    description: `Refund for cancelled booking #${booking.bookingCode || booking.id}`,
-                    amount: Number(booking.amount)
-                });
-            }
-        });
+        const matchPayment = await prisma.matchPayment.findFirst({
+            where: {
+                OR: [
+                    { id: rawId },
+                    { matchId: rawId }
+                ]
+            },
+            include: { match: true }
+        }).catch(() => null);
 
-        emitToBranch(branchId, 'booking:cancelled', { bookingId: id });
-        if (booking.userId) emitToUser(booking.userId, 'booking:cancelled', { bookingId: id });
-        emitToSuperAdmins('booking:cancelled', { bookingId: id });
+        if (matchPayment) {
+            if (matchPayment.paymentStatus === 'REFUNDED') {
+                return res.status(400).json({ success: false, message: 'This match booking is already cancelled/refunded.' });
+            }
 
-        return res.status(200).json({ success: true, message: 'Booking successfully cancelled, slot is now available.' });
+            let branchId = matchPayment.match?.branchId || null;
+            await prisma.$transaction(async (tx) => {
+                await tx.matchPayment.update({ where: { id: matchPayment.id }, data: { paymentStatus: 'REFUNDED' } });
+                if (matchPayment.matchId) {
+                    await tx.match.update({ where: { id: matchPayment.matchId }, data: { matchStatus: 'CANCELLED' } }).catch(() => null);
+                }
+                const slotId = matchPayment.match?.slotId;
+                if (slotId) {
+                    const slot = await tx.slot.update({ where: { id: slotId }, data: { status: 'AVAILABLE' } }).catch(() => null);
+                    if (slot) branchId = slot.branchId;
+                }
+                if (matchPayment.userId) {
+                    await MatchSettlementService.postWalletTransaction(tx, {
+                        userId: matchPayment.userId,
+                        type: 'REFUND',
+                        description: `Refund for cancelled match payment #${matchPayment.id}`,
+                        amount: Number(matchPayment.amount)
+                    }).catch(() => null);
+                }
+
+                await tx.dispute.create({
+                    data: {
+                        id: `DISP-${Date.now()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`,
+                        userId: matchPayment.userId || null,
+                        customerName: matchPayment.playerName || 'Player',
+                        matchId: matchPayment.matchId || matchPayment.id,
+                        type: 'REFUND',
+                        amount: Number(matchPayment.amount),
+                        reason: `Match Payment #${matchPayment.id} cancelled & refunded`,
+                        status: 'RESOLVED',
+                        resolutionNotes: 'Auto-resolved upon match payment refund'
+                    }
+                }).catch(() => null);
+            });
+
+            emitToBranch(branchId, 'booking:cancelled', { matchPaymentId: matchPayment.id });
+            if (matchPayment.userId) emitToUser(matchPayment.userId, 'booking:cancelled', { matchPaymentId: matchPayment.id });
+            emitToSuperAdmins('booking:cancelled', { matchPaymentId: matchPayment.id });
+
+            return res.status(200).json({ success: true, message: 'Match booking successfully cancelled, slot is now available.' });
+        }
+
+        return res.status(404).json({ success: false, message: 'Booking record not found for the provided code or ID.' });
     } catch (error) {
         console.error('Cancel booking transaction error:', error);
-        return res.status(500).json({ success: false, message: 'Internal Server Error cancelling booking.' });
+        return res.status(500).json({ success: false, message: 'Internal Server Error cancelling booking: ' + error.message });
     }
 };
 
@@ -180,28 +277,40 @@ const cancelBooking = async (req, res) => {
  * rows for staff accounts.
  */
 const resolveBranchFilterForUser = async (req, branchId) => {
-    if (!req.user || req.user.role === 'SUPER_ADMIN' || req.user.role === 'SUPERADMIN' || req.user.role === 'ADMIN' || req.user.role === 'OWNER') {
-        return branchId ? { branchId } : {};
+    const userRole = (req.user?.role || '').toUpperCase().replace(/[-_]/g, '');
+
+    // If a specific branchId filter was passed in the request query
+    if (branchId && branchId !== 'ALL' && branchId !== 'undefined') {
+        return { branchId };
     }
-    if (req.user.role === 'STAFF') {
+
+    // Super Admin has global visibility across all turfs
+    if (!req.user || userRole === 'SUPERADMIN') {
+        return {};
+    }
+
+    // Staff member is scoped to their assigned staff branch
+    if (userRole === 'STAFF') {
         const staffUser = await prisma.user.findUnique({ where: { id: req.user.id }, select: { staffBranchId: true } });
         return staffUser?.staffBranchId ? { branchId: staffUser.staffBranchId } : {};
     }
-    if (branchId) return { branchId };
 
-    const branches = await prisma.branch.findMany({
+    // Owner / Turf Admin / Admin: Scope strictly to branches owned by this user
+    const ownerBranches = await prisma.branch.findMany({
         where: {
             OR: [
                 { ownerUserId: req.user.id },
                 { owner: { userId: req.user.id } },
-                { email: req.user.email || '__none__' }
+                ...(req.user.staffBranchId ? [{ id: req.user.staffBranchId }] : []),
+                ...(req.user.email ? [{ email: req.user.email }] : [])
             ]
         },
         select: { id: true }
     });
 
-    if (branches.length > 0) {
-        return { branchId: { in: branches.map(b => b.id) } };
+    if (ownerBranches.length > 0) {
+        const ids = ownerBranches.map(b => b.id);
+        return { branchId: ids.length === 1 ? ids[0] : { in: ids } };
     }
 
     return {};
@@ -286,35 +395,44 @@ const getBookingHistory = async (req, res) => {
             }),
             prisma.matchPayment.findMany({
                 where: matchPayWhere,
-                include: { match: { include: { branch: true, sport: true } } },
+                include: { match: { include: { branch: true, sport: true, captainA: true, matchTeams: true } } },
                 orderBy: { createdAt: 'desc' }
             })
         ]);
 
-        const existingCodes = new Set(bookings.map(b => (b.bookingCode || '').toLowerCase()));
-        const existingNamesAndAmounts = new Set(bookings.map(b => `${(b.customerName || '').toLowerCase()}_${Number(b.amount || 0)}`));
+        const existingBookingCodes = new Set(bookings.map(b => (b.bookingCode || '').replace(/\D/g, '')));
+        const existingSlotIds = new Set(bookings.map(b => b.slotId).filter(Boolean));
 
         const formatted = bookings.map(formatBooking);
-        for (const mp of matchPayments) {
-            const codeKey = `match-${(mp.matchId || '').substring(0, 10)}`.toLowerCase();
-            const nameAmountKey = `${(mp.playerName || '').toLowerCase()}_${Number(mp.amount || 0)}`;
 
-            if (!existingCodes.has(codeKey) && !existingNamesAndAmounts.has(nameAmountKey)) {
+        for (const mp of matchPayments) {
+            const rawMatchId = mp.matchId || mp.id || '';
+            const digitsOnly = rawMatchId.replace(/\D/g, '');
+            const slotId = mp.match?.slotId;
+
+            // Suppress duplicate rows if this match is already in the bookings list by ID digits or slotId
+            const isDuplicateCode = digitsOnly && existingBookingCodes.has(digitsOnly);
+            const isDuplicateSlot = slotId && existingSlotIds.has(slotId);
+
+            if (!isDuplicateCode && !isDuplicateSlot) {
+                const captainName = mp.playerName || mp.match?.captainA?.name || mp.match?.matchTeams?.[0]?.captainName || 'Valued Player';
+                const matchStatus = (mp.paymentStatus === 'COMPLETED' || mp.match?.matchStatus === 'CONFIRMED' || mp.match?.matchStatus === 'COMPLETED') ? 'COMPLETED' : 'HELD';
+
                 formatted.push({
                     booking_id: mp.id,
                     id: mp.id,
-                    bookingCode: `MATCH-${(mp.matchId || mp.id).substring(0, 10)}`,
+                    bookingCode: `MATCH-${digitsOnly ? digitsOnly.slice(-10) : mp.id.slice(-8)}`,
                     user_id: mp.userId,
-                    customer_name: mp.playerName || 'Player',
-                    mobile_number: mp.playerPhone || '',
-                    amount: Number(mp.amount || 0),
-                    gross_amount: Number(mp.amount || 0),
+                    customer_name: captainName,
+                    mobile_number: mp.playerPhone || mp.match?.matchTeams?.[0]?.captainPhone || '',
+                    amount: Number(mp.amount || mp.match?.totalAmount || 0),
+                    gross_amount: Number(mp.amount || mp.match?.totalAmount || 0),
                     commission_rate: 10,
                     commission_amount: Number(mp.commissionAmount || Math.round(Number(mp.amount || 0) * 0.1)),
                     owner_amount: Number(mp.ownerAmount || (Number(mp.amount || 0) * 0.9)),
                     duration: mp.match?.financialSnapshot?.durationHours || 1,
-                    booking_status: mp.paymentStatus === 'COMPLETED' ? 'COMPLETED' : 'HELD',
-                    status: mp.paymentStatus === 'COMPLETED' ? 'COMPLETED' : 'HELD',
+                    booking_status: matchStatus,
+                    status: matchStatus,
                     booked_on: mp.createdAt,
                     branch_id: mp.match?.branchId || null,
                     slot_date: mp.createdAt.toISOString().substring(0, 10),

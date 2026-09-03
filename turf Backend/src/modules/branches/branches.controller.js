@@ -406,18 +406,39 @@ const createBranch = async (req, res) => {
         const peakPrice = req.body.peakPricePerHour ? Number(req.body.peakPricePerHour) : Math.round(regPrice * 1.5);
         
         try {
-            const sportsList = await prisma.sport.findMany({ take: 3 });
-            if (sportsList.length > 0) {
-                await prisma.branchSport.createMany({
-                    data: sportsList.map(s => ({
-                        id: genId('bs'),
-                        branchId: branch.id,
-                        sportId: s.id,
-                        regularPrice: regPrice,
-                        peakPrice: peakPrice,
-                        status: 'ACTIVE'
-                    }))
-                });
+            const selectedSportNames = Array.isArray(req.body.sports)
+                ? req.body.sports.map(s => typeof s === 'string' ? s : (s?.name || s?.sport?.name || '')).filter(Boolean)
+                : [];
+
+            if (selectedSportNames.length > 0) {
+                for (const sName of selectedSportNames) {
+                    let masterSport = await prisma.sport.findFirst({
+                        where: { name: { contains: sName } }
+                    });
+                    if (!masterSport) {
+                        masterSport = await prisma.sport.create({
+                            data: {
+                                id: genId('sp'),
+                                name: sName,
+                                icon: '⚽',
+                                category: 'Turf Sport',
+                                defaultSlotDuration: 60
+                            }
+                        }).catch(() => null);
+                    }
+                    if (masterSport) {
+                        await prisma.branchSport.create({
+                            data: {
+                                id: genId('bs'),
+                                branchId: branch.id,
+                                sportId: masterSport.id,
+                                regularPrice: regPrice,
+                                peakPrice: peakPrice,
+                                status: 'ACTIVE'
+                            }
+                        }).catch(() => {});
+                    }
+                }
             }
         } catch (_) {}
 
@@ -450,6 +471,9 @@ const updateBranch = async (req, res) => {
             dimensionsSqFt, surfaceType, status, latitude, longitude
         } = req.body;
 
+        const cleanOwnerId = typeof ownerId === 'object' ? (ownerId?._id || ownerId?.id || '') : (ownerId || '');
+        const cleanPlanId = typeof subscriptionPlanId === 'object' ? (subscriptionPlanId?._id || subscriptionPlanId?.id || '') : (subscriptionPlanId || '');
+
         const targetPrice = minPriceHourly ?? pricePerHour ?? price;
         const targetPeakPrice = req.body.peakPricePerHour ?? req.body.peakPrice;
 
@@ -457,8 +481,8 @@ const updateBranch = async (req, res) => {
         const validPeakPrice = (targetPeakPrice !== undefined && targetPeakPrice !== '' && !isNaN(Number(targetPeakPrice))) ? Number(targetPeakPrice) : validPrice;
 
         let newSnapshotPrice = undefined;
-        if (subscriptionPlanId) {
-            const newPlan = await prisma.subscriptionPlan.findUnique({ where: { id: subscriptionPlanId } });
+        if (cleanPlanId) {
+            const newPlan = await prisma.subscriptionPlan.findUnique({ where: { id: cleanPlanId } });
             if (newPlan) {
                 newSnapshotPrice = Number(newPlan.monthlyPrice || 0);
             }
@@ -466,8 +490,8 @@ const updateBranch = async (req, res) => {
 
         let resolvedOwnerId = undefined;
         let resolvedOwnerUserId = undefined;
-        if (ownerId) {
-            const targetOwner = await prisma.owner.findFirst({ where: { OR: [{ id: ownerId }, { userId: ownerId }] } });
+        if (cleanOwnerId) {
+            const targetOwner = await prisma.owner.findFirst({ where: { OR: [{ id: cleanOwnerId }, { userId: cleanOwnerId }] } });
             if (targetOwner) {
                 resolvedOwnerId = targetOwner.id;
                 resolvedOwnerUserId = targetOwner.userId;
@@ -479,9 +503,9 @@ const updateBranch = async (req, res) => {
             data: {
                 branchName: branchName ?? undefined,
                 description: description ?? undefined,
-                ownerId: resolvedOwnerId ?? undefined,
-                ownerUserId: resolvedOwnerUserId ?? undefined,
-                subscriptionPlanId: subscriptionPlanId ?? undefined,
+                owner: resolvedOwnerId ? { connect: { id: resolvedOwnerId } } : undefined,
+                ownerUser: resolvedOwnerUserId ? { connect: { id: resolvedOwnerUserId } } : undefined,
+                subscriptionPlan: cleanPlanId ? { connect: { id: cleanPlanId } } : undefined,
                 subscriptionPriceSnapshot: newSnapshotPrice ?? undefined,
                 planPrice: newSnapshotPrice ?? undefined,
                 city: city ?? undefined,
@@ -503,7 +527,6 @@ const updateBranch = async (req, res) => {
                 surfaceType: surfaceType ?? undefined,
                 latitude: (latitude !== undefined && latitude !== null && latitude !== '') ? Number(latitude) : undefined,
                 longitude: (longitude !== undefined && longitude !== null && longitude !== '') ? Number(longitude) : undefined,
-                isDynamicPricingActive: req.body.isDynamicPricingActive !== undefined ? Boolean(req.body.isDynamicPricingActive) : undefined,
                 status: status ?? undefined
             },
             include: { owner: true, subscriptionPlan: true, branchSports: { include: { sport: true } }, discountOffers: true }
@@ -553,16 +576,20 @@ const updateBranch = async (req, res) => {
             'Tennis': '🎾'
         };
 
-        const selectedSportNames = Array.isArray(req.body.sports) && req.body.sports.length > 0
+        const selectedSportNames = Array.isArray(req.body.sports)
             ? req.body.sports.map(s => typeof s === 'string' ? s : (s?.name || s?.sport?.name || '')).filter(Boolean)
-            : ['Cricket'];
+            : [];
 
         // Delete any branchSport rows for sports that are no longer selected
         const allMasters = await prisma.sport.findMany();
         const selectedMasters = allMasters.filter(m => selectedSportNames.some(sn => sn.toLowerCase() === m.name.toLowerCase()));
         const selectedIds = selectedMasters.map(m => m.id);
 
-        if (selectedIds.length > 0) {
+        if (selectedSportNames.length === 0) {
+            await prisma.branchSport.deleteMany({
+                where: { branchId: id }
+            }).catch(() => {});
+        } else if (selectedIds.length > 0) {
             await prisma.branchSport.deleteMany({
                 where: {
                     branchId: id,

@@ -32,10 +32,23 @@ const formatBranchSport = (bs) => ({
  */
 const assertBranchAccess = async (branchId, user) => {
     if (!user) return { ok: false, code: 401, message: 'Authentication required.' };
-    if (user.role === 'SUPER_ADMIN') return { ok: true };
-    const branch = await prisma.branch.findUnique({ where: { id: branchId } });
+    const roleNorm = (user.role || '').toUpperCase().replace(/[-_]/g, '');
+    if (roleNorm === 'SUPERADMIN' || roleNorm === 'ADMIN') return { ok: true };
+
+    const branch = await prisma.branch.findUnique({ where: { id: branchId }, include: { owner: true } });
     if (!branch) return { ok: false, code: 404, message: 'Branch not found.' };
-    if (branch.ownerUserId !== user.id) return { ok: false, code: 403, message: 'Forbidden: you do not manage this branch.' };
+
+    const isOwner = (
+        branch.ownerUserId === user.id ||
+        branch.ownerId === user.id ||
+        branch.owner?.userId === user.id ||
+        branch.owner?.id === user.id ||
+        (user.email && branch.email === user.email) ||
+        (user.email && branch.owner?.email === user.email) ||
+        user.staffBranchId === branchId
+    );
+
+    if (!isOwner) return { ok: false, code: 403, message: 'Forbidden: you do not manage this branch.' };
     return { ok: true };
 };
 

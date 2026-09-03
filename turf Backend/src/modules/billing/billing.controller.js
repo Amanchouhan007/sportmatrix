@@ -188,6 +188,12 @@ const getBillHistory = async (req, res) => {
             prisma.matchPayment.findMany({ where: matchWhere, include: { user: true, match: { include: { branch: true } } }, orderBy: { createdAt: 'desc' } })
         ]);
 
+        const matchSlotIds = matchPayments.map(mp => mp.match?.slotId).filter(Boolean);
+        const linkedBookings = matchSlotIds.length > 0
+            ? await prisma.booking.findMany({ where: { slotId: { in: matchSlotIds } } })
+            : [];
+        const bookingBySlot = Object.fromEntries(linkedBookings.map(b => [b.slotId, b]));
+
         const logs = payments.map(formatPaymentLog);
         for (const mp of matchPayments) {
             const gross = Number(mp.amount || 0);
@@ -195,14 +201,19 @@ const getBillHistory = async (req, res) => {
             const owner = Number(mp.ownerAmount || (gross - comm));
             const commRate = gross > 0 ? Math.round((comm / gross) * 100) : 10;
 
+            const linkedBooking = mp.match?.slotId ? bookingBySlot[mp.match.slotId] : null;
+            const resolvedCustomerName = linkedBooking?.customerName || (mp.playerName && mp.playerName !== 'Player' ? mp.playerName : mp.user?.name) || 'Player';
+            const resolvedPhone = linkedBooking?.mobileNumber || mp.playerPhone || mp.user?.mobile || '';
+
             logs.push({
                 _id: `mp_${mp.id}`, id: `mp_${mp.id}`,
                 paymentId: `INV-${mp.id.substring(0, 10)}`,
                 transactionId: `TXN-${mp.id.substring(0, 10)}`,
                 invoiceNumber: `INV-${mp.id.substring(0, 10)}`,
-                userId: { _id: mp.userId, fullName: mp.playerName || 'Player', email: '', mobile: mp.playerPhone || '' },
-                user: mp.playerName || 'Player',
-                customer: mp.playerName || 'Player',
+                userId: { _id: mp.userId, fullName: resolvedCustomerName, email: mp.user?.email || '', mobile: resolvedPhone },
+                user: resolvedCustomerName,
+                customer: resolvedCustomerName,
+                customerName: resolvedCustomerName,
                 branchName: mp.match?.branch?.branchName || '',
                 type: 'BOOKING',
                 amount: gross,

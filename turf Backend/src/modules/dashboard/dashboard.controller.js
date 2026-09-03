@@ -82,42 +82,78 @@ const getOwnerDashboardSummary = async (branchIds = [], isSuperAdmin = false) =>
         slotWhereAvailable.branchId = branchFilter;
     }
 
+    const recentPaymentWhereAll = !isSuperAdmin ? { booking: { slot: { branchId: branchFilter } } } : {};
+    const recentBookingWhereAll = !isSuperAdmin ? { slot: { branchId: branchFilter } } : {};
+    const recentMatchPaymentWhereAll = !isSuperAdmin ? { match: { branchId: branchFilter } } : {};
+
     const [paymentsToday, bookingsToday, matchPaymentsToday, allPayments, allBookings, allMatchPayments, activeMatches, availableSlots, recentPayments, recentBookings, recentMatchPayments, bookedSlotsToday, sportsCount, upcomingTournamentsCount] = await Promise.all([
-        prisma.payment.findMany({ where: paymentWhereToday }),
+        prisma.payment.findMany({ where: paymentWhereToday, include: { booking: true } }),
         prisma.booking.findMany({ where: bookingWhereToday }),
-        prisma.matchPayment.findMany({ where: matchPaymentWhereToday }),
-        prisma.payment.findMany({ where: paymentWhereAll }),
+        prisma.matchPayment.findMany({ where: matchPaymentWhereToday, include: { match: true } }),
+        prisma.payment.findMany({ where: paymentWhereAll, include: { booking: true } }),
         prisma.booking.findMany({ where: bookingWhereAll }),
-        prisma.matchPayment.findMany({ where: matchPaymentWhereAll }),
+        prisma.matchPayment.findMany({ where: matchPaymentWhereAll, include: { match: true } }),
         prisma.slot.count({ where: slotWhereActive }),
         prisma.slot.count({ where: slotWhereAvailable }),
-        prisma.payment.findMany({ where: paymentWhereAll, include: { booking: { include: { slot: { include: { sport: true } } } } }, orderBy: { createdAt: 'desc' }, take: 10 }),
-        prisma.booking.findMany({ where: bookingWhereAll, include: { slot: { include: { sport: true } } }, orderBy: { createdAt: 'desc' }, take: 10 }),
-        prisma.matchPayment.findMany({ where: matchPaymentWhereAll, include: { match: { include: { branch: true, slot: { include: { sport: true } }, sport: true } } }, orderBy: { createdAt: 'desc' }, take: 10 }),
+        prisma.payment.findMany({ where: recentPaymentWhereAll, include: { booking: { include: { slot: { include: { sport: true } } } } }, orderBy: { createdAt: 'desc' }, take: 15 }),
+        prisma.booking.findMany({ where: recentBookingWhereAll, include: { slot: { include: { sport: true } } }, orderBy: { createdAt: 'desc' }, take: 15 }),
+        prisma.matchPayment.findMany({ where: recentMatchPaymentWhereAll, include: { match: { include: { branch: true, slot: { include: { sport: true } }, sport: true } } }, orderBy: { createdAt: 'desc' }, take: 15 }),
         prisma.slot.findMany({ where: isSuperAdmin ? { status: 'BOOKED' } : { status: 'BOOKED', branchId: branchFilter }, select: { startTime: true } }),
         isSuperAdmin ? prisma.sport.count() : prisma.sport.count({ where: { branchSports: { some: { branchId: branchFilter } } } }).catch(() => prisma.sport.count()),
         isSuperAdmin ? prisma.tournament.count({ where: { status: { in: ['APPROVED', 'REGISTRATION_OPEN', 'UPCOMING', 'ACTIVE', 'RUNNING'] } } }) : prisma.tournament.count({ where: { branchId: branchFilter, status: { in: ['APPROVED', 'REGISTRATION_OPEN', 'UPCOMING', 'ACTIVE', 'RUNNING'] } } })
     ]);
 
-    // 1. Calculate Today's Unique Revenue & Booking Count
-    const todayBookingIdsWithPayment = new Set(paymentsToday.map(p => p.bookingId).filter(Boolean));
-    const standaloneBookingsToday = bookingsToday.filter(b => !todayBookingIdsWithPayment.has(b.id));
-
+    // 1. Calculate Today's Unique Revenue & Booking Count (Deduplicated by slotId & bookingId)
+    const todaySlotIds = new Set();
+    const todayBookingIds = new Set();
     let grossTodaysRevenue = 0;
-    for (const p of paymentsToday) grossTodaysRevenue += Number(p.amount || 0);
-    for (const b of standaloneBookingsToday) grossTodaysRevenue += Number(b.amount || 0);
-    for (const mp of matchPaymentsToday) grossTodaysRevenue += Number(mp.amount || 0);
+    let todaysBookingsCount = 0;
 
-    const todaysBookingsCount = paymentsToday.length + standaloneBookingsToday.length + matchPaymentsToday.length;
+    for (const p of paymentsToday) {
+        if (p.bookingId) todayBookingIds.add(p.bookingId);
+        if (p.booking?.slotId) todaySlotIds.add(p.booking.slotId);
+        grossTodaysRevenue += Number(p.amount || 0);
+        todaysBookingsCount++;
+    }
 
-    // 2. Calculate Total Lifetime Unique Revenue
-    const allBookingIdsWithPayment = new Set(allPayments.map(p => p.bookingId).filter(Boolean));
-    const standaloneBookingsAll = allBookings.filter(b => !allBookingIdsWithPayment.has(b.id));
+    for (const mp of matchPaymentsToday) {
+        if (mp.match?.slotId) todaySlotIds.add(mp.match.slotId);
+        grossTodaysRevenue += Number(mp.amount || 0);
+        todaysBookingsCount++;
+    }
 
+    for (const b of bookingsToday) {
+        if (todayBookingIds.has(b.id)) continue;
+        if (b.slotId && todaySlotIds.has(b.slotId)) continue;
+        todayBookingIds.add(b.id);
+        if (b.slotId) todaySlotIds.add(b.slotId);
+        grossTodaysRevenue += Number(b.amount || 0);
+        todaysBookingsCount++;
+    }
+
+    // 2. Calculate Total Lifetime Unique Revenue (Deduplicated by slotId & bookingId)
+    const allSlotIds = new Set();
+    const allBookingIds = new Set();
     let grossTotalRevenue = 0;
-    for (const p of allPayments) grossTotalRevenue += Number(p.amount || 0);
-    for (const b of standaloneBookingsAll) grossTotalRevenue += Number(b.amount || 0);
-    for (const mp of allMatchPayments) grossTotalRevenue += Number(mp.amount || 0);
+
+    for (const p of allPayments) {
+        if (p.bookingId) allBookingIds.add(p.bookingId);
+        if (p.booking?.slotId) allSlotIds.add(p.booking.slotId);
+        grossTotalRevenue += Number(p.amount || 0);
+    }
+
+    for (const mp of allMatchPayments) {
+        if (mp.match?.slotId) allSlotIds.add(mp.match.slotId);
+        grossTotalRevenue += Number(mp.amount || 0);
+    }
+
+    for (const b of allBookings) {
+        if (allBookingIds.has(b.id)) continue;
+        if (b.slotId && allSlotIds.has(b.slotId)) continue;
+        allBookingIds.add(b.id);
+        if (b.slotId) allSlotIds.add(b.slotId);
+        grossTotalRevenue += Number(b.amount || 0);
+    }
 
     const commRate = 10; // 10% platform commission
     const todaysCommission = Math.round((grossTodaysRevenue * commRate) / 100);
@@ -125,11 +161,16 @@ const getOwnerDashboardSummary = async (branchIds = [], isSuperAdmin = false) =>
     // 3. Deduplicate Recent Bookings List for Dashboard Display
     const mergedList = [];
     const processedBookingIds = new Set();
-    const processedMatchIds = new Set();
+    const processedSlotIds = new Set();
 
     for (const p of recentPayments) {
         if (p.bookingId) processedBookingIds.add(p.bookingId);
+        if (p.booking?.slotId) processedSlotIds.add(p.booking.slotId);
         const gross = Number(p.amount || 0);
+        const isCancelled = p.status === 'REFUNDED' || p.status === 'CANCELLED' || p.booking?.status === 'REFUNDED' || p.booking?.status === 'CANCELLED';
+        const isPending = p.status === 'PENDING';
+        const resolvedStatus = isCancelled ? 'Cancelled' : (isPending ? 'Pending' : 'Confirmed');
+
         mergedList.push({
             id: `pay_${p.id}`,
             bookingId: p.bookingId || null,
@@ -139,47 +180,54 @@ const getOwnerDashboardSummary = async (branchIds = [], isSuperAdmin = false) =>
             sport: p.booking?.slot?.sport?.name || p.booking?.sportName || 'Badminton',
             court: p.booking?.slot?.courtName || p.booking?.courtName || '',
             amount: `₹${gross.toLocaleString('en-IN')}`,
-            status: 'Confirmed'
+            status: resolvedStatus
+        });
+    }
+
+    for (const mp of recentMatchPayments) {
+        const slotId = mp.match?.slotId;
+        if (slotId) processedSlotIds.add(slotId);
+        const matchKey = mp.matchId || mp.id;
+        processedBookingIds.add(matchKey);
+        const gross = Number(mp.amount || 0);
+        const isCancelled = mp.paymentStatus === 'REFUNDED' || mp.paymentStatus === 'CANCELLED' || mp.match?.matchStatus === 'CANCELLED';
+        const isPending = mp.paymentStatus === 'PENDING';
+        const resolvedStatus = isCancelled ? 'Cancelled' : (isPending ? 'Pending' : 'Confirmed');
+
+        mergedList.push({
+            id: `mpay_${mp.id}`,
+            bookingId: matchKey,
+            createdAt: mp.createdAt,
+            time: mp.createdAt ? new Date(mp.createdAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }) : 'Just now',
+            customer: mp.playerName || 'Match Player',
+            sport: mp.match?.slot?.sport?.name || mp.match?.sport?.name || 'Badminton',
+            court: mp.match?.courtName || 'Court 1',
+            amount: `₹${gross.toLocaleString('en-IN')}`,
+            status: resolvedStatus
         });
     }
 
     for (const b of recentBookings) {
-        if (!processedBookingIds.has(b.id)) {
-            const gross = Number(b.amount || 0);
-            mergedList.push({
-                id: `bk_${b.id}`,
-                bookingId: b.id,
-                createdAt: b.createdAt,
-                time: b.createdAt ? new Date(b.createdAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }) : 'Just now',
-                customer: b.customerName || '',
-                sport: b.slot?.sport?.name || b.sportName || 'Badminton',
-                court: b.slot?.courtName || b.courtName || '',
-                amount: `₹${gross.toLocaleString('en-IN')}`,
-                status: 'Confirmed'
-            });
-        }
-    }
+        if (processedBookingIds.has(b.id)) continue;
+        if (b.slotId && processedSlotIds.has(b.slotId)) continue;
+        processedBookingIds.add(b.id);
+        if (b.slotId) processedSlotIds.add(b.slotId);
+        const gross = Number(b.amount || 0);
+        const isCancelled = b.status === 'REFUNDED' || b.status === 'CANCELLED';
+        const isPending = b.status === 'PENDING';
+        const resolvedStatus = isCancelled ? 'Cancelled' : (isPending ? 'Pending' : 'Confirmed');
 
-    for (const mp of recentMatchPayments) {
-        const matchKey = mp.matchId || mp.id;
-        const custKey = `${(mp.playerName || '').toLowerCase()}_${mp.createdAt ? new Date(mp.createdAt).toISOString().substring(0,10) : ''}`;
-        if (!processedBookingIds.has(matchKey) && !processedBookingIds.has(mp.id) && !processedBookingIds.has(custKey)) {
-            processedBookingIds.add(matchKey);
-            processedBookingIds.add(mp.id);
-            processedBookingIds.add(custKey);
-            const gross = Number(mp.amount || 0);
-            mergedList.push({
-                id: `mpay_${mp.id}`,
-                bookingId: matchKey,
-                createdAt: mp.createdAt,
-                time: mp.createdAt ? new Date(mp.createdAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }) : 'Just now',
-                customer: mp.playerName || 'Match Player',
-                sport: mp.match?.slot?.sport?.name || mp.match?.sport?.name || 'Badminton',
-                court: mp.match?.courtName || 'Court 1',
-                amount: `₹${gross.toLocaleString('en-IN')}`,
-                status: 'Confirmed'
-            });
-        }
+        mergedList.push({
+            id: `bk_${b.id}`,
+            bookingId: b.id,
+            createdAt: b.createdAt,
+            time: b.createdAt ? new Date(b.createdAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }) : 'Just now',
+            customer: b.customerName || '',
+            sport: b.slot?.sport?.name || b.sportName || 'Badminton',
+            court: b.slot?.courtName || b.courtName || '',
+            amount: `₹${gross.toLocaleString('en-IN')}`,
+            status: resolvedStatus
+        });
     }
 
     mergedList.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
@@ -397,50 +445,70 @@ const getDashboardHistory = async (req, res) => {
         // Merge & deduplicate into unified transaction ledger
         const allTransactions = [];
         const processedBookingIds = new Set();
+        const processedSlotIds = new Set();
 
         for (const p of payments) {
             if (p.bookingId) processedBookingIds.add(p.bookingId);
+            if (p.booking?.slotId) processedSlotIds.add(p.booking.slotId);
+            const isCancelled = p.status === 'REFUNDED' || p.status === 'CANCELLED' || p.booking?.status === 'REFUNDED' || p.booking?.status === 'CANCELLED';
+            const isPending = p.status === 'PENDING';
+            const resolvedStatus = isCancelled ? 'Cancelled' : (isPending ? 'Pending' : 'Confirmed');
+
             allTransactions.push({
                 id: `pay_${p.id}`,
                 amount: Number(p.amount || 0),
                 customerName: p.customerName || p.booking?.customerName || p.user?.name || '',
                 sportName: p.booking?.slot?.sport?.name || p.booking?.sportName || 'Badminton',
                 courtName: p.booking?.slot?.courtName || p.booking?.courtName || '',
-                status: p.status === 'COMPLETED' ? 'COMPLETED' : 'PENDING',
+                status: resolvedStatus,
+                rawStatus: p.status,
                 createdAt: p.createdAt
             });
         }
 
         for (const b of bookings) {
-            if (!processedBookingIds.has(b.id)) {
-                allTransactions.push({
-                    id: `bk_${b.id}`,
-                    amount: Number(b.amount || 0),
-                    customerName: b.customerName || '',
-                    sportName: b.slot?.sport?.name || b.sportName || 'Badminton',
-                    courtName: b.slot?.courtName || b.courtName || '',
-                    status: b.status || 'COMPLETED',
-                    createdAt: b.createdAt
-                });
-            }
+            if (processedBookingIds.has(b.id)) continue;
+            if (b.slotId && processedSlotIds.has(b.slotId)) continue;
+            processedBookingIds.add(b.id);
+            if (b.slotId) processedSlotIds.add(b.slotId);
+            const isCancelled = b.status === 'REFUNDED' || b.status === 'CANCELLED';
+            const isPending = b.status === 'PENDING';
+            const resolvedStatus = isCancelled ? 'Cancelled' : (isPending ? 'Pending' : 'Confirmed');
+
+            allTransactions.push({
+                id: `bk_${b.id}`,
+                amount: Number(b.amount || 0),
+                customerName: b.customerName || '',
+                sportName: b.slot?.sport?.name || b.sportName || 'Badminton',
+                courtName: b.slot?.courtName || b.courtName || '',
+                status: resolvedStatus,
+                rawStatus: b.status,
+                createdAt: b.createdAt
+            });
         }
 
         for (const mp of matchPayments) {
+            const slotId = mp.match?.slotId;
+            if (slotId && processedSlotIds.has(slotId)) continue;
+            if (slotId) processedSlotIds.add(slotId);
             const matchKey = mp.matchId || mp.id;
-            const custKey = `${(mp.playerName || '').toLowerCase()}_${mp.createdAt ? new Date(mp.createdAt).toISOString().substring(0,10) : ''}`;
-            if (!processedBookingIds.has(matchKey) && !processedBookingIds.has(mp.id) && !processedBookingIds.has(custKey)) {
-                processedBookingIds.add(matchKey);
-                processedBookingIds.add(custKey);
-                allTransactions.push({
-                    id: `mpay_${mp.id}`,
-                    amount: Number(mp.amount || 0),
-                    customerName: mp.playerName || 'Match Player',
-                    sportName: mp.match?.slot?.sport?.name || mp.match?.sport?.name || 'Badminton',
-                    court: mp.match?.courtName || 'Court 1',
-                    status: mp.paymentStatus === 'COMPLETED' ? 'COMPLETED' : 'PENDING',
-                    createdAt: mp.createdAt
-                });
-            }
+            if (processedBookingIds.has(matchKey) || processedBookingIds.has(mp.id)) continue;
+            processedBookingIds.add(matchKey);
+            processedBookingIds.add(mp.id);
+            const isCancelled = mp.paymentStatus === 'REFUNDED' || mp.paymentStatus === 'CANCELLED' || mp.match?.matchStatus === 'CANCELLED';
+            const isPending = mp.paymentStatus === 'PENDING';
+            const resolvedStatus = isCancelled ? 'Cancelled' : (isPending ? 'Pending' : 'Confirmed');
+
+            allTransactions.push({
+                id: `mpay_${mp.id}`,
+                amount: Number(mp.amount || 0),
+                customerName: mp.playerName || 'Match Player',
+                sportName: mp.match?.slot?.sport?.name || mp.match?.sport?.name || 'Badminton',
+                courtName: mp.match?.courtName || 'Court 1',
+                status: resolvedStatus,
+                rawStatus: mp.paymentStatus,
+                createdAt: mp.createdAt
+            });
         }
 
         allTransactions.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
@@ -460,7 +528,7 @@ const getDashboardHistory = async (req, res) => {
                 return tDate >= startOfDay && tDate <= endOfDay;
             });
 
-            const completedTx = dayTx.filter(t => ['COMPLETED', 'CONFIRMED', 'PAID', 'HELD'].includes(t.status));
+            const completedTx = dayTx.filter(t => ['COMPLETED', 'CONFIRMED', 'PAID', 'HELD', 'Confirmed'].includes(t.status));
             const grossDayRevenue = completedTx.reduce((sum, t) => sum + Number(t.amount || 0), 0);
             const netDayRevenue = Math.round(grossDayRevenue * (1 - commRate / 100));
 
@@ -495,33 +563,30 @@ const getDashboardHistory = async (req, res) => {
                 date: dateLabel,
                 revenue: grossDayRevenue,
                 grossRevenue: grossDayRevenue,
-                bookings: dayTx.length,
-                occupancy: `${occupancyPercent}%`,
-                topSport: dayTx.length > 0 ? topSport : 'No bookings',
+                netRevenue: netDayRevenue,
+                commissionPaid: grossDayRevenue - netDayRevenue,
+                bookingsCount: dayTx.length,
+                topSport,
+                occupancyPercent,
                 status
             });
         }
 
         const weeklyBreakdown = [];
         for (let w = 0; w < 4; w++) {
-            const wEnd = new Date(now.getTime() - w * 7 * 24 * 60 * 60 * 1000);
-            const wStart = new Date(wEnd.getTime() - 7 * 24 * 60 * 60 * 1000);
+            const startW = new Date(now.getTime() - (w + 1) * 7 * 24 * 60 * 60 * 1000);
+            const endW = new Date(now.getTime() - w * 7 * 24 * 60 * 60 * 1000);
 
             const weekTx = allTransactions.filter(t => {
                 const tDate = new Date(t.createdAt);
-                return tDate >= wStart && tDate <= wEnd;
+                return tDate >= startW && tDate <= endW;
             });
 
-            const grossWeekRevenue = weekTx.reduce((sum, t) => sum + Number(t.amount || 0), 0);
-            const netWeekRevenue = Math.round(grossWeekRevenue * (1 - commRate / 100));
+            const completedW = weekTx.filter(t => ['COMPLETED', 'CONFIRMED', 'PAID', 'HELD', 'Confirmed'].includes(t.status));
+            const grossWeekRevenue = completedW.reduce((sum, t) => sum + Number(t.amount || 0), 0);
 
-            let badge = '✓ Settled';
-            if (weekTx.length === 0) badge = 'No Activity';
-            else if (weekTx.length >= 5) badge = '🔥 High Demand';
-            else if (weekTx.length >= 1) badge = '⚡ Steady Flow';
-
-            const title = w === 0 ? `Current Week (${wStart.getDate()} ${wStart.toLocaleString('en-US', { month: 'short' })} - ${wEnd.getDate()} ${wEnd.toLocaleString('en-US', { month: 'short' })})`
-                : `Week ${4 - w} (${wStart.getDate()} ${wStart.toLocaleString('en-US', { month: 'short' })} - ${wEnd.getDate()} ${wEnd.toLocaleString('en-US', { month: 'short' })})`;
+            const title = w === 0 ? 'Current Week (Last 7 Days)' : `Week -${w} (${startW.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - ${endW.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })})`;
+            const badge = w === 0 ? 'Active Period' : 'Completed Period';
 
             weeklyBreakdown.push({
                 title,
@@ -548,8 +613,8 @@ const getDashboardHistory = async (req, res) => {
                 court: t.courtName || 'Box Cricket Pitch 1',
                 amount: `₹${gross.toLocaleString('en-IN')}`,
                 grossAmount: `₹${gross.toLocaleString('en-IN')}`,
-                status: 'Confirmed',
-                paymentStatus: 'COMPLETED'
+                status: t.status || 'Confirmed',
+                paymentStatus: t.status === 'Cancelled' ? 'CANCELLED' : (t.status === 'Pending' ? 'PENDING' : 'COMPLETED')
             };
         });
 

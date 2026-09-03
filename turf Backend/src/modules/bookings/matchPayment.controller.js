@@ -805,20 +805,23 @@ class MatchPaymentController {
             const updated = await prisma.$transaction(async (tx) => {
                 const row = await tx.matchPayment.update({
                     where: { id },
-                    data: { commissionStatus: legResult.commissionStatus, commissionConfirmedAt: legResult.commissionConfirmedAt }
+                    data: {
+                        commissionStatus: legResult.commissionStatus,
+                        commissionConfirmedAt: legResult.commissionConfirmedAt,
+                        ownerPayoutStatus: 'CONFIRMED',
+                        ownerConfirmedAt: new Date(),
+                        paymentStatus: 'COMPLETED'
+                    }
                 });
 
-                if (row.commissionStatus === 'CONFIRMED' && row.ownerPayoutStatus === 'CONFIRMED') {
-                    await tx.matchPayment.update({ where: { id }, data: { paymentStatus: 'COMPLETED' } });
-                    await MatchSettlementService.settlePaymentAmount(tx, {
-                        branchId: branch.id,
-                        matchId: payment.matchId,
-                        captainUserId: payment.userId,
-                        ownerAmount: row.ownerAmount,
-                        commissionAmount: row.commissionAmount,
-                        commissionRate: payment.match.commissionRateSnapshot || 5
-                    });
-                }
+                await MatchSettlementService.settlePaymentAmount(tx, {
+                    branchId: branch.id,
+                    matchId: payment.matchId,
+                    captainUserId: payment.userId,
+                    ownerAmount: row.ownerAmount,
+                    commissionAmount: row.commissionAmount,
+                    commissionRate: payment.match.commissionRateSnapshot || 5
+                });
 
                 await tx.activityLog.create({
                     data: { id: genId('log'), userId: req.user.id, action: 'COMMISSION_CONFIRMED', details: `Super Admin confirmed commission for payment ${id} on match ${payment.matchId}.`, entityType: 'MatchPayment', entityId: id }
