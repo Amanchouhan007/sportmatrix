@@ -37,26 +37,38 @@ export default function TournamentDashboard({ role = 'owner' }) {
 
     const fetchLiveStats = async () => {
         try {
-            const res = await api.get('/tournaments')
-            const list = (res && res.success && Array.isArray(res.data)) ? res.data : []
-            setLiveTournamentsList(list)
+            const [tourneysRes, reportsRes] = await Promise.all([
+                api.get('/tournaments').catch(() => null),
+                api.get('/tournaments/reports').catch(() => null)
+            ]);
 
-            const totalT = list.length
-            const pendingA = list.filter(t => (t.status || '').toLowerCase().includes('pending')).length
-            const activeA = list.filter(t => (t.status || '').toLowerCase().includes('approved') || (t.status || '').toLowerCase().includes('active')).length
-            const teamsCount = list.reduce((sum, t) => sum + (Number(t.maximum_teams || t.maxTeams || t.registrations) || 0), 0)
-            const revenueSum = list.reduce((sum, t) => sum + (Number(t.entry_fee_per_team || t.entryFee || 0) * (Number(t.registrations) || 0)), 0)
+            const list = (tourneysRes && tourneysRes.success && Array.isArray(tourneysRes.data)) ? tourneysRes.data : (Array.isArray(tourneysRes) ? tourneysRes : []);
+            setLiveTournamentsList(list);
+
+            const reportData = (reportsRes && reportsRes.success && reportsRes.data) ? reportsRes.data : null;
+
+            const totalT = list.length;
+            const pendingA = list.filter(t => (t.status || '').toLowerCase().includes('pending')).length;
+            const activeA = list.filter(t => (t.status || '').toLowerCase().includes('approved') || (t.status || '').toLowerCase().includes('active')).length;
+
+            const realTeamsCount = reportData?.totalTeamsRegistered !== undefined
+                ? Number(reportData.totalTeamsRegistered)
+                : list.reduce((sum, t) => sum + (Number(t.registrations ?? t.registeredTeams ?? t.registrationsCount) || 0), 0);
+
+            const realRevenue = reportData?.totalRevenue !== undefined
+                ? Number(reportData.totalRevenue)
+                : list.reduce((sum, t) => sum + (Number(t.entry_fee_per_team || t.entryFee || 0) * (Number(t.registrations) || 0)), 0);
 
             setStats({
                 totalTournaments: totalT,
                 pendingApprovals: pendingA,
                 approvedActive: activeA,
-                totalTeams: teamsCount,
-                totalRevenue: revenueSum
-            })
+                totalTeams: realTeamsCount,
+                totalRevenue: realRevenue
+            });
         } catch (err) {
-            console.warn('Sync live tournament stats note:', err)
-            setLiveTournamentsList([])
+            console.warn('Sync live tournament stats note:', err);
+            setLiveTournamentsList([]);
         }
     }
 

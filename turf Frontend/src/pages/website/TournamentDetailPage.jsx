@@ -4,7 +4,7 @@ import { useNavigate, useParams, useLocation } from 'react-router-dom'
 import { HiArrowLeft, HiLocationMarker, HiCalendar, HiDocumentText, HiX } from 'react-icons/hi'
 import BracketComponent from '../../components/ui/BracketComponent'
 import CustomSelect from '../../components/ui/CustomSelect'
-import { getTournamentById, getFixtures, getLeaderboard, registerTeam, fallbackPublicTournaments } from '../../services/tournamentService'
+import { getTournamentById, getFixtures, getLeaderboard, registerTeam, createRazorpayOrder, verifyRazorpayPayment, fallbackPublicTournaments } from '../../services/tournamentService'
 
 const jerseyColorOptions = [
     { value: 'Blue', label: 'Royal Blue', color: '#2563EB' },
@@ -191,23 +191,102 @@ export default function TournamentDetailPage() {
         e.preventDefault()
         if (!regForm.teamName || !regForm.captainName || !regForm.captainMobile) return
         setRegLoading(true)
+
         try {
-            const res = await registerTeam(id, regForm)
-            if (res.success) {
-                setRegSuccess(true)
-                setTournament(prev => ({
-                    ...prev,
-                    registrations: ((prev && prev.registrations) || 12) + 1
-                }))
-                setTimeout(() => {
-                    setShowRegModal(false)
-                    setRegSuccess(false)
-                    setRegForm({ teamName: '', captainName: '', captainEmail: '', captainMobile: '', jerseyColor: 'Blue', paymentMethod: 'UPI', players: [{ name: '', mobile: '', jerseyNumber: '', role: 'Player' }] })
-                }, 1800)
+            if (regForm.paymentMethod === 'CASH') {
+                const res = await registerTeam(id, regForm)
+                if (res && res.success) {
+                    setRegSuccess(true)
+                    setTournament(prev => ({
+                        ...prev,
+                        registrations: (Number(prev?.registrations) || 0) + 1
+                    }))
+                    setTimeout(() => {
+                        setShowRegModal(false)
+                        setRegSuccess(false)
+                        setRegForm({ teamName: '', captainName: '', captainEmail: '', captainMobile: '', jerseyColor: 'Blue', paymentMethod: 'UPI', players: [{ name: '', mobile: '', jerseyNumber: '', role: 'Player' }] })
+                    }, 1800)
+                }
+                return
             }
+
+            // Razorpay Gateway Checkout Flow for Online Payment (UPI, CARD, WALLET)
+            const orderRes = await createRazorpayOrder(id, regForm)
+            if (!orderRes || !orderRes.success || !orderRes.orderId) {
+                throw new Error(orderRes?.message || 'Failed to initialize Razorpay Order')
+            }
+
+            // Dynamically load Razorpay SDK script if not already on page
+            if (!window.Razorpay) {
+                await new Promise((resolve, reject) => {
+                    const script = document.createElement('script')
+                    script.src = 'https://checkout.razorpay.com/v1/checkout.js'
+                    script.onload = resolve
+                    script.onerror = () => reject(new Error('Failed to load Razorpay Payment Gateway SDK'))
+                    document.body.appendChild(script)
+                })
+            }
+
+            const options = {
+                key: orderRes.keyId || 'rzp_test_T1r8sgDPyFz1bB',
+                amount: orderRes.amount,
+                currency: orderRes.currency || 'INR',
+                name: 'Kiaan Turf - Tournament Registration',
+                description: `Entry Fee for ${orderRes.tournamentTitle || 'Tournament'}`,
+                order_id: orderRes.orderId,
+                handler: async function (response) {
+                    try {
+                        setRegLoading(true)
+                        const verifyRes = await verifyRazorpayPayment(id, {
+                            razorpayOrderId: response.razorpay_order_id,
+                            razorpayPaymentId: response.razorpay_payment_id,
+                            razorpaySignature: response.razorpay_signature,
+                            ...regForm
+                        })
+
+                        if (verifyRes && verifyRes.success) {
+                            setRegSuccess(true)
+                            setTournament(prev => ({
+                                ...prev,
+                                registrations: (Number(prev?.registrations) || 0) + 1
+                            }))
+                            setTimeout(() => {
+                                setShowRegModal(false)
+                                setRegSuccess(false)
+                                setRegForm({ teamName: '', captainName: '', captainEmail: '', captainMobile: '', jerseyColor: 'Blue', paymentMethod: 'UPI', players: [{ name: '', mobile: '', jerseyNumber: '', role: 'Player' }] })
+                            }, 1800)
+                        } else {
+                            alert(verifyRes?.message || 'Payment verification failed.')
+                        }
+                    } catch (err) {
+                        alert(err.message || 'Error processing payment verification.')
+                    } finally {
+                        setRegLoading(false)
+                    }
+                },
+                prefill: {
+                    name: regForm.captainName,
+                    email: regForm.captainEmail || 'captain@sportmatrix.com',
+                    contact: regForm.captainMobile
+                },
+                theme: {
+                    color: '#16A34A'
+                },
+                modal: {
+                    ondismiss: function () {
+                        setRegLoading(false)
+                    }
+                }
+            }
+
+            const rzp = new window.Razorpay(options)
+            rzp.on('payment.failed', function (response) {
+                alert(`Payment Failed: ${response.error.description || 'Transaction declined.'}`)
+                setRegLoading(false)
+            })
+            rzp.open()
         } catch (err) {
             alert(err.message || 'Registration failed')
-        } finally {
             setRegLoading(false)
         }
     }

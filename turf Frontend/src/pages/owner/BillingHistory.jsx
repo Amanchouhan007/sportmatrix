@@ -10,7 +10,16 @@ const columns = [
     { key: 'type', label: 'Type' },
     { key: 'amount', label: 'Amount' },
     { key: 'method', label: 'Payment Method' },
-    { key: 'status', label: 'Status', render: (value) => <Badge variant={value === 'Completed' ? 'success' : value === 'Pending' ? 'warning' : 'default'} dot>{value}</Badge> },
+    { 
+        key: 'status', 
+        label: 'Status', 
+        render: (value) => {
+            let variant = 'warning';
+            if (value === 'Completed') variant = 'success';
+            else if (value === 'Refunded' || value === 'Cancelled') variant = 'danger';
+            return <Badge variant={variant} dot>{value}</Badge>;
+        } 
+    },
     { key: 'date', label: 'Date' },
 ]
 
@@ -22,15 +31,27 @@ export default function BillingHistory() {
             .then(res => {
                 const list = res?.data || (Array.isArray(res) ? res : []);
                 if (Array.isArray(list)) {
-                    const mapped = list.map(b => ({
-                        id: b.id || b.paymentId || b.invoiceNumber || `INV-${b.id}`,
-                        customer: b.customerName || b.user?.fullName || b.user || b.customer || 'Customer',
-                        type: b.type || 'Turf Booking',
-                        amount: b.amount ? `₹${Number(b.amount).toLocaleString('en-IN')}` : '₹0',
-                        method: b.method || b.paymentMethod || b.payment_mode || 'UPI',
-                        status: b.status === 'CONFIRMED' || b.status === 'COMPLETED' ? 'Completed' : 'Pending',
-                        date: b.date ? String(b.date).split('T')[0] : (b.createdAt ? String(b.createdAt).split('T')[0] : 'Today')
-                    }));
+                    const mapped = list.map(b => {
+                        const rawStatus = (b.status || '').toUpperCase();
+                        let displayStatus = 'Pending';
+                        if (rawStatus === 'COMPLETED' || rawStatus === 'CONFIRMED' || rawStatus === 'PAID') {
+                            displayStatus = 'Completed';
+                        } else if (rawStatus === 'REFUNDED') {
+                            displayStatus = 'Refunded';
+                        } else if (rawStatus === 'CANCELLED' || rawStatus === 'FAILED') {
+                            displayStatus = 'Cancelled';
+                        }
+
+                        return {
+                            id: b.invoiceNumber || b.id || b.paymentId || `INV-${b.id}`,
+                            customer: b.customerName || b.customer || b.user?.fullName || b.user || 'Customer',
+                            type: b.type || 'Turf Booking',
+                            amount: b.amount ? `₹${Number(b.amount).toLocaleString('en-IN')}` : '₹0',
+                            method: b.paymentMethod || b.method || b.payment_mode || 'UPI',
+                            status: displayStatus,
+                            date: b.date ? String(b.date).split('T')[0] : (b.createdAt ? String(b.createdAt).split('T')[0] : 'Today')
+                        };
+                    });
                     setBillingHistory(mapped);
                 } else {
                     setBillingHistory([]);

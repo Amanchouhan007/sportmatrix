@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import Card from '../../components/ui/Card'
 import Button from '../../components/ui/Button'
@@ -7,6 +7,7 @@ import Select from '../../components/ui/Select'
 import CustomDatePicker from '../../components/ui/CustomDatePicker'
 import { useToast } from '../../components/ui/Toast'
 import { createDiscountOffer } from '../../services/discountService'
+import { getBranches } from '../../services/branchService'
 import {
     FiArrowLeft, FiTag, FiPercent, FiDollarSign, FiClock, FiCalendar,
     FiMapPin, FiUsers, FiSave, FiChevronRight, FiChevronLeft, FiImage, FiCheck, FiInfo, FiLayers
@@ -19,31 +20,32 @@ export default function CreateDiscountOffer() {
     // Wizard Step State (1: Basic Details, 2: Config, 3: Targeting, 4: Summary)
     const [currentStep, setCurrentStep] = useState(1)
     const [isSubmitting, setIsSubmitting] = useState(false)
+    const [turfs, setTurfs] = useState([])
 
     // Form Data State
     const [formData, setFormData] = useState({
         // STEP 1: Basic Details
-        title: 'Monsoon Special 25% OFF',
-        turfId: 'turf-1',
-        turfName: 'Champions Turf Arena (Mumbai)',
-        ownerName: 'Rajesh Sharma',
-        description: 'Enjoy 25% instant discount on all evening turf slot bookings.',
+        title: 'Special Discount Offer',
+        turfId: '',
+        turfName: '',
+        ownerName: '',
+        description: 'Instant discount on turf slot bookings.',
         discountType: 'Percentage',
-        promoCode: 'MONSOON25',
+        promoCode: 'OFFER20',
         banner: 'https://images.unsplash.com/photo-1551958219-acbc608c6377?auto=format&fit=crop&q=80&w=800',
         thumbnail: '',
 
         // STEP 2: Discount Configuration
-        discountValue: '25',
-        minimumBookingAmount: '1000',
-        maximumDiscountAmount: '500',
+        discountValue: '20',
+        minimumBookingAmount: '500',
+        maximumDiscountAmount: '300',
         slotTypes: ['Evening', 'Night'],
         applicableDays: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'],
         applicableSports: ['Football', 'Cricket'],
-        startDate: '2026-08-01',
-        endDate: '2026-08-31',
-        startTime: '17:00',
-        endTime: '23:00',
+        startDate: new Date().toISOString().split('T')[0],
+        endDate: new Date(Date.now() + 30*86400000).toISOString().split('T')[0],
+        startTime: '00:00:00',
+        endTime: '23:59:59',
         usageLimit: '200',
         perUserLimit: '2',
         firstBookingOnly: false,
@@ -52,44 +54,51 @@ export default function CreateDiscountOffer() {
 
         // STEP 3: Targeting
         targetRadius: '5',
-        location: 'Mumbai Suburban',
-        targetCities: ['Mumbai'],
-        gender: 'All',
+        location: 'Local Region',
+        targetCities: [],
+        gender: 'All Genders',
         ageGroup: 'All Ages',
         customerType: 'All Users',
         estimatedAudience: 12500,
 
         // Status
-        status: 'Active'
+        status: 'ACTIVE'
     })
 
-    const ALL_TURFS = [
-        { id: '13', name: 'Spike Cricket Turf (Indore)', owner: 'Rohit Verma' },
-        { id: '6', name: 'Royal Cricket Ground (Indore)', owner: 'Aman Singhal' },
-        { id: '14', name: 'Indore Sports Complex (Indore)', owner: 'Vijay Malhotra' },
-        { id: '15', name: 'Rajiv Gandhi Stadium Turf (Indore)', owner: 'Sanjay Sharma' },
-        { id: '16', name: 'Champion Turf Ground (Indore)', owner: 'Ritesh Jain' },
-        { id: '17', name: 'Skyline Sports Hub (Indore)', owner: 'Pooja Gupta' },
-        { id: '18', name: 'GreenField Arena (Indore)', owner: 'Devendra Patel' },
-        { id: '19', name: 'Annapurna Sports Arena (Indore)', owner: 'Yash Rathore' },
-        { id: '1', name: 'SportZone Arena (Mumbai)', owner: 'Rajesh Sharma' },
-        { id: '2', name: 'Champion Cricket Ground (Bangalore)', owner: 'Suresh Patil' },
-        { id: '3', name: 'GameVault Cricket Center (Bangalore)', owner: 'Kunal Kapoor' },
-        { id: '4', name: 'ProKick Cricket Turf (Bangalore)', owner: 'Ananya Roy' },
-        { id: '5', name: 'ProPlay Cricket Arena (Navi Mumbai)', owner: 'Dinesh Joshi' },
-        { id: '7', name: 'DunkZone Cricket Turf (Mumbai)', owner: 'Arjun Mehta' },
-        { id: '8', name: 'PixelArena Cricket (Bangalore)', owner: 'Vikram Sethi' },
-        { id: '9', name: 'Skyline Cricket Turf (Mumbai)', owner: 'Pooja Hegde' },
-        { id: '10', name: 'StrikeZone Cricket (Delhi)', owner: 'Harsh Vardhan' },
-        { id: '11', name: 'Master Blaster Cricket (Delhi)', owner: 'Sachin Narang' },
-        { id: '12', name: 'Pune Cricket Arena (Pune)', owner: 'Vikramaditya Roy' }
-    ]
+    useEffect(() => {
+        const fetchTurfs = async () => {
+            try {
+                const res = await getBranches()
+                const branchList = Array.isArray(res) ? res : (res?.data || [])
+                if (Array.isArray(branchList) && branchList.length > 0) {
+                    const mapped = branchList.map(b => ({
+                        id: b.id,
+                        name: `${b.branchName || b.name || 'Turf'} (${b.city || b.location || 'Location'})`,
+                        owner: b.owner?.fullName || b.ownerName || 'Turf Owner'
+                    }))
+                    setTurfs(mapped)
+                    setFormData(prev => ({
+                        ...prev,
+                        turfId: mapped[0].id,
+                        turfName: mapped[0].name,
+                        ownerName: mapped[0].owner
+                    }))
+                }
+            } catch (err) {
+                console.error('Failed to load turfs in CreateDiscountOffer', err)
+            }
+        }
+        fetchTurfs()
+    }, [])
 
-    const handleTurfChange = (turfId) => {
-        const found = ALL_TURFS.find(t => String(t.id) === String(turfId))
-        const turfName = found ? found.name : 'Spike Cricket Turf (Indore)'
-        const ownerName = found ? found.owner : 'Rohit Verma'
-        setFormData(prev => ({ ...prev, turfId, turfName, ownerName }))
+    const handleTurfChange = (selectedId) => {
+        const found = turfs.find(t => String(t.id) === String(selectedId))
+        setFormData(prev => ({
+            ...prev,
+            turfId: selectedId,
+            turfName: found ? found.name : '',
+            ownerName: found ? found.owner : ''
+        }))
     }
 
     const handleFileUpload = (field, e) => {
@@ -277,7 +286,7 @@ export default function CreateDiscountOffer() {
                                         value={formData.turfId}
                                         onChange={(e) => handleTurfChange(e.target.value)}
                                     >
-                                        {ALL_TURFS.map(t => (
+                                        {turfs.map(t => (
                                             <option key={t.id} value={t.id}>
                                                 {t.name}
                                             </option>

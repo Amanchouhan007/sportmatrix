@@ -16,6 +16,7 @@ import TeamPaymentModesSection from '../../components/website/TeamPaymentModesSe
 import LiveCricketChallengeCard from '../../components/website/LiveCricketChallengeCard'
 import CorporateBookingSection from '../../components/website/CorporateBookingSection'
 import MembershipCheckoutModal from '../../components/membership/MembershipCheckoutModal'
+import TournamentCardPremium from '../../components/tournaments/TournamentCardPremium'
 import PageLoader from '../../components/ui/PageLoader'
 import useRealtime from '../../utils/useRealtime'
 
@@ -45,11 +46,14 @@ const DEFAULT_FALLBACK_DARES = [
 ]
 function useReveal() {
     const ref = useRef(null)
-    const [v, setV] = useState(false)
+    const [v, setV] = useState(true)
     useEffect(() => {
+        if (typeof window === 'undefined' || !('IntersectionObserver' in window)) return
         const obs = new IntersectionObserver(([e]) => {
-            setV(e.isIntersecting)
-        }, { threshold: 0.1 })
+            if (e.isIntersecting) {
+                setV(true)
+            }
+        }, { threshold: 0.05 })
         if (ref.current) obs.observe(ref.current)
         return () => obs.disconnect()
     }, [])
@@ -195,8 +199,9 @@ export default function HomePage() {
         const retryTimer = setTimeout(loadTurfs, 1200)
 
         getPublicTournaments().then(res => {
-            if (res?.success && Array.isArray(res?.data)) {
-                setUpcomingTournaments(res.data.slice(0, 4))
+            const list = res?.data || (Array.isArray(res) ? res : []);
+            if (Array.isArray(list) && list.length > 0) {
+                setUpcomingTournaments(list.slice(0, 4))
             }
         }).catch(() => { })
 
@@ -747,53 +752,13 @@ export default function HomePage() {
                         <p className="text-xs text-[#6B7280] max-w-lg mx-auto font-semibold leading-relaxed">Bring your squad, dominate division tables, and earn high-stakes victory across the region</p>
                     </div>
 
-                    <div
-                        ref={tourneyReveal.ref}
-                        className={`grid grid-cols-1 md:grid-cols-2 max-w-4xl mx-auto gap-8 transition-all duration-[1000ms] ease-out ${tourneyReveal.visible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-16'
-                            }`}
-                    >
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 max-w-6xl mx-auto gap-8 transition-all duration-500">
                         {(upcomingTournaments.length > 0 ? upcomingTournaments : [
-                            { id: 'fallback-1', title: 'Matrix Football League', sport: 'Football', prize: '₹50,000', entryFee: '2500', maxTeams: 16, registrations: 13, status: 'Approved' },
-                            { id: 'fallback-2', title: 'Indore Turf Cricket Cup', sport: 'Cricket', prize: '₹75,000', entryFee: '3000', maxTeams: 12, registrations: 6, status: 'Approved' }
-                        ]).slice(0, 4).map((t, idx) => {
-                            const spotsLeft = (t.maxTeams || 16) - (t.registrations || 0)
-                            const isOpen = ['APPROVED', 'ACTIVE', 'REGISTRATION_OPEN', 'UPCOMING'].includes((t.status || '').toUpperCase()) || t.status === 'Approved'
-                            const statusColor = spotsLeft <= 3 ? 'border-amber-200 bg-amber-50 text-amber-700' : 'border-green-200 bg-green-50 text-[#16A34A]'
-                            const statusText = !isOpen ? t.status : (spotsLeft <= 3 ? 'Few Slots Left' : 'Registration Open')
-                            return (
-                                <div
-                                    key={t.id || t._id || idx}
-                                    className="group bg-white border border-[#E5E7EB] hover:border-[#16A34A]/40 rounded-[18px] p-6 flex flex-col justify-between shadow-[0_15px_45px_rgba(0,0,0,0.08)] hover:shadow-[0_25px_60px_rgba(0,0,0,0.14)] transition-all duration-300 hover:-translate-y-[6px] relative overflow-hidden"
-                                >
-                                    <div>
-                                        <div className="flex items-center justify-between mb-4 gap-2">
-                                            <span className={`text-[8px] font-black uppercase tracking-widest px-3 py-1 rounded-[6px] border ${statusColor}`}>
-                                                {statusText}
-                                            </span>
-                                            <span className="text-[9px] font-black text-[#6B7280] uppercase tracking-wide bg-slate-100 border border-[#E5E7EB] px-2.5 py-1 rounded-[6px]">{t.sport || 'Sports'}</span>
-                                        </div>
-                                        <h3 className="text-lg font-black uppercase text-[#111827] tracking-tight mb-4 group-hover:text-[#16A34A] transition-colors">{t.title || t.name}</h3>
-
-                                        <div className="p-3.5 bg-slate-50 border border-[#E5E7EB] rounded-[14px] space-y-2 mb-6">
-                                            <div className="flex justify-between items-center text-[10px]">
-                                                <span className="text-[#6B7280] font-bold uppercase tracking-wide">GRAND PRIZE</span>
-                                                <span className="text-[#111827] font-black">{t.prize || `₹${t.entryFee || 0}`} Cash Pool</span>
-                                            </div>
-                                            <div className="flex justify-between items-center text-[10px]">
-                                                <span className="text-[#6B7280] font-bold uppercase tracking-wide">ENTRY FEE</span>
-                                                <span className="text-[#111827] font-black">₹{t.entryFee || 0} / SQUAD</span>
-                                            </div>
-                                            <div className="flex justify-between items-center text-[9px] pt-1.5 border-t border-[#E5E7EB] text-[#6B7280]">
-                                                <span className="font-bold uppercase tracking-wider text-[#16A34A]">{spotsLeft} / {t.maxTeams || 16} SLOTS REMAINING</span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <button onClick={() => navigate(`/tournaments/${t.id || t._id}`)} className="w-full py-3.5 bg-[#C8FF2E] hover:bg-[#B5F000] text-[#111827] font-black text-[10px] uppercase tracking-widest rounded-[14px] transition-all shadow-[0_12px_25px_rgba(184,255,44,0.28)] hover:scale-[1.02] cursor-pointer border border-[#B5F000]">
-                                        Register Squad
-                                    </button>
-                                </div>
-                            )
-                        })}
+                            { id: 't_1788590436647_66059', title: 'IPL-20', name: 'IPL-20', sport: 'Cricket', prize: '₹85,000', prizePool: '₹85,000', entryFee: '900', maxTeams: 10, registrations: 0, status: 'APPROVED', startDate: '2026-09-08', location: 'Ujjain, MP' },
+                            { id: 'fallback-2', title: 'Indore Turf Cricket Cup', name: 'Indore Turf Cricket Cup', sport: 'Cricket', prize: '₹75,000', prizePool: '₹75,000', entryFee: '1200', maxTeams: 12, registrations: 4, status: 'APPROVED', startDate: '2026-09-12', location: 'Indore, MP' }
+                        ]).slice(0, 4).map((t, idx) => (
+                            <TournamentCardPremium key={t.id || t._id || idx} tournament={t} />
+                        ))}
                     </div>
                 </div>
             </section>

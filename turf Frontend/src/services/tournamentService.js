@@ -94,6 +94,30 @@ export const registerTeam = async (tournamentId, teamData) => {
 };
 
 /**
+ * Initialize Razorpay Payment Order for Tournament Entry Fee
+ */
+export const createRazorpayOrder = async (tournamentId, teamData) => {
+    try {
+        const res = await api.post(`/tournaments/${tournamentId}/create-razorpay-order`, teamData);
+        return res;
+    } catch (error) {
+        throw new Error(error.message || 'Failed to initialize Razorpay payment order');
+    }
+};
+
+/**
+ * Verify Razorpay Payment Signature & Confirm Tournament Registration
+ */
+export const verifyRazorpayPayment = async (tournamentId, verificationPayload) => {
+    try {
+        const res = await api.post(`/tournaments/${tournamentId}/verify-razorpay-payment`, verificationPayload);
+        return res;
+    } catch (error) {
+        throw new Error(error.message || 'Razorpay payment verification failed');
+    }
+};
+
+/**
  * Fetch tournament categories
  */
 export const getCategories = async () => {

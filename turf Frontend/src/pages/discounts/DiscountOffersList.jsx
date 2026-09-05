@@ -10,6 +10,7 @@ import {
     changeDiscountStatus,
     duplicateDiscountOffer
 } from '../../services/discountService'
+import { getBranches } from '../../services/branchService'
 import {
     FiPlus, FiSearch, FiRefreshCw, FiDownload, FiEdit2, FiTrash2,
     FiEye, FiCopy, FiCheckCircle, FiXCircle, FiTag, FiClock, FiCheck,
@@ -17,45 +18,19 @@ import {
     FiChevronDown
 } from 'react-icons/fi'
 
-const TURF_OPTIONS = [
-    { value: 'ALL', label: 'All Turfs' },
-    { value: '13', label: 'Spike Cricket Turf (Indore)' },
-    { value: '6', label: 'Royal Cricket Ground (Indore)' },
-    { value: '14', label: 'Indore Sports Complex (Indore)' },
-    { value: '15', label: 'Rajiv Gandhi Stadium Turf (Indore)' },
-    { value: '16', label: 'Champion Turf Ground (Indore)' },
-    { value: '17', label: 'Skyline Sports Hub (Indore)' },
-    { value: '18', label: 'GreenField Arena (Indore)' },
-    { value: '19', label: 'Annapurna Sports Arena (Indore)' },
-    { value: '1', label: 'SportZone Arena (Mumbai)' },
-    { value: '2', label: 'Champion Cricket Ground (Bangalore)' },
-    { value: '3', label: 'GameVault Cricket Center (Bangalore)' },
-    { value: '4', label: 'ProKick Cricket Turf (Bangalore)' },
-    { value: '5', label: 'ProPlay Cricket Arena (Navi Mumbai)' },
-    { value: '7', label: 'DunkZone Cricket Turf (Mumbai)' },
-    { value: '8', label: 'PixelArena Cricket (Bangalore)' },
-    { value: '9', label: 'Skyline Cricket Turf (Mumbai)' },
-    { value: '10', label: 'StrikeZone Cricket (Delhi)' },
-    { value: '11', label: 'Master Blaster Cricket (Delhi)' },
-    { value: '12', label: 'Pune Cricket Arena (Pune)' }
-]
-
 const TYPE_OPTIONS = [
     { value: 'ALL', label: 'All Discount Types' },
-    { value: 'Percentage', label: 'Percentage (%)' },
-    { value: 'Flat Amount', label: 'Flat Amount (₹)' },
-    { value: 'Buy One Get One', label: 'Buy One Get One' },
-    { value: 'Free Slot', label: 'Free Slot' },
-    { value: 'Cashback', label: 'Cashback' }
+    { value: 'PERCENTAGE', label: 'Percentage (%)' },
+    { value: 'FLAT_AMOUNT', label: 'Flat Amount (₹)' }
 ]
 
 const STATUS_OPTIONS = [
     { value: 'ALL', label: 'All Statuses' },
-    { value: 'Active', label: 'Active' },
-    { value: 'Scheduled', label: 'Scheduled' },
-    { value: 'Expired', label: 'Expired' },
-    { value: 'Draft', label: 'Draft' },
-    { value: 'Inactive', label: 'Inactive' }
+    { value: 'ACTIVE', label: 'Active' },
+    { value: 'SCHEDULED', label: 'Scheduled' },
+    { value: 'EXPIRED', label: 'Expired' },
+    { value: 'DRAFT', label: 'Draft' },
+    { value: 'INACTIVE', label: 'Inactive' }
 ]
 
 export default function DiscountOffersList() {
@@ -72,11 +47,33 @@ export default function DiscountOffersList() {
     const [page, setPage] = useState(1)
     const [openDropdown, setOpenDropdown] = useState(null)
     const [pagination, setPagination] = useState({ total: 0, page: 1, limit: 10, totalPages: 1 })
+    const [turfOptions, setTurfOptions] = useState([{ value: 'ALL', label: 'All Turfs' }])
 
     // Modals state
     const [viewModalOffer, setViewModalOffer] = useState(null)
     const [deleteModalOffer, setDeleteModalOffer] = useState(null)
     const [isDeleting, setIsDeleting] = useState(false)
+
+    useEffect(() => {
+        const fetchTurfs = async () => {
+            try {
+                const res = await getBranches()
+                const branchList = Array.isArray(res) ? res : (res?.data || [])
+                if (Array.isArray(branchList) && branchList.length > 0) {
+                    setTurfOptions([
+                        { value: 'ALL', label: 'All Turfs' },
+                        ...branchList.map(b => ({
+                            value: b.id,
+                            label: `${b.branchName || b.name || 'Turf'} (${b.city || b.location || 'Location'})`
+                        }))
+                    ])
+                }
+            } catch (err) {
+                console.error('Failed to load branches for filter', err)
+            }
+        }
+        fetchTurfs()
+    }, [])
 
     useEffect(() => {
         fetchData()
@@ -110,7 +107,8 @@ export default function DiscountOffersList() {
     }
 
     const handleStatusToggle = async (offer) => {
-        const nextStatus = offer.status === 'Active' ? 'Inactive' : 'Active'
+        const isCurrentlyActive = (offer.status || '').toUpperCase() === 'ACTIVE'
+        const nextStatus = isCurrentlyActive ? 'INACTIVE' : 'ACTIVE'
         try {
             await changeDiscountStatus(offer.id || offer._id, nextStatus)
             addToast({ message: `Offer "${offer.title}" status changed to ${nextStatus}`, type: 'success' })
@@ -147,6 +145,15 @@ export default function DiscountOffersList() {
         }
     }
 
+    const isPercentage = (type) => {
+        const t = (type || '').toUpperCase()
+        return t === 'PERCENTAGE' || t === 'PERCENT'
+    }
+
+    const getDiscountDisplay = (type, value) => {
+        return isPercentage(type) ? `${value}% OFF` : `₹${value} OFF`
+    }
+
     const handleExportCSV = () => {
         if (offers.length === 0) {
             addToast({ message: 'No records available to export', type: 'info' })
@@ -159,11 +166,11 @@ export default function DiscountOffersList() {
         offers.forEach(o => {
             const row = [
                 `"${o.id}"`,
-                `"${o.title.replace(/"/g, '""')}"`,
-                `"${o.turfName.replace(/"/g, '""')}"`,
-                `"${o.ownerName.replace(/"/g, '""')}"`,
+                `"${(o.title || '').replace(/"/g, '""')}"`,
+                `"${(o.turfName || '').replace(/"/g, '""')}"`,
+                `"${(o.ownerName || '').replace(/"/g, '""')}"`,
                 `"${o.discountType}"`,
-                `"${o.discountType === 'Percentage' ? `${o.discountValue}%` : `₹${o.discountValue}`}"`,
+                `"${getDiscountDisplay(o.discountType, o.discountValue)}"`,
                 `"${o.promoCode || 'N/A'}"`,
                 `"${o.startDate}"`,
                 `"${o.endDate}"`,
@@ -184,23 +191,25 @@ export default function DiscountOffersList() {
     }
 
     // Calculated Dashboard Stats
-    const activeCount = offers.filter(o => o.status === 'Active').length
-    const scheduledCount = offers.filter(o => o.status === 'Scheduled').length
-    const expiredCount = offers.filter(o => o.status === 'Expired').length
-    const totalCount = offers.length
+    const activeCount = offers.filter(o => (o.status || '').toUpperCase() === 'ACTIVE').length
+    const scheduledCount = offers.filter(o => (o.status || '').toUpperCase() === 'SCHEDULED').length
+    const expiredCount = offers.filter(o => (o.status || '').toUpperCase() === 'EXPIRED').length
+    const totalCount = pagination.total || offers.length
     const totalBookingsImpact = offers.reduce((acc, curr) => acc + (curr.usedCount || 0), 0)
-    const totalEstRevenue = offers.reduce((acc, curr) => acc + (curr.usedCount * 1200), 0)
+    const totalEstRevenue = offers.reduce((acc, curr) => acc + ((curr.usedCount || 0) * 1200), 0)
 
     const getStatusStyle = (status) => {
-        switch (status) {
-            case 'Active':
+        const s = (status || '').toUpperCase()
+        switch (s) {
+            case 'ACTIVE':
                 return 'bg-emerald-50 text-emerald-700 border-emerald-200'
-            case 'Scheduled':
+            case 'SCHEDULED':
                 return 'bg-blue-50 text-blue-700 border-blue-200'
-            case 'Expired':
+            case 'EXPIRED':
                 return 'bg-rose-50 text-rose-700 border-rose-200'
-            case 'Draft':
+            case 'DRAFT':
                 return 'bg-slate-100 text-slate-700 border-slate-300'
+            case 'INACTIVE':
             default:
                 return 'bg-amber-50 text-amber-700 border-amber-200'
         }
@@ -300,15 +309,15 @@ export default function DiscountOffersList() {
                                 onClick={() => setOpenDropdown(openDropdown === 'turf' ? null : 'turf')}
                                 className="w-full h-10 px-3.5 rounded-xl border border-surface-200 bg-surface-50/50 hover:bg-white text-xs font-bold text-surface-800 outline-none focus:border-emerald-500 transition-all cursor-pointer flex items-center justify-between"
                             >
-                                <span className="truncate">{TURF_OPTIONS.find(o => o.value === turfFilter)?.label || 'All Turfs'}</span>
+                                <span className="truncate">{turfOptions.find(o => o.value === turfFilter)?.label || 'All Turfs'}</span>
                                 <FiChevronDown className={`w-3.5 h-3.5 text-surface-400 shrink-0 transition-transform duration-200 ${openDropdown === 'turf' ? 'rotate-180 text-emerald-600' : ''}`} />
                             </button>
 
                             {openDropdown === 'turf' && (
                                 <>
                                     <div className="fixed inset-0 z-40" onClick={() => setOpenDropdown(null)} />
-                                    <div className="absolute top-full left-0 right-0 mt-1.5 z-50 bg-white/95 backdrop-blur-md rounded-2xl border border-surface-200/90 shadow-[0_15px_35px_rgba(0,0,0,0.1)] p-1.5 space-y-0.5 animate-in fade-in slide-in-from-top-2 duration-150">
-                                        {TURF_OPTIONS.map(opt => {
+                                    <div className="absolute top-full left-0 right-0 mt-1.5 z-50 bg-white/95 backdrop-blur-md rounded-2xl border border-surface-200/90 shadow-[0_15px_35px_rgba(0,0,0,0.1)] p-1.5 space-y-0.5 animate-in fade-in slide-in-from-top-2 duration-150 max-h-60 overflow-y-auto">
+                                        {turfOptions.map(opt => {
                                             const isSelected = turfFilter === opt.value
                                             return (
                                                 <button
@@ -497,7 +506,7 @@ export default function DiscountOffersList() {
 
                                         <td className="py-4 px-5">
                                             <span className="font-extrabold text-emerald-600 block">
-                                                {o.discountType === 'Percentage' ? `${o.discountValue}% OFF` : `₹${o.discountValue} OFF`}
+                                                {getDiscountDisplay(o.discountType, o.discountValue)}
                                             </span>
                                             <span className="text-[10px] text-surface-400 font-bold uppercase">{o.discountType}</span>
                                         </td>
@@ -542,13 +551,18 @@ export default function DiscountOffersList() {
                                                 >
                                                     <FiEye className="text-sm" />
                                                 </button>
-                                                <button
-                                                    onClick={() => handleStatusToggle(o)}
-                                                    title={o.status === 'Active' ? 'Deactivate Offer' : 'Activate Offer'}
-                                                    className={`p-2 rounded-xl transition-colors ${o.status === 'Active' ? 'bg-amber-50 text-amber-600 hover:bg-amber-100' : 'bg-emerald-50 text-emerald-600 hover:bg-emerald-100'}`}
-                                                >
-                                                    {o.status === 'Active' ? <FiXCircle className="text-sm" /> : <FiCheckCircle className="text-sm" />}
-                                                </button>
+                                                {(() => {
+                                                    const isActive = (o.status || '').toUpperCase() === 'ACTIVE';
+                                                    return (
+                                                        <button
+                                                            onClick={() => handleStatusToggle(o)}
+                                                            title={isActive ? 'Deactivate Offer' : 'Activate Offer'}
+                                                            className={`p-2 rounded-xl transition-colors ${isActive ? 'bg-amber-50 text-amber-600 hover:bg-amber-100' : 'bg-emerald-50 text-emerald-600 hover:bg-emerald-100'}`}
+                                                        >
+                                                            {isActive ? <FiXCircle className="text-sm" /> : <FiCheckCircle className="text-sm" />}
+                                                        </button>
+                                                    );
+                                                })()}
                                                 <button
                                                     onClick={() => handleDuplicate(o.id)}
                                                     title="Duplicate Offer"
@@ -599,7 +613,7 @@ export default function DiscountOffersList() {
                         <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 bg-surface-50 p-4 rounded-2xl text-xs font-bold text-surface-700">
                             <div>
                                 <span className="text-surface-400 uppercase text-[10px] block">Discount Value</span>
-                                <span className="text-emerald-600 text-base font-extrabold">{viewModalOffer.discountType === 'Percentage' ? `${viewModalOffer.discountValue}% OFF` : `₹${viewModalOffer.discountValue} OFF`}</span>
+                                <span className="text-emerald-600 text-base font-extrabold">{getDiscountDisplay(viewModalOffer.discountType, viewModalOffer.discountValue)}</span>
                             </div>
                             <div>
                                 <span className="text-surface-400 uppercase text-[10px] block">Promo Code</span>

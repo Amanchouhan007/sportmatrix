@@ -27,6 +27,16 @@ export default function StaffDashboard() {
                         const rawDate = b.slotDate || b.slot_date || b.date || b.bookedOn || b.createdAt || b.created_at;
                         const bDateStr = rawDate ? String(rawDate).split('T')[0] : new Date().toISOString().split('T')[0];
 
+                        const rawStatus = (b.status || '').toUpperCase();
+                        let displayStatus = 'Pending';
+                        if (rawStatus === 'CONFIRMED' || rawStatus === 'COMPLETED' || rawStatus === 'PAID') {
+                            displayStatus = 'Confirmed';
+                        } else if (rawStatus === 'REFUNDED') {
+                            displayStatus = 'Refunded';
+                        } else if (rawStatus === 'CANCELLED' || rawStatus === 'FAILED') {
+                            displayStatus = 'Cancelled';
+                        }
+
                         return {
                             id: b.invoiceNumber || b.paymentId || b.id,
                             customer: b.customerName || b.user?.fullName || b.user || b.customer || 'Valued Player',
@@ -36,7 +46,7 @@ export default function StaffDashboard() {
                             amount: net, // Commission Cut Ke (Net Revenue)
                             grossAmount: gross,
                             commissionAmount: comm,
-                            status: b.status === 'CONFIRMED' || b.status === 'COMPLETED' ? 'Confirmed' : 'Pending',
+                            status: displayStatus,
                             date: bDateStr
                         };
                     });
