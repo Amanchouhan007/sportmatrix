@@ -28,7 +28,7 @@ const validateDiscountOffer = (req, res, next) => {
 
     // Discount Type validation -- matches the real DiscountType enum (PERCENTAGE | FLAT_AMOUNT)
     const validTypes = ['PERCENTAGE', 'FLAT_AMOUNT'];
-    const normalizedType = (discountType || '').toUpperCase();
+    const normalizedType = (discountType || '').toUpperCase().replace(/\s+/g, '_');
     if (!discountType || !validTypes.includes(normalizedType)) {
         errors.push(`Discount Type must be one of: ${validTypes.join(', ')}`);
     }

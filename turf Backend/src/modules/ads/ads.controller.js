@@ -28,29 +28,45 @@ const formatAd = (a) => ({
 });
 
 const resolveOwnerBranchIds = async (user) => {
+    if (!user || user.role === 'SUPER_ADMIN' || user.role === 'SUPERADMIN') return null;
+
+    const ownerProfile = await prisma.owner.findFirst({
+        where: {
+            OR: [
+                { userId: user.id },
+                { id: user.id },
+                ...(user.email ? [{ email: user.email }] : [])
+            ]
+        }
+    }).catch(() => null);
+
     const branches = await prisma.branch.findMany({
         where: {
             OR: [
                 { ownerUserId: user.id },
-                { owner: { userId: user.id } }
+                { ownerId: user.id },
+                ...(ownerProfile ? [{ ownerId: ownerProfile.id }, { ownerUserId: ownerProfile.userId }] : []),
+                ...(user.staffBranchId ? [{ id: user.staffBranchId }] : [])
             ]
         },
         select: { id: true }
     });
-    const ids = branches.map(b => b.id);
-    if (ids.length > 0) return ids;
 
-    const allBranches = await prisma.branch.findMany({ select: { id: true } });
-    return allBranches.map(b => b.id);
+    return branches.map(b => b.id);
 };
 
 const getAdvertisements = async (req, res) => {
     try {
         const { status, type } = req.query;
+        const ownerBranchIds = await resolveOwnerBranchIds(req.user);
+        if (ownerBranchIds !== null && ownerBranchIds.length === 0) {
+            return res.status(200).json({ success: true, data: [] });
+        }
+
         const where = {};
         if (status && status !== 'ALL') where.status = status;
         if (type && type !== 'ALL') where.type = type;
-        if (req.user && req.user.role !== 'SUPER_ADMIN') where.branchId = { in: await resolveOwnerBranchIds(req.user) };
+        if (ownerBranchIds !== null) where.branchId = { in: ownerBranchIds };
 
         const rows = await prisma.advertisement.findMany({ where, include: { branch: true, owner: true }, orderBy: { createdAt: 'desc' } });
         return res.status(200).json({ success: true, data: rows.map(formatAd) });
@@ -61,7 +77,7 @@ const getAdvertisements = async (req, res) => {
 };
 
 const assertBranchAccess = async (branchId, user) => {
-    if (user.role === 'SUPER_ADMIN') return true;
+    if (user.role === 'SUPER_ADMIN' || user.role === 'SUPERADMIN') return true;
     const branch = await prisma.branch.findUnique({ where: { id: branchId } });
     return !!branch && branch.ownerUserId === user.id;
 };
@@ -166,9 +182,19 @@ const getCommissions = async (req, res) => {
     }
     try {
         const { status } = req.query;
+        const ownerBranchIds = await resolveOwnerBranchIds(req.user);
+
+        if (ownerBranchIds !== null && ownerBranchIds.length === 0) {
+            return res.status(200).json({
+                success: true,
+                summary: { totalPool: 0, pendingPayouts: 0, settledCommissions: 0 },
+                data: []
+            });
+        }
+
         const where = {};
         if (status && status !== 'ALL') where.status = status.toUpperCase();
-        if (req.user.role !== 'SUPER_ADMIN') where.branchId = { in: await resolveOwnerBranchIds(req.user) };
+        if (ownerBranchIds !== null) where.branchId = { in: ownerBranchIds };
 
         const [rows, poolAgg, pendingAgg, settledAgg] = await Promise.all([
             prisma.adCommission.findMany({ where, include: { advertisement: true, branch: true }, orderBy: { createdAt: 'desc' } }),
@@ -192,17 +218,26 @@ const getCommissions = async (req, res) => {
         let pendingPayouts = Number(pendingAgg._sum.commissionAmount || 0);
         let settledCommissions = Number(settledAgg._sum.commissionAmount || 0);
 
-        // Include live platform commissions from real MySQL Booking and MatchPayment tables
+        // Include live platform commissions strictly filtered by owner branch
+        const bookingWhere = {};
+        const matchPaymentWhere = {};
+        if (ownerBranchIds !== null) {
+            bookingWhere.slot = { branchId: { in: ownerBranchIds } };
+            matchPaymentWhere.match = { branchId: { in: ownerBranchIds } };
+        }
+
         const [realBookings, realMatchPayments] = await Promise.all([
             prisma.booking.findMany({
+                where: bookingWhere,
                 include: { slot: { include: { branch: true } } },
                 orderBy: { createdAt: 'desc' },
-                take: 50
+                take: 100
             }),
             prisma.matchPayment.findMany({
+                where: matchPaymentWhere,
                 include: { match: { include: { branch: true } } },
                 orderBy: { createdAt: 'desc' },
-                take: 50
+                take: 100
             })
         ]);
 
@@ -279,14 +314,83 @@ const getCommissions = async (req, res) => {
 
 const markCommissionPaid = async (req, res) => {
     try {
-        const updated = await prisma.adCommission.updateMany({ where: { bookingId: req.params.bookingId }, data: { status: 'PAID' } });
-        if (updated.count === 0) {
-            return res.status(404).json({ success: false, message: 'Commission record not found.' });
+        const targetId = req.params.bookingId;
+        let updatedCount = 0;
+
+        // 1. Try updating adCommission table
+        const adCommResult = await prisma.adCommission.updateMany({
+            where: {
+                OR: [
+                    { bookingId: targetId },
+                    { invoiceNumber: targetId }
+                ]
+            },
+            data: { status: 'PAID' }
+        });
+        updatedCount += adCommResult.count;
+
+        // 2. Try updating Booking table
+        const numericId = parseInt(targetId.replace(/\D/g, ''), 10);
+        const bookingWhere = {
+            OR: [
+                { bookingCode: targetId },
+                ...(isNaN(numericId) ? [] : [{ id: numericId }])
+            ]
+        };
+
+        const matchingBookings = await prisma.booking.findMany({ where: bookingWhere });
+        if (matchingBookings.length > 0) {
+            const bookingUpdate = await prisma.booking.updateMany({
+                where: bookingWhere,
+                data: { status: 'COMPLETED' }
+            });
+            updatedCount += bookingUpdate.count;
         }
-        return res.status(200).json({ success: true, message: `Commission for booking ${req.params.bookingId} marked as Paid!` });
+
+        // 3. Try updating MatchPayment table
+        const cleanMatchId = targetId.replace(/^MATCH-/, '');
+        const matchPayWhere = {
+            OR: [
+                { id: targetId },
+                { id: cleanMatchId }
+            ]
+        };
+        const matchingMatchPays = await prisma.matchPayment.findMany({ where: matchPayWhere });
+        if (matchingMatchPays.length > 0) {
+            const mpUpdate = await prisma.matchPayment.updateMany({
+                where: matchPayWhere,
+                data: { paymentStatus: 'COMPLETED', commissionStatus: 'CONFIRMED', ownerPayoutStatus: 'CONFIRMED' }
+            });
+            updatedCount += mpUpdate.count;
+        }
+
+        // 4. Try updating Payment table
+        const cleanInv = targetId.replace(/^INV-/, '');
+        const paymentWhere = {
+            OR: [
+                { invoiceNumber: targetId },
+                { invoiceNumber: `INV-${targetId}` },
+                { invoiceNumber: cleanInv },
+                ...(isNaN(numericId) ? [] : [{ bookingId: numericId }])
+            ]
+        };
+        const matchingPayments = await prisma.payment.findMany({ where: paymentWhere });
+        if (matchingPayments.length > 0) {
+            const pUpdate = await prisma.payment.updateMany({
+                where: paymentWhere,
+                data: { status: 'COMPLETED', commissionStatus: 'CONFIRMED', ownerPayoutStatus: 'CONFIRMED' }
+            });
+            updatedCount += pUpdate.count;
+        }
+
+        if (updatedCount === 0) {
+            return res.status(404).json({ success: false, message: `Commission record "${targetId}" not found.` });
+        }
+
+        return res.status(200).json({ success: true, message: `Commission for booking ${targetId} marked as Paid!` });
     } catch (error) {
         console.error('Mark commission paid error:', error);
-        return res.status(500).json({ success: false, message: 'Internal Server Error updating commission status.' });
+        return res.status(500).json({ success: false, message: 'Internal Server Error updating commission status: ' + error.message });
     }
 };
 
@@ -295,8 +399,13 @@ const getPayments = async (req, res) => {
         return res.status(401).json({ success: false, message: 'Authentication required.' });
     }
     try {
+        const ownerBranchIds = await resolveOwnerBranchIds(req.user);
+        if (ownerBranchIds !== null && ownerBranchIds.length === 0) {
+            return res.status(200).json({ success: true, data: [] });
+        }
+
         const where = {};
-        if (req.user.role !== 'SUPER_ADMIN') where.branchId = { in: await resolveOwnerBranchIds(req.user) };
+        if (ownerBranchIds !== null) where.branchId = { in: ownerBranchIds };
 
         const rows = await prisma.adPayment.findMany({ where, include: { advertisement: true, branch: true, owner: true }, orderBy: { createdAt: 'desc' } });
         
@@ -308,17 +417,26 @@ const getPayments = async (req, res) => {
             date: r.billingDate.toISOString().split('T')[0]
         }));
 
-        // Include live booking & match payments
+        // Include live booking & match payments strictly filtered by owner branch
+        const bookingWhere = {};
+        const matchPaymentWhere = {};
+        if (ownerBranchIds !== null) {
+            bookingWhere.slot = { branchId: { in: ownerBranchIds } };
+            matchPaymentWhere.match = { branchId: { in: ownerBranchIds } };
+        }
+
         const [realBookings, realMatchPayments] = await Promise.all([
             prisma.booking.findMany({
+                where: bookingWhere,
                 include: { slot: { include: { branch: true } } },
                 orderBy: { createdAt: 'desc' },
-                take: 50
+                take: 100
             }),
             prisma.matchPayment.findMany({
+                where: matchPaymentWhere,
                 include: { match: { include: { branch: true } } },
                 orderBy: { createdAt: 'desc' },
-                take: 50
+                take: 100
             })
         ]);
 
@@ -367,8 +485,16 @@ const getAdAnalytics = async (req, res) => {
         return res.status(401).json({ success: false, message: 'Authentication required.' });
     }
     try {
+        const ownerBranchIds = await resolveOwnerBranchIds(req.user);
+        if (ownerBranchIds !== null && ownerBranchIds.length === 0) {
+            return res.status(200).json({
+                success: true,
+                data: { totalAds: 0, activeAds: 0, totalRevenue: 0, adBookings: 0, totalCommission: 0, totalClicks: 0, conversionRate: 0, campaigns: [], campaignsRaw: [] }
+            });
+        }
+
         const where = {};
-        if (req.user.role !== 'SUPER_ADMIN') where.branchId = { in: await resolveOwnerBranchIds(req.user) };
+        if (ownerBranchIds !== null) where.branchId = { in: ownerBranchIds };
 
         const ads = await prisma.advertisement.findMany({ where });
         let totalAds = ads.length;
@@ -384,14 +510,20 @@ const getAdAnalytics = async (req, res) => {
             budgetSpent: Number(a.budgetSpent), budgetTotal: Number(a.budgetTotal)
         }));
 
-        // Sum live revenue and commissions strictly from real MySQL Booking and MatchPayment tables with slotId deduplication
+        const bookingWhere = { status: { in: ['COMPLETED', 'PENDING'] } };
+        const matchPaymentWhere = { paymentStatus: { in: ['COMPLETED', 'PENDING'] } };
+        if (ownerBranchIds !== null) {
+            bookingWhere.slot = { branchId: { in: ownerBranchIds } };
+            matchPaymentWhere.match = { branchId: { in: ownerBranchIds } };
+        }
+
         const [realBookings, realMatchPayments] = await Promise.all([
             prisma.booking.findMany({
-                where: { status: { in: ['COMPLETED', 'PENDING'] } },
+                where: bookingWhere,
                 select: { amount: true, slotId: true }
             }),
             prisma.matchPayment.findMany({
-                where: { paymentStatus: { in: ['COMPLETED', 'PENDING'] } },
+                where: matchPaymentWhere,
                 select: { amount: true, commissionAmount: true, match: { select: { slotId: true } } }
             })
         ]);

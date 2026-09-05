@@ -1,5 +1,7 @@
 const fs = require('fs');
 const path = require('path');
+const crypto = require('crypto');
+const Razorpay = require('razorpay');
 const prisma = require('../../config/prisma');
 const { emitToBranch, getIo } = require('../../realtime/socket');
 
@@ -383,9 +385,12 @@ const registerTeam = async (req, res) => {
 
             if (Array.isArray(players)) {
                 for (const p of players) {
-                    await tx.tournamentPlayer.create({
-                        data: { id: genId('pl'), teamId, playerName: p.name || p.playerName, mobile: p.mobile || null, jerseyNumber: p.jerseyNumber || null, role: p.role || null }
-                    });
+                    if (p.name || p.playerName) {
+                        const parsedJersey = p.jerseyNumber && !isNaN(p.jerseyNumber) ? parseInt(p.jerseyNumber, 10) : null;
+                        await tx.tournamentPlayer.create({
+                            data: { id: genId('pl'), teamId, playerName: p.name || p.playerName, mobile: p.mobile || null, jerseyNumber: parsedJersey, role: p.role || null }
+                        });
+                    }
                 }
             }
 
@@ -410,6 +415,146 @@ const registerTeam = async (req, res) => {
     }
 };
 
+const createRazorpayOrder = async (req, res) => {
+    try {
+        const tournament = await prisma.tournament.findUnique({ where: { id: req.params.id } });
+        if (!tournament) {
+            return res.status(404).json({ success: false, message: 'Tournament not found.' });
+        }
+
+        const keyId = process.env.RAZORPAY_KEY_ID || 'rzp_test_T1r8sgDPyFz1bB';
+        const keySecret = process.env.RAZORPAY_KEY_SECRET || 'GBL1GdG1iHJWvDEFkvDyG0Bf';
+
+        const razorpay = new Razorpay({
+            key_id: keyId,
+            key_secret: keySecret
+        });
+
+        const entryFee = Number(tournament.entryFeePerTeam) || 0;
+        const amountInPaise = Math.round(entryFee * 100);
+
+        if (amountInPaise <= 0) {
+            return res.status(400).json({ success: false, message: 'Invalid tournament entry fee amount.' });
+        }
+
+        const options = {
+            amount: amountInPaise,
+            currency: 'INR',
+            receipt: `rcpt_trn_${Date.now().toString().slice(-8)}`,
+            notes: {
+                tournamentId: tournament.id,
+                tournamentTitle: tournament.title
+            }
+        };
+
+        const order = await razorpay.orders.create(options);
+        return res.status(200).json({
+            success: true,
+            orderId: order.id,
+            amount: order.amount,
+            currency: order.currency,
+            keyId: keyId,
+            tournamentTitle: tournament.title,
+            entryFee: entryFee
+        });
+    } catch (error) {
+        console.error('Create Razorpay Order error:', error);
+        return res.status(500).json({ success: false, message: 'Failed to initialize Razorpay payment order: ' + error.message });
+    }
+};
+
+const verifyRazorpayPayment = async (req, res) => {
+    const { razorpayOrderId, razorpayPaymentId, razorpaySignature, teamName, captainName, captainEmail, captainMobile, players, jerseyColor } = req.body;
+
+    if (!razorpayOrderId || !razorpayPaymentId || !razorpaySignature || !teamName || !captainName || !captainMobile) {
+        return res.status(400).json({ success: false, message: 'Payment verification tokens and captain/team details are required.' });
+    }
+
+    try {
+        const keySecret = process.env.RAZORPAY_KEY_SECRET || 'GBL1GdG1iHJWvDEFkvDyG0Bf';
+        const body = razorpayOrderId + '|' + razorpayPaymentId;
+
+        const expectedSignature = crypto
+            .createHmac('sha256', keySecret)
+            .update(body.toString())
+            .digest('hex');
+
+        if (expectedSignature !== razorpaySignature) {
+            return res.status(400).json({ success: false, message: 'Razorpay payment signature verification failed. Tampered transaction detected.' });
+        }
+
+        const tournament = await prisma.tournament.findUnique({ where: { id: req.params.id } });
+        if (!tournament) {
+            return res.status(404).json({ success: false, message: 'Tournament not found.' });
+        }
+
+        const validPaymentMethod = (req.body.paymentMethod && ['UPI', 'CASH', 'CARD', 'WALLET', 'BANK_TRANSFER', 'ONLINE'].includes(req.body.paymentMethod.toUpperCase()))
+            ? req.body.paymentMethod.toUpperCase()
+            : 'UPI';
+
+        const teamId = genId('tm');
+        const team = await prisma.$transaction(async (tx) => {
+            const created = await tx.tournamentTeam.create({
+                data: {
+                    id: teamId,
+                    tournamentId: tournament.id,
+                    teamName,
+                    captainName,
+                    captainEmail: captainEmail || '',
+                    captainMobile,
+                    paymentMethod: validPaymentMethod,
+                    paymentStatus: 'COMPLETED',
+                    status: 'CONFIRMED'
+                }
+            });
+
+            if (Array.isArray(players)) {
+                for (const p of players) {
+                    if (p.name || p.playerName) {
+                        const parsedJersey = p.jerseyNumber && !isNaN(p.jerseyNumber) ? parseInt(p.jerseyNumber, 10) : null;
+                        await tx.tournamentPlayer.create({
+                            data: {
+                                id: genId('pl'),
+                                teamId,
+                                playerName: p.name || p.playerName,
+                                mobile: p.mobile || null,
+                                jerseyNumber: parsedJersey,
+                                role: p.role || null
+                            }
+                        });
+                    }
+                }
+            }
+
+            const invoiceNumber = `INV-TRN-RZP-${Date.now().toString().slice(-6)}`;
+            const commissionRate = 10;
+            await tx.tournamentPayment.create({
+                data: {
+                    id: genId('tpay'),
+                    invoiceNumber,
+                    tournamentId: tournament.id,
+                    teamId,
+                    payerName: captainName,
+                    transactionType: 'Entry Fee',
+                    amount: tournament.entryFeePerTeam,
+                    platformCommRate: commissionRate,
+                    commissionAmount: Math.round(Number(tournament.entryFeePerTeam) * commissionRate / 100),
+                    paymentMode: validPaymentMethod,
+                    status: 'COMPLETED',
+                    transactionId: razorpayPaymentId
+                }
+            });
+
+            return created;
+        });
+
+        return res.status(201).json({ success: true, message: 'Payment verified and Team registered successfully!', teamId: team.id });
+    } catch (error) {
+        console.error('Verify Razorpay Payment error:', error);
+        return res.status(500).json({ success: false, message: 'Internal Server Error verifying Razorpay payment: ' + error.message });
+    }
+};
+
 const getTeams = async (req, res) => {
     const { tournamentId } = req.query;
     try {
@@ -423,10 +568,15 @@ const getTeams = async (req, res) => {
         }
         const teams = await prisma.tournamentTeam.findMany({
             where,
-            include: { players: true, tournament: { select: { title: true } } },
+            include: { players: true, tournament: { select: { title: true, entryFeePerTeam: true } } },
             orderBy: { createdAt: 'desc' }
         });
-        return res.status(200).json({ success: true, data: teams });
+        const formattedTeams = teams.map(tm => ({
+            ...tm,
+            tournamentTitle: tm.tournament?.title || 'Tournament',
+            amount: tm.tournament?.entryFeePerTeam || 0
+        }));
+        return res.status(200).json({ success: true, data: formattedTeams });
     } catch (error) {
         return res.status(500).json({ success: false, message: 'Internal Server Error.' });
     }
@@ -847,7 +997,7 @@ module.exports = {
     getTournaments, getTournamentById, createTournament, updateTournament,
     approveTournament, rejectTournament, suspendTournament, deleteTournament,
     getCategories, createCategory, updateCategory, deleteCategory,
-    registerTeam, getTeams, updateTeamStatus,
+    registerTeam, createRazorpayOrder, verifyRazorpayPayment, getTeams, updateTeamStatus,
     generateFixtures, getFixtures, updateMatchScore, getLeaderboard, getGlobalLeaderboard,
     getSponsors, createSponsor, updateSponsor, deleteSponsor,
     getTournamentPayments, getTournamentReports, getSettings, updateSettings,

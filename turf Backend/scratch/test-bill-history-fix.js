@@ -1,40 +1,51 @@
 const prisma = require('../src/config/prisma');
 
-async function testGetBillHistoryFix() {
-  try {
-    const branchIds = null;
-    const matchWhere = branchIds === null ? {} : { match: { branchId: { in: branchIds } } };
+async function testBillHistoryFix() {
     const [payments, matchPayments] = await Promise.all([
-      prisma.payment.findMany({ where: {}, include: { user: true, booking: { include: { slot: { include: { branch: true } } } } }, orderBy: { createdAt: 'desc' } }),
-      prisma.matchPayment.findMany({ where: matchWhere, include: { user: true, match: { include: { branch: true } } }, orderBy: { createdAt: 'desc' } })
+        prisma.payment.findMany({ include: { user: true, booking: { include: { slot: { include: { branch: true } } } } }, orderBy: { createdAt: 'desc' } }),
+        prisma.matchPayment.findMany({ include: { user: true, match: { include: { branch: true } } }, orderBy: { createdAt: 'desc' } })
     ]);
 
     const matchSlotIds = matchPayments.map(mp => mp.match?.slotId).filter(Boolean);
     const linkedBookings = matchSlotIds.length > 0
-      ? await prisma.booking.findMany({ where: { slotId: { in: matchSlotIds } } })
-      : [];
+        ? await prisma.booking.findMany({ where: { slotId: { in: matchSlotIds } } })
+        : [];
     const bookingBySlot = Object.fromEntries(linkedBookings.map(b => [b.slotId, b]));
 
-    const logs = payments.map(p => {
-      const resolvedCustomer = p.customerName || p.booking?.customerName || p.user?.name || '';
-      return { id: p.id, customer: resolvedCustomer, source: 'Payment' };
-    });
+    const logs = payments.map(p => ({ id: `pay_${p.id}`, status: (p.status || '').toUpperCase() }));
 
     for (const mp of matchPayments) {
-      const linkedBooking = mp.match?.slotId ? bookingBySlot[mp.match.slotId] : null;
-      const resolvedCustomerName = linkedBooking?.customerName || (mp.playerName && mp.playerName !== 'Player' ? mp.playerName : mp.user?.name) || 'Player';
+        const linkedBooking = mp.match?.slotId ? bookingBySlot[mp.match.slotId] : null;
+        let resolvedStatus = 'PENDING';
+        const mpStatusUpper = (mp.paymentStatus || '').toUpperCase();
+        const bkStatusUpper = (linkedBooking?.status || '').toUpperCase();
 
-      logs.push({ id: mp.id, customer: resolvedCustomerName, source: 'MatchPayment' });
+        if (mpStatusUpper === 'REFUNDED' || bkStatusUpper === 'REFUNDED') {
+            resolvedStatus = 'REFUNDED';
+        } else if (mpStatusUpper === 'CANCELLED' || mpStatusUpper === 'FAILED' || bkStatusUpper === 'CANCELLED') {
+            resolvedStatus = 'CANCELLED';
+        } else if (mpStatusUpper === 'COMPLETED' || mpStatusUpper === 'PAID' || mpStatusUpper === 'CONFIRMED' || bkStatusUpper === 'COMPLETED' || bkStatusUpper === 'CONFIRMED') {
+            resolvedStatus = 'COMPLETED';
+        } else if (mpStatusUpper) {
+            resolvedStatus = mpStatusUpper;
+        }
+
+        logs.push({
+            id: `INV-${mp.id.substring(0, 10)}`,
+            mpId: mp.id,
+            paymentStatus: mp.paymentStatus,
+            linkedBookingStatus: linkedBooking?.status || null,
+            resolvedStatus
+        });
     }
 
-    console.log('=== PRODUCED BILLING LOGS ===');
-    console.log(logs);
+    console.log('--- TEST RESULTS ---');
+    console.table(logs.slice(0, 10));
 
-  } catch (err) {
-    console.error(err);
-  } finally {
     await prisma.$disconnect();
-  }
 }
 
-testGetBillHistoryFix();
+testBillHistoryFix().catch(err => {
+    console.error(err);
+    process.exit(1);
+});

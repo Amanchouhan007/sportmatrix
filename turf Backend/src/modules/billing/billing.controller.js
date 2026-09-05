@@ -2,20 +2,28 @@ const prisma = require('../../config/prisma');
 const { computeSplit } = require('../../services/paymentGateway/paymentSplit.util');
 
 const resolveOwnerBranchIds = async (user) => {
-    if (!user || user.role === 'SUPERADMIN' || user.role === 'SUPER_ADMIN' || user.role === 'ADMIN') return null;
-    const ownerProfile = await prisma.owner.findUnique({ where: { userId: user.id } }).catch(() => null);
+    if (!user || user.role === 'SUPERADMIN' || user.role === 'SUPER_ADMIN') return null;
+    const ownerProfile = await prisma.owner.findFirst({
+        where: {
+            OR: [
+                { userId: user.id },
+                { id: user.id },
+                ...(user.email ? [{ email: user.email }] : [])
+            ]
+        }
+    }).catch(() => null);
     const branches = await prisma.branch.findMany({
         where: {
             OR: [
                 { ownerUserId: user.id },
-                { ownerId: ownerProfile ? ownerProfile.id : 'NO_MATCH' }
+                { ownerId: user.id },
+                ...(ownerProfile ? [{ ownerId: ownerProfile.id }, { ownerUserId: ownerProfile.userId }] : []),
+                ...(user.staffBranchId ? [{ id: user.staffBranchId }] : [])
             ]
         },
         select: { id: true }
     });
-    if (branches.length > 0) return branches.map(b => b.id);
-    const fallbackBranches = await prisma.branch.findMany({ select: { id: true } });
-    return fallbackBranches.map(b => b.id);
+    return branches.map(b => b.id);
 };
 
 /**
@@ -108,8 +116,12 @@ const getPaymentStats = async (req, res) => {
             totalRevenue += gross;
             totalCommission += comm;
 
-            if (mp.paymentStatus === 'COMPLETED' || mp.paymentStatus === 'PAID') {
+            const mpStatusUpper = (mp.paymentStatus || '').toUpperCase();
+            if (mpStatusUpper === 'COMPLETED' || mpStatusUpper === 'PAID' || mpStatusUpper === 'CONFIRMED') {
                 completedCount += 1;
+            } else if (mpStatusUpper === 'REFUNDED') {
+                refundedCount += 1;
+                refundedAmount += gross;
             } else {
                 pendingCount += 1;
                 pendingPayments += gross;
@@ -139,6 +151,19 @@ const getPaymentStats = async (req, res) => {
 
 const formatPaymentLog = (p) => {
     const resolvedCustomer = p.customerName || p.booking?.customerName || p.user?.name || '';
+
+    let resolvedStatus = (p.status || '').toUpperCase();
+    const bkStatus = (p.booking?.status || '').toUpperCase();
+    if (resolvedStatus === 'REFUNDED' || bkStatus === 'REFUNDED') {
+        resolvedStatus = 'REFUNDED';
+    } else if (resolvedStatus === 'CANCELLED' || resolvedStatus === 'FAILED' || bkStatus === 'CANCELLED') {
+        resolvedStatus = 'CANCELLED';
+    } else if (resolvedStatus === 'COMPLETED' || resolvedStatus === 'CONFIRMED' || resolvedStatus === 'PAID' || bkStatus === 'COMPLETED' || bkStatus === 'CONFIRMED') {
+        resolvedStatus = 'COMPLETED';
+    } else if (!resolvedStatus) {
+        resolvedStatus = 'PENDING';
+    }
+
     return {
         _id: `pay_${p.id}`, id: `pay_${p.id}`,
         paymentId: p.invoiceNumber, transactionId: `TXN-${p.invoiceNumber}`, invoiceNumber: p.invoiceNumber,
@@ -150,7 +175,7 @@ const formatPaymentLog = (p) => {
         commissionRate: Number(p.amount) > 0 ? Math.round((Number(p.commission) / Number(p.amount)) * 100) : 0,
         ownerAmount: Number(p.ownerAmount),
         ownerPayoutStatus: p.ownerPayoutStatus, commissionStatus: p.commissionStatus,
-        paymentMethod: p.paymentMethod, status: p.status,
+        paymentMethod: p.paymentMethod, status: resolvedStatus,
         notice: p.type === 'Booking' ? 'Turf Slot Online Booking' : p.type,
         paymentDate: p.createdAt, createdAt: p.createdAt, date: p.createdAt
     };
@@ -205,6 +230,20 @@ const getBillHistory = async (req, res) => {
             const resolvedCustomerName = linkedBooking?.customerName || (mp.playerName && mp.playerName !== 'Player' ? mp.playerName : mp.user?.name) || 'Player';
             const resolvedPhone = linkedBooking?.mobileNumber || mp.playerPhone || mp.user?.mobile || '';
 
+            let resolvedStatus = 'PENDING';
+            const mpStatusUpper = (mp.paymentStatus || '').toUpperCase();
+            const bkStatusUpper = (linkedBooking?.status || '').toUpperCase();
+
+            if (mpStatusUpper === 'REFUNDED' || bkStatusUpper === 'REFUNDED') {
+                resolvedStatus = 'REFUNDED';
+            } else if (mpStatusUpper === 'CANCELLED' || mpStatusUpper === 'FAILED' || bkStatusUpper === 'CANCELLED') {
+                resolvedStatus = 'CANCELLED';
+            } else if (mpStatusUpper === 'COMPLETED' || mpStatusUpper === 'PAID' || mpStatusUpper === 'CONFIRMED' || bkStatusUpper === 'COMPLETED' || bkStatusUpper === 'CONFIRMED') {
+                resolvedStatus = 'COMPLETED';
+            } else if (mpStatusUpper) {
+                resolvedStatus = mpStatusUpper;
+            }
+
             logs.push({
                 _id: `mp_${mp.id}`, id: `mp_${mp.id}`,
                 paymentId: `INV-${mp.id.substring(0, 10)}`,
@@ -223,7 +262,7 @@ const getBillHistory = async (req, res) => {
                 ownerPayoutStatus: mp.ownerPayoutStatus || 'PENDING',
                 commissionStatus: mp.commissionStatus || 'CONFIRMED',
                 paymentMethod: mp.paymentMode || 'UPI',
-                status: mp.paymentStatus === 'COMPLETED' ? 'COMPLETED' : 'PENDING',
+                status: resolvedStatus,
                 notice: `Match Booking - ${mp.match?.branch?.branchName || 'Turf Arena'} (${commRate}% Platform Commission: ₹${comm})`,
                 paymentDate: mp.createdAt,
                 createdAt: mp.createdAt,

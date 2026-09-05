@@ -13,6 +13,8 @@ const {
     updateCategory,
     deleteCategory,
     registerTeam,
+    createRazorpayOrder,
+    verifyRazorpayPayment,
     getTeams,
     updateTeamStatus,
     generateFixtures,
@@ -53,6 +55,8 @@ router.get('/:id', optionalToken, getTournamentById);
 router.get('/:id/fixtures', optionalToken, getFixtures);
 router.get('/:id/leaderboard', optionalToken, getLeaderboard);
 router.post('/:id/register', optionalToken, registerTeam);
+router.post('/:id/create-razorpay-order', optionalToken, createRazorpayOrder);
+router.post('/:id/verify-razorpay-payment', optionalToken, verifyRazorpayPayment);
 
 // Staff & Owner Creation / Editing Endpoints
 router.post('/', verifyToken, createTournament);

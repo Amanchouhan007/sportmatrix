@@ -125,7 +125,7 @@ const createDiscountOffer = async (req, res) => {
                 branchId: resolvedBranchId,
                 ownerId: branch.ownerId,
                 title: title.trim(), description: description || null,
-                discountType: discountType.toUpperCase(), discountValue,
+                discountType: discountType.toUpperCase().replace(/\s+/g, '_'), discountValue,
                 minimumBookingAmount: minimumBookingAmount || 0, maximumDiscountAmount: maximumDiscountAmount || 0,
                 promoCode: code, banner, thumbnail,
                 applicableSports: arrify(applicableSports), applicableDays: arrify(applicableDays), applicableSlotTypes: arrify(slotTypes),
@@ -161,7 +161,7 @@ const updateDiscountOffer = async (req, res) => {
             data: {
                 title: u.title?.trim() ?? undefined,
                 description: u.description ?? undefined,
-                discountType: u.discountType ? u.discountType.toUpperCase() : undefined,
+                discountType: u.discountType ? u.discountType.toUpperCase().replace(/\s+/g, '_') : undefined,
                 discountValue: u.discountValue ?? undefined,
                 minimumBookingAmount: u.minimumBookingAmount ?? undefined,
                 maximumDiscountAmount: u.maximumDiscountAmount ?? undefined,
