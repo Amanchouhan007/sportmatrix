@@ -32,6 +32,8 @@ const formatDuty = (d) => {
         tossWinnerTeam: d.tossWinnerTeam, tossElected: d.tossElected,
         ballByBallFeed: d.ballByBallFeed, currentScoreSummary: d.currentScoreSummary,
         dutyStatus: d.dutyStatus, certifiedAt: d.certifiedAt,
+        createdAt: d.createdAt || d.match?.createdAt,
+        matchCreatedAt: d.match?.createdAt || d.createdAt,
         totalOvers: totalOvers,
         topBatsmanName: d.topBatsmanName, topBatsmanRuns: d.topBatsmanRuns,
         topBowlerName: d.topBowlerName, topBowlerWickets: d.topBowlerWickets,
@@ -130,9 +132,12 @@ const getUmpireMatches = async (req, res) => {
             orderBy: { createdAt: 'desc' }
         });
 
-        // Fallback: If no duties linked directly to profile, return all active ground duties
+        // Fallback: If no duties linked directly to profile, return active ground duties
         if (duties.length === 0) {
             duties = await prisma.umpireDutyAssignment.findMany({
+                where: {
+                    dutyStatus: { not: 'CERTIFIED_COMPLETED' }
+                },
                 include: { match: { include: { branch: true, sport: true, matchTeams: true } } },
                 orderBy: { createdAt: 'desc' },
                 take: 10
@@ -468,21 +473,44 @@ const completeMatch = async (req, res) => {
         
         if (duty) {
             await prisma.$transaction(async (tx) => {
-                await tx.umpireDutyAssignment.update({ where: { id: duty.id }, data: { dutyStatus: 'CERTIFIED_COMPLETED', certifiedAt: new Date() } }).catch(() => null);
+                await tx.umpireDutyAssignment.update({
+                    where: { id: duty.id },
+                    data: { dutyStatus: 'CERTIFIED_COMPLETED', certifiedAt: new Date() }
+                });
                 if (duty.matchId) {
-                    await tx.match.update({ where: { id: duty.matchId }, data: { matchStatus: 'COMPLETED', winnerTeamSide: winnerTeamSide ?? undefined } }).catch(() => null);
+                    await tx.match.update({
+                        where: { id: duty.matchId },
+                        data: { matchStatus: 'COMPLETED', winnerTeamSide: winnerTeamSide ?? undefined }
+                    });
                 }
                 if (duty.umpireProfileId) {
-                    await tx.umpireProfile.update({ where: { id: duty.umpireProfileId }, data: { totalMatchesOfficiated: { increment: 1 } } }).catch(() => null);
+                    await tx.umpireProfile.update({
+                        where: { id: duty.umpireProfileId },
+                        data: { totalMatchesOfficiated: { increment: 1 } }
+                    }).catch(e => console.warn('Umpire profile count increment note:', e.message));
                 }
             });
+        } else {
+            const directMatch = await prisma.match.findUnique({ where: { id: matchId } });
+            if (directMatch) {
+                await prisma.$transaction(async (tx) => {
+                    await tx.match.update({
+                        where: { id: matchId },
+                        data: { matchStatus: 'COMPLETED', winnerTeamSide: winnerTeamSide ?? undefined }
+                    });
+                    await tx.umpireDutyAssignment.updateMany({
+                        where: { matchId: matchId },
+                        data: { dutyStatus: 'CERTIFIED_COMPLETED', certifiedAt: new Date() }
+                    });
+                });
+            }
         }
 
         try {
             const io = getIo();
             if (io) {
                 io.emit('live:match-completed', { matchId, winnerTeamSide });
-                if (duty.branchId) emitToBranch(duty.branchId, 'live:match-completed', { matchId, winnerTeamSide });
+                if (duty?.branchId) emitToBranch(duty.branchId, 'live:match-completed', { matchId, winnerTeamSide });
             }
         } catch (sErr) {}
 

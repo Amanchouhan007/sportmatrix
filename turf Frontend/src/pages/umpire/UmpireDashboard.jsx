@@ -114,7 +114,13 @@ export default function UmpireDashboard() {
         try {
             const list = await getUmpireMatches()
             if (Array.isArray(list) && list.length > 0) {
-                const upcoming = list.filter(m => (m.dutyStatus || m.status) !== 'CERTIFIED_COMPLETED').map(m => {
+                const isMatchCompleted = (m) => {
+                    const ds = m.dutyStatus || m.status;
+                    const ms = m.match?.matchStatus || m.matchStatus || m.match_status;
+                    return ds === 'CERTIFIED_COMPLETED' || ms === 'COMPLETED';
+                };
+
+                const upcoming = list.filter(m => !isMatchCompleted(m)).map(m => {
                     const matchObj = m.match || {};
                     const teamA = matchObj.teamAName || m.team1_name || 'Team A';
                     const teamB = matchObj.teamBName || m.team2_name || 'Team B';
@@ -148,14 +154,16 @@ export default function UmpireDashboard() {
                         } catch (err) {}
                     }
 
+                    const upcomingDateObj = m.createdAt || matchObj.createdAt ? new Date(m.createdAt || matchObj.createdAt) : null;
+
                     return {
                         id: m.id || m.matchId || m.match_code,
                         matchCode: m.matchId || m.id || m.match_code,
                         title: m.title || `${teamA} vs ${teamB}`,
                         turf: m.turf || m.venue || matchObj.branch?.branchName || m.branchName || 'Turf Venue',
                         turfLocation: m.turfLocation || matchObj.branch?.city || '',
-                        date: m.date || (matchObj.createdAt ? new Date(matchObj.createdAt).toLocaleDateString() : 'Today'),
-                        time: m.time || (matchObj.createdAt ? new Date(matchObj.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Today'),
+                        date: m.date || (upcomingDateObj ? upcomingDateObj.toLocaleDateString() : 'Today'),
+                        time: m.time || (upcomingDateObj ? upcomingDateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Today'),
                         matchType: m.matchType || matchObj.paymentMode || 'DARE MATCH',
                         modeBadge: m.modeBadge || (matchObj.paymentMode ? `🔥 ${matchObj.paymentMode}` : '🔥 DARE MATCH'),
                         hasUmpireRequested: true,
@@ -189,19 +197,32 @@ export default function UmpireDashboard() {
 
                 setMatches(upcoming);
 
-                const completed = list.filter(m => (m.dutyStatus || m.match_status) === 'CERTIFIED_COMPLETED').map(m => {
+                const completed = list.filter(isMatchCompleted).map(m => {
                     const matchObj = m.match || {};
                     const teamA = matchObj.teamAName || m.team1_name || 'Team A';
                     const teamB = matchObj.teamBName || m.team2_name || 'Team B';
+                    const completedDateObj = m.createdAt || m.matchCreatedAt || matchObj.createdAt || m.certifiedAt ? new Date(m.createdAt || m.matchCreatedAt || matchObj.createdAt || m.certifiedAt) : null;
+                    let mvpText = 'Player Performance Score (1.5x)';
+                    if (m.topBatsmanName) {
+                        mvpText = `${m.topBatsmanName} (${m.topBatsmanRuns || 0} Runs${m.topBowlerWickets ? `, ${m.topBowlerWickets} Wkts` : ''})`;
+                    } else if (m.topBowlerName) {
+                        mvpText = `${m.topBowlerName} (${m.topBowlerWickets || 0} Wkts)`;
+                    } else {
+                        const captA = m.teamA?.captain || matchObj.teamA?.captain || matchObj.matchTeams?.find(t => t.teamSide === 'TEAM_A')?.captainName;
+                        const captB = m.teamB?.captain || matchObj.teamB?.captain || matchObj.matchTeams?.find(t => t.teamSide === 'TEAM_B')?.captainName;
+                        const fallbackWinner = (matchObj.winnerTeamSide === 'TEAM_B' || m.tossWinnerTeam === teamB) ? (captB || teamB) : (captA || teamA);
+                        mvpText = `${fallbackWinner} (Match MVP)`;
+                    }
+
                     return {
                         id: m.id || m.matchId || m.match_code,
                         matchTitle: m.matchTitle || `${teamA} vs ${teamB}`,
                         turf: m.turf || matchObj.branch?.branchName || m.branchName || 'Turf Venue',
-                        date: m.date || (m.certifiedAt ? new Date(m.certifiedAt).toLocaleDateString() : 'Recently'),
-                        time: m.time || (m.certifiedAt ? new Date(m.certifiedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Recently'),
+                        date: m.date || (completedDateObj ? completedDateObj.toLocaleDateString() : 'Recently'),
+                        time: m.time || (completedDateObj ? completedDateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Recently'),
                         officiatedBy: `${myUmpireName || 'Official Umpire'}`,
                         result: m.result || m.currentScoreSummary || `${m.tossWinnerTeam || teamA} won`,
-                        mvp: m.topBatsmanName ? `MVP: ${m.topBatsmanName} (${m.topBatsmanRuns} runs)` : 'Player Performance Score (1.5x)',
+                        mvp: mvpText,
                         payment: `✓ ₹${m.dutyFee || m.umpireFee || 300} Received`,
                         verifiedTier: '⚖️ 1.5x Umpire Certified'
                     };
@@ -223,6 +244,10 @@ export default function UmpireDashboard() {
             if (prof) {
                 if (prof.full_name) setMyUmpireName(prof.full_name);
                 if (prof.upi_id) setMyUpiId(prof.upi_id);
+                if (prof.qr_image) {
+                    setCustomQrImage(prof.qr_image);
+                    setQrMode('custom');
+                }
                 if (prof.on_duty_status !== undefined) setIsOnDuty(Boolean(prof.on_duty_status));
                 if (prof.officiating_grounds) setOfficiatingLocations(prof.officiating_grounds);
                 if (prof.match_fee) setMyMatchFee(Number(prof.match_fee));
@@ -700,6 +725,7 @@ export default function UmpireDashboard() {
         setMatchHistory(prev => [completedItem, ...prev.filter(h => h.id !== match.id)])
         setMatches(prev => prev.filter(m => m.id !== match.id && m.id !== match.matchCode))
         setScoringMatch(null)
+        await reloadMatches()
 
         if (addToast) {
             addToast(`🎉 Match Certified & Closed! Persisted to DB & moved to History!`, 'success')
@@ -838,11 +864,16 @@ export default function UmpireDashboard() {
             return
         }
         const reader = new FileReader()
-        reader.onload = (event) => {
+        reader.onload = async (event) => {
             const base64 = event.target?.result
             setCustomQrImage(base64)
             setQrMode('custom')
-            if (addToast) addToast('✅ Custom QR Code Scanner Photo Uploaded Successfully!', 'success')
+            try {
+                await updateUmpireProfile({ custom_qr_image: base64 })
+            } catch (err) {
+                console.warn('QR image DB profile update note:', err)
+            }
+            if (addToast) addToast('✅ Custom QR Code Scanner Photo Uploaded & Saved to Profile!', 'success')
         }
         reader.readAsDataURL(file)
     }
@@ -1426,6 +1457,27 @@ export default function UmpireDashboard() {
                                                     >
                                                         <span>💬</span>
                                                         <span>Call Captains</span>
+                                                    </button>
+
+                                                    {/* Quick Mark Completed & Move to History */}
+                                                    <button
+                                                        type="button"
+                                                        onClick={async () => {
+                                                            if (window.confirm(`Mark ${match.title} as Completed & Certified?`)) {
+                                                                try {
+                                                                    await completeMatch({ matchId: match.id || match.matchCode })
+                                                                    if (addToast) addToast(`✓ ${match.title} marked as completed & moved to history!`, 'success')
+                                                                    await reloadMatches()
+                                                                } catch (err) {
+                                                                    if (addToast) addToast('Failed to mark match as completed', 'error')
+                                                                }
+                                                            }
+                                                        }}
+                                                        className="px-3.5 py-2.5 rounded-xl bg-purple-100 hover:bg-purple-200 text-purple-900 border border-purple-300 font-bold text-xs transition-all cursor-pointer flex items-center gap-1.5"
+                                                        title="Mark match certified and move to history"
+                                                    >
+                                                        <span>🏁</span>
+                                                        <span>Mark Completed</span>
                                                     </button>
                                                 </>
                                             )}
